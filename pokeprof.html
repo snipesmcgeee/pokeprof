@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PokeProf</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #1a1a2e;
+    color: #e0e0e0;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  #header {
+    background: #16213e;
+    border-bottom: 2px solid #e63946;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  #header h1 {
+    font-size: 16px;
+    color: #e63946;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  #header .funds {
+    font-size: 15px;
+    color: #f4d03f;
+    font-weight: bold;
+  }
+
+  #main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* LEFT: Aide Panel */
+  #aide-panel {
+    width: 280px;
+    background: #16213e;
+    border-right: 1px solid #0f3460;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .panel-title {
+    background: #0f3460;
+    padding: 6px 12px;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #a0a0c0;
+    flex-shrink: 0;
+  }
+
+  #aide-info {
+    padding: 10px 12px;
+    border-bottom: 1px solid #0f3460;
+    flex-shrink: 0;
+  }
+
+  #aide-info .aide-name {
+    color: #e63946;
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
+
+  #aide-info .aide-location {
+    color: #a0a0c0;
+    font-size: 11px;
+    margin-bottom: 8px;
+  }
+
+  #party-list {
+    overflow-y: auto;
+    flex: 1;
+    padding: 8px;
+  }
+
+  .party-slot {
+    background: #0f3460;
+    border: 1px solid #1a4a80;
+    border-radius: 4px;
+    padding: 8px;
+    margin-bottom: 6px;
+  }
+
+  .party-slot.fainted {
+    opacity: 0.5;
+    border-color: #e63946;
+  }
+
+  .party-slot .poke-name {
+    font-size: 12px;
+    color: #fff;
+    margin-bottom: 3px;
+  }
+
+  .party-slot .poke-level {
+    color: #a0c4ff;
+    font-size: 11px;
+  }
+
+  .hp-bar-wrap {
+    background: #0a0a1a;
+    border-radius: 3px;
+    height: 6px;
+    margin: 5px 0 3px;
+    overflow: hidden;
+  }
+
+  .hp-bar {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s, background 0.3s;
+  }
+
+  .hp-text {
+    font-size: 10px;
+    color: #a0a0c0;
+  }
+
+  .exp-bar-wrap {
+    background: #0a0a1a;
+    border-radius: 3px;
+    height: 3px;
+    margin-top: 4px;
+    overflow: hidden;
+  }
+
+  .exp-bar {
+    height: 100%;
+    background: #9b59b6;
+    border-radius: 3px;
+    transition: width 0.3s;
+  }
+
+  /* CENTER: Log + Controls */
+  #center-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  #encounter-display {
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    padding: 10px 14px;
+    flex-shrink: 0;
+    min-height: 80px;
+  }
+
+  #encounter-display .enc-title {
+    color: #e63946;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  #encounter-display .enc-body {
+    color: #c0c0d0;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+
+  #encounter-display .enc-enemy {
+    color: #f4d03f;
+    font-weight: bold;
+  }
+
+  #log {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 14px;
+    background: #12112a;
+  }
+
+  .log-entry {
+    padding: 2px 0;
+    line-height: 1.6;
+    color: #9090b0;
+    font-size: 11px;
+    border-bottom: 1px solid #1a1a35;
+  }
+
+  .log-entry.catch { color: #2ecc71; }
+  .log-entry.damage { color: #e74c3c; }
+  .log-entry.exp { color: #9b59b6; }
+  .log-entry.evolve { color: #f4d03f; font-weight: bold; }
+  .log-entry.fail { color: #e67e22; }
+  .log-entry.info { color: #5dade2; }
+  .log-entry.money { color: #f4d03f; }
+  .log-entry.faint { color: #e63946; font-weight: bold; }
+  .log-entry.win { color: #27ae60; }
+
+  #controls {
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+    padding: 10px 14px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+    align-items: center;
+  }
+
+  button {
+    background: #0f3460;
+    color: #e0e0e0;
+    border: 1px solid #1a4a80;
+    border-radius: 3px;
+    padding: 6px 12px;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: background 0.2s;
+  }
+
+  button:hover { background: #1a4a80; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.danger { border-color: #e63946; color: #e63946; }
+  button.danger:hover { background: #3a1020; }
+  button.primary { border-color: #2ecc71; color: #2ecc71; }
+  button.primary:hover { background: #0a3020; }
+
+  .potion-threshold {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #a0a0c0;
+    font-size: 11px;
+  }
+
+  .potion-threshold input {
+    width: 46px;
+    background: #0f3460;
+    border: 1px solid #1a4a80;
+    color: #e0e0e0;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    padding: 4px 6px;
+    border-radius: 3px;
+  }
+
+  /* RIGHT: Pokédex */
+  #dex-panel {
+    width: 320px;
+    background: #16213e;
+    border-left: 1px solid #0f3460;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  #dex-controls {
+    padding: 8px;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+
+  #dex-controls select, #dex-controls input {
+    background: #0f3460;
+    border: 1px solid #1a4a80;
+    color: #e0e0e0;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    padding: 4px 6px;
+    border-radius: 3px;
+    flex: 1;
+  }
+
+  #dex-stats {
+    padding: 6px 10px;
+    border-bottom: 1px solid #0f3460;
+    font-size: 10px;
+    color: #a0a0c0;
+    display: flex;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+
+  #dex-stats span { color: #f4d03f; }
+
+  #dex-list {
+    overflow-y: auto;
+    flex: 1;
+    padding: 6px;
+  }
+
+  .dex-entry {
+    background: #0f3460;
+    border: 1px solid #1a4a80;
+    border-radius: 4px;
+    padding: 7px 10px;
+    margin-bottom: 5px;
+    font-size: 11px;
+  }
+
+  .dex-entry .dex-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 3px;
+  }
+
+  .dex-entry .dex-name {
+    color: #fff;
+    font-weight: bold;
+  }
+
+  .dex-entry .dex-id {
+    color: #5dade2;
+  }
+
+  .dex-entry .dex-details {
+    color: #9090b0;
+    line-height: 1.5;
+  }
+
+  .dex-entry .dex-holder {
+    color: #2ecc71;
+    font-size: 10px;
+    margin-top: 2px;
+  }
+
+  .dex-entry.unassigned .dex-holder {
+    color: #e67e22;
+  }
+
+  #mission-status {
+    padding: 8px 12px;
+    border-bottom: 1px solid #0f3460;
+    font-size: 11px;
+    color: #a0a0c0;
+    flex-shrink: 0;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  #mission-status .timer { color: #f4d03f; }
+
+  .income-rate {
+    font-size: 10px;
+    color: #9090b0;
+  }
+
+  #save-indicator {
+    font-size: 10px;
+    color: #555;
+    text-align: right;
+    margin-top: 2px;
+    transition: color 0.5s;
+  }
+  #save-indicator.saving { color: #2ecc71; }
+  #save-indicator.error { color: #e63946; }
+  button.reset { border-color: #e63946; color: #777; font-size: 10px; padding: 4px 8px; }
+  button.reset:hover { background: #3a1020; color: #e63946; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>🎓 PokeProf</h1>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <button class="reset" onclick="resetGame()">⚠ Reset</button>
+    <div>
+      <div class="funds">💰 $<span id="funds-display">5.00</span></div>
+      <div class="income-rate">+$<span id="income-display">1.00</span>/min</div>
+      <div id="save-indicator">⬤ No save yet</div>
+    </div>
+  </div>
+</div>
+
+<div id="main">
+
+  <!-- LEFT: Aide + Party -->
+  <div id="aide-panel">
+    <div class="panel-title">Aide Status</div>
+    <div id="aide-info">
+      <div class="aide-name">🧑‍🔬 Aide #1</div>
+      <div class="aide-location" id="aide-location">📍 Route 1 — Exploring</div>
+    </div>
+    <div class="panel-title" style="margin-top:0;">Party</div>
+    <div id="party-list"></div>
+  </div>
+
+  <!-- CENTER: Encounter log -->
+  <div id="center-panel">
+    <div id="encounter-display">
+      <div class="enc-title">Current Encounter</div>
+      <div class="enc-body" id="enc-body">Awaiting first encounter...</div>
+    </div>
+    <div id="log"></div>
+    <div id="controls">
+      <button class="primary" id="btn-start" onclick="startMission()">▶ Start Mission</button>
+      <button class="danger" id="btn-recall" onclick="recallAide()" disabled>⏎ Recall Aide</button>
+      <div class="potion-threshold">
+        🧪 Auto-potion at
+        <input type="number" id="potion-threshold" value="75" min="1" max="100">
+        % HP
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Pokédex -->
+  <div id="dex-panel">
+    <div class="panel-title">Pokédex (<span id="dex-count">0</span> entries)</div>
+    <div id="dex-stats">
+      Catches: <span id="total-catches">0</span>
+      &nbsp;|&nbsp; Sightings: <span id="total-sightings">0</span>
+    </div>
+    <div id="dex-controls">
+      <select id="sort-select" onchange="renderDex()">
+        <option value="id">Sort: ID</option>
+        <option value="level">Sort: Level ↓</option>
+        <option value="hp">Sort: HP ↓</option>
+        <option value="total">Sort: Stat Total ↓</option>
+        <option value="species">Sort: Species</option>
+      </select>
+      <select id="filter-select" onchange="renderDex()">
+        <option value="all">All</option>
+        <option value="unassigned">Unassigned</option>
+        <option value="assigned">Assigned</option>
+      </select>
+    </div>
+    <div id="dex-list"></div>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+// DATA TABLES
+// ============================================================
+
+const SPECIES = {
+  Rattata: {
+    baseHP: 30, baseAtk: 56, baseDef: 35, baseSpatk: 25, baseSpdef: 35, baseSpd: 72,
+    baseExp: 51, growthRate: 'mediumFast',
+    evolveLevel: 20, evolvesInto: 'Raticate'
+  },
+  Raticate: {
+    baseHP: 55, baseAtk: 81, baseDef: 60, baseSpatk: 50, baseSpdef: 70, baseSpd: 97,
+    baseExp: 145, growthRate: 'mediumFast',
+    evolveLevel: null, evolvesInto: null
+  },
+  Pidgey: {
+    baseHP: 40, baseAtk: 45, baseDef: 40, baseSpatk: 35, baseSpdef: 35, baseSpd: 56,
+    baseExp: 50, growthRate: 'mediumSlow',
+    evolveLevel: 18, evolvesInto: 'Pidgeotto'
+  },
+  Pidgeotto: {
+    baseHP: 63, baseAtk: 60, baseDef: 55, baseSpatk: 50, baseSpdef: 50, baseSpd: 71,
+    baseExp: 113, growthRate: 'mediumSlow',
+    evolveLevel: 36, evolvesInto: 'Pidgeot'
+  },
+  Pidgeot: {
+    baseHP: 83, baseAtk: 80, baseDef: 75, baseSpatk: 70, baseSpdef: 70, baseSpd: 101,
+    baseExp: 172, growthRate: 'mediumSlow',
+    evolveLevel: null, evolvesInto: null
+  }
+};
+
+const ROUTE1_TABLE = [
+  { species: 'Rattata', minLv: 2, maxLv: 4, weight: 50 },
+  { species: 'Pidgey',  minLv: 2, maxLv: 5, weight: 50 }
+];
+
+// ============================================================
+// GROWTH RATE FORMULAS (total EXP to reach level n)
+// ============================================================
+function expToLevel(level, rate) {
+  if (level <= 1) return 0;
+  if (rate === 'mediumFast') return Math.floor(Math.pow(level, 3));
+  if (rate === 'mediumSlow') {
+    return Math.floor((6/5) * Math.pow(level, 3) - 15 * Math.pow(level, 2) + 100 * level - 140);
+  }
+  return Math.floor(Math.pow(level, 3)); // fallback
+}
+
+function expForNextLevel(level, rate) {
+  return expToLevel(level + 1, rate) - expToLevel(level, rate);
+}
+
+// ============================================================
+// STAT CALCULATIONS
+// ============================================================
+function calcMaxHP(species, level) {
+  const s = SPECIES[species];
+  return Math.floor((s.baseHP * 2 * level) / 100) + level + 10;
+}
+
+function calcStatTotal(species, level) {
+  const s = SPECIES[species];
+  const stat = (base, lv) => Math.floor((base * 2 * lv) / 100) + 5;
+  return calcMaxHP(species, level)
+    + stat(s.baseAtk, level)
+    + stat(s.baseDef, level)
+    + stat(s.baseSpatk, level)
+    + stat(s.baseSpdef, level)
+    + stat(s.baseSpd, level);
+}
+
+// ============================================================
+// GAME STATE
+// ============================================================
+let state = {
+  funds: 5.00,
+  totalCatches: 0,
+  totalSightings: 0,
+  missionActive: false,
+  missionElapsed: 0,        // seconds since mission start
+  nextEncounterIn: 180,     // seconds until next encounter
+  incomeAccumulator: 0,     // fractional cents
+  potionThreshold: 75,
+  party: [],                // array of pokemon objects (slot 0 = lead)
+  dex: [],                  // all caught/owned pokemon
+  dexIdCounter: 1,
+  currentEncounter: null,
+  log: []
+};
+
+// ============================================================
+// POKEMON FACTORY
+// ============================================================
+function makePokemon(species, level, gender, isStarter = false) {
+  const s = SPECIES[species];
+  const maxHP = calcMaxHP(species, level);
+  const totalExp = expToLevel(level, s.growthRate);
+  return {
+    id: state.dexIdCounter++,
+    species,
+    level,
+    gender,
+    currentHP: maxHP,
+    maxHP,
+    exp: totalExp,
+    holder: isStarter ? 'Aide #1' : null
+  };
+}
+
+// ============================================================
+// INITIALISE
+// ============================================================
+function init() {
+  const starter = makePokemon('Rattata', 5, Math.random() < 0.5 ? 'M' : 'F', true);
+  state.party.push(starter);
+  state.dex.push(starter);
+  addLog(`📋 ${starter.species} #${starter.id} added to party as starter.`, 'info');
+  render();
+}
+
+// ============================================================
+// LOGGING
+// ============================================================
+function addLog(msg, type = '') {
+  state.log.unshift({ msg, type });
+  if (state.log.length > 200) state.log.pop();
+  const logEl = document.getElementById('log');
+  const div = document.createElement('div');
+  div.className = 'log-entry ' + type;
+  div.textContent = msg;
+  logEl.insertBefore(div, logEl.firstChild);
+  if (logEl.children.length > 200) logEl.removeChild(logEl.lastChild);
+}
+
+// ============================================================
+// MISSION CONTROL
+// ============================================================
+function startMission() {
+  if (state.missionActive) return;
+  const alive = state.party.filter(p => p.currentHP > 0);
+  if (alive.length === 0) {
+    addLog('⚠ No conscious Pokémon in party!', 'fail');
+    return;
+  }
+  state.missionActive = true;
+  state.nextEncounterIn = 180;
+  document.getElementById('btn-start').disabled = true;
+  document.getElementById('btn-recall').disabled = false;
+  addLog('▶ Aide dispatched to Route 1.', 'info');
+  render();
+}
+
+function recallAide() {
+  if (!state.missionActive) return;
+  state.missionActive = false;
+  state.currentEncounter = null;
+  document.getElementById('btn-start').disabled = false;
+  document.getElementById('btn-recall').disabled = true;
+  document.getElementById('enc-body').textContent = 'Aide recalled to Pallet Town.';
+  addLog('⏎ Aide recalled to Pallet Town.', 'info');
+  render();
+}
+
+function allFainted() {
+  return state.party.every(p => p.currentHP <= 0);
+}
+
+function getLeadPokemon() {
+  return state.party.find(p => p.currentHP > 0) || null;
+}
+
+// ============================================================
+// INCOME TICK (called every second)
+// ============================================================
+function incomeTick() {
+  // $1/min base + $0.01 per 100 catches
+  const perMin = 1.00 + Math.floor(state.totalCatches / 100) * 0.01;
+  const perSec = perMin / 60;
+  state.incomeAccumulator += perSec;
+  if (state.incomeAccumulator >= 0.01) {
+    const cents = Math.floor(state.incomeAccumulator * 100);
+    state.funds += cents / 100;
+    state.incomeAccumulator -= cents / 100;
+  }
+  document.getElementById('funds-display').textContent = state.funds.toFixed(2);
+  document.getElementById('income-display').textContent = perMin.toFixed(2);
+}
+
+// ============================================================
+// ENCOUNTER SYSTEM
+// ============================================================
+function rollEncounter() {
+  const roll = Math.random() * 100;
+  let cumulative = 0;
+  for (const entry of ROUTE1_TABLE) {
+    cumulative += entry.weight;
+    if (roll < cumulative) {
+      const level = entry.minLv + Math.floor(Math.random() * (entry.maxLv - entry.minLv + 1));
+      const gender = Math.random() < 0.5 ? 'M' : 'F';
+      return { species: entry.species, level, gender, maxHP: calcMaxHP(entry.species, level), currentHP: calcMaxHP(entry.species, level) };
+    }
+  }
+}
+
+function resolveEncounterStep() {
+  const enc = state.currentEncounter;
+  if (!enc) return;
+  const lead = getLeadPokemon();
+  if (!lead) { endMission(); return; }
+
+  const threshold = parseInt(document.getElementById('potion-threshold').value) || 75;
+
+  // Auto-potion check BEFORE encounter action
+  if ((lead.currentHP / lead.maxHP) * 100 < threshold && state.funds >= 1.00) {
+    usePotion(lead);
+  }
+
+  // Auto-throw ball if funds allow
+  if (state.funds >= 1.00) {
+    throwBall(lead, enc);
+  } else {
+    fight(lead, enc);
+  }
+}
+
+function throwBall(lead, enc) {
+  state.funds = Math.round((state.funds - 1.00) * 100) / 100;
+  const success = Math.random() < 0.75;
+  if (success) {
+    // Catch!
+    const caught = makePokemon(enc.species, enc.level, enc.gender);
+    state.dex.push(caught);
+    state.totalCatches++;
+    state.totalSightings++;
+    const expGained = Math.floor((SPECIES[enc.species].baseExp * enc.level) / 7);
+    giveExp(lead, expGained);
+    addLog(`✅ Caught ${enc.species} #${caught.id} (Lv${enc.level} ${enc.gender})! +${expGained} EXP`, 'catch');
+    document.getElementById('total-catches').textContent = state.totalCatches;
+    document.getElementById('total-sightings').textContent = state.totalSightings;
+    state.currentEncounter = null;
+    document.getElementById('enc-body').textContent = `Caught ${enc.species} Lv${enc.level}! Encounter resolved.`;
+    saveGame();
+  } else {
+    // Failed catch — 25% of normal damage
+    const dmgPct = (enc.level / lead.level) * 0.5 * 0.25;
+    const dmg = Math.max(1, Math.floor(dmgPct * lead.maxHP));
+    lead.currentHP = Math.max(0, lead.currentHP - dmg);
+    addLog(`❌ Poké Ball failed! ${enc.species} Lv${enc.level} deals ${dmg} HP. (${lead.species}: ${lead.currentHP}/${lead.maxHP} HP)`, 'fail');
+    document.getElementById('enc-body').textContent = `Battling ${enc.species} Lv${enc.level} — ball missed! ${lead.species} at ${lead.currentHP}/${lead.maxHP} HP`;
+    checkFaint(lead, enc);
+  }
+}
+
+function fight(lead, enc) {
+  const dmgPct = (enc.level / lead.level) * 0.5;
+  const dmg = Math.max(1, Math.floor(dmgPct * lead.maxHP));
+  lead.currentHP = Math.max(0, lead.currentHP - dmg);
+  addLog(`⚔ ${lead.species} vs ${enc.species} Lv${enc.level}: took ${dmg} dmg. (${lead.currentHP}/${lead.maxHP} HP)`, 'damage');
+
+  if (lead.currentHP <= 0) {
+    // Lead fainted — check for next party member
+    addLog(`💀 ${lead.species} #${lead.id} fainted!`, 'faint');
+    const next = getLeadPokemon();
+    if (!next) { endMission(); return; }
+    // Enemy flees on your faint too
+    addLog(`${enc.species} fled after the faint.`, 'info');
+    state.currentEncounter = null;
+    document.getElementById('enc-body').textContent = `${lead.species} fainted. ${enc.species} fled.`;
+  } else {
+    // Win the fight
+    const expGained = Math.floor((SPECIES[enc.species].baseExp * enc.level) / 7);
+    giveExp(lead, expGained);
+    addLog(`🏆 Won vs ${enc.species} Lv${enc.level}! +${expGained} EXP (enemy fled, no data)`, 'win');
+    state.currentEncounter = null;
+    document.getElementById('enc-body').textContent = `Won vs ${enc.species} Lv${enc.level}. Enemy fled. No Pokédex data recorded.`;
+  }
+}
+
+function checkFaint(lead, enc) {
+  if (lead.currentHP <= 0) {
+    addLog(`💀 ${lead.species} #${lead.id} fainted mid-encounter!`, 'faint');
+    const next = getLeadPokemon();
+    if (!next) { endMission(); return; }
+    // Encounter continues with next party member (same enemy)
+    addLog(`🔄 ${next.species} #${next.id} steps in to continue the encounter.`, 'info');
+  }
+}
+
+function usePotion(pokemon) {
+  state.funds = Math.round((state.funds - 1.00) * 100) / 100;
+  const healed = Math.min(20, pokemon.maxHP - pokemon.currentHP);
+  pokemon.currentHP = Math.min(pokemon.maxHP, pokemon.currentHP + 20);
+  addLog(`🧪 Auto-potion used on ${pokemon.species}: +${healed} HP → ${pokemon.currentHP}/${pokemon.maxHP}`, 'info');
+}
+
+function endMission() {
+  state.missionActive = false;
+  state.currentEncounter = null;
+  document.getElementById('btn-start').disabled = false;
+  document.getElementById('btn-recall').disabled = true;
+  document.getElementById('enc-body').textContent = 'All Pokémon fainted. Aide returned to Pallet Town.';
+  addLog('🏠 All Pokémon fainted — aide returned to Pallet Town.', 'faint');
+}
+
+// ============================================================
+// EXP + LEVEL UP + EVOLUTION
+// ============================================================
+function giveExp(pokemon, amount) {
+  pokemon.exp += amount;
+  addLog(`✨ ${pokemon.species} #${pokemon.id} gained ${amount} EXP`, 'exp');
+  // Check for level ups
+  let levelled = false;
+  while (true) {
+    const s = SPECIES[pokemon.species];
+    const needed = expToLevel(pokemon.level + 1, s.growthRate);
+    if (pokemon.exp >= needed && pokemon.level < 100) {
+      pokemon.level++;
+      levelled = true;
+      const oldMax = pokemon.maxHP;
+      pokemon.maxHP = calcMaxHP(pokemon.species, pokemon.level);
+      const hpGain = pokemon.maxHP - oldMax;
+      pokemon.currentHP = Math.min(pokemon.maxHP, pokemon.currentHP + hpGain);
+      addLog(`⬆ ${pokemon.species} #${pokemon.id} reached Lv${pokemon.level}! Max HP: ${pokemon.maxHP}`, 'info');
+      checkEvolution(pokemon);
+      saveGame();
+    } else { break; }
+  }
+  if (levelled) renderDex();
+}
+
+function checkEvolution(pokemon) {
+  const s = SPECIES[pokemon.species];
+  if (s.evolveLevel && pokemon.level >= s.evolveLevel && s.evolvesInto) {
+    const oldSpecies = pokemon.species;
+    pokemon.species = s.evolvesInto;
+    const newS = SPECIES[pokemon.species];
+    const oldMax = pokemon.maxHP;
+    pokemon.maxHP = calcMaxHP(pokemon.species, pokemon.level);
+    const hpGain = pokemon.maxHP - oldMax;
+    pokemon.currentHP = Math.min(pokemon.maxHP, pokemon.currentHP + hpGain);
+    addLog(`🌟 ${oldSpecies} #${pokemon.id} evolved into ${pokemon.species}!`, 'evolve');
+    document.getElementById('enc-body').textContent = `✨ ${oldSpecies} evolved into ${pokemon.species}!`;
+  }
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function render() {
+  renderParty();
+  renderDex();
+  document.getElementById('dex-count').textContent = state.dex.length;
+}
+
+function renderParty() {
+  const container = document.getElementById('party-list');
+  container.innerHTML = '';
+  if (state.party.length === 0) {
+    container.innerHTML = '<div style="color:#555;padding:10px;font-size:11px;">No Pokémon in party</div>';
+    return;
+  }
+  state.party.forEach(p => {
+    const hpPct = Math.max(0, (p.currentHP / p.maxHP) * 100);
+    const hpColor = hpPct > 50 ? '#2ecc71' : hpPct > 20 ? '#f4d03f' : '#e74c3c';
+    const s = SPECIES[p.species];
+    const expCurrent = p.exp - expToLevel(p.level, s.growthRate);
+    const expNeeded = expToLevel(p.level + 1, s.growthRate) - expToLevel(p.level, s.growthRate);
+    const expPct = Math.min(100, (expCurrent / expNeeded) * 100);
+    const fainted = p.currentHP <= 0;
+    const div = document.createElement('div');
+    div.className = 'party-slot' + (fainted ? ' fainted' : '');
+    div.innerHTML = `
+      <div class="poke-name">${fainted ? '💀' : '🐾'} ${p.species} #${p.id} <span style="color:#a0a0c0">(${p.gender})</span></div>
+      <div class="poke-level">Lv${p.level} &nbsp;|&nbsp; ${calcStatTotal(p.species, p.level)} BST</div>
+      <div class="hp-bar-wrap"><div class="hp-bar" style="width:${hpPct}%;background:${hpColor}"></div></div>
+      <div class="hp-text">HP: ${p.currentHP}/${p.maxHP}</div>
+      <div class="exp-bar-wrap"><div class="exp-bar" style="width:${expPct}%"></div></div>
+      <div class="hp-text" style="color:#9b59b6">EXP: ${expCurrent}/${expNeeded}</div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function renderDex() {
+  const sortBy = document.getElementById('sort-select').value;
+  const filterBy = document.getElementById('filter-select').value;
+  let entries = [...state.dex];
+
+  if (filterBy === 'unassigned') entries = entries.filter(p => !p.holder);
+  if (filterBy === 'assigned') entries = entries.filter(p => !!p.holder);
+
+  if (sortBy === 'id') entries.sort((a, b) => a.id - b.id);
+  else if (sortBy === 'level') entries.sort((a, b) => b.level - a.level);
+  else if (sortBy === 'hp') entries.sort((a, b) => b.maxHP - a.maxHP);
+  else if (sortBy === 'total') entries.sort((a, b) => calcStatTotal(b.species, b.level) - calcStatTotal(a.species, a.level));
+  else if (sortBy === 'species') entries.sort((a, b) => a.species.localeCompare(b.species));
+
+  const container = document.getElementById('dex-list');
+  container.innerHTML = '';
+  if (entries.length === 0) {
+    container.innerHTML = '<div style="color:#555;padding:10px;font-size:11px;">No entries yet.</div>';
+    return;
+  }
+  entries.forEach(p => {
+    const assigned = !!p.holder;
+    const div = document.createElement('div');
+    div.className = 'dex-entry' + (assigned ? '' : ' unassigned');
+    div.innerHTML = `
+      <div class="dex-header">
+        <span class="dex-name">${p.species}</span>
+        <span class="dex-id">#${p.id}</span>
+      </div>
+      <div class="dex-details">
+        Lv${p.level} · ${p.gender} · HP ${p.maxHP} · BST ${calcStatTotal(p.species, p.level)}
+      </div>
+      <div class="dex-holder">${assigned ? '👤 ' + p.holder : '📦 Unassigned'}</div>
+    `;
+    container.appendChild(div);
+  });
+  document.getElementById('dex-count').textContent = state.dex.length;
+}
+
+// ============================================================
+// MAIN GAME LOOP (1 second tick)
+// ============================================================
+function gameTick() {
+  incomeTick();
+
+  if (!state.missionActive) { renderParty(); return; }
+
+  state.missionElapsed++;
+  state.nextEncounterIn--;
+
+  // If mid-encounter, resolve one step per tick
+  if (state.currentEncounter) {
+    resolveEncounterStep();
+    render();
+    return;
+  }
+
+  // Trigger new encounter?
+  if (state.nextEncounterIn <= 0) {
+    state.currentEncounter = rollEncounter();
+    state.nextEncounterIn = 180;
+    const enc = state.currentEncounter;
+    addLog(`🌿 Wild ${enc.species} appeared! Lv${enc.level} ${enc.gender}`, 'info');
+    document.getElementById('enc-body').textContent = `Wild ${enc.species} Lv${enc.level} (${enc.gender}) appeared!`;
+    state.totalSightings++;
+    document.getElementById('total-sightings').textContent = state.totalSightings;
+    render();
+  } else {
+    // Update countdown in header
+    const mins = Math.floor(state.nextEncounterIn / 60);
+    const secs = state.nextEncounterIn % 60;
+    document.getElementById('aide-location').textContent =
+      `📍 Route 1 — Next encounter: ${mins}:${secs.toString().padStart(2, '0')}`;
+    renderParty();
+  }
+}
+
+// ============================================================
+// SAVE / LOAD SYSTEM
+// ============================================================
+const SAVE_KEY = 'pokeprof_save';
+const SAVE_VERSION = 1;
+let saveTimer = 0;
+
+function saveGame() {
+  try {
+    const saveData = {
+      version: SAVE_VERSION,
+      savedAt: Date.now(),
+      state: {
+        funds: state.funds,
+        totalCatches: state.totalCatches,
+        totalSightings: state.totalSightings,
+        missionActive: false, // always save as inactive — resume manually
+        missionElapsed: state.missionElapsed,
+        nextEncounterIn: state.nextEncounterIn,
+        incomeAccumulator: state.incomeAccumulator,
+        potionThreshold: state.potionThreshold,
+        dexIdCounter: state.dexIdCounter,
+        currentEncounter: null,
+        party: state.party,
+        dex: state.dex,
+        log: state.log.slice(0, 50) // save last 50 log entries
+      }
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
+    setSaveIndicator('✔ Saved', 'saving');
+    setTimeout(() => setSaveIndicator('⬤ Auto-save on', ''), 2000);
+  } catch (e) {
+    setSaveIndicator('✘ Save failed', 'error');
+    console.error('Save failed:', e);
+  }
+}
+
+function loadGame() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return false;
+    const saveData = JSON.parse(raw);
+    if (!saveData || saveData.version !== SAVE_VERSION) return false;
+
+    const s = saveData.state;
+    state.funds = s.funds ?? 5;
+    state.totalCatches = s.totalCatches ?? 0;
+    state.totalSightings = s.totalSightings ?? 0;
+    state.missionActive = false;
+    state.missionElapsed = s.missionElapsed ?? 0;
+    state.nextEncounterIn = s.nextEncounterIn ?? 180;
+    state.incomeAccumulator = s.incomeAccumulator ?? 0;
+    state.potionThreshold = s.potionThreshold ?? 75;
+    state.dexIdCounter = s.dexIdCounter ?? 1;
+    state.currentEncounter = null;
+    state.party = s.party ?? [];
+    state.dex = s.dex ?? [];
+    state.log = s.log ?? [];
+
+    // Restore log to DOM
+    const logEl = document.getElementById('log');
+    logEl.innerHTML = '';
+    [...state.log].reverse().forEach(entry => {
+      const div = document.createElement('div');
+      div.className = 'log-entry ' + (entry.type || '');
+      div.textContent = entry.msg;
+      logEl.appendChild(div);
+    });
+
+    // Restore UI state
+    document.getElementById('funds-display').textContent = state.funds.toFixed(2);
+    document.getElementById('total-catches').textContent = state.totalCatches;
+    document.getElementById('total-sightings').textContent = state.totalSightings;
+    document.getElementById('potion-threshold').value = state.potionThreshold;
+    document.getElementById('btn-recall').disabled = true;
+    document.getElementById('btn-start').disabled = false;
+
+    const saved = new Date(saveData.savedAt);
+    const timeStr = saved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    setSaveIndicator(`⬤ Loaded (${timeStr})`, 'saving');
+    setTimeout(() => setSaveIndicator('⬤ Auto-save on', ''), 3000);
+
+    addLog(`📂 Save loaded from ${saved.toLocaleDateString()} ${timeStr}`, 'info');
+    return true;
+  } catch (e) {
+    setSaveIndicator('✘ Load failed', 'error');
+    console.error('Load failed:', e);
+    return false;
+  }
+}
+
+function resetGame() {
+  if (!confirm('⚠ This will wipe ALL progress permanently. Are you sure?')) return;
+  localStorage.removeItem(SAVE_KEY);
+  location.reload();
+}
+
+function setSaveIndicator(msg, cls) {
+  const el = document.getElementById('save-indicator');
+  el.textContent = msg;
+  el.className = cls || '';
+}
+
+// Auto-save every 30 seconds
+function autoSaveTick() {
+  saveTimer++;
+  if (saveTimer >= 30) {
+    saveTimer = 0;
+    saveGame();
+  }
+}
+
+// ============================================================
+// BOOT
+// ============================================================
+const hasSave = loadGame();
+if (!hasSave) {
+  init();
+  setSaveIndicator('⬤ New game', '');
+} else {
+  render();
+}
+setInterval(gameTick, 1000);
+setInterval(autoSaveTick, 1000);
+</script>
+</body>
+</html>

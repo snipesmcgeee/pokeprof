@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PokeProf Database Converter</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #1a1a2e; color: #e0e0e0; font-family: 'Courier New', monospace; font-size: 13px; padding: 20px; }
+  h1 { color: #e63946; font-size: 18px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
+  .subtitle { color: #6080a0; font-size: 11px; margin-bottom: 24px; }
+  .card { background: #16213e; border: 1px solid #0f3460; border-radius: 6px; padding: 16px; margin-bottom: 16px; }
+  .card h2 { color: #5dade2; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; }
+  .upload-zone { border: 2px dashed #0f3460; border-radius: 6px; padding: 30px; text-align: center; cursor: pointer; transition: border-color 0.2s; }
+  .upload-zone:hover, .upload-zone.drag { border-color: #e63946; }
+  .upload-zone input { display: none; }
+  .upload-zone .icon { font-size: 32px; margin-bottom: 8px; }
+  .upload-zone p { color: #6080a0; font-size: 12px; }
+  .upload-zone .filename { color: #2ecc71; margin-top: 6px; font-size: 11px; }
+  button { background: #0f3460; color: #e0e0e0; border: 1px solid #1a4a80; border-radius: 4px; padding: 10px 20px; font-family: 'Courier New', monospace; font-size: 12px; cursor: pointer; letter-spacing: 1px; text-transform: uppercase; transition: background 0.15s; }
+  button:hover { background: #1a4a80; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.primary { border-color: #2ecc71; color: #2ecc71; }
+  button.primary:hover { background: #0a3020; }
+  #status { padding: 10px; border-radius: 4px; font-size: 11px; line-height: 1.8; }
+  #status.success { background: #0a2a0a; border: 1px solid #2ecc71; color: #2ecc71; }
+  #status.error { background: #2a0a0a; border: 1px solid #e63946; color: #e63946; }
+  #status.info { background: #0a1a2a; border: 1px solid #5dade2; color: #5dade2; }
+  .preview { background: #0f1a2a; border: 1px solid #0f3460; border-radius: 4px; padding: 10px; font-size: 10px; color: #6080a0; max-height: 200px; overflow-y: auto; white-space: pre; margin-top: 10px; }
+  .stats { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 10px; }
+  .stat { background: #0f3460; border-radius: 4px; padding: 6px 12px; font-size: 11px; }
+  .stat span { color: #f4d03f; }
+  .download-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; margin-top: 10px; }
+  .dl-btn { background: #0f3460; border: 1px solid #1a4a80; border-radius: 4px; padding: 10px; text-align: center; cursor: pointer; font-size: 11px; transition: background 0.15s; }
+  .dl-btn:hover { background: #1a4a80; }
+  .dl-btn .dl-icon { font-size: 20px; margin-bottom: 4px; }
+  .dl-btn .dl-name { color: #5dade2; }
+  .dl-btn .dl-size { color: #6080a0; font-size: 10px; }
+  .warning { color: #f4d03f; background: #2a2000; border: 1px solid #f4d03f; border-radius: 4px; padding: 8px 12px; font-size: 11px; margin-top: 8px; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<h1>🎓 PokeProf — Database Converter</h1>
+<p class="subtitle">Upload your Excel file to generate the game database JS files</p>
+
+<div class="card">
+  <h2>Step 1 — Upload Excel File</h2>
+  <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()"
+       ondragover="event.preventDefault();this.classList.add('drag')"
+       ondragleave="this.classList.remove('drag')"
+       ondrop="handleDrop(event)">
+    <input type="file" id="file-input" accept=".xlsx" onchange="handleFile(this.files[0])">
+    <div class="icon">📂</div>
+    <p>Click to browse or drag & drop your Excel file here</p>
+    <p class="filename" id="filename-display"></p>
+  </div>
+</div>
+
+<div class="card" id="convert-card" style="display:none">
+  <h2>Step 2 — Convert</h2>
+  <div id="status" class="info">File loaded. Click Convert to process all sheets.</div>
+  <div class="stats" id="stats-display"></div>
+  <br>
+  <button class="primary" id="convert-btn" onclick="convertAll()">⚡ Convert All Sheets</button>
+</div>
+
+<div class="card" id="download-card" style="display:none">
+  <h2>Step 3 — Download Files</h2>
+  <p style="color:#a0a0c0;font-size:11px;margin-bottom:10px;">Upload each file to your GitHub repository, replacing the existing versions.</p>
+  <div class="download-grid" id="download-grid"></div>
+  <div id="warnings-display"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+
+let workbook = null;
+let outputFiles = {};
+let warnings = [];
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+}
+
+function handleFile(file) {
+  if (!file || !file.name.endsWith('.xlsx')) {
+    setStatus('Please upload an .xlsx file.', 'error');
+    return;
+  }
+  document.getElementById('filename-display').textContent = '✔ ' + file.name;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      workbook = XLSX.read(e.target.result, { type: 'array' });
+      const sheets = workbook.SheetNames;
+      setStatus(`Loaded: ${sheets.join(', ')}`, 'info');
+      const statsEl = document.getElementById('stats-display');
+      statsEl.innerHTML = sheets.map(s => {
+        const ws = workbook.Sheets[s];
+        const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        return `<div class="stat">${s}: <span>${Math.max(0, data.length - 1)}</span> rows</div>`;
+      }).join('');
+      document.getElementById('convert-card').style.display = 'block';
+    } catch(err) {
+      setStatus('Error reading file: ' + err.message, 'error');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function setStatus(msg, type) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = type;
+}
+
+function val(v) {
+  if (v === null || v === undefined || v === '') return null;
+  if (typeof v === 'string' && v.trim() === '') return null;
+  return v;
+}
+
+function boolVal(v) {
+  if (v === null || v === undefined || v === '') return false;
+  if (typeof v === 'string') return v.trim().toUpperCase() === 'TRUE';
+  return !!v;
+}
+
+function numVal(v) {
+  if (v === null || v === undefined || v === '') return null;
+  const n = Number(v);
+  return isNaN(n) ? null : n;
+}
+
+function getSheet(name) {
+  if (!workbook.Sheets[name]) return null;
+  return XLSX.utils.sheet_to_json(workbook.Sheets[name], { header: 1, defval: '' });
+}
+
+function convertAll() {
+  outputFiles = {};
+  warnings = [];
+  document.getElementById('convert-btn').disabled = true;
+  setStatus('Converting...', 'info');
+
+  try {
+    convertPokedex();
+    convertEncounters();
+    convertLocations();
+    convertConnections();
+    convertTypeChart();
+    convertEvoTree();
+    convertFormTriggers();
+
+    // Show download section
+    const grid = document.getElementById('download-grid');
+    grid.innerHTML = '';
+    let totalSize = 0;
+    Object.entries(outputFiles).forEach(([name, content]) => {
+      const size = new Blob([content]).size;
+      totalSize += size;
+      const div = document.createElement('div');
+      div.className = 'dl-btn';
+      div.innerHTML = `<div class="dl-icon">📄</div><div class="dl-name">${name}</div><div class="dl-size">${(size/1024).toFixed(1)} KB</div>`;
+      div.onclick = () => downloadFile(name, content);
+      grid.appendChild(div);
+    });
+
+    // Add download all button
+    const allBtn = document.createElement('div');
+    allBtn.className = 'dl-btn';
+    allBtn.style.borderColor = '#2ecc71';
+    allBtn.innerHTML = `<div class="dl-icon">📦</div><div class="dl-name" style="color:#2ecc71">Download All</div><div class="dl-size">${(totalSize/1024).toFixed(1)} KB total</div>`;
+    allBtn.onclick = () => Object.entries(outputFiles).forEach(([n,c]) => downloadFile(n,c));
+    grid.insertBefore(allBtn, grid.firstChild);
+
+    document.getElementById('download-card').style.display = 'block';
+    setStatus(`✔ Conversion complete. ${Object.keys(outputFiles).length} files ready.`, 'success');
+
+    // Show warnings
+    if (warnings.length > 0) {
+      document.getElementById('warnings-display').innerHTML =
+        `<div class="warning">⚠ ${warnings.length} warning(s):<br>${warnings.join('<br>')}</div>`;
+    }
+  } catch(err) {
+    setStatus('Conversion error: ' + err.message, 'error');
+    console.error(err);
+  }
+  document.getElementById('convert-btn').disabled = false;
+}
+
+function convertPokedex() {
+  const rows = getSheet('Pokedex');
+  if (!rows || rows.length < 2) { warnings.push('Pokedex sheet is empty or missing'); return; }
+
+  const headers = rows[0].map(h => String(h).trim());
+  const col = (name) => {
+    const idx = headers.findIndex(h => h.toLowerCase() === name.toLowerCase());
+    return idx;
+  };
+
+  const entries = [];
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r[col('dexId')] && r[col('dexId')] !== 0) continue;
+    const dexId = numVal(r[col('dexId')]);
+    if (!dexId) continue;
+
+    const entry = {
+      dexId,
+      formVariant: numVal(r[col('formVariant')]),
+      familyId: numVal(r[col('familyId')]),
+      name: val(r[col('name')]),
+      formName: val(r[col('formName')]),
+      category: val(r[col('category')]),
+      flavorText: val(r[col('flavorText')]),
+      type1: val(r[col('type1')]),
+      type2: val(r[col('type2')]),
+      heightM: numVal(r[col('heightM')]),
+      weightKg: numVal(r[col('weightKg')]),
+      baseHP: numVal(r[col('baseHP')]),
+      baseAtk: numVal(r[col('baseAtk')]),
+      baseDef: numVal(r[col('baseDef')]),
+      baseSpatk: numVal(r[col('baseSpatk')]),
+      baseSpdef: numVal(r[col('baseSpdef')]),
+      baseSpd: numVal(r[col('baseSpd')]),
+      ability1: val(r[col('ability1')]),
+      ability2: val(r[col('ability2')]),
+      hiddenAbility: val(r[col('hiddenability')] !== undefined ? r[col('hiddenability')] : r[col('hiddenAbility')]),
+      growthRate: val(r[col('growthRate')]),
+      baseExpYield: numVal(r[col('baseExpYield')]),
+      catchRate: numVal(r[col('catchRate')]),
+      genderMalePct: numVal(r[col('genderMalePct')]),
+      evolvesIntoId: numVal(r[col('evolvesIntoId')]),
+      evolveMethod: val(r[col('evolveMethod')]),
+      evolveLevel: numVal(r[col('evolveLevel')]),
+      evolveItem: val(r[col('evolveItem')]),
+      eggGroup1: val(r[col('eggGroup1')]),
+      eggGroup2: val(r[col('eggGroup2')]),
+      eggCycles: numVal(r[col('eggCycles')]),
+      colorGroup: val(r[col('colorGroup')]),
+      shape: val(r[col('shape')]),
+      habitat: val(r[col('habitat')]),
+      genderDifference: boolVal(r[col('genderDifference')]),
+      hasSizeVariants: boolVal(r[col('hasSizeVariants')]),
+      baseFormId: numVal(r[col('baseFormId')]),
+      isLegendary: boolVal(r[col('isLegendary')]),
+      isMythical: boolVal(r[col('isMythical')]),
+    };
+
+    // Derived fields
+    entry.hasForms = !!entry.formName;
+    if (entry.baseHP && entry.baseAtk && entry.baseDef && entry.baseSpatk && entry.baseSpdef && entry.baseSpd) {
+      entry.bst = entry.baseHP + entry.baseAtk + entry.baseDef + entry.baseSpatk + entry.baseSpdef + entry.baseSpd;
+    }
+
+    // Derive generation from dexId
+    const gd = entry.dexId;
+    entry.generation = gd <= 151 ? 1 : gd <= 251 ? 2 : gd <= 386 ? 3 : gd <= 493 ? 4 :
+                       gd <= 649 ? 5 : gd <= 721 ? 6 : gd <= 809 ? 7 : gd <= 898 ? 8 : 9;
+
+    entries.push(entry);
+  }
+
+  outputFiles['pokedex.js'] =
+    `// PokeProf — Pokédex Database\n// Auto-generated by converter.html — do not edit manually\n// Last generated: ${new Date().toLocaleString()}\n// Entries: ${entries.length}\n\nconst POKEDEX_DATA = ${JSON.stringify(entries, null, 2)};\n\n// Index by dexId + formName for fast lookup\nconst POKEDEX = {};\nPOKEDEX_DATA.forEach(p => {\n  const key = p.dexId + (p.formName ? '_' + p.formName.replace(/\\s+/g,'_') : '');\n  POKEDEX[key] = p;\n});\n\n// Lookup by name (base form)\nfunction dexByName(name) {\n  return POKEDEX_DATA.find(p => p.name === name && !p.formName) || null;\n}\n\n// Get all forms of a dexId\nfunction getForms(dexId) {\n  return POKEDEX_DATA.filter(p => p.dexId === dexId);\n}\n\n// Get family members\nfunction getFamilyMembers(familyId) {\n  const seen = new Set();\n  return POKEDEX_DATA.filter(p => {\n    if (p.familyId !== familyId || p.formName) return false;\n    if (seen.has(p.dexId)) return false;\n    seen.add(p.dexId); return true;\n  }).sort((a,b) => a.dexId - b.dexId);\n}\n`;
+}
+
+function convertEncounters() {
+  const rows = getSheet('Encounters');
+  if (!rows || rows.length < 2) { warnings.push('Encounters sheet is empty'); return; }
+  const headers = rows[0].map(h => String(h).trim());
+  const entries = [];
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r[0]) continue;
+    const entry = {};
+    headers.forEach((h, idx) => {
+      if (!h) return;
+      const v = val(r[idx]);
+      entry[h] = ['dexId','minLevel','maxLevel','encounterRate'].includes(h) ? numVal(r[idx]) : v;
+    });
+    entries.push(entry);
+  }
+  outputFiles['encounters.js'] =
+    `// PokeProf — Encounters Database\n// Auto-generated: ${new Date().toLocaleString()}\n// Entries: ${entries.length}\n\nconst ENCOUNTERS = ${JSON.stringify(entries, null, 2)};\n\nfunction getEncountersForLocation(locationId) {\n  return ENCOUNTERS.filter(e => e.locationId === locationId);\n}\n`;
+}
+
+function convertLocations() {
+  const rows = getSheet('Locations');
+  if (!rows || rows.length < 2) { warnings.push('Locations sheet is empty'); return; }
+  const headers = rows[0].map(h => String(h).trim());
+  const entries = [];
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r[0]) continue;
+    const entry = {};
+    headers.forEach((h, idx) => { if (h) entry[h] = val(r[idx]); });
+    entries.push(entry);
+  }
+  outputFiles['locations.js'] =
+    `// PokeProf — Locations Database\n// Auto-generated: ${new Date().toLocaleString()}\n// Entries: ${entries.length}\n\nconst LOCATIONS = ${JSON.stringify(entries, null, 2)};\n\nfunction getLocation(locationId) {\n  return LOCATIONS.find(l => l.locationId === locationId) || null;\n}\n`;
+}
+
+function convertConnections() {
+  const rows = getSheet('Connections');
+  if (!rows || rows.length < 2) { warnings.push('Connections sheet is empty'); return; }
+  const entries = [];
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r[0] || !r[1]) continue;
+    entries.push({ from: String(r[0]).trim(), to: String(r[1]).trim() });
+  }
+  // Build adjacency map
+  const map = {};
+  entries.forEach(e => {
+    if (!map[e.from]) map[e.from] = [];
+    map[e.from].push(e.to);
+  });
+  outputFiles['connections.js'] =
+    `// PokeProf — Connections Database\n// Auto-generated: ${new Date().toLocaleString()}\n// Connections: ${entries.length}\n\nconst CONNECTIONS = ${JSON.stringify(map, null, 2)};\n\nfunction getConnectedLocations(locationId) {\n  return CONNECTIONS[locationId] || [];\n}\n`;
+}
+
+function convertTypeChart() {
+  const rows = getSheet('TypeChart');
+  if (!rows || rows.length < 2) { warnings.push('TypeChart sheet is empty'); return; }
+  const types = rows[0].slice(1).map(t => String(t).trim()).filter(t => t);
+  const chart = {};
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    const attackType = String(r[0]).trim();
+    if (!attackType) continue;
+    chart[attackType] = {};
+    types.forEach((defType, idx) => {
+      const v = r[idx + 1];
+      chart[attackType][defType] = (v === '' || v === null || v === undefined) ? 1 : Number(v);
+    });
+  }
+  outputFiles['typechart.js'] =
+    `// PokeProf — Type Chart\n// Auto-generated: ${new Date().toLocaleString()}\n// Blank cells = 1x effectiveness\n\nconst TYPE_CHART = ${JSON.stringify(chart, null, 2)};\n\nfunction getTypeEffectiveness(attackType, defType1, defType2) {\n  const e1 = (TYPE_CHART[attackType] && TYPE_CHART[attackType][defType1]) ?? 1;\n  const e2 = defType2 ? ((TYPE_CHART[attackType] && TYPE_CHART[attackType][defType2]) ?? 1) : 1;\n  return e1 * e2;\n}\n`;
+}
+
+function convertEvoTree() {
+  const rows = getSheet('EvoTree');
+  if (!rows || rows.length < 2) { warnings.push('EvoTree sheet is empty'); return; }
+  const headers = rows[0].map(h => String(h).trim());
+  const entries = [];
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r[0]) continue;
+    const entry = {};
+    headers.forEach((h, idx) => {
+      if (!h) return;
+      entry[h] = ['fromDexId','toDexId','evolveLevel'].includes(h) ? numVal(r[idx]) : val(r[idx]);
+    });
+    entries.push(entry);
+  }
+  outputFiles['evotree.js'] =
+    `// PokeProf — Evolution Tree (branching evolutions)\n// Auto-generated: ${new Date().toLocaleString()}\n// Entries: ${entries.length}\n\nconst EVO_TREE = ${JSON.stringify(entries, null, 2)};\n\nfunction getEvolutions(fromDexId) {\n  return EVO_TREE.filter(e => e.fromDexId === fromDexId);\n}\n`;
+}
+
+function convertFormTriggers() {
+  const rows = getSheet('FormTrigger');
+  if (!rows || rows.length < 2) { warnings.push('FormTrigger sheet is empty or has no data yet'); return; }
+  const headers = rows[0].map(h => String(h).trim());
+  const entries = [];
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r[0]) continue;
+    const entry = {};
+    headers.forEach((h, idx) => {
+      if (!h) return;
+      entry[h] = h === 'dexId' ? numVal(r[idx]) : val(r[idx]);
+    });
+    entries.push(entry);
+  }
+  outputFiles['formtriggers.js'] =
+    `// PokeProf — Form Triggers\n// Auto-generated: ${new Date().toLocaleString()}\n// Entries: ${entries.length}\n\nconst FORM_TRIGGERS = ${JSON.stringify(entries, null, 2)};\n\nfunction getFormTriggers(dexId, formName) {\n  return FORM_TRIGGERS.filter(t => t.dexId === dexId && t.formName === formName);\n}\n`;
+}
+
+function downloadFile(name, content) {
+  const blob = new Blob([content], { type: 'text/javascript' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+}
+
+</script>
+</body>
+</html>

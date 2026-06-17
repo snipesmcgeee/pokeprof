@@ -89,6 +89,14 @@
   .dex-entry .dex-holder { color:#2ecc71; font-size:10px; margin-top:3px; }
   .dex-entry.unassigned .dex-holder { color:#e67e22; }
 </style>
+<!-- External database files — must be in same GitHub repo -->
+<script src="pokedex.js"></script>
+<script src="encounters.js"></script>
+<script src="locations.js"></script>
+<script src="connections.js"></script>
+<script src="typechart.js"></script>
+<script src="evotree.js"></script>
+<script src="formtriggers.js"></script>
 </head>
 <body>
 
@@ -141,35 +149,61 @@
   </div>
 
   <div class="panel" id="panel-dex" style="background:#16213e;">
-    <div class="panel-title">Pokédex</div>
+    <div class="panel-title" id="dex-breadcrumb">Pokédex</div>
     <div id="dex-stats">Catches: <span id="total-catches">0</span> &nbsp;|&nbsp; Sightings: <span id="total-sightings">0</span></div>
     <div id="dex-controls">
-      <select id="sort-select" onchange="renderDex()">
-        <option value="id">Sort: ID</option>
+      <button id="dex-back-btn" onclick="dexBack()" style="display:none;padding:5px 10px;font-size:11px;">◀ Back</button>
+      <button onclick="dexViewAll()" style="padding:5px 10px;font-size:11px;">≡ View All</button>
+    </div>
+    <!-- View All controls (hidden by default) -->
+    <div id="dex-viewall-controls" style="display:none;padding:6px 8px;border-bottom:1px solid #0f3460;gap:6px;flex-wrap:wrap;background:#16213e;">
+      <select id="sort-select" onchange="renderViewAll()" style="background:#0f3460;border:1px solid #1a4a80;color:#e0e0e0;font-family:'Courier New',monospace;font-size:11px;padding:5px;border-radius:4px;flex:1;">
+        <option value="id">Sort: Catch ID</option>
+        <option value="dexid">Sort: Dex #</option>
         <option value="level">Sort: Level</option>
         <option value="hp">Sort: HP</option>
         <option value="total">Sort: BST</option>
-        <option value="species">Sort: Species</option>
       </select>
-      <select id="filter-select" onchange="renderDex()">
+      <select id="filter-select" onchange="renderViewAll()" style="background:#0f3460;border:1px solid #1a4a80;color:#e0e0e0;font-family:'Courier New',monospace;font-size:11px;padding:5px;border-radius:4px;flex:1;">
         <option value="all">All</option>
         <option value="unassigned">Unassigned</option>
         <option value="assigned">Assigned</option>
       </select>
     </div>
-    <div id="dex-list"></div>
+    <div id="dex-list" style="overflow-y:auto;flex:1;padding:6px;background:#16213e;"></div>
   </div>
 </div>
 
 <script>
-const SPECIES = {
-  Rattata:   {baseHP:30,baseAtk:56,baseDef:35,baseSpatk:25,baseSpdef:35,baseSpd:72, baseExp:51, growthRate:'mediumFast',evolveLevel:20,evolvesInto:'Raticate'},
-  Raticate:  {baseHP:55,baseAtk:81,baseDef:60,baseSpatk:50,baseSpdef:70,baseSpd:97, baseExp:145,growthRate:'mediumFast',evolveLevel:null,evolvesInto:null},
-  Pidgey:    {baseHP:40,baseAtk:45,baseDef:40,baseSpatk:35,baseSpdef:35,baseSpd:56, baseExp:50, growthRate:'mediumSlow',evolveLevel:18,evolvesInto:'Pidgeotto'},
-  Pidgeotto: {baseHP:63,baseAtk:60,baseDef:55,baseSpatk:50,baseSpdef:50,baseSpd:71, baseExp:113,growthRate:'mediumSlow',evolveLevel:36,evolvesInto:'Pidgeot'},
-  Pidgeot:   {baseHP:83,baseAtk:80,baseDef:75,baseSpatk:70,baseSpdef:70,baseSpd:101,baseExp:172,growthRate:'mediumSlow',evolveLevel:null,evolvesInto:null}
-};
-const ROUTE1 = [{species:'Rattata',minLv:2,maxLv:4,weight:50},{species:'Pidgey',minLv:2,maxLv:5,weight:50}];
+// ── DATABASE BRIDGE ──
+// POKEDEX_DATA, dexByName(), getForms(), getFamilyMembers() provided by pokedex.js
+// ENCOUNTERS provided by encounters.js
+// TYPE_CHART + getTypeEffectiveness() provided by typechart.js
+// EVO_TREE + getEvolutions() provided by evotree.js
+// FORM_TRIGGERS provided by formtriggers.js
+
+// Build SPECIES lookup by name (base forms only) for game logic
+const SPECIES = {};
+if(typeof POKEDEX_DATA !== 'undefined'){
+  POKEDEX_DATA.forEach(p => {
+    // Map by name — base form (no formName) takes priority
+    if(!p.formName || !SPECIES[p.name]) SPECIES[p.name] = p;
+  });
+} else {
+  console.error('pokedex.js not loaded — check GitHub file is uploaded');
+}
+
+// Build route encounter table from ENCOUNTERS data (fallback to hardcoded if empty)
+function buildRouteTable(locationId){
+  if(typeof ENCOUNTERS !== 'undefined' && ENCOUNTERS.length > 0){
+    return ENCOUNTERS.filter(e=>e.locationId===locationId).map(e=>({
+      dexId: e.dexId, minLv: e.minLevel, maxLv: e.maxLevel, weight: e.encounterRate
+    }));
+  }
+  // Fallback for Route 1 until encounters.js is populated
+  return [{dexId:19,minLv:2,maxLv:4,weight:50},{dexId:16,minLv:2,maxLv:5,weight:50}];
+}
+const ROUTE1 = buildRouteTable('route1');
 const ENC_INTERVAL = 180;
 
 function expToLevel(lv,rate){
@@ -178,10 +212,13 @@ function expToLevel(lv,rate){
   if(rate==='mediumSlow')return Math.max(0,Math.floor((6/5)*Math.pow(lv,3)-15*Math.pow(lv,2)+100*lv-140));
   return Math.floor(Math.pow(lv,3));
 }
-function calcMaxHP(sp,lv){return Math.floor((SPECIES[sp].baseHP*2*lv)/100)+lv+10;}
+function calcMaxHP(sp,lv){
+  const s=SPECIES[sp];if(!s)return lv+10;
+  return Math.floor((s.baseHP*2*lv)/100)+lv+10;
+}
 function calcBST(sp,lv){
-  const s=SPECIES[sp];
-  const st=(b)=>Math.floor((b*2*lv)/100)+5;
+  const s=SPECIES[sp];if(!s)return 0;
+  const st=(b)=>Math.floor(((b||0)*2*lv)/100)+5;
   return calcMaxHP(sp,lv)+st(s.baseAtk)+st(s.baseDef)+st(s.baseSpatk)+st(s.baseSpdef)+st(s.baseSpd);
 }
 
@@ -193,8 +230,11 @@ let state={
 };
 
 function makePokemon(sp,lv,gender,holder=null){
+  const entry=SPECIES[sp]||dexByName(sp);
+  const dexId=entry?entry.dexId||entry.id:0;
   const maxHP=calcMaxHP(sp,lv);
-  return{id:state.dexIdCounter++,species:sp,level:lv,gender,currentHP:maxHP,maxHP,exp:expToLevel(lv,SPECIES[sp].growthRate),holder};
+  const growthRate=entry?entry.growthRate:'mediumFast';
+  return{id:state.dexIdCounter++,species:sp,pokedexId:dexId,level:lv,gender,currentHP:maxHP,maxHP,exp:expToLevel(lv,growthRate),holder};
 }
 
 function switchTab(name){
@@ -270,8 +310,11 @@ function incomeTick(){
 
 function rollEncounter(){
   let roll=Math.random()*100,cum=0;
-  for(const e of ROUTE1){cum+=e.weight;if(roll<cum){
-    return{species:e.species,level:e.minLv+Math.floor(Math.random()*(e.maxLv-e.minLv+1)),gender:Math.random()<0.5?'M':'F'};
+  const table=ROUTE1;
+  for(const e of table){cum+=e.weight;if(roll<cum){
+    const entry=POKEDEX_DATA?POKEDEX_DATA.find(p=>p.dexId===e.dexId&&!p.formName):null;
+    if(!entry)continue;
+    return{species:entry.name,pokedexId:e.dexId,level:e.minLv+Math.floor(Math.random()*(e.maxLv-e.minLv+1)),gender:Math.random()<0.5?'M':'F'};
   }}
 }
 
@@ -288,7 +331,7 @@ function throwBall(lead,enc){
   if(Math.random()<0.75){
     const caught=makePokemon(enc.species,enc.level,enc.gender);
     state.dex.push(caught);state.totalCatches++;state.totalSightings++;
-    const exp=Math.floor((SPECIES[enc.species].baseExp*enc.level)/7);
+    const s_=SPECIES[enc.species];const exp=Math.floor(((s_?s_.baseExpYield||s_.baseExp:51)*enc.level)/7);
     giveExp(lead,exp);
     addLog('Caught '+enc.species+' #'+caught.id+' (Lv'+enc.level+' '+enc.gender+')! +'+exp+' EXP','catch');
     document.getElementById('total-catches').textContent=state.totalCatches;
@@ -315,7 +358,7 @@ function fight(lead,enc){
     addLog(enc.species+' fled.','info');state.currentEncounter=null;
     document.getElementById('enc-body').textContent=lead.species+' fainted. '+enc.species+' fled.';
   }else{
-    const exp=Math.floor((SPECIES[enc.species].baseExp*enc.level)/7);
+    const s_=SPECIES[enc.species];const exp=Math.floor(((s_?s_.baseExpYield||s_.baseExp:51)*enc.level)/7);
     giveExp(lead,exp);
     addLog('Won vs '+enc.species+' Lv'+enc.level+'! +'+exp+' EXP (no data)','win');
     state.currentEncounter=null;
@@ -350,12 +393,39 @@ function giveExp(pokemon,amount){
 
 function checkEvolution(p){
   const s=SPECIES[p.species];
-  if(s.evolveLevel&&p.level>=s.evolveLevel&&s.evolvesInto){
-    const old=p.species;p.species=s.evolvesInto;
-    const om=p.maxHP;p.maxHP=calcMaxHP(p.species,p.level);
-    p.currentHP=Math.min(p.maxHP,p.currentHP+(p.maxHP-om));
-    addLog(old+' #'+p.id+' evolved into '+p.species+'!','evolve');
-    document.getElementById('enc-body').textContent=old+' evolved into '+p.species+'!';
+  if(!s)return;
+  // Check simple level evolution
+  if(s.evolveMethod==='level'&&s.evolvesIntoId&&p.level>=s.evolveLevel){
+    const newEntry=POKEDEX_DATA?POKEDEX_DATA.find(x=>x.dexId===s.evolvesIntoId&&!x.formName):null;
+    if(newEntry){
+      const old=p.species;
+      p.species=newEntry.name;p.pokedexId=newEntry.dexId;
+      const om=p.maxHP;p.maxHP=calcMaxHP(p.species,p.level);
+      p.currentHP=Math.min(p.maxHP,p.currentHP+(p.maxHP-om));
+      // Update SPECIES shim for new form
+      if(!SPECIES[p.species])SPECIES[p.species]=newEntry;
+      addLog(old+' #'+p.id+' evolved into '+p.species+'!','evolve');
+      document.getElementById('enc-body').textContent=old+' evolved into '+p.species+'!';
+    }
+  }
+  // Check branching evolutions via EVO_TREE
+  if(typeof EVO_TREE!=='undefined'){
+    const branches=getEvolutions(p.pokedexId);
+    if(branches.length>0){
+      const branch=branches[Math.floor(Math.random()*branches.length)];
+      if(branch.evolveMethod==='level'&&p.level>=branch.evolveLevel){
+        const newEntry=POKEDEX_DATA?POKEDEX_DATA.find(x=>x.dexId===branch.toDexId&&!x.formName):null;
+        if(newEntry){
+          const old=p.species;
+          p.species=newEntry.name;p.pokedexId=newEntry.dexId;
+          const om=p.maxHP;p.maxHP=calcMaxHP(p.species,p.level);
+          p.currentHP=Math.min(p.maxHP,p.currentHP+(p.maxHP-om));
+          if(!SPECIES[p.species])SPECIES[p.species]=newEntry;
+          addLog(old+' #'+p.id+' evolved into '+p.species+'!','evolve');
+          document.getElementById('enc-body').textContent=old+' evolved into '+p.species+'!';
+        }
+      }
+    }
   }
 }
 
@@ -363,15 +433,16 @@ function checkEvolution(p){
 function giveExpSilent(p,amount){
   p.exp+=amount;
   while(true){
-    const s=SPECIES[p.species];
+    const s=SPECIES[p.species];if(!s)break;
     if(p.exp>=expToLevel(p.level+1,s.growthRate)&&p.level<100){
       p.level++;const om=p.maxHP;p.maxHP=calcMaxHP(p.species,p.level);
       p.currentHP=Math.min(p.maxHP,p.currentHP+(p.maxHP-om));
-      const ev=SPECIES[p.species];
-      if(ev.evolveLevel&&p.level>=ev.evolveLevel&&ev.evolvesInto){
-        const old=p.species;p.species=ev.evolvesInto;
-        const om2=p.maxHP;p.maxHP=calcMaxHP(p.species,p.level);
-        p.currentHP=Math.min(p.maxHP,p.currentHP+(p.maxHP-om2));
+      // Silent evolution check
+      if(s.evolveMethod==='level'&&s.evolvesIntoId&&p.level>=s.evolveLevel){
+        const ne=POKEDEX_DATA?POKEDEX_DATA.find(x=>x.dexId===s.evolvesIntoId&&!x.formName):null;
+        if(ne){p.species=ne.name;p.pokedexId=ne.dexId;if(!SPECIES[p.species])SPECIES[p.species]=ne;
+          const om2=p.maxHP;p.maxHP=calcMaxHP(p.species,p.level);
+          p.currentHP=Math.min(p.maxHP,p.currentHP+(p.maxHP-om2));}
       }
     }else break;
   }
@@ -401,7 +472,7 @@ function processOfflineTime(secsAway){
         if(Math.random()<0.75){
           const caught=makePokemon(enc.species,enc.level,enc.gender);
           state.dex.push(caught);state.totalCatches++;state.totalSightings++;
-          giveExpSilent(lead,Math.floor((SPECIES[enc.species].baseExp*enc.level)/7));
+          const se1=SPECIES[enc.species];giveExpSilent(lead,Math.floor(((se1?se1.baseExpYield||se1.baseExp:51)*enc.level)/7));
           if(lead.species!==oldSp)summary.evolutions.push(oldSp+' → '+lead.species);
           summary.catches++;resolved=true;
         }else{
@@ -413,7 +484,7 @@ function processOfflineTime(secsAway){
         const dmg=Math.max(1,Math.floor((enc.level/lead.level)*0.5*lead.maxHP));
         lead.currentHP=Math.max(0,lead.currentHP-dmg);
         if(lead.currentHP<=0){resolved=true;}
-        else{giveExpSilent(lead,Math.floor((SPECIES[enc.species].baseExp*enc.level)/7));if(lead.species!==oldSp)summary.evolutions.push(oldSp+' → '+lead.species);summary.wins++;resolved=true;}
+        else{const se2=SPECIES[enc.species];giveExpSilent(lead,Math.floor(((se2?se2.baseExpYield||se2.baseExp:51)*enc.level)/7));if(lead.species!==oldSp)summary.evolutions.push(oldSp+' → '+lead.species);summary.wins++;resolved=true;}
       }
     }
     if(allFainted()){state.missionActive=false;break;}
@@ -435,7 +506,7 @@ function showOfflineBanner(secs,summary){
   document.getElementById('offline-banner').style.display='block';
 }
 
-function render(){renderParty();renderDex();document.getElementById('dex-count').textContent=state.dex.length;updateLocation();}
+function render(){renderParty();renderDex();updateDexChrome();document.getElementById('dex-count').textContent=state.dex.length;updateLocation();}
 
 function renderParty(){
   const c=document.getElementById('party-list');c.innerHTML='';
@@ -460,28 +531,205 @@ function renderParty(){
   });
 }
 
+// ── DEX STATE ──
+let dexView = 'families'; // 'families' | 'species' | 'individual' | 'viewall'
+let dexSelectedFamily = null;
+let dexSelectedDexId = null;
+let dexSelectedCatchId = null;
+
 function renderDex(){
-  const sort=document.getElementById('sort-select').value;
-  const filter=document.getElementById('filter-select').value;
+  document.getElementById('dex-count').textContent=state.dex.length;
+  if(dexView==='families') renderDexFamilies();
+  else if(dexView==='species') renderDexSpecies();
+  else if(dexView==='individual') renderDexIndividual();
+  else if(dexView==='viewall') renderViewAll();
+}
+
+function dexBack(){
+  if(dexView==='viewall'){ dexView='families'; }
+  else if(dexView==='individual'){ dexView='species'; }
+  else if(dexView==='species'){ dexView='families'; }
+  else { dexView='families'; }
+  renderDex(); updateDexChrome();
+}
+
+function dexViewAll(){
+  dexView='viewall'; renderDex(); updateDexChrome();
+}
+
+function updateDexChrome(){
+  const backBtn=document.getElementById('dex-back-btn');
+  const vaCtrl=document.getElementById('dex-viewall-controls');
+  const crumb=document.getElementById('dex-breadcrumb');
+  backBtn.style.display=(dexView!=='families')?'inline-block':'none';
+  vaCtrl.style.display=(dexView==='viewall')?'flex':'none';
+  if(dexView==='families') crumb.textContent='Pokédex — Families';
+  else if(dexView==='species'&&dexSelectedFamily!==null){
+    const fEntry=POKEDEX_DATA?POKEDEX_DATA.find(x=>x.familyId===dexSelectedFamily&&!x.formName):null;
+    crumb.textContent='Family #'+dexSelectedFamily+(fEntry?' — '+fEntry.name+' line':'');
+  } else if(dexView==='individual'&&dexSelectedDexId!==null){
+    const dn=POKEDEX_DATA?POKEDEX_DATA.find(x=>x.dexId===dexSelectedDexId&&!x.formName):null;
+    crumb.textContent=(dn?dn.name:'#'+dexSelectedDexId)+' — Caught';
+  } else if(dexView==='viewall') crumb.textContent='Pokédex — All Catches';
+  else crumb.textContent='Pokédex';
+}
+
+// LAYER 1: Families
+function renderDexFamilies(){
+  const c=document.getElementById('dex-list'); c.innerHTML='';
+  if(typeof POKEDEX_DATA==='undefined'){ c.innerHTML='<div style="color:#e63946;padding:12px;font-size:11px;">Database not loaded. Check pokedex.js is uploaded to GitHub.</div>'; return; }
+  // Get all families seen (by dexId of any caught pokemon)
+  const seenFamilies=new Set();
+  state.dex.forEach(p=>{ if(p.pokedexId){ const e=POKEDEX_DATA.find(x=>x.dexId===p.pokedexId&&!x.formName); if(e)seenFamilies.add(e.familyId); } });
+  if(!seenFamilies.size){ c.innerHTML='<div style="color:#555;padding:12px;font-size:11px;">No Pokémon discovered yet.</div>'; return; }
+  [...seenFamilies].sort((a,b)=>a-b).forEach(famId=>{
+    const members=getFamilyMembers(famId);
+    const baseMember=members[0];
+    // Count caught per family
+    const caught=state.dex.filter(p=>p.pokedexId&&POKEDEX_DATA&&POKEDEX_DATA.find(x=>x.dexId===p.pokedexId&&x.familyId===famId));
+    const speciesSeen=new Set(caught.map(p=>p.pokedexId));
+    const d=document.createElement('div');
+    d.className='dex-entry';
+    d.style.cursor='pointer';
+    d.innerHTML=`
+      <div class="dex-header">
+        <span class="dex-name">Family #${famId} — ${baseMember.name} line</span>
+        <span class="dex-id">▶</span>
+      </div>
+      <div class="dex-details">${speciesSeen.size}/${members.length} species · ${caught.length} caught</div>
+      <div class="dex-holder" style="color:#5dade2;">${members.map(m=>'#'+m.dexId+' '+m.name).join(' → ')}</div>`;
+    d.onclick=()=>{ dexSelectedFamily=famId; dexView='species'; renderDex(); updateDexChrome(); };
+    c.appendChild(d);
+  });
+}
+
+// LAYER 2: Species within a family
+function renderDexSpecies(){
+  const c=document.getElementById('dex-list'); c.innerHTML='';
+  const members=typeof getFamilyMembers!=='undefined'?getFamilyMembers(dexSelectedFamily):[];
+  members.forEach(entry=>{
+    const caught=state.dex.filter(p=>p.pokedexId===entry.dexId);
+    const seen=caught.length>0;
+    const d=document.createElement('div');
+    d.className='dex-entry'+(seen?'':' unassigned');
+    d.style.cursor=seen?'pointer':'default';
+    d.innerHTML=`
+      <div class="dex-header">
+        <span class="dex-name">#${entry.dexId} ${entry.name}</span>
+        <span class="dex-id">${seen?caught.length+' caught':'Not seen'}</span>
+      </div>
+      <div class="dex-details">${entry.type1}${entry.type2?' / '+entry.type2:''} · BST base: ${entry.baseHP+entry.baseAtk+entry.baseDef+entry.baseSpatk+entry.baseSpdef+entry.baseSpd}</div>
+      ${seen?'<div class="dex-holder" style="color:#5dade2;">Click to see catches ▶</div>':'<div class="dex-holder" style="color:#555;">Not yet encountered</div>'}`;
+    if(seen) d.onclick=()=>{ dexSelectedDexId=entry.dexId; dexView='individual'; renderDex(); updateDexChrome(); };
+    c.appendChild(d);
+  });
+}
+
+// LAYER 3: Individual catches of a species
+function renderDexIndividual(){
+  const c=document.getElementById('dex-list'); c.innerHTML='';
+  const entry=POKEDEX[dexSelectedDexId];
+  const caught=state.dex.filter(p=>p.pokedexId===dexSelectedDexId);
+  if(!caught.length){ c.innerHTML='<div style="color:#555;padding:12px;font-size:11px;">None caught.</div>'; return; }
+  caught.sort((a,b)=>a.id-b.id).forEach(p=>{
+    const d=document.createElement('div');
+    d.className='dex-entry'+(p.holder?'':' unassigned');
+    d.style.cursor='pointer';
+    d.innerHTML=`
+      <div class="dex-header">
+        <span class="dex-name">${p.species} #${p.id}</span>
+        <span class="dex-id">${p.holder?'👤':'📦'}</span>
+      </div>
+      <div class="dex-details">Lv${p.level} · ${p.gender} · HP ${p.currentHP}/${p.maxHP} · BST ${calcBST(p.species,p.level)}</div>
+      <div class="dex-holder">${p.holder?'Held by: '+p.holder:'Unassigned'}</div>`;
+    d.onclick=()=>{ showPokemonDetail(p.id); };
+    c.appendChild(d);
+  });
+}
+
+// DETAIL MODAL: individual pokemon
+function showPokemonDetail(catchId){
+  const p=state.dex.find(x=>x.id===catchId); if(!p)return;
+  const entry=POKEDEX[p.pokedexId]||dexByName(p.species);
+  const existing=document.getElementById('poke-modal');
+  if(existing)existing.remove();
+  const modal=document.createElement('div');
+  modal.id='poke-modal';
+  modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML=`
+    <div style="background:#16213e;border:1px solid #e63946;border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:'Courier New',monospace;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div style="color:#e63946;font-size:14px;font-weight:bold;">#${p.pokedexId||'?'} ${p.species}${p.formName?' ('+p.formName+')':''} (catch #${p.id})</div>
+        <button onclick="document.getElementById('poke-modal').remove()" style="padding:4px 10px;font-size:12px;">✕</button>
+      </div>
+      <div style="color:#a0a0c0;font-size:11px;line-height:2;border-bottom:1px solid #0f3460;margin-bottom:10px;padding-bottom:10px;">
+        <div>Level: <span style="color:#fff">${p.level}</span> &nbsp;·&nbsp; Gender: <span style="color:#fff">${p.gender}</span></div>
+        <div>Type: <span style="color:#fff">${entry?entry.type1+(entry.type2?' / '+entry.type2:''):'?'}</span></div>
+        <div style="margin-top:6px;">
+          <div>HP &nbsp;&nbsp;&nbsp;: <span style="color:#2ecc71">${p.currentHP}/${p.maxHP}</span></div>
+          <div>ATK &nbsp;: <span style="color:#fff">${Math.floor(((entry?entry.baseAtk:50)*2*p.level)/100)+5}</span></div>
+          <div>DEF &nbsp;: <span style="color:#fff">${Math.floor(((entry?entry.baseDef:50)*2*p.level)/100)+5}</span></div>
+          <div>SpATK: <span style="color:#fff">${Math.floor(((entry?entry.baseSpatk:50)*2*p.level)/100)+5}</span></div>
+          <div>SpDEF: <span style="color:#fff">${Math.floor(((entry?entry.baseSpdef:50)*2*p.level)/100)+5}</span></div>
+          <div>SPD &nbsp;: <span style="color:#fff">${Math.floor(((entry?entry.baseSpd:50)*2*p.level)/100)+5}</span></div>
+          <div>BST &nbsp;: <span style="color:#f4d03f">${calcBST(p.species,p.level)}</span></div>
+        </div>
+      </div>
+      <div style="margin-bottom:10px;">
+        <div style="color:#a0a0c0;font-size:11px;margin-bottom:6px;">Assignment:</div>
+        <div style="color:${p.holder?'#2ecc71':'#e67e22'};font-size:12px;margin-bottom:8px;">${p.holder?'👤 '+p.holder:'📦 Unassigned'}</div>
+        ${p.holder
+          ? '<button onclick="unassignPokemon('+p.id+')" class="danger" style="width:100%;padding:8px;">Unassign</button>'
+          : '<button onclick="assignToAide('+p.id+')" class="primary" style="width:100%;padding:8px;">Assign to Aide #1</button>'}
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+function assignToAide(catchId){
+  const p=state.dex.find(x=>x.id===catchId); if(!p)return;
+  if(state.party.length>=6){addLog('Party is full (6 max)!','fail');return;}
+  p.holder='Aide #1';
+  if(!state.party.find(x=>x.id===catchId)) state.party.push(p);
+  saveGame(); renderDex();
+  document.getElementById('poke-modal').remove();
+  addLog(p.species+' #'+p.id+' assigned to Aide #1.','info');
+}
+
+function unassignPokemon(catchId){
+  const p=state.dex.find(x=>x.id===catchId); if(!p)return;
+  p.holder=null;
+  state.party=state.party.filter(x=>x.id!==catchId);
+  saveGame(); renderDex(); render();
+  document.getElementById('poke-modal').remove();
+  addLog(p.species+' #'+p.id+' unassigned.','info');
+}
+
+// VIEW ALL: flat list with sort/filter
+function renderViewAll(){
+  const sort=document.getElementById('sort-select')?document.getElementById('sort-select').value:'id';
+  const filter=document.getElementById('filter-select')?document.getElementById('filter-select').value:'all';
   let entries=[...state.dex];
-  if(filter==='unassigned')entries=entries.filter(p=>!p.holder);
-  if(filter==='assigned')entries=entries.filter(p=>!!p.holder);
-  if(sort==='id')entries.sort((a,b)=>a.id-b.id);
-  else if(sort==='level')entries.sort((a,b)=>b.level-a.level);
-  else if(sort==='hp')entries.sort((a,b)=>b.maxHP-a.maxHP);
-  else if(sort==='total')entries.sort((a,b)=>calcBST(b.species,b.level)-calcBST(a.species,a.level));
-  else if(sort==='species')entries.sort((a,b)=>a.species.localeCompare(b.species));
-  const c=document.getElementById('dex-list');c.innerHTML='';
-  if(!entries.length){c.innerHTML='<div style="color:#555;padding:10px;font-size:11px;">No entries yet.</div>';return;}
+  if(filter==='unassigned') entries=entries.filter(p=>!p.holder);
+  if(filter==='assigned') entries=entries.filter(p=>!!p.holder);
+  if(sort==='id') entries.sort((a,b)=>a.id-b.id);
+  else if(sort==='dexid') entries.sort((a,b)=>(a.pokedexId||0)-(b.pokedexId||0));
+  else if(sort==='level') entries.sort((a,b)=>b.level-a.level);
+  else if(sort==='hp') entries.sort((a,b)=>b.maxHP-a.maxHP);
+  else if(sort==='total') entries.sort((a,b)=>calcBST(b.species,b.level)-calcBST(a.species,a.level));
+  const c=document.getElementById('dex-list'); c.innerHTML='';
+  if(!entries.length){ c.innerHTML='<div style="color:#555;padding:12px;font-size:11px;">No entries.</div>'; return; }
   entries.forEach(p=>{
     const d=document.createElement('div');
     d.className='dex-entry'+(p.holder?'':' unassigned');
-    d.innerHTML=`<div class="dex-header"><span class="dex-name">${p.species}</span><span class="dex-id">#${p.id}</span></div>
-<div class="dex-details">Lv${p.level} · ${p.gender} · HP ${p.maxHP} · BST ${calcBST(p.species,p.level)}</div>
-<div class="dex-holder">${p.holder?'👤 '+p.holder:'📦 Unassigned'}</div>`;
+    d.style.cursor='pointer';
+    d.innerHTML=`
+      <div class="dex-header"><span class="dex-name">#${p.pokedexId||'?'} ${p.species} (catch #${p.id})</span><span class="dex-id">${p.holder?'👤':'📦'}</span></div>
+      <div class="dex-details">Lv${p.level} · ${p.gender} · HP ${p.maxHP} · BST ${calcBST(p.species,p.level)}</div>
+      <div class="dex-holder">${p.holder?'Held by: '+p.holder:'Unassigned'}</div>`;
+    d.onclick=()=>showPokemonDetail(p.id);
     c.appendChild(d);
   });
-  document.getElementById('dex-count').textContent=state.dex.length;
 }
 
 function gameTick(){
@@ -499,7 +747,7 @@ function gameTick(){
   }else{updateLocation();renderParty();}
 }
 
-const SAVE_KEY='pokeprof_save';const SAVE_VERSION=2;let saveTimer=0;
+const SAVE_KEY='pokeprof_save';const SAVE_VERSION=3;let saveTimer=0;
 
 function saveGame(){
   try{

@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PokeProf — Data Fetcher</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #1a1a2e; color: #e0e0e0; font-family: 'Courier New', monospace; font-size: 13px; padding: 20px; min-height: 100vh; }
+
+  h1 { color: #e63946; font-size: 18px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; }
+  .subtitle { color: #6080a0; font-size: 11px; margin-bottom: 24px; }
+
+  .card { background: #16213e; border: 1px solid #0f3460; border-radius: 6px; padding: 16px; margin-bottom: 16px; }
+  .card h2 { color: #5dade2; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; }
+
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+  label { color: #a0a0c0; font-size: 11px; white-space: nowrap; }
+
+  input[type=number], input[type=text] {
+    background: #0f3460; border: 1px solid #1a4a80; color: #e0e0e0;
+    font-family: 'Courier New', monospace; font-size: 12px;
+    padding: 7px 10px; border-radius: 4px; width: 80px;
+  }
+  input[type=text] { width: 200px; }
+
+  button {
+    background: #0f3460; color: #e0e0e0; border: 1px solid #1a4a80;
+    border-radius: 4px; padding: 8px 16px; font-family: 'Courier New', monospace;
+    font-size: 11px; cursor: pointer; letter-spacing: 1px; text-transform: uppercase;
+  }
+  button:hover { background: #1a4a80; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.primary { border-color: #2ecc71; color: #2ecc71; }
+  button.primary:hover { background: #0a3020; }
+  button.danger { border-color: #e63946; color: #e63946; }
+
+  #progress-wrap { display: none; margin-top: 10px; }
+  #progress-bar-bg { background: #0a0a1a; border-radius: 3px; height: 8px; overflow: hidden; margin-bottom: 6px; }
+  #progress-bar { height: 100%; background: #2ecc71; border-radius: 3px; width: 0%; transition: width 0.3s; }
+  #progress-text { font-size: 11px; color: #a0a0c0; }
+
+  #status { font-size: 11px; margin-top: 8px; min-height: 18px; }
+  #status.ok { color: #2ecc71; }
+  #status.err { color: #e63946; }
+  #status.info { color: #5dade2; }
+
+  #results-card { display: none; }
+  #results-card h2 { margin-bottom: 8px; }
+
+  .results-controls { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; align-items: center; }
+  .results-controls span { color: #a0a0c0; font-size: 11px; }
+
+  #results-table-wrap { overflow-x: auto; max-height: 400px; overflow-y: auto; }
+  table { border-collapse: collapse; font-size: 10px; white-space: nowrap; min-width: 100%; }
+  thead th {
+    background: #0f3460; color: #5dade2; padding: 5px 8px;
+    text-align: left; border-bottom: 1px solid #1a4a80;
+    position: sticky; top: 0; z-index: 1;
+  }
+  tbody tr:nth-child(even) { background: #13213a; }
+  tbody tr:hover { background: #1a3a5a; }
+  td { padding: 4px 8px; color: #c0c0d0; border-bottom: 1px solid #0f1a2a; }
+  td.null { color: #3a4a5a; font-style: italic; }
+  td.warn { color: #f4d03f; }
+
+  .warning-box { background: #2a2000; border: 1px solid #f4d03f; border-radius: 4px; padding: 10px 14px; font-size: 11px; color: #f4d03f; margin-top: 10px; line-height: 1.7; }
+  .note { color: #6080a0; font-size: 10px; margin-top: 6px; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<h1>🎓 PokeProf — Data Fetcher</h1>
+<p class="subtitle">Pull Pokémon data from PokeAPI and export in your Excel column format</p>
+
+<div class="card">
+  <h2>Fetch Range</h2>
+  <div class="row">
+    <label>From dexId:</label>
+    <input type="number" id="from-id" value="1" min="1" max="1025">
+    <label>To dexId:</label>
+    <input type="number" id="to-id" value="20" min="1" max="1025">
+    <button class="primary" id="fetch-btn" onclick="startFetch()">⬇ Fetch</button>
+    <button onclick="stopFetch()" id="stop-btn" disabled>⏹ Stop</button>
+  </div>
+  <div class="row">
+    <label>Or single name:</label>
+    <input type="text" id="single-name" placeholder="e.g. rattata">
+    <button onclick="fetchSingle()">⬇ Fetch One</button>
+  </div>
+  <div id="progress-wrap">
+    <div id="progress-bar-bg"><div id="progress-bar"></div></div>
+    <div id="progress-text">Fetching...</div>
+  </div>
+  <div id="status"></div>
+  <p class="note">⚠ PokeAPI rate limit: ~100 requests/min. Large ranges may take several minutes. Base forms only — regional variants and megas are not fetched (those need manual entry per your form system).</p>
+</div>
+
+<div class="card" id="results-card">
+  <h2>Results — <span id="result-count">0</span> Pokémon</h2>
+  <div class="results-controls">
+    <button class="primary" onclick="copyForExcel()">📋 Copy for Excel</button>
+    <button onclick="downloadCSV()">⬇ Download CSV</button>
+    <button class="danger" onclick="clearResults()">✕ Clear</button>
+    <span id="copy-status"></span>
+  </div>
+  <div class="warning-box">
+    ⚠ <strong>Manual columns required after pasting:</strong> familyId, formName, formVariant, baseFormId, hasSizeVariants, flavorText (PokeAPI returns English flavor text but it may need editing). Evolution data is best-effort — branching evolutions (Eevee, Wurmple) need manual review.
+  </div>
+  <div id="results-table-wrap">
+    <table id="results-table">
+      <thead id="results-head"></thead>
+      <tbody id="results-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+// Column order matching your Excel exactly
+const COLUMNS = [
+  'dexId','formVariant','familyId','name','formName','category','flavorText',
+  'type1','type2','heightM','weightKg',
+  'baseHP','baseAtk','baseDef','baseSpatk','baseSpdef','baseSpd',
+  'ability1','ability2','hiddenAbility',
+  'growthRate','baseExpYield','catchRate','genderMalePct',
+  'evolvesIntoId','evolveMethod','evolveLevel','evolveItem',
+  'eggGroup1','eggGroup2','eggCycles',
+  'colorGroup','shape','habitat',
+  'genderDifference','hasSizeVariants','baseFormId',
+  'isLegendary','isMythical'
+];
+
+// Columns PokeAPI cannot fill — will be blank
+const MANUAL_COLS = new Set(['formVariant','familyId','formName','baseFormId','hasSizeVariants','flavorText']);
+
+const GROWTH_RATE_MAP = {
+  'slow': 'slow',
+  'medium': 'mediumFast',
+  'fast': 'fast',
+  'medium-slow': 'mediumSlow',
+  'slow-then-very-fast': 'erratic',
+  'fast-then-very-slow': 'fluctuating'
+};
+
+let results = [];
+let fetching = false;
+let stopRequested = false;
+
+function setStatus(msg, type='info') {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = type;
+}
+
+async function fetchPokemon(idOrName) {
+  const [poke, species] = await Promise.all([
+    fetch(`https://pokeapi.co/api/v2/pokemon/${idOrName}`).then(r => r.ok ? r.json() : null),
+    fetch(`https://pokeapi.co/api/v2/pokemon-species/${idOrName}`).then(r => r.ok ? r.json() : null)
+  ]);
+  if (!poke || !species) return null;
+
+  // Types
+  const types = poke.types.sort((a,b) => a.slot - b.slot).map(t => t.type.name);
+  const capitalize = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : null;
+  const type1 = capitalize(types[0]) || null;
+  const type2 = capitalize(types[1]) || null;
+
+  // Stats
+  const statMap = {};
+  poke.stats.forEach(s => { statMap[s.stat.name] = s.base_stat; });
+
+  // Abilities
+  const abilities = poke.abilities.sort((a,b) => a.slot - b.slot);
+  const ability1 = abilities.find(a => a.slot === 1 && !a.is_hidden);
+  const ability2 = abilities.find(a => a.slot === 2 && !a.is_hidden);
+  const hidden   = abilities.find(a => a.is_hidden);
+  const fmtAbility = a => a ? a.ability.name.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : null;
+
+  // Growth rate
+  const gr = GROWTH_RATE_MAP[species.growth_rate?.name] || species.growth_rate?.name || null;
+
+  // Gender
+  let genderMalePct = null;
+  if (species.gender_rate === -1) genderMalePct = null; // genderless
+  else genderMalePct = Math.round((8 - species.gender_rate) / 8 * 100);
+
+  // Egg groups
+  const eggs = species.egg_groups || [];
+  const eggGroup1 = eggs[0] ? capitalize(eggs[0].name.replace('-', ' ')) : null;
+  const eggGroup2 = eggs[1] ? capitalize(eggs[1].name.replace('-', ' ')) : null;
+
+  // Evolution chain — fetch to find what this species evolves into
+  let evolvesIntoId = null, evolveMethod = null, evolveLevel = null, evolveItem = null;
+  try {
+    const chainUrl = species.evolution_chain?.url;
+    if (chainUrl) {
+      const chain = await fetch(chainUrl).then(r => r.json());
+      const findEvo = (node, targetName) => {
+        if (node.species.name === targetName) {
+          if (node.evolves_to.length > 0) {
+            const next = node.evolves_to[0]; // first evolution only
+            const detail = next.evolution_details[0];
+            return {
+              intoName: next.species.name,
+              method: detail?.trigger?.name || null,
+              level: detail?.min_level || null,
+              item: detail?.item?.name || detail?.held_item?.name || null
+            };
+          }
+          return null;
+        }
+        for (const child of node.evolves_to) {
+          const found = findEvo(child, targetName);
+          if (found) return found;
+        }
+        return null;
+      };
+      const evoData = findEvo(chain.chain, species.name);
+      if (evoData) {
+        // Get dexId of evolution target
+        const targetSpecies = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${evoData.intoName}`).then(r => r.ok ? r.json() : null);
+        evolvesIntoId = targetSpecies ? targetSpecies.id : null;
+        evolveMethod = evoData.method === 'level-up' ? 'level' : evoData.method;
+        evolveLevel = evoData.level;
+        evolveItem = evoData.item ? evoData.item.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : null;
+      }
+    }
+  } catch(e) { /* evolution fetch failed, leave null */ }
+
+  // Flavor text — first English entry
+  const flavor = species.flavor_text_entries?.find(f => f.language.name === 'en');
+  const flavorText = flavor ? flavor.flavor_text.replace(/[\n\f]/g, ' ').trim() : null;
+
+  // Category
+  const genus = species.genera?.find(g => g.language.name === 'en');
+  const category = genus ? genus.genus : null;
+
+  // Color, shape, habitat
+  const colorGroup = capitalize(species.color?.name) || null;
+  const shape = capitalize(species.shape?.name?.replace('-', ' ')) || null;
+  const habitat = capitalize(species.habitat?.name?.replace('-', ' ')) || null;
+
+  // Gender difference (has_gender_differences)
+  const genderDifference = species.has_gender_differences || false;
+
+  return {
+    dexId: species.id,
+    formVariant: null,      // manual
+    familyId: null,         // manual
+    name: capitalize(species.name),
+    formName: null,         // manual
+    category,
+    flavorText,
+    type1, type2,
+    heightM: poke.height / 10,
+    weightKg: poke.weight / 10,
+    baseHP: statMap['hp'] || null,
+    baseAtk: statMap['attack'] || null,
+    baseDef: statMap['defense'] || null,
+    baseSpatk: statMap['special-attack'] || null,
+    baseSpdef: statMap['special-defense'] || null,
+    baseSpd: statMap['speed'] || null,
+    ability1: fmtAbility(ability1),
+    ability2: fmtAbility(ability2),
+    hiddenAbility: fmtAbility(hidden),
+    growthRate: gr,
+    baseExpYield: poke.base_experience || null,
+    catchRate: species.capture_rate || null,
+    genderMalePct,
+    evolvesIntoId,
+    evolveMethod,
+    evolveLevel,
+    evolveItem,
+    eggGroup1, eggGroup2,
+    eggCycles: species.hatch_counter || null,
+    colorGroup, shape, habitat,
+    genderDifference,
+    hasSizeVariants: null,   // manual
+    baseFormId: null,        // manual
+    isLegendary: species.is_legendary || false,
+    isMythical: species.is_mythical || false
+  };
+}
+
+async function startFetch() {
+  const from = parseInt(document.getElementById('from-id').value);
+  const to   = parseInt(document.getElementById('to-id').value);
+  if (isNaN(from) || isNaN(to) || from > to) { setStatus('Invalid range.', 'err'); return; }
+  if (to - from > 300) { setStatus('Max 300 at a time to avoid rate limits.', 'err'); return; }
+
+  fetching = true; stopRequested = false;
+  document.getElementById('fetch-btn').disabled = true;
+  document.getElementById('stop-btn').disabled = false;
+  document.getElementById('progress-wrap').style.display = 'block';
+
+  const total = to - from + 1;
+  let done = 0, errors = 0;
+
+  for (let id = from; id <= to; id++) {
+    if (stopRequested) { setStatus('Stopped at ' + id + '.', 'info'); break; }
+    setStatus(`Fetching #${id} (${done}/${total})...`, 'info');
+    document.getElementById('progress-text').textContent = `${done}/${total} — ${Math.round(done/total*100)}%`;
+    document.getElementById('progress-bar').style.width = (done/total*100) + '%';
+    try {
+      const data = await fetchPokemon(id);
+      if (data) { results.push(data); }
+      else { errors++; }
+    } catch(e) { errors++; setStatus('Error on #'+id+': '+e.message, 'err'); }
+    done++;
+    // Small delay to be respectful of API rate limits
+    await new Promise(r => setTimeout(r, 300));
+  }
+
+  fetching = false;
+  document.getElementById('fetch-btn').disabled = false;
+  document.getElementById('stop-btn').disabled = true;
+  document.getElementById('progress-bar').style.width = '100%';
+  document.getElementById('progress-text').textContent = `Done — ${results.length} fetched, ${errors} errors`;
+  setStatus(`✔ Fetched ${results.length} Pokémon. ${errors > 0 ? errors + ' failed.' : ''}`, 'ok');
+  renderTable();
+}
+
+async function fetchSingle() {
+  const name = document.getElementById('single-name').value.trim().toLowerCase();
+  if (!name) { setStatus('Enter a name.', 'err'); return; }
+  setStatus('Fetching ' + name + '...', 'info');
+  try {
+    const data = await fetchPokemon(name);
+    if (data) {
+      results.push(data);
+      setStatus('✔ Fetched ' + data.name, 'ok');
+      renderTable();
+    } else {
+      setStatus('Not found: ' + name, 'err');
+    }
+  } catch(e) { setStatus('Error: ' + e.message, 'err'); }
+}
+
+function stopFetch() {
+  stopRequested = true;
+  document.getElementById('stop-btn').disabled = true;
+}
+
+function renderTable() {
+  document.getElementById('results-card').style.display = 'block';
+  document.getElementById('result-count').textContent = results.length;
+
+  // Header
+  const thead = document.getElementById('results-head');
+  thead.innerHTML = '<tr>' + COLUMNS.map(c =>
+    `<th style="${MANUAL_COLS.has(c)?'color:#f4d03f':''}">${c}</th>`
+  ).join('') + '</tr>';
+
+  // Body
+  const tbody = document.getElementById('results-body');
+  tbody.innerHTML = '';
+  results.forEach(row => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = COLUMNS.map(col => {
+      const v = row[col];
+      if (v === null || v === undefined || v === '') {
+        return `<td class="${MANUAL_COLS.has(col)?'warn':'null'}">${MANUAL_COLS.has(col)?'[manual]':''}</td>`;
+      }
+      return `<td>${v}</td>`;
+    }).join('');
+    tbody.appendChild(tr);
+  });
+}
+
+function copyForExcel() {
+  // Tab-separated, no header row (paste directly into Excel data area)
+  const tsv = results.map(row =>
+    COLUMNS.map(col => {
+      const v = row[col];
+      if (v === null || v === undefined) return '';
+      if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE';
+      return String(v).replace(/\t/g, ' ');
+    }).join('\t')
+  ).join('\n');
+
+  navigator.clipboard.writeText(tsv).then(() => {
+    document.getElementById('copy-status').textContent = '✔ Copied! Paste into Excel.';
+    document.getElementById('copy-status').style.color = '#2ecc71';
+    setTimeout(() => { document.getElementById('copy-status').textContent = ''; }, 3000);
+  }).catch(() => {
+    // Fallback
+    const ta = document.createElement('textarea');
+    ta.value = tsv;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    document.getElementById('copy-status').textContent = '✔ Copied (fallback)';
+  });
+}
+
+function downloadCSV() {
+  const header = COLUMNS.join(',');
+  const rows = results.map(row =>
+    COLUMNS.map(col => {
+      const v = row[col];
+      if (v === null || v === undefined) return '';
+      if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE';
+      const s = String(v);
+      return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g,'""')}"` : s;
+    }).join(',')
+  ).join('\n');
+  const blob = new Blob([header + '\n' + rows], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'pokeprof_data.csv';
+  a.click();
+}
+
+function clearResults() {
+  if (!confirm('Clear all ' + results.length + ' fetched results?')) return;
+  results = [];
+  document.getElementById('results-card').style.display = 'none';
+  document.getElementById('results-body').innerHTML = '';
+  setStatus('Cleared.', 'info');
+}
+</script>
+</body>
+</html>

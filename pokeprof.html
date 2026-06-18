@@ -186,8 +186,15 @@
 const SPECIES = {};
 if(typeof POKEDEX_DATA !== 'undefined'){
   POKEDEX_DATA.forEach(p => {
-    // Map by name — base form (no formName) takes priority
-    if(!p.formName || !SPECIES[p.name]) SPECIES[p.name] = p;
+    // Base form (no formName) takes priority, but only if it has complete data
+    const existing = SPECIES[p.name];
+    if(!p.formName){
+      // Base form: always prefer over alternate forms, but keep existing if new entry has no growthRate
+      if(!existing || p.growthRate) SPECIES[p.name] = p;
+    } else {
+      // Alternate form: only set if no entry exists yet
+      if(!existing) SPECIES[p.name] = p;
+    }
   });
 } else {
   console.error('pokedex.js not loaded — check GitHub file is uploaded');
@@ -300,9 +307,14 @@ function getEvolutionDisplayText(dexId){
 
 function expToLevel(lv,rate){
   if(lv<=1)return 0;
-  if(rate==='mediumFast')return Math.floor(Math.pow(lv,3));
-  if(rate==='mediumSlow')return Math.max(0,Math.floor((6/5)*Math.pow(lv,3)-15*Math.pow(lv,2)+100*lv-140));
-  return Math.floor(Math.pow(lv,3));
+  const r=rate||'mediumFast'; // fallback if growthRate missing from DB
+  if(r==='mediumFast')return Math.floor(Math.pow(lv,3));
+  if(r==='mediumSlow')return Math.max(0,Math.floor((6/5)*Math.pow(lv,3)-15*Math.pow(lv,2)+100*lv-140));
+  if(r==='fast')return Math.floor((4*Math.pow(lv,3))/5);
+  if(r==='slow')return Math.floor((5*Math.pow(lv,3))/4);
+  if(r==='erratic')return lv<50?Math.floor((Math.pow(lv,3)*(100-lv))/50):lv<68?Math.floor((Math.pow(lv,3)*(150-lv))/100):lv<98?Math.floor((Math.pow(lv,3)*Math.floor((1911-10*lv)/3))/500):Math.floor((Math.pow(lv,3)*(160-lv))/100);
+  if(r==='fluctuating')return lv<15?Math.floor((Math.pow(lv,3)*(Math.floor((lv+1)/3)+24))/50):lv<36?Math.floor((Math.pow(lv,3)*(lv+14))/50):Math.floor((Math.pow(lv,3)*(Math.floor(lv/2)+32))/50);
+  return Math.floor(Math.pow(lv,3)); // mediumFast as final fallback
 }
 function calcMaxHP(sp,lv){
   const s=SPECIES[sp];if(!s)return lv+10;
@@ -325,11 +337,26 @@ let state={
 };
 
 function makePokemon(sp,lv,gender,holder=null){
-  const entry=SPECIES[sp]||dexByName(sp);
+  // Find best entry: prefer base form with growthRate populated
+  let entry=null;
+  if(typeof POKEDEX_DATA!=='undefined'){
+    // First try: base form with growthRate
+    entry=POKEDEX_DATA.find(p=>p.name===sp&&!p.formName&&p.growthRate);
+    // Second try: any form with growthRate
+    if(!entry) entry=POKEDEX_DATA.find(p=>p.name===sp&&p.growthRate);
+    // Third try: any entry at all
+    if(!entry) entry=POKEDEX_DATA.find(p=>p.name===sp&&!p.formName);
+    if(!entry) entry=POKEDEX_DATA.find(p=>p.name===sp);
+  }
+  if(!entry) entry=SPECIES[sp];
   const dexId=entry?entry.dexId||entry.id:0;
+  const growthRate=(entry&&entry.growthRate)||'mediumFast';
   const maxHP=calcMaxHP(sp,lv);
-  const growthRate=entry?entry.growthRate:'mediumFast';
-  return{id:state.dexIdCounter++,species:sp,pokedexId:dexId,level:lv,gender,currentHP:maxHP,maxHP,exp:expToLevel(lv,growthRate),holder};
+  const startExp=expToLevel(lv,growthRate);
+  return{id:state.dexIdCounter++,species:sp,pokedexId:dexId,level:lv,gender,
+    currentHP:maxHP,maxHP,growthRate,  // store growthRate on pokemon object
+    exp:isNaN(startExp)?expToLevel(lv,'mediumFast'):startExp,
+    holder};
 }
 
 function switchTab(name){
@@ -547,7 +574,8 @@ function giveExp(pokemon,amount){
   let lv=false;
   while(true){
     const s=SPECIES[pokemon.species];
-    const need=expToLevel(pokemon.level+1,s.growthRate);
+    const gr=pokemon.growthRate||(s?s.growthRate:null)||'mediumFast';
+    const need=expToLevel(pokemon.level+1,gr);
     if(pokemon.exp>=need&&pokemon.level<100){
       pokemon.level++;lv=true;
       const om=pokemon.maxHP;pokemon.maxHP=calcMaxHP(pokemon.species,pokemon.level);
@@ -605,8 +633,9 @@ function checkEvolution(p){
 function giveExpSilent(p,amount){
   p.exp+=amount;
   while(true){
-    const s=SPECIES[p.species];if(!s)break;
-    if(p.exp>=expToLevel(p.level+1,s.growthRate)&&p.level<100){
+    const s=SPECIES[p.species];
+    const gr=p.growthRate||(s?s.growthRate:null)||'mediumFast';
+    if(p.exp>=expToLevel(p.level+1,gr)&&p.level<100){
       p.level++;const om=p.maxHP;p.maxHP=calcMaxHP(p.species,p.level);
       p.currentHP=Math.min(p.maxHP,p.currentHP+(p.maxHP-om));
       // Silent evolution check
@@ -687,9 +716,14 @@ function renderParty(){
     const hpPct=Math.max(0,(p.currentHP/p.maxHP)*100);
     const hpColor=hpPct>50?'#2ecc71':hpPct>20?'#f4d03f':'#e74c3c';
     const s=SPECIES[p.species];
-    const ec=p.exp-expToLevel(p.level,s.growthRate);
-    const en=expToLevel(p.level+1,s.growthRate)-expToLevel(p.level,s.growthRate);
-    const ePct=Math.min(100,(ec/Math.max(1,en))*100);
+    const gr=p.growthRate||(s?s.growthRate:null)||'mediumFast';
+    const expAtLevel=expToLevel(p.level,gr);
+    const expAtNext=expToLevel(p.level+1,gr);
+    // Fix NaN exp if stored incorrectly
+    if(isNaN(p.exp)||p.exp<expAtLevel) p.exp=expAtLevel;
+    const ec=p.exp-expAtLevel;
+    const en=Math.max(1,expAtNext-expAtLevel);
+    const ePct=Math.min(100,(ec/en)*100);
     const fainted=p.currentHP<=0;
     const d=document.createElement('div');
     d.className='party-slot'+(fainted?' fainted':'');

@@ -1,27 +1,35 @@
 // PokeProf — Locations Database
-// Auto-generated: 6/16/2026, 10:51:06 PM
+// Auto-generated: 6/18/2026, 9:18:29 PM
 // Entries: 4
 
 const LOCATIONS = [
   {
     "locationId": "palletTown",
     "name": "Pallet Town",
-    "region": "Kanto"
+    "region": "Kanto",
+    "heals": true,
+    "shopTier": null
   },
   {
     "locationId": "route1",
     "name": "Route 1",
-    "region": "Kanto"
+    "region": "Kanto",
+    "heals": false,
+    "shopTier": null
   },
   {
     "locationId": "route21",
     "name": "Route 21",
-    "region": "Kanto"
+    "region": "Kanto",
+    "heals": false,
+    "shopTier": null
   },
   {
     "locationId": "viridiancity",
     "name": "Viridian City",
-    "region": "Kanto"
+    "region": "Kanto",
+    "heals": true,
+    "shopTier": "basic"
   }
 ];
 

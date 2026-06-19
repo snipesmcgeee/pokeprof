@@ -88,6 +88,10 @@
   .dex-entry .dex-details { color:#9090b0; line-height:1.5; }
   .dex-entry .dex-holder { color:#2ecc71; font-size:10px; margin-top:3px; }
   .dex-entry.unassigned .dex-holder { color:#e67e22; }
+  .party-sprite { width:32px;height:32px;image-rendering:pixelated;flex-shrink:0; }
+  .aide-party-sprites { display:flex;gap:2px;flex-wrap:wrap;margin-top:4px; }
+  .aide-sprite-mini { width:24px;height:24px;image-rendering:pixelated; }
+  .shiny-badge { color:#f4d03f;font-size:10px;margin-left:2px; }
 </style>
 <!-- External database files — must be in same GitHub repo -->
 <script src="pokedex.js"></script>
@@ -119,19 +123,21 @@
 </div>
 
 <div id="tab-bar">
-  <button class="tab-btn active" onclick="switchTab('aide')" id="tab-aide"><span class="tab-icon">🧑‍🔬</span>Aide</button>
+  <button class="tab-btn active" onclick="switchTab('aide')" id="tab-aide"><span class="tab-icon">🧑‍🔬</span>Aides</button>
   <button class="tab-btn" onclick="switchTab('log')" id="tab-log"><span class="tab-icon">📋</span>Log</button>
   <button class="tab-btn" onclick="switchTab('dex')" id="tab-dex"><span class="tab-icon">📓</span>Dex (<span id="dex-count">0</span>)</button>
 </div>
 
 <div id="panels">
   <div class="panel active" id="panel-aide">
-    <div class="panel-title">Aide Status</div>
+    <div class="panel-title">Aides</div>
     <div id="aide-info">
       <div class="aide-name">🧑‍🔬 Carl Oak</div>
       <div class="aide-location" id="aide-location">📍 Pallet Town — Idle</div>
     </div>
-    <div class="panel-title">Party</div>
+    <div class="panel-title" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;" onclick="togglePartyList()">
+      <span>Carl Oak's Party</span><span id="party-toggle-icon">▼</span>
+    </div>
     <div id="party-list"></div>
     <div id="controls">
       <button class="primary" id="btn-start" onclick="startMission()">▶ Start Mission</button>
@@ -168,6 +174,7 @@
         <option value="all">All</option>
         <option value="unassigned">Unassigned</option>
         <option value="assigned">Assigned</option>
+        <option value="shiny">✨ Shiny</option>
       </select>
     </div>
     <div id="dex-list" style="overflow-y:auto;flex:1;padding:6px;background:#16213e;"></div>
@@ -305,6 +312,35 @@ function getEvolutionDisplayText(dexId){
   return 'Evolves into: ??? (unconfirmed)';
 }
 
+
+// ── SPRITE SYSTEM ──
+const SPRITE_BASE='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon';
+function getSpriteUrl(dexId, name, isShiny=false){
+  // Check for custom spriteUrl in DB first (for regional forms)
+  if(POKEDEX_DATA){
+    const entry=POKEDEX_DATA.find(x=>x.dexId===dexId&&!x.formName);
+    if(entry&&entry.spriteUrl) return entry.spriteUrl;
+  }
+  const base=isShiny?SPRITE_BASE+'/shiny':SPRITE_BASE;
+  return base+'/'+dexId+'.png';
+}
+
+
+function checkLocationHeal(){
+  if(!state.missionActive)return;
+  const locData=typeof LOCATIONS!=='undefined'?getLocation(state.missionDestination):null;
+  if(locData&&(locData.heals==='TRUE'||locData.heals===true||locData.heals==='true')){
+    const needsHeal=state.party.some(p=>p.currentHP<p.maxHP||p.currentHP<=0);
+    if(needsHeal){
+      state.party.forEach(p=>{
+        p.currentHP=p.maxHP; // full heal including fainted
+      });
+      addLog('🏥 Party fully healed at '+locData.name+'!','info');
+      render();
+    }
+  }
+}
+
 function expToLevel(lv,rate){
   if(lv<=1)return 0;
   const r=rate||'mediumFast'; // fallback if growthRate missing from DB
@@ -359,6 +395,15 @@ function makePokemon(sp,lv,gender,holder=null){
     holder};
 }
 
+
+function togglePartyList(){
+  const list=document.getElementById('party-list');
+  const icon=document.getElementById('party-toggle-icon');
+  const hidden=list.style.display==='none';
+  list.style.display=hidden?'':'none';
+  icon.textContent=hidden?'▼':'▶';
+}
+
 function switchTab(name){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
@@ -402,12 +447,7 @@ function showMissionModal(){
       <div style="color:#e63946;font-size:14px;font-weight:bold;margin-bottom:12px;">📋 Dispatch Carl Oak</div>
       <div style="color:#a0a0c0;font-size:11px;margin-bottom:8px;">DESTINATION</div>
       ${destOptions}
-      <div style="color:#a0a0c0;font-size:11px;margin:12px 0 8px;">ON ARRIVAL</div>
-      <div style="display:flex;gap:8px;margin-bottom:14px;">
-        <button id="behavior-stop" onclick="selectBehavior('stop')" style="flex:1;border-color:#f4d03f;color:#f4d03f;">⏹ Stop</button>
-        <button id="behavior-research" onclick="selectBehavior('research')" style="flex:1;border-color:#9b59b6;color:#9b59b6;">🔬 Research</button>
-      </div>
-      <div id="mission-summary" style="color:#6080a0;font-size:10px;margin-bottom:12px;">Select a destination above.</div>
+      <div id="mission-summary" style="color:#6080a0;font-size:10px;margin:12px 0 12px;">Select a destination above.</div>
       <div style="display:flex;gap:8px;">
         <button onclick="document.getElementById('mission-modal').remove()" style="flex:1;">✕ Cancel</button>
         <button id="confirm-mission" onclick="confirmMission()" class="primary" style="flex:1;" disabled>▶ Dispatch</button>
@@ -415,27 +455,15 @@ function showMissionModal(){
     </div>`;
   document.body.appendChild(modal);
   state._missionDest=null;
-  state._missionBehavior='stop';
-  selectBehavior('stop');
+  state._missionBehavior='research';
 }
 
 function selectMissionDest(locId){
   state._missionDest=locId;
   const locData=typeof LOCATIONS!=='undefined'?getLocation(locId):null;
   const name=locData?locData.name:locId;
-  document.getElementById('mission-summary').textContent='Carl Oak → '+name+' then '+(state._missionBehavior==='research'?'research area':'stop and wait');
+  document.getElementById('mission-summary').textContent='Carl Oak → '+name+' (research on arrival)';
   document.getElementById('confirm-mission').disabled=false;
-}
-
-function selectBehavior(b){
-  state._missionBehavior=b;
-  document.getElementById('behavior-stop').style.opacity=b==='stop'?'1':'0.4';
-  document.getElementById('behavior-research').style.opacity=b==='research'?'1':'0.4';
-  if(state._missionDest){
-    const locData=typeof LOCATIONS!=='undefined'?getLocation(state._missionDest):null;
-    const name=locData?locData.name:state._missionDest;
-    document.getElementById('mission-summary').textContent='Carl Oak → '+name+' then '+(b==='research'?'research area':'stop and wait');
-  }
 }
 
 function confirmMission(){
@@ -443,14 +471,14 @@ function confirmMission(){
   const modal=document.getElementById('mission-modal');
   if(modal)modal.remove();
   state.missionActive=true;
-  state.missionBehavior=state._missionBehavior||'stop';
+  state.missionBehavior='research';
   state.missionDestination=state._missionDest||'route1';
   state.nextEncounterIn=ENC_INTERVAL;
   document.getElementById('btn-start').disabled=true;
   document.getElementById('btn-recall').disabled=false;
   const locData=typeof LOCATIONS!=='undefined'?getLocation(state.missionDestination):null;
   const destName=locData?locData.name:state.missionDestination;
-  addLog('Carl Oak dispatched to '+destName+' ('+state.missionBehavior+' on arrival).','info');
+  addLog('Carl Oak dispatched to '+destName+' (research on arrival).','info');
   state.pendingFindings=[];
   updateLocation();render();
 }
@@ -483,7 +511,9 @@ function updateLocation(){
   const el=document.getElementById('aide-location');
   if(state.missionActive){
     const m=Math.floor(state.nextEncounterIn/60),s=state.nextEncounterIn%60;
-    el.textContent='📍 Route 1 — Next: '+m+':'+s.toString().padStart(2,'0');
+    const locData=typeof LOCATIONS!=='undefined'?getLocation(state.missionDestination):null;
+    const locName=locData?locData.name:(state.missionDestination||'Route 1');
+    el.textContent='📍 '+locName+' — Next: '+m+':'+s.toString().padStart(2,'0');
   }else{el.textContent='📍 Pallet Town — Idle';}
 }
 
@@ -492,21 +522,26 @@ function incomeTick(){
   state.incomeAccumulator+=perMin/60;
   if(state.incomeAccumulator>=0.01){
     const c=Math.floor(state.incomeAccumulator*100);
-    state.funds+=c/100;
+    state.funds=Math.max(0, Math.round((state.funds+c/100)*100)/100);
     state.incomeAccumulator-=c/100;
   }
+  // Safety: funds should never go below 0
+  if(state.funds<0||isNaN(state.funds)) state.funds=0;
   document.getElementById('funds-display').textContent=state.funds.toFixed(2);
   document.getElementById('income-display').textContent=perMin.toFixed(2);
 }
 
 function rollEncounter(){
+  const dest=state.missionDestination||'route1';
+  const table=buildRouteTable(dest);
+  if(!table||!table.length)return null;
   let roll=Math.random()*100,cum=0;
-  const table=ROUTE1;
   for(const e of table){cum+=e.weight;if(roll<cum){
     const entry=POKEDEX_DATA?POKEDEX_DATA.find(p=>p.dexId===e.dexId&&!p.formName):null;
     if(!entry)continue;
     return{species:entry.name,pokedexId:e.dexId,level:e.minLv+Math.floor(Math.random()*(e.maxLv-e.minLv+1)),gender:Math.random()<0.5?'M':'F'};
   }}
+  return null;
 }
 
 function resolveEncounterStep(){
@@ -521,7 +556,9 @@ function throwBall(lead,enc){
   state.funds=Math.round((state.funds-1.00)*100)/100;
   if(Math.random()<0.75){
     const caught=makePokemon(enc.species,enc.level,enc.gender);
+    caught.isShiny=(Math.random()<(1/4096)); // 1/4096 shiny rate
     state.dex.push(caught);state.totalCatches++;state.totalSightings++;
+    if(caught.isShiny){addLog('✨ SHINY '+caught.species+' caught! ✨','evolve');}
     const s_=SPECIES[enc.species];const exp=Math.floor(((s_?s_.baseExpYield||s_.baseExp:51)*enc.level)/7);
     giveExp(lead,exp);
     // Record research
@@ -707,7 +744,22 @@ function showOfflineBanner(secs,summary){
   document.getElementById('offline-banner').style.display='block';
 }
 
-function render(){renderParty();renderDex();updateDexChrome();document.getElementById('dex-count').textContent=state.dex.length;updateLocation();}
+function render(){renderParty();renderAideHeader();renderDex();updateDexChrome();document.getElementById('dex-count').textContent=state.dex.length;updateLocation();}
+
+function renderAideHeader(){
+  // Update aide header with party sprite strip
+  let spritesHtml='<div class="aide-party-sprites">';
+  state.party.forEach(p=>{
+    const url=getSpriteUrl(p.pokedexId,p.species,p.isShiny||false);
+    const fainted=p.currentHP<=0;
+    spritesHtml+=`<img src="${url}" class="aide-sprite-mini" title="${p.species} Lv${p.level}" style="opacity:${fainted?'0.3':'1'};image-rendering:pixelated;" onerror="this.style.display='none'">`;
+  });
+  spritesHtml+='</div>';
+  const nameEl=document.querySelector('#aide-info .aide-name');
+  if(nameEl){
+    nameEl.innerHTML='🧑‍🔬 Carl Oak'+spritesHtml;
+  }
+}
 
 function renderParty(){
   const c=document.getElementById('party-list');c.innerHTML='';
@@ -727,7 +779,11 @@ function renderParty(){
     const fainted=p.currentHP<=0;
     const d=document.createElement('div');
     d.className='party-slot'+(fainted?' fainted':'');
-    d.innerHTML=`<div class="poke-name">${fainted?'💀':'🐾'} ${p.species} #${p.id} <span style="color:#a0a0c0">(${p.gender})</span></div>
+    const spriteUrl=getSpriteUrl(p.pokedexId,p.species,p.isShiny||false);
+    d.innerHTML=`<div style="display:flex;align-items:flex-start;gap:8px;">
+<img src="${spriteUrl}" class="party-sprite${fainted?' opacity:0.4':''}" onerror="this.style.display='none'">
+<div style="flex:1;">
+<div class="poke-name">${fainted?'💀':'🐾'} ${p.species} #${p.id}${p.isShiny?' ✨':''} <span style="color:#a0a0c0">(${p.gender})</span></div>
 <div class="poke-level">Lv${p.level} · BST ${calcBST(p.species,p.level)}</div>
 <div class="hp-bar-wrap"><div class="hp-bar" style="width:${hpPct}%;background:${hpColor}"></div></div>
 <div class="hp-text">HP: ${p.currentHP}/${p.maxHP}</div>
@@ -789,21 +845,33 @@ function renderDexFamilies(){
   state.dex.forEach(p=>{ if(p.pokedexId){ const e=POKEDEX_DATA.find(x=>x.dexId===p.pokedexId&&!x.formName); if(e)seenFamilies.add(e.familyId); } });
   if(!seenFamilies.size){ c.innerHTML='<div style="color:#555;padding:12px;font-size:11px;">No Pokémon discovered yet.</div>'; return; }
   [...seenFamilies].sort((a,b)=>a-b).forEach(famId=>{
-    const members=getFamilyMembers(famId);
-    const baseMember=members[0];
-    // Count caught per family
+    const allMembers=getFamilyMembers(famId); // full line from DB
+    const baseMember=allMembers[0];
+    // Only show members the professor has actually encountered
     const caught=state.dex.filter(p=>p.pokedexId&&POKEDEX_DATA&&POKEDEX_DATA.find(x=>x.dexId===p.pokedexId&&x.familyId===famId));
     const speciesSeen=new Set(caught.map(p=>p.pokedexId));
+    const knownMembers=allMembers.filter(m=>speciesSeen.has(m.dexId));
+    // Build evolution chain display — only show known species, ??? for unknowns beyond
+    const chainParts=knownMembers.map(m=>'#'+m.dexId+' '+m.name);
+    // If any known member has a confirmed evolution, show ??? at end
+    const lastKnown=knownMembers[knownMembers.length-1];
+    const lastResearch=lastKnown?state.researchLog[lastKnown.dexId]:null;
+    if(lastKnown&&lastResearch&&!lastResearch.evolutionConfirmed&&!lastResearch.nonEvolutionConfirmed){
+      chainParts.push('???');
+    }
     const d=document.createElement('div');
     d.className='dex-entry';
     d.style.cursor='pointer';
+    // Species count: show X/? since we don't reveal total until fully known
+    const totalKnown=allMembers.every(m=>speciesSeen.has(m.dexId));
+    const speciesDisplay=totalKnown?speciesSeen.size+'/'+allMembers.length:speciesSeen.size+'/?';
     d.innerHTML=`
       <div class="dex-header">
         <span class="dex-name">Family #${famId} — ${baseMember.name} line</span>
         <span class="dex-id">▶</span>
       </div>
-      <div class="dex-details">${speciesSeen.size}/${members.length} species · ${caught.length} caught</div>
-      <div class="dex-holder" style="color:#5dade2;">${members.map(m=>'#'+m.dexId+' '+m.name).join(' → ')}</div>`;
+      <div class="dex-details">${speciesDisplay} species · ${caught.length} caught</div>
+      <div class="dex-holder" style="color:#5dade2;">${chainParts.join(' → ')}</div>`;
     d.onclick=()=>{ dexSelectedFamily=famId; dexView='species'; renderDex(); updateDexChrome(); };
     c.appendChild(d);
   });
@@ -812,32 +880,55 @@ function renderDexFamilies(){
 // LAYER 2: Species within a family
 function renderDexSpecies(){
   const c=document.getElementById('dex-list'); c.innerHTML='';
-  const members=typeof getFamilyMembers!=='undefined'?getFamilyMembers(dexSelectedFamily):[];
-  members.forEach(entry=>{
+  const allMembers=typeof getFamilyMembers!=='undefined'?getFamilyMembers(dexSelectedFamily):[];
+  // Only show species that have been encountered
+  const seenDexIds=new Set(state.dex.map(p=>p.pokedexId));
+  const visibleMembers=allMembers.filter(m=>seenDexIds.has(m.dexId));
+  if(!visibleMembers.length){
+    c.innerHTML='<div style="color:#555;padding:12px;font-size:11px;">No species encountered yet.</div>';
+    return;
+  }
+  // Show known species + a ??? placeholder if the last known one hasn't confirmed non-evolution
+  visibleMembers.forEach(entry=>{
     const caught=state.dex.filter(p=>p.pokedexId===entry.dexId);
-    const seen=caught.length>0;
+    const sprite=getSpriteUrl(entry.dexId,entry.name,false);
     const d=document.createElement('div');
-    d.className='dex-entry'+(seen?'':' unassigned');
-    d.style.cursor=seen?'pointer':'default';
+    d.className='dex-entry';
+    d.style.cursor='pointer';
     d.innerHTML=`
-      <div class="dex-header">
-        <span class="dex-name">#${entry.dexId} ${entry.name}</span>
-        <span class="dex-id">${seen?caught.length+' caught':'Not seen'}</span>
-      </div>
-      <div class="dex-details">
-        ${entry.type1||'???'}${entry.type2?' / '+entry.type2:''} · BST base: ${entry.baseHP+entry.baseAtk+entry.baseDef+entry.baseSpatk+entry.baseSpdef+entry.baseSpd}
-      </div>
-      <div style="color:#6080a0;font-size:10px;margin-top:2px;">${getEvolutionDisplayText(entry.dexId)}</div>
-      ${seen?'<div class="dex-holder" style="color:#5dade2;">Click to see catches ▶</div>':'<div class="dex-holder" style="color:#555;">Not yet encountered</div>'}`;
-    if(seen) d.onclick=()=>{ dexSelectedDexId=entry.dexId; dexView='individual'; renderDex(); updateDexChrome(); };
+      <div style="display:flex;align-items:center;gap:10px;">
+        <img src="${sprite}" style="width:40px;height:40px;image-rendering:pixelated;" onerror="this.style.display='none'">
+        <div style="flex:1;">
+          <div class="dex-header">
+            <span class="dex-name">#${entry.dexId} ${entry.name}</span>
+            <span class="dex-id">${caught.length} caught</span>
+          </div>
+          <div class="dex-details">${entry.type1||'???'}${entry.type2?' / '+entry.type2:''}</div>
+          <div style="color:#6080a0;font-size:10px;margin-top:2px;">${getEvolutionDisplayText(entry.dexId)}</div>
+          <div class="dex-holder" style="color:#5dade2;">Click to see catches ▶</div>
+        </div>
+      </div>`;
+    d.onclick=()=>{ dexSelectedDexId=entry.dexId; dexView='individual'; renderDex(); updateDexChrome(); };
     c.appendChild(d);
   });
+  // Show ??? if last known species hasn't confirmed evolution status
+  const lastEntry=visibleMembers[visibleMembers.length-1];
+  const lastR=state.researchLog[lastEntry.dexId];
+  if(!lastR||(!lastR.evolutionConfirmed&&!lastR.nonEvolutionConfirmed)){
+    const placeholder=document.createElement('div');
+    placeholder.className='dex-entry';
+    placeholder.style.opacity='0.5';
+    placeholder.innerHTML=`<div class="dex-header"><span class="dex-name">??? — Unknown</span><span class="dex-id">?</span></div>
+      <div class="dex-details">Further research needed</div>`;
+    c.appendChild(placeholder);
+  }
 }
 
 // LAYER 3: Individual catches of a species
 function renderDexIndividual(){
   const c=document.getElementById('dex-list'); c.innerHTML='';
-  const entry=POKEDEX[dexSelectedDexId];
+  // POKEDEX is keyed by name_formName in new system — use POKEDEX_DATA instead
+  const entry=POKEDEX_DATA?POKEDEX_DATA.find(x=>x.dexId===dexSelectedDexId&&!x.formName):null;
   const caught=state.dex.filter(p=>p.pokedexId===dexSelectedDexId);
   if(!caught.length){ c.innerHTML='<div style="color:#555;padding:12px;font-size:11px;">None caught.</div>'; return; }
   caught.sort((a,b)=>a.id-b.id).forEach(p=>{
@@ -859,7 +950,7 @@ function renderDexIndividual(){
 // DETAIL MODAL: individual pokemon
 function showPokemonDetail(catchId){
   const p=state.dex.find(x=>x.id===catchId); if(!p)return;
-  const entry=POKEDEX[p.pokedexId]||dexByName(p.species);
+  const entry=POKEDEX_DATA?POKEDEX_DATA.find(x=>x.dexId===p.pokedexId&&(!p.formName||x.formName===p.formName))||(typeof dexByName!=='undefined'?dexByName(p.species):null):null;
   const existing=document.getElementById('poke-modal');
   if(existing)existing.remove();
   const modal=document.createElement('div');
@@ -887,12 +978,25 @@ function showPokemonDetail(catchId){
       <div style="margin-bottom:10px;">
         <div style="color:#a0a0c0;font-size:11px;margin-bottom:6px;">Assignment:</div>
         <div style="color:${p.holder?'#2ecc71':'#e67e22'};font-size:12px;margin-bottom:8px;">${p.holder?'👤 '+p.holder:'📦 Unassigned'}</div>
+        ${p.currentHP<=0&&state.funds>=20
+          ? '<button onclick="revivePokemon('+p.id+')" style="width:100%;padding:8px;margin-bottom:6px;border-color:#e67e22;color:#e67e22;">💊 Revive ($20)</button>'
+          : ''}
         ${p.holder
           ? '<button onclick="unassignPokemon('+p.id+')" class="danger" style="width:100%;padding:8px;">Unassign</button>'
           : '<button onclick="assignToAide('+p.id+')" class="primary" style="width:100%;padding:8px;">Assign to Carl Oak</button>'}
       </div>
     </div>`;
   document.body.appendChild(modal);
+}
+
+function revivePokemon(catchId){
+  if(state.funds<20){addLog('Not enough funds to revive!','fail');return;}
+  const p=state.dex.find(x=>x.id===catchId);if(!p)return;
+  state.funds=Math.round((state.funds-20)*100)/100;
+  p.currentHP=p.maxHP;
+  saveGame();render();
+  document.getElementById('poke-modal').remove();
+  addLog('💊 '+p.species+' #'+p.id+' revived!','info');
 }
 
 function assignToAide(catchId){
@@ -923,6 +1027,7 @@ function renderViewAll(){
   let entries=[...state.dex];
   if(filter==='unassigned') entries=entries.filter(p=>!p.holder);
   if(filter==='assigned') entries=entries.filter(p=>!!p.holder);
+  if(filter==='shiny') entries=entries.filter(p=>!!p.isShiny);
   if(sort==='id') entries.sort((a,b)=>a.id-b.id);
   else if(sort==='dexid') entries.sort((a,b)=>(a.pokedexId||0)-(b.pokedexId||0));
   else if(sort==='level') entries.sort((a,b)=>b.level-a.level);
@@ -935,7 +1040,7 @@ function renderViewAll(){
     d.className='dex-entry'+(p.holder?'':' unassigned');
     d.style.cursor='pointer';
     d.innerHTML=`
-      <div class="dex-header"><span class="dex-name">#${p.pokedexId||'?'} ${p.species} (catch #${p.id})</span><span class="dex-id">${p.holder?'👤':'📦'}</span></div>
+      <div class="dex-header"><span class="dex-name">#${p.pokedexId||'?'} ${p.species}${p.isShiny?'<span class="shiny-badge">✨</span>':''} (catch #${p.id})</span><span class="dex-id">${p.holder?'👤':'📦'}</span></div>
       <div class="dex-details">Lv${p.level} · ${p.gender} · HP ${p.maxHP} · BST ${calcBST(p.species,p.level)}</div>
       <div class="dex-holder">${p.holder?'Held by: '+p.holder:'Unassigned'}</div>`;
     d.onclick=()=>showPokemonDetail(p.id);
@@ -949,7 +1054,9 @@ function gameTick(){
   state.missionElapsed++;state.nextEncounterIn--;
   if(state.currentEncounter){resolveEncounterStep();render();return;}
   if(state.nextEncounterIn<=0){
+    checkLocationHeal(); // heal between encounters if in healing location
     state.currentEncounter=rollEncounter();state.nextEncounterIn=ENC_INTERVAL;
+    if(!state.currentEncounter){state.nextEncounterIn=ENC_INTERVAL;return;}
     const enc=state.currentEncounter;
     addLog('Wild '+enc.species+' appeared! Lv'+enc.level+' '+enc.gender,'info');
     document.getElementById('enc-body').textContent='Wild '+enc.species+' Lv'+enc.level+' ('+enc.gender+') appeared!';
@@ -958,7 +1065,7 @@ function gameTick(){
   }else{updateLocation();renderParty();}
 }
 
-const SAVE_KEY='pokeprof_save';const SAVE_VERSION=4;let saveTimer=0;
+const SAVE_KEY='pokeprof_save';const SAVE_VERSION=5;let saveTimer=0;
 
 function saveGame(){
   try{
@@ -1019,6 +1126,27 @@ const hasSave=loadGame();
 if(!hasSave){init();setSaveIndicator('⬤ New game','');}else{render();}
 setInterval(gameTick,1000);
 setInterval(autoSaveTick,1000);
+
+// Handle tab coming back from sleep/background
+let _hiddenAt=null;
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){
+    _hiddenAt=Date.now();
+    saveGame(); // save when going to background
+  } else {
+    if(_hiddenAt&&state.missionActive){
+      const secsAway=Math.floor((Date.now()-_hiddenAt)/1000);
+      if(secsAway>5){
+        const summary=processOfflineTime(secsAway);
+        if(summary&&(summary.encounters>0||summary.income>0)){
+          showOfflineBanner(secsAway,summary);
+        }
+        render();saveGame();
+      }
+    }
+    _hiddenAt=null;
+  }
+});
 </script>
 </body>
 </html>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.10.6</title>
+<title>PokeProf v0.11</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body { background:#1a1a2e; color:#e0e0e0; font-family:'Courier New',monospace; font-size:13px; height:100dvh; display:flex; flex-direction:column; overflow:hidden; }
@@ -29,7 +29,6 @@
   #panels { flex:1; overflow:hidden; }
   .panel { display:none; flex-direction:column; height:100%; overflow:hidden; }
   .panel.active { display:flex; }
-
   .panel-title { background:#0f3460; padding:6px 12px; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:#a0a0c0; flex-shrink:0; }
 
   #aide-info { padding:10px 12px; border-bottom:1px solid #0f3460; background:#16213e; flex-shrink:0; }
@@ -81,19 +80,18 @@
   #dex-controls { padding:8px; border-bottom:1px solid #0f3460; display:flex; gap:6px; flex-shrink:0; background:#16213e; }
   #dex-controls select { background:#0f3460; border:1px solid #1a4a80; color:#e0e0e0; font-family:'Courier New',monospace; font-size:11px; padding:6px; border-radius:4px; flex:1; }
   #dex-list { overflow-y:auto; flex:1; padding:6px; background:#16213e; }
-  .dex-entry { background:#0f3460; border:1px solid #1a4a80; border-radius:6px; padding:8px 10px; margin-bottom:6px; font-size:11px; }
+  .dex-entry { background:#0f3460; border:1px solid #1a4a80; border-radius:6px; padding:8px 10px; margin-bottom:6px; font-size:11px; cursor:pointer; }
   .dex-entry .dex-header { display:flex; justify-content:space-between; margin-bottom:3px; }
   .dex-entry .dex-name { color:#fff; font-weight:bold; }
   .dex-entry .dex-id { color:#5dade2; }
   .dex-entry .dex-details { color:#9090b0; line-height:1.5; }
   .dex-entry .dex-holder { color:#2ecc71; font-size:10px; margin-top:3px; }
   .dex-entry.unassigned .dex-holder { color:#e67e22; }
-  .party-sprite { width:64px;height:64px;image-rendering:pixelated;flex-shrink:0; }
-  .aide-party-sprites { display:flex;gap:2px;flex-wrap:wrap;margin-top:4px; }
-  .aide-sprite-mini { width:48px;height:48px;image-rendering:pixelated; }
-  .shiny-badge { color:#f4d03f;font-size:10px;margin-left:2px; }
+  .party-sprite { width:64px; height:64px; image-rendering:pixelated; flex-shrink:0; }
+  .aide-party-sprites { display:flex; gap:2px; flex-wrap:wrap; margin-top:4px; }
+  .aide-sprite-mini { width:48px; height:48px; image-rendering:pixelated; }
+  .shiny-badge { color:#f4d03f; font-size:10px; margin-left:2px; }
 </style>
-<!-- External database files — must be in same GitHub repo -->
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -106,7 +104,7 @@
 <body>
 
 <div id="header">
-  <h1>🎓 PokeProf v0.10.6</h1>
+  <h1>🎓 PokeProf v0.11</h1>
   <div style="display:flex;align-items:center;gap:10px;">
     <button class="reset" onclick="resetGame()">⚠ Reset</button>
     <div style="text-align:right;">
@@ -130,108 +128,97 @@
 </div>
 
 <div id="panels">
+  <!-- AIDE TAB -->
   <div class="panel active" id="panel-aide">
     <div class="panel-title">Aides</div>
     <div id="aide-info">
       <div class="aide-name">🧑‍🔬 Carl Oak</div>
       <div class="aide-location" id="aide-location">📍 Pallet Town — Idle</div>
-      <div id="aide-bag-display" style="font-size:10px;color:#5dade2;margin-top:2px;">🏐 0 balls in bag</div>
-    </div>
-    <div class="panel-title" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;" onclick="togglePartyList()">
-      <span>Carl Oak's Party</span><span id="party-toggle-icon">▼</span>
+      <div id="aide-bag-display" style="color:#a0a0c0;font-size:10px;margin-top:3px;">🏐 0 balls in bag</div>
+      <div id="bag-display" style="color:#a0a0c0;font-size:10px;margin-top:2px;"></div>
     </div>
     <div id="party-list"></div>
     <div id="controls">
-      <button class="primary" id="btn-start" onclick="startMission()">▶ Start Mission</button>
-      <button class="danger" id="btn-recall" onclick="recallAide()" disabled>⏎ Recall</button>
-      <div id="bag-display" style="font-size:10px;color:#a0a0c0;"></div>
+      <button id="btn-start" onclick="startMission()">▶ Start Mission</button>
+      <button id="btn-recall" onclick="recallAide()" disabled>◀ Recall</button>
+      <div class="potion-threshold">
+        <label>Auto-potion %:</label>
+        <input type="number" id="potion-threshold" value="75" min="0" max="100" onchange="state.potionThreshold=parseInt(this.value)||75">
+      </div>
+    </div>
+    <div style="background:#16213e;border-top:1px solid #0f3460;padding:6px 12px;font-size:10px;color:#6080a0;flex-shrink:0;">
+      Catches: <span id="total-catches" style="color:#f4d03f">0</span> &nbsp;·&nbsp; Sightings: <span id="total-sightings" style="color:#f4d03f">0</span>
     </div>
   </div>
 
+  <!-- LOG TAB -->
   <div class="panel" id="panel-log">
+    <div class="panel-title">Mission Log</div>
     <div id="encounter-display">
       <div class="enc-title">Current Encounter</div>
-      <div class="enc-body" id="enc-body">Awaiting first encounter...</div>
+      <div class="enc-body" id="enc-body">No active mission.</div>
     </div>
     <div id="log"></div>
   </div>
 
-  <div class="panel" id="panel-dex" style="background:#16213e;">
-    <div class="panel-title" id="dex-breadcrumb">Pokédex</div>
-    <div id="dex-stats">Catches: <span id="total-catches">0</span> &nbsp;|&nbsp; Sightings: <span id="total-sightings">0</span></div>
-    <div id="dex-controls">
-      <button id="dex-back-btn" onclick="dexBack()" style="display:none;padding:5px 10px;font-size:11px;">◀ Back</button>
-      <button onclick="dexViewAll()" style="padding:5px 10px;font-size:11px;">≡ View All</button>
+  <!-- DEX TAB -->
+  <div class="panel" id="panel-dex">
+    <div class="panel-title">Pokédex</div>
+    <div id="dex-stats">
+      Caught: <span id="dex-count-detail">0</span> &nbsp;·&nbsp; Sightings: <span id="dex-sight-detail">0</span>
     </div>
-    <!-- View All controls (hidden by default) -->
-    <div id="dex-viewall-controls" style="display:none;padding:6px 8px;border-bottom:1px solid #0f3460;gap:6px;flex-wrap:wrap;background:#16213e;">
-      <select id="sort-select" onchange="renderViewAll()" style="background:#0f3460;border:1px solid #1a4a80;color:#e0e0e0;font-family:'Courier New',monospace;font-size:11px;padding:5px;border-radius:4px;flex:1;">
-        <option value="id">Sort: Catch ID</option>
-        <option value="dexid">Sort: Dex #</option>
+    <div id="dex-controls">
+      <select id="sort-select" onchange="renderDex()">
+        <option value="id">Sort: Catch #</option>
+        <option value="dex">Sort: Dex #</option>
         <option value="level">Sort: Level</option>
         <option value="hp">Sort: HP</option>
         <option value="total">Sort: BST</option>
       </select>
-      <select id="filter-select" onchange="renderViewAll()" style="background:#0f3460;border:1px solid #1a4a80;color:#e0e0e0;font-family:'Courier New',monospace;font-size:11px;padding:5px;border-radius:4px;flex:1;">
+      <select id="filter-select" onchange="renderDex()">
         <option value="all">All</option>
         <option value="unassigned">Unassigned</option>
         <option value="assigned">Assigned</option>
         <option value="shiny">✨ Shiny</option>
       </select>
     </div>
-    <div id="dex-list" style="overflow-y:auto;flex:1;padding:6px;background:#16213e;"></div>
+    <div id="dex-list"></div>
   </div>
 </div>
 
 <script>
-// ── DATABASE BRIDGE ──
-// POKEDEX_DATA, dexByName(), getForms(), getFamilyMembers() provided by pokedex.js
-// ENCOUNTERS provided by encounters.js
-// TYPE_CHART + getTypeEffectiveness() provided by typechart.js
-// EVO_TREE + getEvolutions() provided by evotree.js
-// FORM_TRIGGERS provided by formtriggers.js
-
-// Build SPECIES lookup by name (base forms only) for game logic
+// ── SPECIES LOOKUP ──
 const SPECIES = {};
 if(typeof POKEDEX_DATA !== 'undefined'){
   POKEDEX_DATA.forEach(p => {
-    // Base form (no formName) takes priority, but only if it has complete data
     const existing = SPECIES[p.name];
     if(!p.formName){
-      // Base form: always prefer over alternate forms, but keep existing if new entry has no growthRate
       if(!existing || p.growthRate) SPECIES[p.name] = p;
     } else {
-      // Alternate form: only set if no entry exists yet
       if(!existing) SPECIES[p.name] = p;
     }
   });
-} else {
-  console.error('pokedex.js not loaded — check GitHub file is uploaded');
 }
 
-// Build encounter table for a location from encounters.js
-// Also filter by requiresItem if Carl has that item in his bag
+// ── ENCOUNTER TABLE ──
 function buildRouteTable(locationId){
   if(typeof ENCOUNTERS==='undefined'||!ENCOUNTERS.length) return [];
   return ENCOUNTERS
     .filter(e=>e.locationId===locationId)
     .filter(e=>{
-      if(!e.requiresItem) return true; // no requirement
-      return !!(state.bag&&state.bag[e.requiresItem]&&state.bag[e.requiresItem]>0);
+      if(!e.requiresItem) return true;
+      return !!(state.bag && state.bag[e.requiresItem] && state.bag[e.requiresItem]>0);
     })
     .map(e=>({dexId:e.dexId,minLv:e.minLevel,maxLv:e.maxLevel,weight:e.encounterRate,method:e.encounterMethod}));
 }
+
 const ENC_INTERVAL = 30;
 
-
-
-// ── ITEM SYSTEM ──
+// ── ITEM HELPERS ──
 function getItem(itemId){
   if(typeof ITEMS_DATA==='undefined') return null;
   return ITEMS_DATA.find(i=>i.itemId===itemId)||null;
 }
-
-// getShopItems provided by items.js
 
 function getBallCount(){
   if(!state.bag) return 0;
@@ -244,16 +231,16 @@ function getBallCount(){
 }
 
 function getWeakestEffectivePotion(pokemon){
-  // Returns itemId of weakest potion that can help, or null
-  if(!state.bag) return null;
+  if(!state.bag||!pokemon) return null;
   const missing=pokemon.maxHP-pokemon.currentHP;
   if(missing<=0) return null;
+  const pct=(pokemon.currentHP/pokemon.maxHP)*100;
+  if(pct>=(state.potionThreshold||75)) return null;
   const potionOrder=['potion','super-potion','max-potion'];
   const healAmounts={potion:20,'super-potion':60,'max-potion':Infinity};
   for(const id of potionOrder){
     if((state.bag[id]||0)>0&&healAmounts[id]>=missing) return id;
   }
-  // If nothing covers it exactly, use next best
   for(const id of potionOrder){
     if((state.bag[id]||0)>0) return id;
   }
@@ -267,8 +254,9 @@ function useItemFromBag(itemId, pokemon){
   if(item.itemCategory==='ball'){
     state.bag[itemId]--;
     if(state.bag[itemId]<=0) delete state.bag[itemId];
-    return true; // caller handles catch logic
+    return true;
   }
+  if(!pokemon) return false;
   if(item.effect==='heal-hp'){
     const heal=parseInt(item.effectValue)||20;
     const healed=Math.min(heal,pokemon.maxHP-pokemon.currentHP);
@@ -296,13 +284,152 @@ function renderBagDisplay(){
   if(!state.bag||!Object.keys(state.bag).length){ el.textContent='Bag: empty'; return; }
   const parts=Object.entries(state.bag).map(([id,qty])=>{
     const item=getItem(id);
-    const name=item?item.name:id;
-    return qty+'× '+name;
+    return qty+'× '+(item?item.name:id);
   });
   el.innerHTML='🎒 '+parts.join(' · ')+'<br><span style="color:#5dade2;">🏐 '+getBallCount()+' balls</span>';
 }
 
-// ── RESEARCH LOG ──
+// ── EXP / LEVEL / HP ──
+function expToLevel(lv,rate){
+  if(lv<=1) return 0;
+  const r=rate||'mediumFast';
+  if(r==='mediumFast') return Math.floor(Math.pow(lv,3));
+  if(r==='mediumSlow') return Math.max(0,Math.floor((6/5)*Math.pow(lv,3)-15*Math.pow(lv,2)+100*lv-140));
+  if(r==='fast') return Math.floor((4*Math.pow(lv,3))/5);
+  if(r==='slow') return Math.floor((5*Math.pow(lv,3))/4);
+  if(r==='erratic') return lv<50?Math.floor((Math.pow(lv,3)*(100-lv))/50):lv<68?Math.floor((Math.pow(lv,3)*(150-lv))/100):lv<98?Math.floor((Math.pow(lv,3)*Math.floor((1911-10*lv)/3))/500):Math.floor((Math.pow(lv,3)*(160-lv))/100);
+  if(r==='fluctuating') return lv<15?Math.floor((Math.pow(lv,3)*(Math.floor((lv+1)/3)+24))/50):lv<36?Math.floor((Math.pow(lv,3)*(lv+14))/50):Math.floor((Math.pow(lv,3)*(Math.floor(lv/2)+32))/50);
+  return Math.floor(Math.pow(lv,3));
+}
+
+function calcMaxHP(sp,lv){
+  const s=SPECIES[sp]; if(!s) return lv+10;
+  return Math.floor((s.baseHP*2*lv)/100)+lv+10;
+}
+
+function calcBST(sp,lv){
+  const s=SPECIES[sp]; if(!s) return 0;
+  const st=(b)=>Math.floor(((b||0)*2*lv)/100)+5;
+  return calcMaxHP(sp,lv)+st(s.baseAtk)+st(s.baseDef)+st(s.baseSpatk)+st(s.baseSpdef)+st(s.baseSpd);
+}
+
+// ── STATE ──
+let state={
+  funds:5.00, totalCatches:0, totalSightings:0,
+  missionActive:false, missionElapsed:0, nextEncounterIn:ENC_INTERVAL,
+  incomeAccumulator:0, potionThreshold:75,
+  party:[], dex:[], dexIdCounter:1, currentEncounter:null, log:[],
+  missionDestination:'route1', missionBehavior:'research',
+  missionOrigin:'palletTown', currentLocation:'palletTown', autoRepeat:false,
+  travelPath:[], travelPathIndex:0, travelCyclesRemaining:0,
+  bag:{},
+  researchLog:{}, pendingFindings:[]
+};
+
+function makePokemon(sp,lv,gender,holder=null){
+  let entry=null;
+  if(typeof POKEDEX_DATA!=='undefined'){
+    entry=POKEDEX_DATA.find(p=>p.name===sp&&!p.formName&&p.growthRate);
+    if(!entry) entry=POKEDEX_DATA.find(p=>p.name===sp&&p.growthRate);
+    if(!entry) entry=POKEDEX_DATA.find(p=>p.name===sp&&!p.formName);
+    if(!entry) entry=POKEDEX_DATA.find(p=>p.name===sp);
+  }
+  if(!entry) entry=SPECIES[sp];
+  const dexId=entry?entry.dexId||entry.id:0;
+  const growthRate=(entry&&entry.growthRate)||'mediumFast';
+  const maxHP=calcMaxHP(sp,lv);
+  const startExp=expToLevel(lv,growthRate);
+  return{id:state.dexIdCounter++,species:sp,pokedexId:dexId,level:lv,gender,
+    currentHP:maxHP,maxHP,growthRate,
+    exp:isNaN(startExp)?0:startExp,
+    holder};
+}
+
+// ── SPRITES ──
+const SPRITE_BASE='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon';
+function getSpriteUrl(dexId,name,isShiny=false){
+  if(POKEDEX_DATA){
+    const entry=POKEDEX_DATA.find(x=>x.dexId===dexId&&!x.formName);
+    if(entry&&entry.spriteUrl) return entry.spriteUrl;
+  }
+  return (isShiny?SPRITE_BASE+'/shiny':SPRITE_BASE)+'/'+dexId+'.png';
+}
+
+// ── TRAVEL ──
+function buildTravelPath(fromId,toId){
+  if(typeof CONNECTIONS_DATA!=='undefined'){
+    const visited=new Set([fromId]);
+    const queue=[[fromId,[]]];
+    while(queue.length){
+      const [cur,path]=queue.shift();
+      const available=(CONNECTIONS_DATA||[]).filter(c=>{
+        if(c.fromLocationId!==cur) return false;
+        if(!c.requiresItem) return true;
+        return (state.bag&&state.bag[c.requiresItem]&&state.bag[c.requiresItem]>0)||
+               (state.trainerUnlocks&&state.trainerUnlocks[c.requiresItem]);
+      });
+      for(const conn of available){
+        const n=conn.toLocationId;
+        if(visited.has(n)) continue;
+        visited.add(n);
+        const newPath=[...path,n];
+        if(n===toId) return newPath;
+        queue.push([n,newPath]);
+      }
+    }
+    return [];
+  }
+  if(typeof CONNECTIONS!=='undefined'&&typeof getConnectedLocations==='function'){
+    const visited=new Set([fromId]);
+    const queue=[[fromId,[]]];
+    while(queue.length){
+      const [cur,path]=queue.shift();
+      const neighbors=getConnectedLocations(cur)||[];
+      for(const n of neighbors){
+        if(visited.has(n)) continue;
+        visited.add(n);
+        const newPath=[...path,n];
+        if(n===toId) return newPath;
+        queue.push([n,newPath]);
+      }
+    }
+  }
+  return [toId];
+}
+
+function arriveAtLocation(locId){
+  state.currentLocation=locId;
+  const locData=typeof LOCATIONS!=='undefined'?getLocation(locId):null;
+  const locName=locData?locData.name:locId;
+  addLog('📍 Carl Oak arrived at '+locName+'!','info');
+  if(locData&&(locData.heals==='TRUE'||locData.heals===true||locData.heals==='true')){
+    const needsHeal=state.party.some(p=>p.currentHP<p.maxHP||p.currentHP<=0);
+    if(needsHeal){
+      state.party.forEach(p=>{ p.currentHP=p.maxHP; });
+      addLog('🏥 Party healed at '+locName+'!','info');
+    }
+  }
+  const cycles=locData&&locData.travelTime?parseInt(locData.travelTime):1;
+  state.travelCyclesRemaining=Math.max(1,cycles);
+}
+
+function advanceTravelPath(){
+  if(!state.travelPath||state.travelPath.length===0) return;
+  if(state.travelPathIndex>=state.travelPath.length) return;
+  state.travelCyclesRemaining--;
+  if(state.travelCyclesRemaining<=0){
+    state.travelPathIndex++;
+    if(state.travelPathIndex<state.travelPath.length){
+      arriveAtLocation(state.travelPath[state.travelPathIndex]);
+    } else {
+      state.currentLocation=state.missionDestination;
+      const locData=typeof LOCATIONS!=='undefined'?getLocation(state.missionDestination):null;
+      addLog('🏁 Carl Oak reached '+(locData?locData.name:state.missionDestination)+'!','info');
+    }
+  }
+}
+
+// ── RESEARCH ──
 function getResearch(dexId){
   if(!state.researchLog[dexId]) state.researchLog[dexId]={
     evolutionConfirmed:false, nonEvolutionConfirmed:false,
@@ -312,62 +439,49 @@ function getResearch(dexId){
   };
   return state.researchLog[dexId];
 }
-
-function recordSighting(dexId, level){
+function recordSighting(dexId,level){
   const r=getResearch(dexId);
   if(level>r.highestLevelObserved) r.highestLevelObserved=level;
-  // At level 100 with no evolution, rule out level-based evolution
-  if(level>=100&&!r.evolutionConfirmed&&!r.nonEvolutionConfirmed){
-    const entry=POKEDEX_DATA?POKEDEX_DATA.find(x=>x.dexId===dexId&&!x.formName):null;
-    if(entry&&!entry.evolvesIntoId){ r.nonEvolutionConfirmed=true; r.testedMethods.push('level'); }
-  }
 }
-
-function recordEvolution(fromDexId, toDexId, method, level){
+function recordEvolution(fromDexId,toDexId,method,level){
   const r=getResearch(fromDexId);
   if(!r.evolutionConfirmed){
-    r.evolutionConfirmed=true;
-    r.confirmedMethod=method;
-    r.confirmedIntoId=toDexId;
+    r.evolutionConfirmed=true; r.confirmedMethod=method; r.confirmedIntoId=toDexId;
     if(method==='level') r.testedMethods.push('level');
-    // Queue finding
     const fromEntry=POKEDEX_DATA?POKEDEX_DATA.find(x=>x.dexId===fromDexId&&!x.formName):null;
     const toEntry=POKEDEX_DATA?POKEDEX_DATA.find(x=>x.dexId===toDexId&&!x.formName):null;
-    addFinding('evolution', fromEntry?fromEntry.name:'#'+fromDexId, toEntry?toEntry.name:'#'+toDexId, method, level);
+    addFinding('evolution',fromEntry?fromEntry.name:'#'+fromDexId,toEntry?toEntry.name:'#'+toDexId,method,level);
   }
 }
-
-function recordNewSpecies(dexId, name){
+function recordNewSpecies(dexId,name){
   const r=getResearch(dexId);
-  // First time seen
-  if(!r.firstSeen){ r.firstSeen=true; addFinding('species', name); }
+  if(!r.firstSeen){ r.firstSeen=true; addFinding('species',name); }
 }
+function addFinding(type,...args){ state.pendingFindings.push({type,args,time:Date.now()}); }
+function isSpeciesKnown(dexId){ return !!state.researchLog[dexId]; }
 
-function addFinding(type, ...args){
-  state.pendingFindings.push({type, args, time:Date.now()});
-}
-
-function isSpeciesKnown(dexId){
-  return !!state.researchLog[dexId];
-}
-
-function isEvolutionKnown(dexId){
+function getEvolutionDisplayText(dexId){
   const r=state.researchLog[dexId];
-  return r&&(r.evolutionConfirmed||r.nonEvolutionConfirmed);
+  if(!r) return 'Evolves into: ???';
+  if(r.nonEvolutionConfirmed) return 'Does not evolve';
+  if(r.evolutionConfirmed){
+    const toEntry=POKEDEX_DATA?POKEDEX_DATA.find(x=>x.dexId===r.confirmedIntoId&&!x.formName):null;
+    const toName=toEntry?toEntry.name:'#'+r.confirmedIntoId;
+    return 'Evolves into: '+toName+' ('+r.confirmedMethod+(r.confirmedMethod==='level'?' Lv'+r.highestLevelObserved:'')+')';
+  }
+  return 'Evolves into: ??? (unconfirmed)';
 }
-
 
 function showFindingsReport(){
-  if(!state.pendingFindings||!state.pendingFindings.length)return;
+  if(!state.pendingFindings||!state.pendingFindings.length) return;
   const existing=document.getElementById('findings-modal');
-  if(existing)existing.remove();
+  if(existing) existing.remove();
   const modal=document.createElement('div');
   modal.id='findings-modal';
   modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
   const lines=state.pendingFindings.map(f=>{
     if(f.type==='species') return '🆕 New Species: <span style="color:#2ecc71">'+f.args[0]+'</span>';
-    if(f.type==='evolution') return '🔄 Evolution Confirmed: <span style="color:#f4d03f">'+f.args[0]+' → '+f.args[1]+'</span><br><span style="color:#9090b0;font-size:10px;padding-left:16px;">Method: '+f.args[2]+(f.args[3]?' at Lv'+f.args[3]:'')+'</span>';
-    if(f.type==='encounter') return '📍 New Encounter: <span style="color:#5dade2">'+f.args[0]+'</span>';
+    if(f.type==='evolution') return '🔄 Evolution: <span style="color:#f4d03f">'+f.args[0]+' → '+f.args[1]+'</span>';
     return '📋 '+f.args.join(' ');
   }).join('<br>');
   modal.innerHTML=`
@@ -380,256 +494,339 @@ function showFindingsReport(){
   state.pendingFindings=[];
 }
 
-
-function getEvolutionDisplayText(dexId){
-  const r=state.researchLog[dexId];
-  if(!r) return 'Evolves into: ???';
-  if(r.nonEvolutionConfirmed) return 'Does not evolve';
-  if(r.evolutionConfirmed){
-    const toEntry=POKEDEX_DATA?POKEDEX_DATA.find(x=>x.dexId===r.confirmedIntoId&&!x.formName):null;
-    const toName=toEntry?toEntry.name:'#'+r.confirmedIntoId;
-    return 'Evolves into: '+toName+' ('+r.confirmedMethod+(r.confirmedMethod==='level'?' Lv'+r.highestLevelObserved:'')+')'
+// ── EXP / EVOLUTION ──
+function giveExp(pokemon,amount){
+  pokemon.exp+=amount;
+  addLog(pokemon.species+' #'+pokemon.id+' +'+amount+' EXP','exp');
+  let levelled=false;
+  while(true){
+    const s=SPECIES[pokemon.species];
+    const gr=pokemon.growthRate||(s?s.growthRate:null)||'mediumFast';
+    const need=expToLevel(pokemon.level+1,gr);
+    if(pokemon.exp>=need&&pokemon.level<100){
+      pokemon.level++; levelled=true;
+      const om=pokemon.maxHP; pokemon.maxHP=calcMaxHP(pokemon.species,pokemon.level);
+      pokemon.currentHP=Math.min(pokemon.maxHP,pokemon.currentHP+(pokemon.maxHP-om));
+      addLog(pokemon.species+' #'+pokemon.id+' → Lv'+pokemon.level+'! HP:'+pokemon.maxHP,'info');
+      checkEvolution(pokemon); saveGame();
+    } else break;
   }
-  return 'Evolves into: ??? (unconfirmed)';
+  if(levelled) renderDex();
 }
 
-
-// ── SPRITE SYSTEM ──
-const SPRITE_BASE='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon';
-function getSpriteUrl(dexId, name, isShiny=false){
-  // Check for custom spriteUrl in DB first (for regional forms)
-  if(POKEDEX_DATA){
-    const entry=POKEDEX_DATA.find(x=>x.dexId===dexId&&!x.formName);
-    if(entry&&entry.spriteUrl) return entry.spriteUrl;
+function checkEvolution(p){
+  const s=SPECIES[p.species]; if(!s) return;
+  if(s.evolveMethod==='level'&&s.evolvesIntoId&&p.level>=s.evolveLevel){
+    const newEntry=POKEDEX_DATA?POKEDEX_DATA.find(x=>x.dexId===s.evolvesIntoId&&!x.formName):null;
+    if(newEntry){
+      const old=p.species; const prevDexId=p.pokedexId;
+      p.species=newEntry.name; p.pokedexId=newEntry.dexId;
+      const om=p.maxHP; p.maxHP=calcMaxHP(p.species,p.level);
+      p.currentHP=Math.min(p.maxHP,p.currentHP+(p.maxHP-om));
+      if(!SPECIES[p.species]) SPECIES[p.species]=newEntry;
+      recordEvolution(prevDexId,newEntry.dexId,'level',p.level);
+      recordNewSpecies(newEntry.dexId,p.species);
+      addLog(old+' #'+p.id+' evolved into '+p.species+'!','evolve');
+      document.getElementById('enc-body').textContent=old+' evolved into '+p.species+'!';
+    }
   }
-  const base=isShiny?SPRITE_BASE+'/shiny':SPRITE_BASE;
-  return base+'/'+dexId+'.png';
+  if(typeof EVO_TREE!=='undefined'){
+    const branches=getEvolutions(p.pokedexId);
+    if(branches.length>0){
+      const branch=branches[Math.floor(Math.random()*branches.length)];
+      if(branch.evolveMethod==='level'&&p.level>=branch.evolveLevel){
+        const newEntry=POKEDEX_DATA?POKEDEX_DATA.find(x=>x.dexId===branch.toDexId&&!x.formName):null;
+        if(newEntry){
+          const old=p.species; const prevDexId=p.pokedexId;
+          p.species=newEntry.name; p.pokedexId=newEntry.dexId;
+          const om=p.maxHP; p.maxHP=calcMaxHP(p.species,p.level);
+          p.currentHP=Math.min(p.maxHP,p.currentHP+(p.maxHP-om));
+          if(!SPECIES[p.species]) SPECIES[p.species]=newEntry;
+          recordEvolution(prevDexId,newEntry.dexId,'level',p.level);
+          recordNewSpecies(newEntry.dexId,p.species);
+          addLog(old+' #'+p.id+' evolved into '+p.species+'!','evolve');
+          document.getElementById('enc-body').textContent=old+' evolved into '+p.species+'!';
+        }
+      }
+    }
+  }
 }
 
+function giveExpSilent(p,amount){
+  p.exp+=amount;
+  while(true){
+    const s=SPECIES[p.species];
+    const gr=p.growthRate||(s?s.growthRate:null)||'mediumFast';
+    if(p.exp>=expToLevel(p.level+1,gr)&&p.level<100){
+      p.level++;
+      const om=p.maxHP; p.maxHP=calcMaxHP(p.species,p.level);
+      p.currentHP=Math.min(p.maxHP,p.currentHP+(p.maxHP-om));
+      if(s&&s.evolveMethod==='level'&&s.evolvesIntoId&&p.level>=s.evolveLevel){
+        const ne=POKEDEX_DATA?POKEDEX_DATA.find(x=>x.dexId===s.evolvesIntoId&&!x.formName):null;
+        if(ne){
+          p.species=ne.name; p.pokedexId=ne.dexId;
+          if(!SPECIES[p.species]) SPECIES[p.species]=ne;
+          const om2=p.maxHP; p.maxHP=calcMaxHP(p.species,p.level);
+          p.currentHP=Math.min(p.maxHP,p.currentHP+(p.maxHP-om2));
+        }
+      }
+    } else break;
+  }
+}
+
+// ── OFFLINE PROCESSING ──
+function processOfflineTime(secsAway){
+  if(secsAway<10||!state.missionActive) return null;
+  const summary={encounters:0,catches:0,wins:0,income:0,evolutions:[]};
+  const perMin=1.00+Math.floor(state.totalCatches/100)*0.01;
+  const income=Math.round((perMin/60)*secsAway*100)/100;
+  state.funds=Math.round((state.funds+income)*100)/100;
+  summary.income=income;
+  let remaining=secsAway, nextIn=state.nextEncounterIn;
+  while(remaining>=nextIn){
+    remaining-=nextIn; nextIn=ENC_INTERVAL; summary.encounters++;
+    const enc=rollEncounter(); const lead=getLeadPokemon(); if(!lead) break;
+    let resolved=false, tries=0;
+    while(!resolved&&tries<20){
+      tries++;
+      const potId=getWeakestEffectivePotion(lead);
+      if(potId) useItemFromBag(potId,lead);
+      const hasBalls=getBallCount()>0;
+      if(hasBalls){
+        const ballPriority=['master-ball','ultra-ball','great-ball','poke-ball'];
+        let ballId=null;
+        for(const b of ballPriority){ if(state.bag&&state.bag[b]>0){ ballId=b; break; } }
+        if(ballId){
+          useItemFromBag(ballId,null);
+          const ballItem=getItem(ballId);
+          const modifier=ballItem&&ballItem.catchRateModifier?parseFloat(ballItem.catchRateModifier):1;
+          const catchRate=modifier>=255?1:Math.min(0.99,0.75*modifier);
+          if(Math.random()<catchRate){
+            const caught=makePokemon(enc.species,enc.level,enc.gender);
+            state.dex.push(caught); state.totalCatches++; state.totalSightings++;
+            recordSighting(enc.pokedexId||caught.pokedexId,enc.level);
+            recordNewSpecies(caught.pokedexId,enc.species);
+            const s_=SPECIES[enc.species];
+            const exp=Math.floor(((s_?s_.baseExpYield||s_.baseExp:51)*enc.level)/7);
+            giveExpSilent(lead,exp);
+            summary.catches++; resolved=true;
+          }
+        } else {
+          resolved=true;
+        }
+      } else {
+        const dmg=Math.max(1,Math.floor((enc.level/lead.level)*0.5*0.25*lead.maxHP));
+        lead.currentHP=Math.max(0,lead.currentHP-dmg);
+        if(lead.currentHP<=0){ resolved=true; }
+        else {
+          const s_=SPECIES[enc.species];
+          const exp=Math.floor(((s_?s_.baseExpYield||s_.baseExp:51)*enc.level)/7);
+          giveExpSilent(lead,exp);
+          summary.wins++; resolved=true;
+        }
+      }
+    }
+    advanceTravelPath();
+  }
+  state.nextEncounterIn=Math.max(1,nextIn-remaining);
+  return summary;
+}
+
+function showOfflineBanner(secsAway,summary){
+  const mins=Math.floor(secsAway/60);
+  const el=document.getElementById('offline-summary');
+  el.innerHTML='Away for '+mins+' min · Income: +$'+summary.income.toFixed(2)+' · Encounters: '+summary.encounters+' · Catches: '+summary.catches;
+  document.getElementById('offline-banner').style.display='block';
+}
+
+// ── COMBAT ──
+function rollEncounter(){
+  const dest=state.currentLocation||state.missionDestination||'route1';
+  const table=buildRouteTable(dest);
+  if(!table||!table.length) return null;
+  let roll=Math.random()*100, cum=0;
+  for(const e of table){
+    cum+=e.weight;
+    if(roll<cum){
+      const entry=POKEDEX_DATA?POKEDEX_DATA.find(p=>p.dexId===e.dexId&&!p.formName):null;
+      if(!entry) continue;
+      return{species:entry.name,pokedexId:e.dexId,level:e.minLv+Math.floor(Math.random()*(e.maxLv-e.minLv+1)),gender:Math.random()<0.5?'M':'F'};
+    }
+  }
+  return null;
+}
+
+function resolveEncounterStep(){
+  const enc=state.currentEncounter; if(!enc) return;
+  const lead=getLeadPokemon(); if(!lead){ endMission(); return; }
+  if(lead.currentHP<=0){
+    const fainted=state.party.filter(p=>p.currentHP<=0).sort((a,b)=>a.level-b.level);
+    for(const fp of fainted){
+      if((state.bag['revive']||0)>0){ useItemFromBag('revive',fp); break; }
+      if((state.bag['max-revive']||0)>0){ useItemFromBag('max-revive',fp); break; }
+    }
+  }
+  const potionId=getWeakestEffectivePotion(lead);
+  if(potionId) useItemFromBag(potionId,lead);
+  const hasBalls=getBallCount()>0;
+  if(hasBalls){ throwBall(lead,enc); } else { fight(lead,enc); }
+}
+
+function throwBall(lead,enc){
+  const isShiny=Math.random()<(1/4096);
+  if(isShiny){ catchPokemon(lead,enc,true); return; }
+  const ballPriority=['master-ball','ultra-ball','great-ball','poke-ball'];
+  let ballUsed=null;
+  for(const b of ballPriority){ if((state.bag[b]||0)>0){ ballUsed=b; break; } }
+  if(!ballUsed){ fight(lead,enc); return; }
+  useItemFromBag(ballUsed,null);
+  const ballItem=getItem(ballUsed);
+  const modifier=ballItem&&ballItem.catchRateModifier?parseFloat(ballItem.catchRateModifier):1;
+  const catchRate=modifier>=255?1:Math.min(0.99,0.75*modifier);
+  if(Math.random()<catchRate){
+    catchPokemon(lead,enc,false);
+  } else {
+    const dmg=Math.max(1,Math.floor((enc.level/lead.level)*0.5*0.25*lead.maxHP));
+    lead.currentHP=Math.max(0,lead.currentHP-dmg);
+    addLog('Ball failed! '+enc.species+' Lv'+enc.level+' deals '+dmg+' HP. ('+lead.species+': '+lead.currentHP+'/'+lead.maxHP+' HP)','fail');
+    document.getElementById('enc-body').textContent='Ball missed! '+lead.species+' at '+lead.currentHP+'/'+lead.maxHP+' HP';
+    if(lead.currentHP<=0){ addLog(lead.species+' #'+lead.id+' fainted!','faint'); const next=getLeadPokemon(); if(!next) endMission(); }
+  }
+}
+
+function catchPokemon(lead,enc,isShiny){
+  const caught=makePokemon(enc.species,enc.level,enc.gender);
+  caught.isShiny=isShiny;
+  state.dex.push(caught); state.totalCatches++; state.totalSightings++;
+  if(isShiny) addLog('✨ SHINY '+caught.species+' caught automatically! ✨','evolve');
+  const s_=SPECIES[enc.species];
+  const exp=Math.floor(((s_?s_.baseExpYield||s_.baseExp:51)*enc.level)/7);
+  giveExp(lead,exp);
+  recordSighting(enc.pokedexId||caught.pokedexId,enc.level);
+  if(!isSpeciesKnown(caught.pokedexId)||!state.researchLog[caught.pokedexId].firstSeen)
+    recordNewSpecies(caught.pokedexId,enc.species);
+  addLog('Caught '+enc.species+' #'+caught.id+' (Lv'+enc.level+' '+enc.gender+(isShiny?' ✨':'')+')! +'+exp+' EXP','catch');
+  document.getElementById('total-catches').textContent=state.totalCatches;
+  document.getElementById('total-sightings').textContent=state.totalSightings;
+  state.currentEncounter=null;
+  advanceTravelPath();
+  document.getElementById('enc-body').textContent='Caught '+enc.species+' Lv'+enc.level+(isShiny?' ✨ SHINY!':'!');
+  saveGame();
+}
+
+function fight(lead,enc){
+  const dmg=Math.max(1,Math.floor((enc.level/lead.level)*0.5*lead.maxHP));
+  lead.currentHP=Math.max(0,lead.currentHP-dmg);
+  addLog(lead.species+' vs '+enc.species+' Lv'+enc.level+': took '+dmg+' dmg. ('+lead.currentHP+'/'+lead.maxHP+' HP)','damage');
+  if(lead.currentHP<=0){
+    addLog(lead.species+' #'+lead.id+' fainted!','faint');
+    const next=getLeadPokemon(); if(!next){ endMission(); return; }
+    addLog(enc.species+' fled.','info'); state.currentEncounter=null;
+    advanceTravelPath();
+    document.getElementById('enc-body').textContent=lead.species+' fainted. '+enc.species+' fled.';
+  } else {
+    const s_=SPECIES[enc.species];
+    const exp=Math.floor(((s_?s_.baseExpYield||s_.baseExp:51)*enc.level)/7);
+    giveExp(lead,exp);
+    addLog('Won vs '+enc.species+' Lv'+enc.level+'! +'+exp+' EXP','win');
+    state.currentEncounter=null;
+    advanceTravelPath();
+    document.getElementById('enc-body').textContent='Won vs '+enc.species+' Lv'+enc.level+'.';
+  }
+}
+
+// ── INCOME ──
+function incomeTick(){
+  const perMin=1.00+Math.floor(state.totalCatches/100)*0.01;
+  state.incomeAccumulator+=perMin/60;
+  if(state.incomeAccumulator>=0.01){
+    const c=Math.floor(state.incomeAccumulator*100);
+    state.funds=Math.max(0,Math.round((state.funds+c/100)*100)/100);
+    state.incomeAccumulator-=c/100;
+  }
+  if(state.funds<0||isNaN(state.funds)) state.funds=0;
+  document.getElementById('funds-display').textContent=state.funds.toFixed(2);
+  document.getElementById('income-display').textContent=perMin.toFixed(2);
+}
+
+// ── GAME TICK ──
+function gameTick(){
+  incomeTick();
+  if(!state.missionActive){ renderParty(); return; }
+  state.missionElapsed++; state.nextEncounterIn--;
+  if(state.currentEncounter){ resolveEncounterStep(); render(); return; }
+  if(state.nextEncounterIn<=0){
+    checkLocationHeal();
+    state.currentEncounter=rollEncounter(); state.nextEncounterIn=ENC_INTERVAL;
+    if(!state.currentEncounter){
+      advanceTravelPath();
+      state.nextEncounterIn=ENC_INTERVAL; updateLocation(); return;
+    }
+    const enc=state.currentEncounter;
+    addLog('Wild '+enc.species+' appeared! Lv'+enc.level+' '+enc.gender,'info');
+    document.getElementById('enc-body').textContent='Wild '+enc.species+' Lv'+enc.level+' ('+enc.gender+') appeared!';
+    state.totalSightings++;
+    document.getElementById('total-sightings').textContent=state.totalSightings;
+    render();
+  } else { updateLocation(); renderParty(); }
+}
 
 function checkLocationHeal(){
-  if(!state.missionActive)return;
+  if(!state.missionActive) return;
   const locData=typeof LOCATIONS!=='undefined'?getLocation(state.currentLocation):null;
   if(locData&&(locData.heals==='TRUE'||locData.heals===true||locData.heals==='true')){
     const needsHeal=state.party.some(p=>p.currentHP<p.maxHP||p.currentHP<=0);
     if(needsHeal){
-      state.party.forEach(p=>{
-        p.currentHP=p.maxHP; // full heal including fainted
-      });
-      addLog('🏥 Party fully healed at '+locData.name+'!','info');
-      render();
-    }
-  }
-}
-
-
-// ── TRAVEL SYSTEM ──
-function buildTravelPath(fromId, toId){
-  // BFS through connections, filtering out paths requiring items Carl doesn't have
-  if(typeof CONNECTIONS==='undefined'||typeof CONNECTIONS_DATA==='undefined') {
-    // Simple adjacency — no requiresItem check possible
-    if(typeof CONNECTIONS!=='undefined'){
-      const visited=new Set([fromId]);
-      const queue=[[fromId,[]]];
-      while(queue.length){
-        const [cur,path]=queue.shift();
-        const neighbors=getConnectedLocations(cur)||[];
-        for(const n of neighbors){
-          if(visited.has(n))continue;
-          visited.add(n);
-          const newPath=[...path,n];
-          if(n===toId) return newPath;
-          queue.push([n,newPath]);
-        }
-      }
-    }
-    return [toId];
-  }
-  // Full BFS with requiresItem check
-  const visited=new Set([fromId]);
-  const queue=[[fromId,[]]];
-  while(queue.length){
-    const [cur,path]=queue.shift();
-    // Get connections from this location that Carl can use
-    const available=(CONNECTIONS_DATA||[]).filter(c=>{
-      if(c.fromLocationId!==cur) return false;
-      if(!c.requiresItem) return true;
-      return (state.bag&&state.bag[c.requiresItem]&&state.bag[c.requiresItem]>0)||
-             (state.trainerUnlocks&&state.trainerUnlocks[c.requiresItem]);
-    });
-    for(const conn of available){
-      const n=conn.toLocationId;
-      if(visited.has(n))continue;
-      visited.add(n);
-      const newPath=[...path,n];
-      if(n===toId) return newPath;
-      queue.push([n,newPath]);
-    }
-  }
-  return []; // empty = unreachable
-}
-
-function arriveAtLocation(locId){
-  // Carl arrives at a new location
-  state.currentLocation=locId;
-  const locData=typeof LOCATIONS!=='undefined'?getLocation(locId):null;
-  const locName=locData?locData.name:locId;
-  addLog('📍 Carl Oak arrived at '+locName+'!','info');
-  // Heal if this location heals
-  if(locData&&(locData.heals==='TRUE'||locData.heals===true||locData.heals==='true')){
-    const needsHeal=state.party.some(p=>p.currentHP<p.maxHP||p.currentHP<=0);
-    if(needsHeal){
       state.party.forEach(p=>{ p.currentHP=p.maxHP; });
-      addLog('🏥 Party healed at '+locName+'!','info');
-    }
-  }
-  // Set travelCycles for this location
-  const cycles=locData&&locData.travelTime?parseInt(locData.travelTime):1;
-  state.travelCyclesRemaining=Math.max(1,cycles);
-}
-
-function advanceTravelPath(){
-  // Called AFTER each encounter — decrement cycles, advance when done
-  if(!state.travelPath||state.travelPath.length===0) return;
-  if(state.travelPathIndex>=state.travelPath.length) return; // at destination already
-  state.travelCyclesRemaining--;
-  if(state.travelCyclesRemaining<=0){
-    // Move to next location in path
-    state.travelPathIndex++;
-    if(state.travelPathIndex<state.travelPath.length){
-      arriveAtLocation(state.travelPath[state.travelPathIndex]);
-    } else {
-      // Arrived at final destination
-      state.currentLocation=state.missionDestination;
-      addLog('🏁 Carl Oak reached '+( (typeof LOCATIONS!=='undefined'?getLocation(state.missionDestination):null)||{name:state.missionDestination}).name+'!','info');
+      addLog('🏥 Party fully healed at '+locData.name+'!','info');
     }
   }
 }
 
-function isAtDestination(){
-  return state.currentLocation===state.missionDestination;
-}
-
-function expToLevel(lv,rate){
-  if(lv<=1)return 0;
-  const r=rate||'mediumFast'; // fallback if growthRate missing from DB
-  if(r==='mediumFast')return Math.floor(Math.pow(lv,3));
-  if(r==='mediumSlow')return Math.max(0,Math.floor((6/5)*Math.pow(lv,3)-15*Math.pow(lv,2)+100*lv-140));
-  if(r==='fast')return Math.floor((4*Math.pow(lv,3))/5);
-  if(r==='slow')return Math.floor((5*Math.pow(lv,3))/4);
-  if(r==='erratic')return lv<50?Math.floor((Math.pow(lv,3)*(100-lv))/50):lv<68?Math.floor((Math.pow(lv,3)*(150-lv))/100):lv<98?Math.floor((Math.pow(lv,3)*Math.floor((1911-10*lv)/3))/500):Math.floor((Math.pow(lv,3)*(160-lv))/100);
-  if(r==='fluctuating')return lv<15?Math.floor((Math.pow(lv,3)*(Math.floor((lv+1)/3)+24))/50):lv<36?Math.floor((Math.pow(lv,3)*(lv+14))/50):Math.floor((Math.pow(lv,3)*(Math.floor(lv/2)+32))/50);
-  return Math.floor(Math.pow(lv,3)); // mediumFast as final fallback
-}
-function calcMaxHP(sp,lv){
-  const s=SPECIES[sp];if(!s)return lv+10;
-  return Math.floor((s.baseHP*2*lv)/100)+lv+10;
-}
-function calcBST(sp,lv){
-  const s=SPECIES[sp];if(!s)return 0;
-  const st=(b)=>Math.floor(((b||0)*2*lv)/100)+5;
-  return calcMaxHP(sp,lv)+st(s.baseAtk)+st(s.baseDef)+st(s.baseSpatk)+st(s.baseSpdef)+st(s.baseSpd);
-}
-
-let state={
-  funds:5.00,totalCatches:0,totalSightings:0,
-  missionActive:false,missionElapsed:0,nextEncounterIn:ENC_INTERVAL,
-  incomeAccumulator:0,potionThreshold:75,
-  party:[],dex:[],dexIdCounter:1,currentEncounter:null,log:[],
-  missionDestination:'route1', missionBehavior:'research',
-  missionOrigin:'palletTown', currentLocation:'palletTown', autoRepeat:false,
-  travelPath:[], travelPathIndex:0, travelCyclesRemaining:0,
-  researchLog:{},   // keyed by dexId: {evolutionConfirmed,nonEvolutionConfirmed,confirmedMethod,confirmedIntoId,testedMethods,highestLevelObserved,knownSince}
-  pendingFindings:[] // queue of findings to show after mission
-};
-
-function makePokemon(sp,lv,gender,holder=null){
-  // Find best entry: prefer base form with growthRate populated
-  let entry=null;
-  if(typeof POKEDEX_DATA!=='undefined'){
-    // First try: base form with growthRate
-    entry=POKEDEX_DATA.find(p=>p.name===sp&&!p.formName&&p.growthRate);
-    // Second try: any form with growthRate
-    if(!entry) entry=POKEDEX_DATA.find(p=>p.name===sp&&p.growthRate);
-    // Third try: any entry at all
-    if(!entry) entry=POKEDEX_DATA.find(p=>p.name===sp&&!p.formName);
-    if(!entry) entry=POKEDEX_DATA.find(p=>p.name===sp);
-  }
-  if(!entry) entry=SPECIES[sp];
-  const dexId=entry?entry.dexId||entry.id:0;
-  const growthRate=(entry&&entry.growthRate)||'mediumFast';
-  const maxHP=calcMaxHP(sp,lv);
-  const startExp=expToLevel(lv,growthRate);
-  return{id:state.dexIdCounter++,species:sp,pokedexId:dexId,level:lv,gender,
-    currentHP:maxHP,maxHP,growthRate,  // store growthRate on pokemon object
-    exp:isNaN(startExp)?expToLevel(lv,'mediumFast'):startExp,
-    holder};
-}
-
-
-function togglePartyList(){
-  const list=document.getElementById('party-list');
-  const icon=document.getElementById('party-toggle-icon');
-  const hidden=list.style.display==='none';
-  list.style.display=hidden?'':'none';
-  icon.textContent=hidden?'▼':'▶';
-}
-
-
-function sortParty(){
-  state.party.sort((a,b)=>a.level-b.level);
-}
-
-function switchTab(name){
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-  document.getElementById('panel-'+name).classList.add('active');
-  document.getElementById('tab-'+name).classList.add('active');
-}
-
-function addLog(msg,type=''){
-  state.log.unshift({msg,type});
-  if(state.log.length>200)state.log.pop();
-  const el=document.getElementById('log');
-  const d=document.createElement('div');
-  d.className='log-entry '+type;
-  d.textContent=msg;
-  el.insertBefore(d,el.firstChild);
-  if(el.children.length>200)el.removeChild(el.lastChild);
-}
-
+// ── MISSION ──
 function startMission(){
-  if(state.missionActive)return;
-  if(!state.party.find(p=>p.currentHP>0)){addLog('No conscious Pokemon!','fail');return;}
+  if(state.missionActive) return;
+  if(!state.party.find(p=>p.currentHP>0)){ addLog('No conscious Pokémon!','fail'); return; }
   showMissionModal();
 }
 
 function showMissionModal(){
   const existing=document.getElementById('mission-modal');
-  if(existing)existing.remove();
+  if(existing) existing.remove();
   const currentLoc=state.currentLocation||'palletTown';
-  // Get reachable destinations — filter by requiresItem
-  const allConnected=typeof CONNECTIONS!=='undefined'?getConnectedLocations(currentLoc):['route1'];
+  const allConnected=typeof CONNECTIONS!=='undefined'&&typeof getConnectedLocations==='function'?getConnectedLocations(currentLoc):['route1'];
   const connected=allConnected.filter(loc=>{
-    if(typeof CONNECTIONS_DATA==='undefined') return true; // no data, show all
+    if(typeof CONNECTIONS_DATA==='undefined') return true;
     const conn=(CONNECTIONS_DATA||[]).find(c=>c.fromLocationId===currentLoc&&c.toLocationId===loc);
-    if(!conn) return false; // connection not found in data — block it
-    if(!conn.requiresItem) return true; // no requirement — accessible
-    // Has a requirement — check Carl's bag or trainer unlocks
+    if(!conn) return false;
+    if(!conn.requiresItem) return true;
     return (state.bag&&state.bag[conn.requiresItem]&&state.bag[conn.requiresItem]>0)||
            (state.trainerUnlocks&&state.trainerUnlocks[conn.requiresItem]);
   });
   const modal=document.createElement('div');
   modal.id='mission-modal';
   modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
-const destOptions=connected.length?connected.map(loc=>{
-    const locData=typeof LOCATIONS!=='undefined'?getLocation(loc):null;
-    const name=locData?locData.name:loc;
-    return `<button onclick="selectMissionDest('${loc}')" style="display:block;width:100%;margin-bottom:6px;padding:10px;text-align:left;border-color:#5dade2;color:#5dade2;">${name}</button>`;
-  }).join(''):'<div style="color:#e67e22;font-size:11px;padding:8px 0;">No destinations reachable from here. Check your items or connections data.</div>';
-  // Build shop section
   const shopItems=typeof getShopItems==='function'?getShopItems(currentLoc):[];
-  const shopHtml=shopItems.length?`<div style="color:#a0a0c0;font-size:11px;margin:12px 0 6px;letter-spacing:1px;">🛒 SHOP</div><div style="max-height:180px;overflow-y:auto;margin-bottom:4px;">${shopItems.map(item=>`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;background:#0f1a2a;padding:6px 8px;border-radius:4px;"><div><span style="font-size:11px;color:#e0e0e0;">${item.name}</span><span style="color:#6080a0;font-size:10px;"> $${item.shopPrice}</span></div><div style="display:flex;align-items:center;gap:6px;"><span id="bag-${item.itemId}" style="color:#f4d03f;font-size:11px;min-width:18px;text-align:right;">${state.bag&&state.bag[item.itemId]?state.bag[item.itemId]:0}</span><button onclick="buyItem('${item.itemId}')" style="padding:4px 10px;font-size:12px;">+</button></div></div>`).join('')}</div>`:'';
+  const destOptions=connected.length
+    ? connected.map(loc=>{
+        const locData=typeof LOCATIONS!=='undefined'?getLocation(loc):null;
+        const name=locData?locData.name:loc;
+        return `<button onclick="selectMissionDest('${loc}')" style="display:block;width:100%;margin-bottom:6px;padding:10px;text-align:left;border-color:#5dade2;color:#5dade2;">${name}</button>`;
+      }).join('')
+    : '<div style="color:#e67e22;font-size:11px;padding:8px 0;">No destinations reachable from here.</div>';
+  const shopHtml=shopItems.length
+    ? `<div style="color:#a0a0c0;font-size:11px;margin:12px 0 6px;letter-spacing:1px;">🛒 SHOP</div>
+       <div style="max-height:180px;overflow-y:auto;margin-bottom:4px;">
+         ${shopItems.map(item=>`
+           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;background:#0f1a2a;padding:6px 8px;border-radius:4px;">
+             <div><span style="font-size:11px;color:#e0e0e0;">${item.name}</span><span style="color:#6080a0;font-size:10px;"> $${item.shopPrice}</span></div>
+             <div style="display:flex;align-items:center;gap:6px;">
+               <span id="bag-${item.itemId}" style="color:#f4d03f;font-size:11px;min-width:18px;text-align:right;">${(state.bag&&state.bag[item.itemId])||0}</span>
+               <button onclick="buyItem('${item.itemId}')" style="padding:4px 10px;font-size:12px;">+</button>
+             </div>
+           </div>`).join('')}
+       </div>`
+    : '';
   modal.innerHTML=`
     <div style="background:#16213e;border:1px solid #e63946;border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:'Courier New',monospace;max-height:90vh;overflow-y:auto;">
       <div style="color:#e63946;font-size:14px;font-weight:bold;margin-bottom:12px;">📋 Dispatch Carl Oak</div>
@@ -648,19 +845,17 @@ const destOptions=connected.length?connected.map(loc=>{
     </div>`;
   document.body.appendChild(modal);
   state._missionDest=null;
-  state._missionBehavior='research';
 }
-
 
 function buyItem(itemId){
   const item=getItem(itemId);
   if(!item||!item.shopPrice) return;
   const price=parseFloat(item.shopPrice);
   if(state.funds<price){ addLog('Not enough funds for '+item.name+'!','fail'); return; }
+  if(!state.bag) state.bag={};
   state.funds=Math.round((state.funds-price)*100)/100;
   state.bag[itemId]=(state.bag[itemId]||0)+1;
   document.getElementById('funds-display').textContent=state.funds.toFixed(2);
-  // Update count in modal
   const el=document.getElementById('bag-'+itemId);
   if(el) el.textContent=state.bag[itemId];
   addLog('Bought '+item.name+' ($'+price+')','info');
@@ -675,15 +870,14 @@ function selectMissionDest(locId){
 }
 
 function confirmMission(){
-  if(!state._missionDest)return;
+  if(!state._missionDest) return;
   const modal=document.getElementById('mission-modal');
-  if(modal)modal.remove();
+  if(modal) modal.remove();
   state.missionActive=true;
   state.missionBehavior='research';
   state.missionDestination=state._missionDest||'route1';
   state.missionOrigin=state.currentLocation||'palletTown';
-  // Build travel path
-  state.travelPath=buildTravelPath(state.missionOrigin, state.missionDestination);
+  state.travelPath=buildTravelPath(state.missionOrigin,state.missionDestination);
   if(state.travelPath.length===0){
     addLog('⚠ Cannot reach that destination — missing required item.','fail');
     state.missionActive=false;
@@ -692,33 +886,30 @@ function confirmMission(){
     return;
   }
   state.travelPathIndex=0;
-  // Arrive at first location immediately
   arriveAtLocation(state.travelPath[0]);
   state.nextEncounterIn=ENC_INTERVAL;
   document.getElementById('btn-start').disabled=true;
   document.getElementById('btn-recall').disabled=false;
   const locData=typeof LOCATIONS!=='undefined'?getLocation(state.missionDestination):null;
-  const destName=locData?locData.name:state.missionDestination;
-  addLog('Carl Oak dispatched to '+destName+' (research on arrival).','info');
+  addLog('Carl Oak dispatched to '+(locData?locData.name:state.missionDestination)+' (research on arrival).','info');
   state.pendingFindings=[];
-  updateLocation();render();
+  updateLocation(); render();
 }
 
 function recallAide(){
-  if(!state.missionActive)return;
-  state.missionActive=false;state.currentEncounter=null;
+  if(!state.missionActive) return;
+  state.missionActive=false; state.currentEncounter=null;
   document.getElementById('btn-start').disabled=false;
   document.getElementById('btn-recall').disabled=true;
   endMission('recall');
   render();
 }
 
-function getLeadPokemon(){return state.party.find(p=>p.currentHP>0)||null;}
-function allFainted(){return state.party.every(p=>p.currentHP<=0);}
+function getLeadPokemon(){ return state.party.find(p=>p.currentHP>0)||null; }
+function allFainted(){ return state.party.every(p=>p.currentHP<=0); }
 
 function endMission(reason='faint'){
-  state.missionActive=false;state.currentEncounter=null;
-  // Return Carl to origin location
+  state.missionActive=false; state.currentEncounter=null;
   const originLocId=state.missionOrigin||'palletTown';
   state.currentLocation=originLocId;
   const originLoc=typeof LOCATIONS!=='undefined'?getLocation(originLocId):null;
@@ -727,8 +918,7 @@ function endMission(reason='faint'){
   document.getElementById('btn-recall').disabled=true;
   const msg=reason==='recall'?'Carl Oak recalled to '+originName+'.':'All fainted — Carl Oak returned to '+originName+'.';
   document.getElementById('enc-body').textContent=msg;
-  addLog(msg, reason==='recall'?'info':'faint');
-  // Heal party if origin location heals
+  addLog(msg,reason==='recall'?'info':'faint');
   if(originLoc&&(originLoc.heals==='TRUE'||originLoc.heals===true||originLoc.heals==='true')){
     const needsHeal=state.party.some(p=>p.currentHP<p.maxHP||p.currentHP<=0);
     if(needsHeal){
@@ -737,526 +927,87 @@ function endMission(reason='faint'){
     }
   }
   showFindingsReport();
-  updateLocation();saveGame();
-  // Auto-repeat: restart mission if wipe and autoRepeat is on
+  updateLocation(); saveGame();
   if(reason==='faint'&&state.autoRepeat){
     setTimeout(()=>{
       if(!state.missionActive&&state.party.find(p=>p.currentHP>0)){
-        addLog('🔄 Auto-repeating mission to '+(getLocation(state.missionDestination)||{name:state.missionDestination}).name+'...','info');
-        // Restart same mission
+        addLog('🔄 Auto-repeating mission...','info');
         state.missionActive=true;
-        state.travelPath=buildTravelPath(state.missionOrigin, state.missionDestination);
+        state.travelPath=buildTravelPath(state.missionOrigin,state.missionDestination);
         state.travelPathIndex=0;
-        if(state.travelPath.length>0){
-          arriveAtLocation(state.travelPath[0]);
-        } else {
-          state.currentLocation=state.missionDestination;
-        }
+        if(state.travelPath.length>0){ arriveAtLocation(state.travelPath[0]); }
+        else { state.currentLocation=state.missionDestination; }
         state.nextEncounterIn=ENC_INTERVAL;
         state.pendingFindings=[];
         document.getElementById('btn-start').disabled=true;
         document.getElementById('btn-recall').disabled=false;
-        updateLocation();render();
+        updateLocation(); render();
       }
-    },2000); // 2 second pause before repeating
+    },2000);
   }
 }
 
 function updateLocation(){
   const el=document.getElementById('aide-location');
   if(state.missionActive){
-    const m=Math.floor(state.nextEncounterIn/60),s=state.nextEncounterIn%60;
+    const m=Math.floor(state.nextEncounterIn/60), s=state.nextEncounterIn%60;
     const curLocData=typeof LOCATIONS!=='undefined'?getLocation(state.currentLocation):null;
     const curLocName=curLocData?curLocData.name:(state.currentLocation||'Route 1');
     const destLocData=typeof LOCATIONS!=='undefined'?getLocation(state.missionDestination):null;
     const destLocName=destLocData?destLocData.name:state.missionDestination;
     const atDest=state.currentLocation===state.missionDestination;
-    const cyclesLeft=state.travelCyclesRemaining||0;
     if(atDest){
       el.textContent='📍 '+curLocName+' — Researching · Next: '+m+':'+s.toString().padStart(2,'0');
     } else {
-      el.textContent='📍 '+curLocName+' (→ '+destLocName+', '+cyclesLeft+' enc left) · Next: '+m+':'+s.toString().padStart(2,'0');
+      el.textContent='📍 '+curLocName+' (→ '+destLocName+', '+(state.travelCyclesRemaining||0)+' enc left) · Next: '+m+':'+s.toString().padStart(2,'0');
     }
-  }else{
+  } else {
     const idleLoc=typeof LOCATIONS!=='undefined'?getLocation(state.currentLocation||'palletTown'):null;
     el.textContent='📍 '+(idleLoc?idleLoc.name:'Pallet Town')+' — Idle';
   }
 }
 
-function incomeTick(){
-  const perMin=1.00+Math.floor(state.totalCatches/100)*0.01;
-  state.incomeAccumulator+=perMin/60;
-  if(state.incomeAccumulator>=0.01){
-    const c=Math.floor(state.incomeAccumulator*100);
-    state.funds=Math.max(0, Math.round((state.funds+c/100)*100)/100);
-    state.incomeAccumulator-=c/100;
-  }
-  // Safety: funds should never go below 0
-  if(state.funds<0||isNaN(state.funds)) state.funds=0;
-  document.getElementById('funds-display').textContent=state.funds.toFixed(2);
-  document.getElementById('income-display').textContent=perMin.toFixed(2);
+// ── POKEMON MANAGEMENT ──
+function assignToAide(catchId){
+  const p=state.dex.find(x=>x.id===catchId); if(!p) return;
+  if(state.missionActive){ addLog('Cannot change party during a mission!','fail'); return; }
+  if(state.party.length>=6){ addLog('Party is full (6 max)!','fail'); return; }
+  p.holder='Carl Oak';
+  state.party.push(p);
+  addLog(p.species+' #'+p.id+' assigned to Carl Oak.','info');
+  saveGame(); render();
+  const m=document.getElementById('poke-modal'); if(m) m.remove();
 }
 
-function rollEncounter(){
-  const dest=state.currentLocation||state.missionDestination||'route1';
-  const table=buildRouteTable(dest);
-  if(!table||!table.length)return null;
-  let roll=Math.random()*100,cum=0;
-  for(const e of table){cum+=e.weight;if(roll<cum){
-    const entry=POKEDEX_DATA?POKEDEX_DATA.find(p=>p.dexId===e.dexId&&!p.formName):null;
-    if(!entry)continue;
-    return{species:entry.name,pokedexId:e.dexId,level:e.minLv+Math.floor(Math.random()*(e.maxLv-e.minLv+1)),gender:Math.random()<0.5?'M':'F'};
-  }}
-  return null;
+function unassignPokemon(catchId){
+  const p=state.dex.find(x=>x.id===catchId); if(!p) return;
+  if(state.missionActive){ addLog('Cannot change party during a mission!','fail'); return; }
+  p.holder=null;
+  state.party=state.party.filter(x=>x.id!==catchId);
+  addLog(p.species+' #'+p.id+' unassigned.','info');
+  saveGame(); render();
+  const m=document.getElementById('poke-modal'); if(m) m.remove();
 }
 
-function resolveEncounterStep(){
-  const enc=state.currentEncounter;if(!enc)return;
-  const lead=getLeadPokemon();if(!lead){endMission();return;}
-  // Auto-revive fainted lower-level pokemon first
-  if(lead.currentHP<=0){
-    const fainted=state.party.filter(p=>p.currentHP<=0).sort((a,b)=>a.level-b.level);
-    for(const fp of fainted){
-      if((state.bag['revive']||0)>0){useItemFromBag('revive',fp);break;}
-      if((state.bag['max-revive']||0)>0){useItemFromBag('max-revive',fp);break;}
-    }
-  }
-  // Auto-potion: use weakest effective potion
-  const potionId=getWeakestEffectivePotion(lead);
-  if(potionId)useItemFromBag(potionId,lead);
-  // Auto-ball or fight
-  const hasBalls=getBallCount()>0;
-  if(hasBalls){throwBall(lead,enc);}else{fight(lead,enc);}
+function revivePokemon(catchId){
+  if(state.funds<20){ addLog('Not enough funds to revive!','fail'); return; }
+  const p=state.dex.find(x=>x.id===catchId); if(!p) return;
+  state.funds=Math.round((state.funds-20)*100)/100;
+  p.currentHP=p.maxHP;
+  saveGame(); render();
+  const m=document.getElementById('poke-modal'); if(m) m.remove();
+  addLog('💊 '+p.species+' #'+p.id+' revived!','info');
 }
 
-function throwBall(lead,enc){
-  // Shiny auto-catch — no ball consumed
-  const isShiny=Math.random()<(1/4096);
-  if(isShiny){
-    catchPokemon(lead,enc,true,false); // auto catch, no ball used
-    return;
-  }
-  // Pick best available ball
-  const ballPriority=['master-ball','ultra-ball','great-ball','poke-ball'];
-  let ballUsed=null;
-  for(const b of ballPriority){
-    if((state.bag[b]||0)>0){ ballUsed=b; break; }
-  }
-  if(!ballUsed){ fight(lead,enc); return; }
-  useItemFromBag(ballUsed,null); // consume ball (no pokemon target)
-  const ballItem=getItem(ballUsed);
-  const modifier=ballItem&&ballItem.catchRateModifier?parseFloat(ballItem.catchRateModifier):1;
-  const catchRate=modifier>=255?1:Math.min(0.99,0.75*modifier); // base 75% × modifier
-  if(Math.random()<catchRate){
-    catchPokemon(lead,enc,false,false);
-  }else{
-    const dmg=Math.max(1,Math.floor((enc.level/lead.level)*0.5*0.25*lead.maxHP));
-    lead.currentHP=Math.max(0,lead.currentHP-dmg);
-    addLog('Ball failed! '+enc.species+' Lv'+enc.level+' deals '+dmg+' HP. ('+lead.species+': '+lead.currentHP+'/'+lead.maxHP+' HP)','fail');
-    document.getElementById('enc-body').textContent='Ball missed! '+lead.species+' at '+lead.currentHP+'/'+lead.maxHP+' HP';
-    if(lead.currentHP<=0){addLog(lead.species+' #'+lead.id+' fainted!','faint');const next=getLeadPokemon();if(!next)endMission();}
-  }
-}
-
-function catchPokemon(lead,enc,isShiny,ballUsed){
-  const caught=makePokemon(enc.species,enc.level,enc.gender);
-  caught.isShiny=isShiny;
-  state.dex.push(caught);state.totalCatches++;state.totalSightings++;
-  if(isShiny) addLog('✨ SHINY '+caught.species+' caught automatically! ✨','evolve');
-  const s_=SPECIES[enc.species];const exp=Math.floor(((s_?s_.baseExpYield||s_.baseExp:51)*enc.level)/7);
-  giveExp(lead,exp);
-  recordSighting(enc.pokedexId||caught.pokedexId,enc.level);
-  if(!isSpeciesKnown(caught.pokedexId)||!state.researchLog[caught.pokedexId].firstSeen)
-    recordNewSpecies(caught.pokedexId,enc.species);
-  addLog('Caught '+enc.species+' #'+caught.id+' (Lv'+enc.level+' '+enc.gender+(isShiny?' ✨':'')+')! +'+exp+' EXP','catch');
-  document.getElementById('total-catches').textContent=state.totalCatches;
-  document.getElementById('total-sightings').textContent=state.totalSightings;
-  state.currentEncounter=null;
-  advanceTravelPath(); // advance travel after each resolved encounter
-  document.getElementById('enc-body').textContent='Caught '+enc.species+' Lv'+enc.level+(isShiny?' ✨ SHINY!':'!');;
-  saveGame();
-}
-
-function fight(lead,enc){
-  const dmg=Math.max(1,Math.floor((enc.level/lead.level)*0.5*lead.maxHP));
-  lead.currentHP=Math.max(0,lead.currentHP-dmg);
-  addLog(lead.species+' vs '+enc.species+' Lv'+enc.level+': took '+dmg+' dmg. ('+lead.currentHP+'/'+lead.maxHP+' HP)','damage');
-  if(lead.currentHP<=0){
-    addLog(lead.species+' #'+lead.id+' fainted!','faint');
-    const next=getLeadPokemon();if(!next){endMission();return;}
-    addLog(enc.species+' fled.','info');state.currentEncounter=null;
-    advanceTravelPath();
-    document.getElementById('enc-body').textContent=lead.species+' fainted. '+enc.species+' fled.';
-  }else{
-    const s_=SPECIES[enc.species];const exp=Math.floor(((s_?s_.baseExpYield||s_.baseExp:51)*enc.level)/7);
-    giveExp(lead,exp);
-    addLog('Won vs '+enc.species+' Lv'+enc.level+'! +'+exp+' EXP (no data)','win');
-    state.currentEncounter=null;
-    advanceTravelPath(); // advance travel after each resolved encounter
-    document.getElementById('enc-body').textContent='Won vs '+enc.species+' Lv'+enc.level+'. No Pokedex data.';
-  }
-}
-
-// usePotion removed — handled by useItemFromBag
-
-function giveExp(pokemon,amount){
-  pokemon.exp+=amount;
-  addLog(pokemon.species+' #'+pokemon.id+' +'+amount+' EXP','exp');
-  let lv=false;
-  while(true){
-    const s=SPECIES[pokemon.species];
-    const gr=pokemon.growthRate||(s?s.growthRate:null)||'mediumFast';
-    const need=expToLevel(pokemon.level+1,gr);
-    if(pokemon.exp>=need&&pokemon.level<100){
-      pokemon.level++;lv=true;
-      const om=pokemon.maxHP;pokemon.maxHP=calcMaxHP(pokemon.species,pokemon.level);
-      pokemon.currentHP=Math.min(pokemon.maxHP,pokemon.currentHP+(pokemon.maxHP-om));
-      addLog(pokemon.species+' #'+pokemon.id+' -> Lv'+pokemon.level+'! HP:'+pokemon.maxHP,'info');
-      checkEvolution(pokemon);saveGame();
-    }else break;
-  }
-  if(lv)renderDex();
-}
-
-function checkEvolution(p){
-  const s=SPECIES[p.species];
-  if(!s)return;
-  // Check simple level evolution
-  if(s.evolveMethod==='level'&&s.evolvesIntoId&&p.level>=s.evolveLevel){
-    const newEntry=POKEDEX_DATA?POKEDEX_DATA.find(x=>x.dexId===s.evolvesIntoId&&!x.formName):null;
-    if(newEntry){
-      const old=p.species;const prevDexId=p.pokedexId;
-      p.species=newEntry.name;p.pokedexId=newEntry.dexId;
-      const om=p.maxHP;p.maxHP=calcMaxHP(p.species,p.level);
-      p.currentHP=Math.min(p.maxHP,p.currentHP+(p.maxHP-om));
-      // Update SPECIES shim for new form
-      if(!SPECIES[p.species])SPECIES[p.species]=newEntry;
-      recordEvolution(prevDexId, newEntry.dexId, 'level', p.level);
-      recordNewSpecies(newEntry.dexId, p.species);
-      addLog(old+' #'+p.id+' evolved into '+p.species+'!','evolve');
-      document.getElementById('enc-body').textContent=old+' evolved into '+p.species+'!';
-    }
-  }
-  // Check branching evolutions via EVO_TREE
-  if(typeof EVO_TREE!=='undefined'){
-    const branches=getEvolutions(p.pokedexId);
-    if(branches.length>0){
-      const branch=branches[Math.floor(Math.random()*branches.length)];
-      if(branch.evolveMethod==='level'&&p.level>=branch.evolveLevel){
-        const newEntry=POKEDEX_DATA?POKEDEX_DATA.find(x=>x.dexId===branch.toDexId&&!x.formName):null;
-        if(newEntry){
-          const old=p.species;
-          p.species=newEntry.name;p.pokedexId=newEntry.dexId;
-          const om=p.maxHP;p.maxHP=calcMaxHP(p.species,p.level);
-          p.currentHP=Math.min(p.maxHP,p.currentHP+(p.maxHP-om));
-          if(!SPECIES[p.species])SPECIES[p.species]=newEntry;
-          recordEvolution(prevDexId, newEntry.dexId, 'level', p.level);
-      recordNewSpecies(newEntry.dexId, p.species);
-      addLog(old+' #'+p.id+' evolved into '+p.species+'!','evolve');
-          document.getElementById('enc-body').textContent=old+' evolved into '+p.species+'!';
-        }
-      }
-    }
-  }
-}
-
-// ── OFFLINE TIME PROCESSING ──
-function giveExpSilent(p,amount){
-  p.exp+=amount;
-  while(true){
-    const s=SPECIES[p.species];
-    const gr=p.growthRate||(s?s.growthRate:null)||'mediumFast';
-    if(p.exp>=expToLevel(p.level+1,gr)&&p.level<100){
-      p.level++;const om=p.maxHP;p.maxHP=calcMaxHP(p.species,p.level);
-      p.currentHP=Math.min(p.maxHP,p.currentHP+(p.maxHP-om));
-      // Silent evolution check
-      if(s.evolveMethod==='level'&&s.evolvesIntoId&&p.level>=s.evolveLevel){
-        const ne=POKEDEX_DATA?POKEDEX_DATA.find(x=>x.dexId===s.evolvesIntoId&&!x.formName):null;
-        if(ne){p.species=ne.name;p.pokedexId=ne.dexId;if(!SPECIES[p.species])SPECIES[p.species]=ne;
-          const om2=p.maxHP;p.maxHP=calcMaxHP(p.species,p.level);
-          p.currentHP=Math.min(p.maxHP,p.currentHP+(p.maxHP-om2));}
-      }
-    }else break;
-  }
-}
-
-function processOfflineTime(secsAway){
-  if(secsAway<10||!state.missionActive)return null;
-  const summary={encounters:0,catches:0,wins:0,income:0,evolutions:[]};
-  const perMin=1.00+Math.floor(state.totalCatches/100)*0.01;
-  const income=Math.round((perMin/60)*secsAway*100)/100;
-  state.funds=Math.round((state.funds+income)*100)/100;
-  summary.income=income;
-  let remaining=secsAway,nextIn=state.nextEncounterIn;
-  while(remaining>=nextIn){
-    remaining-=nextIn;nextIn=ENC_INTERVAL;summary.encounters++;
-    const enc=rollEncounter();const lead=getLeadPokemon();if(!lead)break;
-    const oldSp=lead.species;let resolved=false,tries=0;
-    while(!resolved&&tries<20){
-      tries++;
-      // Auto-potion from bag
-      const potId=getWeakestEffectivePotion(lead);
-      if(potId){ useItemFromBag(potId,lead); }
-      const hasBalls=getBallCount()>0;
-      if(hasBalls){
-        // Use cheapest ball
-        const ballId=state.bag['poke-ball']>0?'poke-ball':state.bag['great-ball']>0?'great-ball':'ultra-ball';
-        state.bag[ballId]=Math.max(0,(state.bag[ballId]||1)-1);
-        if(Math.random()<0.75){
-          const caught=makePokemon(enc.species,enc.level,enc.gender);
-          caught.isShiny=Math.random()<(1/4096);
-          state.dex.push(caught);state.totalCatches++;state.totalSightings++;
-          const se1=SPECIES[enc.species];giveExpSilent(lead,Math.floor(((se1?se1.baseExpYield||se1.baseExp:51)*enc.level)/7));
-          if(lead.species!==oldSp)summary.evolutions.push(oldSp+' → '+lead.species);
-          summary.catches++;resolved=true;
-        }else{
-          const dmg=Math.max(1,Math.floor((enc.level/lead.level)*0.5*0.25*lead.maxHP));
-          lead.currentHP=Math.max(0,lead.currentHP-dmg);
-          if(lead.currentHP<=0)resolved=true;
-        }
-      }else{
-        const dmg=Math.max(1,Math.floor((enc.level/lead.level)*0.5*lead.maxHP));
-        lead.currentHP=Math.max(0,lead.currentHP-dmg);
-        if(lead.currentHP<=0){resolved=true;}
-        else{const se2=SPECIES[enc.species];giveExpSilent(lead,Math.floor(((se2?se2.baseExpYield||se2.baseExp:51)*enc.level)/7));if(lead.species!==oldSp)summary.evolutions.push(oldSp+' → '+lead.species);summary.wins++;resolved=true;}
-      }
-    }
-    if(allFainted()){state.missionActive=false;break;}
-  }
-  state.nextEncounterIn=Math.max(1,Math.min(ENC_INTERVAL,nextIn-remaining));
-  document.getElementById('total-catches').textContent=state.totalCatches;
-  document.getElementById('total-sightings').textContent=state.totalSightings;
-  if(!state.missionActive){document.getElementById('btn-start').disabled=false;document.getElementById('btn-recall').disabled=true;}
-  return summary;
-}
-
-function showOfflineBanner(secs,summary){
-  const h=Math.floor(secs/3600),m=Math.floor((secs%3600)/60);
-  const t=h>0?h+'h '+m+'m':m+'m';
-  let txt='Away for '+t+': '+summary.encounters+' encounter'+(summary.encounters!==1?'s':'')+', '+summary.catches+' catch'+(summary.catches!==1?'es':'')+', +$'+summary.income.toFixed(2)+'.';
-  if(summary.evolutions.length)txt+=' 🌟 '+summary.evolutions.join(', ')+'!';
-  if(!state.missionActive)txt+=' Aide returned (all fainted).';
-  document.getElementById('offline-summary').textContent=txt;
-  document.getElementById('offline-banner').style.display='block';
-}
-
-function render(){renderParty();renderAideHeader();renderDex();updateDexChrome();document.getElementById('dex-count').textContent=state.dex.length;updateLocation();}
-
-function renderAideHeader(){
-  // Update aide header with party sprite strip
-  let spritesHtml='<div class="aide-party-sprites">';
-  state.party.forEach(p=>{
-    const url=getSpriteUrl(p.pokedexId,p.species,p.isShiny||false);
-    const fainted=p.currentHP<=0;
-    spritesHtml+=`<img src="${url}" class="aide-sprite-mini" title="${p.species} Lv${p.level}" style="opacity:${fainted?'0.3':'1'};image-rendering:pixelated;" onerror="this.style.display='none'">`;
-  });
-  spritesHtml+='</div>';
-  const nameEl=document.querySelector('#aide-info .aide-name');
-  if(nameEl){
-    nameEl.innerHTML='🧑‍🔬 Carl Oak'+spritesHtml;
-  }
-  const bagEl=document.getElementById('aide-bag-display');
-  if(bagEl) bagEl.textContent='🏐 '+getBallCount()+' balls in bag';
-  renderBagDisplay();
-}
-
-function renderParty(){
-  const c=document.getElementById('party-list');c.innerHTML='';
-  if(!state.party.length){c.innerHTML='<div style="color:#555;padding:10px;font-size:11px;">No Pokemon in party</div>';return;}
-  state.party.forEach(p=>{
-    const hpPct=Math.max(0,(p.currentHP/p.maxHP)*100);
-    const hpColor=hpPct>50?'#2ecc71':hpPct>20?'#f4d03f':'#e74c3c';
-    const s=SPECIES[p.species];
-    const gr=p.growthRate||(s?s.growthRate:null)||'mediumFast';
-    const expAtLevel=expToLevel(p.level,gr);
-    const expAtNext=expToLevel(p.level+1,gr);
-    // Fix NaN exp if stored incorrectly
-    if(isNaN(p.exp)||p.exp<expAtLevel) p.exp=expAtLevel;
-    const ec=p.exp-expAtLevel;
-    const en=Math.max(1,expAtNext-expAtLevel);
-    const ePct=Math.min(100,(ec/en)*100);
-    const fainted=p.currentHP<=0;
-    const d=document.createElement('div');
-    d.className='party-slot'+(fainted?' fainted':'');
-    const spriteUrl=getSpriteUrl(p.pokedexId,p.species,p.isShiny||false);
-    d.innerHTML=`<div style="display:flex;align-items:flex-start;gap:8px;">
-<img src="${spriteUrl}" class="party-sprite${fainted?' opacity:0.4':''}" onerror="this.style.display='none'">
-<div style="flex:1;">
-<div class="poke-name">${fainted?'💀':'🐾'} ${p.species} #${p.id}${p.isShiny?' ✨':''} <span style="color:#a0a0c0">(${p.gender})</span></div>
-<div class="poke-level">Lv${p.level} · BST ${calcBST(p.species,p.level)}</div>
-<div class="hp-bar-wrap"><div class="hp-bar" style="width:${hpPct}%;background:${hpColor}"></div></div>
-<div class="hp-text">HP: ${p.currentHP}/${p.maxHP}</div>
-<div class="exp-bar-wrap"><div class="exp-bar" style="width:${ePct}%"></div></div>
-<div class="hp-text" style="color:#9b59b6">EXP: ${ec}/${en}</div>`;
-    c.appendChild(d);
-  });
-}
-
-// ── DEX STATE ──
-let dexView = 'families'; // 'families' | 'species' | 'individual' | 'viewall'
-let dexSelectedFamily = null;
-let dexSelectedDexId = null;
-let dexSelectedCatchId = null;
-
-function renderDex(){
-  document.getElementById('dex-count').textContent=state.dex.length;
-  if(dexView==='families') renderDexFamilies();
-  else if(dexView==='species') renderDexSpecies();
-  else if(dexView==='individual') renderDexIndividual();
-  else if(dexView==='viewall') renderViewAll();
-}
-
-function dexBack(){
-  if(dexView==='viewall'){ dexView='families'; }
-  else if(dexView==='individual'){ dexView='species'; }
-  else if(dexView==='species'){ dexView='families'; }
-  else { dexView='families'; }
-  renderDex(); updateDexChrome();
-}
-
-function dexViewAll(){
-  dexView='viewall'; renderDex(); updateDexChrome();
-}
-
-function updateDexChrome(){
-  const backBtn=document.getElementById('dex-back-btn');
-  const vaCtrl=document.getElementById('dex-viewall-controls');
-  const crumb=document.getElementById('dex-breadcrumb');
-  backBtn.style.display=(dexView!=='families')?'inline-block':'none';
-  vaCtrl.style.display=(dexView==='viewall')?'flex':'none';
-  if(dexView==='families') crumb.textContent='Pokédex — Families';
-  else if(dexView==='species'&&dexSelectedFamily!==null){
-    const fEntry=POKEDEX_DATA?POKEDEX_DATA.find(x=>x.familyId===dexSelectedFamily&&!x.formName):null;
-    crumb.textContent='Family #'+dexSelectedFamily+(fEntry?' — '+fEntry.name+' line':'');
-  } else if(dexView==='individual'&&dexSelectedDexId!==null){
-    const dn=POKEDEX_DATA?POKEDEX_DATA.find(x=>x.dexId===dexSelectedDexId&&!x.formName):null;
-    crumb.textContent=(dn?dn.name:'#'+dexSelectedDexId)+' — Caught';
-  } else if(dexView==='viewall') crumb.textContent='Pokédex — All Catches';
-  else crumb.textContent='Pokédex';
-}
-
-// LAYER 1: Families
-function renderDexFamilies(){
-  const c=document.getElementById('dex-list'); c.innerHTML='';
-  if(typeof POKEDEX_DATA==='undefined'){ c.innerHTML='<div style="color:#e63946;padding:12px;font-size:11px;">Database not loaded. Check pokedex.js is uploaded to GitHub.</div>'; return; }
-  // Get all families seen (by dexId of any caught pokemon)
-  const seenFamilies=new Set();
-  state.dex.forEach(p=>{ if(p.pokedexId){ const e=POKEDEX_DATA.find(x=>x.dexId===p.pokedexId&&!x.formName); if(e)seenFamilies.add(e.familyId); } });
-  if(!seenFamilies.size){ c.innerHTML='<div style="color:#555;padding:12px;font-size:11px;">No Pokémon discovered yet.</div>'; return; }
-  [...seenFamilies].sort((a,b)=>a-b).forEach(famId=>{
-    const allMembers=getFamilyMembers(famId); // full line from DB
-    const baseMember=allMembers[0];
-    // Only show members the professor has actually encountered
-    const caught=state.dex.filter(p=>p.pokedexId&&POKEDEX_DATA&&POKEDEX_DATA.find(x=>x.dexId===p.pokedexId&&x.familyId===famId));
-    const speciesSeen=new Set(caught.map(p=>p.pokedexId));
-    const knownMembers=allMembers.filter(m=>speciesSeen.has(m.dexId));
-    // Build evolution chain display — only show known species, ??? for unknowns beyond
-    const chainParts=knownMembers.map(m=>'#'+m.dexId+' '+m.name);
-    // If any known member has a confirmed evolution, show ??? at end
-    const lastKnown=knownMembers[knownMembers.length-1];
-    const lastResearch=lastKnown?state.researchLog[lastKnown.dexId]:null;
-    if(lastKnown&&lastResearch&&!lastResearch.evolutionConfirmed&&!lastResearch.nonEvolutionConfirmed){
-      chainParts.push('???');
-    }
-    const d=document.createElement('div');
-    d.className='dex-entry';
-    d.style.cursor='pointer';
-    // Species count: show X/? since we don't reveal total until fully known
-    const totalKnown=allMembers.every(m=>speciesSeen.has(m.dexId));
-    const speciesDisplay=totalKnown?speciesSeen.size+'/'+allMembers.length:speciesSeen.size+'/?';
-    d.innerHTML=`
-      <div class="dex-header">
-        <span class="dex-name">Family #${famId} — ${baseMember.name} line</span>
-        <span class="dex-id">▶</span>
-      </div>
-      <div class="dex-details">${speciesDisplay} species · ${caught.length} caught</div>
-      <div class="dex-holder" style="color:#5dade2;">${chainParts.join(' → ')}</div>`;
-    d.onclick=()=>{ dexSelectedFamily=famId; dexView='species'; renderDex(); updateDexChrome(); };
-    c.appendChild(d);
-  });
-}
-
-// LAYER 2: Species within a family
-function renderDexSpecies(){
-  const c=document.getElementById('dex-list'); c.innerHTML='';
-  const allMembers=typeof getFamilyMembers!=='undefined'?getFamilyMembers(dexSelectedFamily):[];
-  // Only show species that have been encountered
-  const seenDexIds=new Set(state.dex.map(p=>p.pokedexId));
-  const visibleMembers=allMembers.filter(m=>seenDexIds.has(m.dexId));
-  if(!visibleMembers.length){
-    c.innerHTML='<div style="color:#555;padding:12px;font-size:11px;">No species encountered yet.</div>';
-    return;
-  }
-  // Show known species + a ??? placeholder if the last known one hasn't confirmed non-evolution
-  visibleMembers.forEach(entry=>{
-    const caught=state.dex.filter(p=>p.pokedexId===entry.dexId);
-    const sprite=getSpriteUrl(entry.dexId,entry.name,false);
-    const d=document.createElement('div');
-    d.className='dex-entry';
-    d.style.cursor='pointer';
-    d.innerHTML=`
-      <div style="display:flex;align-items:center;gap:10px;">
-        <img src="${sprite}" style="width:40px;height:40px;image-rendering:pixelated;" onerror="this.style.display='none'">
-        <div style="flex:1;">
-          <div class="dex-header">
-            <span class="dex-name">#${entry.dexId} ${entry.name}</span>
-            <span class="dex-id">${caught.length} caught</span>
-          </div>
-          <div class="dex-details">${entry.type1||'???'}${entry.type2?' / '+entry.type2:''}</div>
-          <div style="color:#6080a0;font-size:10px;margin-top:2px;">${getEvolutionDisplayText(entry.dexId)}</div>
-          <div class="dex-holder" style="color:#5dade2;">Click to see catches ▶</div>
-        </div>
-      </div>`;
-    d.onclick=()=>{ dexSelectedDexId=entry.dexId; dexView='individual'; renderDex(); updateDexChrome(); };
-    c.appendChild(d);
-  });
-  // Show ??? if last known species hasn't confirmed evolution status
-  const lastEntry=visibleMembers[visibleMembers.length-1];
-  const lastR=state.researchLog[lastEntry.dexId];
-  if(!lastR||(!lastR.evolutionConfirmed&&!lastR.nonEvolutionConfirmed)){
-    const placeholder=document.createElement('div');
-    placeholder.className='dex-entry';
-    placeholder.style.opacity='0.5';
-    placeholder.innerHTML=`<div class="dex-header"><span class="dex-name">??? — Unknown</span><span class="dex-id">?</span></div>
-      <div class="dex-details">Further research needed</div>`;
-    c.appendChild(placeholder);
-  }
-}
-
-// LAYER 3: Individual catches of a species
-function renderDexIndividual(){
-  const c=document.getElementById('dex-list'); c.innerHTML='';
-  // POKEDEX is keyed by name_formName in new system — use POKEDEX_DATA instead
-  const entry=POKEDEX_DATA?POKEDEX_DATA.find(x=>x.dexId===dexSelectedDexId&&!x.formName):null;
-  const caught=state.dex.filter(p=>p.pokedexId===dexSelectedDexId);
-  if(!caught.length){ c.innerHTML='<div style="color:#555;padding:12px;font-size:11px;">None caught.</div>'; return; }
-  caught.sort((a,b)=>a.id-b.id).forEach(p=>{
-    const d=document.createElement('div');
-    d.className='dex-entry'+(p.holder?'':' unassigned');
-    d.style.cursor='pointer';
-    d.innerHTML=`
-      <div class="dex-header">
-        <span class="dex-name">${p.species} #${p.id}</span>
-        <span class="dex-id">${p.holder?'👤':'📦'}</span>
-      </div>
-      <div class="dex-details">Lv${p.level} · ${p.gender} · HP ${p.currentHP}/${p.maxHP} · BST ${calcBST(p.species,p.level)}</div>
-      <div class="dex-holder">${p.holder?'Held by: '+p.holder:'Unassigned'}</div>`;
-    d.onclick=()=>{ showPokemonDetail(p.id); };
-    c.appendChild(d);
-  });
-}
-
-// DETAIL MODAL: individual pokemon
 function showPokemonDetail(catchId){
-  const p=state.dex.find(x=>x.id===catchId); if(!p)return;
-  const entry=POKEDEX_DATA?POKEDEX_DATA.find(x=>x.dexId===p.pokedexId&&(!p.formName||x.formName===p.formName))||(typeof dexByName!=='undefined'?dexByName(p.species):null):null;
-  const existing=document.getElementById('poke-modal');
-  if(existing)existing.remove();
+  const p=state.dex.find(x=>x.id===catchId); if(!p) return;
+  const entry=POKEDEX_DATA?POKEDEX_DATA.find(x=>x.dexId===p.pokedexId&&(!p.formName||x.formName===p.formName))||null:null;
+  const existing=document.getElementById('poke-modal'); if(existing) existing.remove();
   const modal=document.createElement('div');
   modal.id='poke-modal';
   modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
   modal.innerHTML=`
-    <div style="background:#16213e;border:1px solid #e63946;border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:'Courier New',monospace;">
+    <div style="background:#16213e;border:1px solid #e63946;border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:'Courier New',monospace;max-height:90vh;overflow-y:auto;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
         <div style="color:#e63946;font-size:14px;font-weight:bold;">#${p.pokedexId||'?'} ${p.species}${p.formName?' ('+p.formName+')':''} (catch #${p.id})</div>
         <button onclick="document.getElementById('poke-modal').remove()" style="padding:4px 10px;font-size:12px;">✕</button>
@@ -1265,145 +1016,175 @@ function showPokemonDetail(catchId){
         <div>Level: <span style="color:#fff">${p.level}</span> &nbsp;·&nbsp; Gender: <span style="color:#fff">${p.gender}</span></div>
         <div>Type: <span style="color:#fff">${entry?entry.type1+(entry.type2?' / '+entry.type2:''):'?'}</span></div>
         <div style="margin-top:6px;">
-          <div>HP &nbsp;&nbsp;&nbsp;: <span style="color:#2ecc71">${p.currentHP}/${p.maxHP}</span></div>
-          <div>ATK &nbsp;: <span style="color:#fff">${Math.floor(((entry?entry.baseAtk:50)*2*p.level)/100)+5}</span></div>
-          <div>DEF &nbsp;: <span style="color:#fff">${Math.floor(((entry?entry.baseDef:50)*2*p.level)/100)+5}</span></div>
+          <div>HP: <span style="color:#2ecc71">${p.currentHP}/${p.maxHP}</span></div>
+          <div>ATK: <span style="color:#fff">${Math.floor(((entry?entry.baseAtk:50)*2*p.level)/100)+5}</span></div>
+          <div>DEF: <span style="color:#fff">${Math.floor(((entry?entry.baseDef:50)*2*p.level)/100)+5}</span></div>
           <div>SpATK: <span style="color:#fff">${Math.floor(((entry?entry.baseSpatk:50)*2*p.level)/100)+5}</span></div>
           <div>SpDEF: <span style="color:#fff">${Math.floor(((entry?entry.baseSpdef:50)*2*p.level)/100)+5}</span></div>
-          <div>SPD &nbsp;: <span style="color:#fff">${Math.floor(((entry?entry.baseSpd:50)*2*p.level)/100)+5}</span></div>
-          <div>BST &nbsp;: <span style="color:#f4d03f">${calcBST(p.species,p.level)}</span></div>
+          <div>SPD: <span style="color:#fff">${Math.floor(((entry?entry.baseSpd:50)*2*p.level)/100)+5}</span></div>
+          <div>BST: <span style="color:#f4d03f">${calcBST(p.species,p.level)}</span></div>
         </div>
       </div>
       <div style="margin-bottom:10px;">
         <div style="color:#a0a0c0;font-size:11px;margin-bottom:6px;">Assignment:</div>
         <div style="color:${p.holder?'#2ecc71':'#e67e22'};font-size:12px;margin-bottom:8px;">${p.holder?'👤 '+p.holder:'📦 Unassigned'}</div>
-        ${p.currentHP<=0&&state.funds>=20
-          ? '<button onclick="revivePokemon('+p.id+')" style="width:100%;padding:8px;margin-bottom:6px;border-color:#e67e22;color:#e67e22;">💊 Revive ($20)</button>'
-          : ''}
+        ${p.currentHP<=0&&state.funds>=20?'<button onclick="revivePokemon('+p.id+')" style="width:100%;padding:8px;margin-bottom:6px;border-color:#e67e22;color:#e67e22;">💊 Revive ($20)</button>':''}
         ${p.holder
-          ? '<button onclick="unassignPokemon('+p.id+')" class="danger" style="width:100%;padding:8px;">Unassign</button>'
-          : '<button onclick="assignToAide('+p.id+')" class="primary" style="width:100%;padding:8px;">Assign to Carl Oak</button>'}
+          ?'<button onclick="unassignPokemon('+p.id+')" class="danger" style="width:100%;padding:8px;">Unassign</button>'
+          :'<button onclick="assignToAide('+p.id+')" class="primary" style="width:100%;padding:8px;">Assign to Carl Oak</button>'}
       </div>
     </div>`;
   document.body.appendChild(modal);
 }
 
-function revivePokemon(catchId){
-  if(state.funds<20){addLog('Not enough funds to revive!','fail');return;}
-  const p=state.dex.find(x=>x.id===catchId);if(!p)return;
-  state.funds=Math.round((state.funds-20)*100)/100;
-  p.currentHP=p.maxHP;
-  saveGame();render();
-  document.getElementById('poke-modal').remove();
-  addLog('💊 '+p.species+' #'+p.id+' revived!','info');
+// ── RENDER ──
+function render(){ renderParty(); renderDex(); updateLocation(); }
+
+function renderParty(){
+  const c=document.getElementById('party-list'); c.innerHTML='';
+  if(!state.party.length){ c.innerHTML='<div style="color:#555;padding:10px;font-size:11px;">No Pokémon in party</div>'; return; }
+  let spritesHtml='<div class="aide-party-sprites">';
+  state.party.forEach(p=>{
+    const hpPct=Math.max(0,(p.currentHP/p.maxHP)*100);
+    const hpColor=hpPct>50?'#2ecc71':hpPct>20?'#f4d03f':'#e74c3c';
+    const s=SPECIES[p.species];
+    const gr=p.growthRate||(s?s.growthRate:null)||'mediumFast';
+    const expAtLevel=expToLevel(p.level,gr);
+    const expAtNext=expToLevel(p.level+1,gr);
+    if(isNaN(p.exp)||p.exp<expAtLevel) p.exp=expAtLevel;
+    const ec=p.exp-expAtLevel;
+    const en=Math.max(1,expAtNext-expAtLevel);
+    const ePct=Math.min(100,(ec/en)*100);
+    const fainted=p.currentHP<=0;
+    const d=document.createElement('div');
+    d.className='party-slot'+(fainted?' fainted':'');
+    const spriteUrl=getSpriteUrl(p.pokedexId,p.species,p.isShiny||false);
+    spritesHtml+=`<img src="${spriteUrl}" class="aide-sprite-mini" style="opacity:${fainted?'0.3':'1'};image-rendering:pixelated;" onerror="this.style.display='none'">`;
+    d.innerHTML=`<div style="display:flex;align-items:flex-start;gap:8px;">
+      <img src="${spriteUrl}" class="party-sprite" onerror="this.style.display='none'">
+      <div style="flex:1;">
+        <div class="poke-name">${fainted?'💀':'🐾'} ${p.species} #${p.id}${p.isShiny?'<span class="shiny-badge">✨</span>':''}</div>
+        <div class="poke-level">Lv ${p.level} · ${p.gender}</div>
+        <div class="hp-bar-wrap"><div class="hp-bar" style="width:${hpPct}%;background:${hpColor};"></div></div>
+        <div class="hp-text">HP: ${p.currentHP}/${p.maxHP}</div>
+        <div class="exp-bar-wrap"><div class="exp-bar" style="width:${ePct}%;"></div></div>
+      </div>
+    </div>`;
+    d.onclick=()=>showPokemonDetail(p.id);
+    c.appendChild(d);
+  });
+  spritesHtml+='</div>';
+  const nameEl=document.querySelector('#aide-info .aide-name');
+  if(nameEl) nameEl.innerHTML='🧑‍🔬 Carl Oak'+spritesHtml;
+  const bagEl=document.getElementById('aide-bag-display');
+  if(bagEl) bagEl.textContent='🏐 '+getBallCount()+' balls in bag';
+  renderBagDisplay();
 }
 
-function assignToAide(catchId){
-  const p=state.dex.find(x=>x.id===catchId); if(!p)return;
-  if(state.missionActive){addLog('Cannot change party during a mission!','fail');return;}
-  if(state.party.length>=6){addLog('Party is full (6 max)!','fail');return;}
-  p.holder='Carl Oak';
-  if(!state.party.find(x=>x.id===catchId)) state.party.push(p);
-  sortParty();
-  saveGame(); renderDex();
-  document.getElementById('poke-modal').remove();
-  addLog(p.species+' #'+p.id+' assigned to Carl Oak.','info');
-}
-
-function unassignPokemon(catchId){
-  const p=state.dex.find(x=>x.id===catchId); if(!p)return;
-  if(state.missionActive){addLog('Cannot change party during a mission!','fail');return;}
-  p.holder=null;
-  state.party=state.party.filter(x=>x.id!==catchId);
-  saveGame(); renderDex(); render();
-  document.getElementById('poke-modal').remove();
-  addLog(p.species+' #'+p.id+' unassigned.','info');
-}
-
-// VIEW ALL: flat list with sort/filter
-function renderViewAll(){
-  const sort=document.getElementById('sort-select')?document.getElementById('sort-select').value:'id';
-  const filter=document.getElementById('filter-select')?document.getElementById('filter-select').value:'all';
-  let entries=[...state.dex];
-  if(filter==='unassigned') entries=entries.filter(p=>!p.holder);
-  if(filter==='assigned') entries=entries.filter(p=>!!p.holder);
-  if(filter==='shiny') entries=entries.filter(p=>!!p.isShiny);
-  if(sort==='id') entries.sort((a,b)=>a.id-b.id);
-  else if(sort==='dexid') entries.sort((a,b)=>(a.pokedexId||0)-(b.pokedexId||0));
-  else if(sort==='level') entries.sort((a,b)=>b.level-a.level);
-  else if(sort==='hp') entries.sort((a,b)=>b.maxHP-a.maxHP);
-  else if(sort==='total') entries.sort((a,b)=>calcBST(b.species,b.level)-calcBST(a.species,a.level));
+function renderDex(){
   const c=document.getElementById('dex-list'); c.innerHTML='';
-  if(!entries.length){ c.innerHTML='<div style="color:#555;padding:12px;font-size:11px;">No entries.</div>'; return; }
-  entries.forEach(p=>{
+  const sortBy=document.getElementById('sort-select').value;
+  const filterBy=document.getElementById('filter-select').value;
+  let list=[...state.dex];
+  if(filterBy==='unassigned') list=list.filter(p=>!p.holder);
+  else if(filterBy==='assigned') list=list.filter(p=>!!p.holder);
+  else if(filterBy==='shiny') list=list.filter(p=>p.isShiny);
+  if(sortBy==='dex') list.sort((a,b)=>a.pokedexId-b.pokedexId);
+  else if(sortBy==='level') list.sort((a,b)=>b.level-a.level);
+  else if(sortBy==='hp') list.sort((a,b)=>b.maxHP-a.maxHP);
+  else if(sortBy==='total') list.sort((a,b)=>calcBST(b.species,b.level)-calcBST(a.species,a.level));
+  else list.sort((a,b)=>a.id-b.id);
+  document.getElementById('dex-count').textContent=state.dex.length;
+  document.getElementById('dex-count-detail').textContent=state.totalCatches;
+  document.getElementById('dex-sight-detail').textContent=state.totalSightings;
+  list.forEach(p=>{
     const d=document.createElement('div');
     d.className='dex-entry'+(p.holder?'':' unassigned');
-    d.style.cursor='pointer';
     d.innerHTML=`
       <div class="dex-header"><span class="dex-name">#${p.pokedexId||'?'} ${p.species}${p.isShiny?'<span class="shiny-badge">✨</span>':''} (catch #${p.id})</span><span class="dex-id">${p.holder?'👤':'📦'}</span></div>
-      <div class="dex-details">Lv${p.level} · ${p.gender} · HP ${p.maxHP} · BST ${calcBST(p.species,p.level)}</div>
+      <div class="dex-details">Lv${p.level} · ${p.gender} · HP ${p.currentHP}/${p.maxHP} · BST ${calcBST(p.species,p.level)}</div>
       <div class="dex-holder">${p.holder?'Held by: '+p.holder:'Unassigned'}</div>`;
     d.onclick=()=>showPokemonDetail(p.id);
     c.appendChild(d);
   });
 }
 
-function gameTick(){
-  incomeTick();
-  if(!state.missionActive){renderParty();return;}
-  state.missionElapsed++;state.nextEncounterIn--;
-  if(state.currentEncounter){resolveEncounterStep();render();return;}
-  if(state.nextEncounterIn<=0){
-    checkLocationHeal(); // heal if in healing location between encounters
-    // Roll encounter for CURRENT location
-    state.currentEncounter=rollEncounter();state.nextEncounterIn=ENC_INTERVAL;
-    if(!state.currentEncounter){
-      // No encounter here — still advance travel
-      advanceTravelPath();
-      state.nextEncounterIn=ENC_INTERVAL;updateLocation();return;
-    }
-    const enc=state.currentEncounter;
-    addLog('Wild '+enc.species+' appeared! Lv'+enc.level+' '+enc.gender,'info');
-    document.getElementById('enc-body').textContent='Wild '+enc.species+' Lv'+enc.level+' ('+enc.gender+') appeared!';
-    state.totalSightings++;document.getElementById('total-sightings').textContent=state.totalSightings;
-    render();
-  }else{updateLocation();renderParty();}
+// ── UI HELPERS ──
+function switchTab(name){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
 }
 
-const SAVE_KEY='pokeprof_save';const SAVE_VERSION=7;let saveTimer=0;
+function addLog(msg,type=''){
+  state.log.unshift({msg,type});
+  if(state.log.length>200) state.log.pop();
+  const el=document.getElementById('log');
+  const d=document.createElement('div');
+  d.className='log-entry '+type;
+  d.textContent=msg;
+  el.insertBefore(d,el.firstChild);
+  if(el.children.length>200) el.removeChild(el.lastChild);
+}
+
+// ── SAVE / LOAD / RESET ──
+const SAVE_KEY='pokeprof_save';
+const SAVE_VERSION=8;
+let saveTimer=0;
 
 function saveGame(){
-  if(window._resetting)return;
+  if(window._resetting) return;
   try{
-    localStorage.setItem(SAVE_KEY,JSON.stringify({version:SAVE_VERSION,savedAt:Date.now(),missionWasActive:state.missionActive,
-      state:{funds:state.funds,totalCatches:state.totalCatches,totalSightings:state.totalSightings,
-        missionActive:state.missionActive,missionElapsed:state.missionElapsed,nextEncounterIn:state.nextEncounterIn,
-        incomeAccumulator:state.incomeAccumulator,potionThreshold:state.potionThreshold,
-        dexIdCounter:state.dexIdCounter,currentEncounter:null,party:state.party,dex:state.dex,log:state.log.slice(0,50),researchLog:state.researchLog,missionDestination:state.missionDestination,missionBehavior:state.missionBehavior,missionOrigin:state.missionOrigin,currentLocation:state.currentLocation,autoRepeat:state.autoRepeat||false,bag:state.bag||{},travelPath:state.travelPath||[],travelPathIndex:state.travelPathIndex||0,travelCyclesRemaining:state.travelCyclesRemaining||0}}));
+    localStorage.setItem(SAVE_KEY,JSON.stringify({
+      version:SAVE_VERSION, savedAt:Date.now(), missionWasActive:state.missionActive,
+      state:{
+        funds:state.funds, totalCatches:state.totalCatches, totalSightings:state.totalSightings,
+        missionActive:state.missionActive, missionElapsed:state.missionElapsed,
+        nextEncounterIn:state.nextEncounterIn, incomeAccumulator:state.incomeAccumulator,
+        potionThreshold:state.potionThreshold, dexIdCounter:state.dexIdCounter,
+        currentEncounter:null, party:state.party, dex:state.dex,
+        log:state.log.slice(0,50), researchLog:state.researchLog,
+        missionDestination:state.missionDestination, missionBehavior:state.missionBehavior,
+        missionOrigin:state.missionOrigin, currentLocation:state.currentLocation,
+        autoRepeat:state.autoRepeat||false, bag:state.bag||{},
+        travelPath:state.travelPath||[], travelPathIndex:state.travelPathIndex||0,
+        travelCyclesRemaining:state.travelCyclesRemaining||0
+      }
+    }));
     setSaveIndicator('✔ Saved','saving');
     setTimeout(()=>setSaveIndicator('⬤ Auto-save on',''),2000);
-  }catch(e){setSaveIndicator('✘ Failed','error');}
+  } catch(e){ setSaveIndicator('✘ Failed','error'); }
 }
 
 function loadGame(){
   try{
-    const raw=localStorage.getItem(SAVE_KEY);if(!raw)return false;
-    const data=JSON.parse(raw);if(!data||data.version!==SAVE_VERSION)return false;
+    const raw=localStorage.getItem(SAVE_KEY); if(!raw) return false;
+    const data=JSON.parse(raw); if(!data||data.version!==SAVE_VERSION) return false;
     const s=data.state;
-    Object.assign(state,{funds:s.funds??5,totalCatches:s.totalCatches??0,totalSightings:s.totalSightings??0,
-      missionActive:s.missionActive??false,missionElapsed:s.missionElapsed??0,
-      nextEncounterIn:s.nextEncounterIn??ENC_INTERVAL,incomeAccumulator:s.incomeAccumulator??0,
-      potionThreshold:s.potionThreshold??75,dexIdCounter:s.dexIdCounter??1,
-      currentEncounter:null,party:s.party??[],dex:s.dex??[],log:s.log??[],
-      researchLog:s.researchLog??{},pendingFindings:[],
-      missionDestination:s.missionDestination??'route1',missionBehavior:s.missionBehavior??'research',
-      missionOrigin:s.missionOrigin??'palletTown',currentLocation:s.currentLocation??'palletTown',autoRepeat:s.autoRepeat??false,
-      bag:s.bag??{},travelPath:s.travelPath??[],travelPathIndex:s.travelPathIndex??0,travelCyclesRemaining:s.travelCyclesRemaining??0});
+    Object.assign(state,{
+      funds:s.funds??5, totalCatches:s.totalCatches??0, totalSightings:s.totalSightings??0,
+      missionActive:s.missionActive??false, missionElapsed:s.missionElapsed??0,
+      nextEncounterIn:s.nextEncounterIn??ENC_INTERVAL, incomeAccumulator:s.incomeAccumulator??0,
+      potionThreshold:s.potionThreshold??75, dexIdCounter:s.dexIdCounter??1,
+      currentEncounter:null, party:s.party??[], dex:s.dex??[], log:s.log??[],
+      researchLog:s.researchLog??{}, pendingFindings:[],
+      missionDestination:s.missionDestination??'route1', missionBehavior:s.missionBehavior??'research',
+      missionOrigin:s.missionOrigin??'palletTown', currentLocation:s.currentLocation??'palletTown',
+      autoRepeat:s.autoRepeat??false, bag:s.bag??{},
+      travelPath:s.travelPath??[], travelPathIndex:s.travelPathIndex??0,
+      travelCyclesRemaining:s.travelCyclesRemaining??0
+    });
     const secsAway=Math.floor((Date.now()-data.savedAt)/1000);
     let offSum=null;
-    if(secsAway>10&&data.missionWasActive)offSum=processOfflineTime(secsAway);
-    const logEl=document.getElementById('log');logEl.innerHTML='';
-    [...state.log].reverse().forEach(e=>{const d=document.createElement('div');d.className='log-entry '+(e.type||'');d.textContent=e.msg;logEl.appendChild(d);});
+    if(secsAway>10&&data.missionWasActive) offSum=processOfflineTime(secsAway);
+    const logEl=document.getElementById('log'); logEl.innerHTML='';
+    [...state.log].reverse().forEach(e=>{
+      const d=document.createElement('div');
+      d.className='log-entry '+(e.type||'');
+      d.textContent=e.msg;
+      logEl.appendChild(d);
+    });
     document.getElementById('funds-display').textContent=state.funds.toFixed(2);
     document.getElementById('total-catches').textContent=state.totalCatches;
     document.getElementById('total-sightings').textContent=state.totalSightings;
@@ -1413,43 +1194,70 @@ function loadGame(){
     const t=new Date(data.savedAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
     setSaveIndicator('⬤ Loaded ('+t+')','saving');
     setTimeout(()=>setSaveIndicator('⬤ Auto-save on',''),3000);
-    if(offSum)showOfflineBanner(secsAway,offSum);
+    if(offSum) showOfflineBanner(secsAway,offSum);
     return true;
-  }catch(e){setSaveIndicator('✘ Load error','error');return false;}
+  } catch(e){ setSaveIndicator('✘ Load error','error'); return false; }
 }
 
-function resetGame(){if(!confirm('Wipe ALL progress? This cannot be undone.'))return;clearInterval(window._gameTickInterval);clearInterval(window._autoSaveInterval);window._resetting=true;localStorage.clear();location.reload();}
-function setSaveIndicator(msg,cls){const el=document.getElementById('save-indicator');el.textContent=msg;el.className=cls||'';}
-function autoSaveTick(){saveTimer++;if(saveTimer>=30){saveTimer=0;saveGame();}}
+function resetGame(){
+  if(!confirm('Wipe ALL progress? This cannot be undone.')) return;
+  clearInterval(window._gameTickInterval);
+  clearInterval(window._autoSaveInterval);
+  window._resetting=true;
+  localStorage.clear();
+  location.reload();
+}
+
+function setSaveIndicator(msg,cls){
+  const el=document.getElementById('save-indicator');
+  el.textContent=msg; el.className=cls||'';
+}
+
+function autoSaveTick(){ saveTimer++; if(saveTimer>=30){ saveTimer=0; saveGame(); } }
 
 function init(){
   const s=makePokemon('Rattata',5,Math.random()<0.5?'M':'F','Carl Oak');
-  state.party.push(s);state.dex.push(s);
+  state.party.push(s); state.dex.push(s);
   recordNewSpecies(s.pokedexId,'Rattata');
   recordSighting(s.pokedexId,5);
-  addLog('Rattata #1 added to party as starter (your own Rattata).','info');render();
+  addLog('Rattata #1 added to party as starter.','info');
+  render();
 }
 
+// ── BOOT ──
 const hasSave=loadGame();
-if(!hasSave){state.party=[];state.dex=[];state.log=[];state.dexIdCounter=1;state.bag={};state.funds=5;state.totalCatches=0;state.totalSightings=0;init();setSaveIndicator('⬤ New game','');}else{render();}
+if(!hasSave){
+  state={
+    funds:5.00, totalCatches:0, totalSightings:0,
+    missionActive:false, missionElapsed:0, nextEncounterIn:ENC_INTERVAL,
+    incomeAccumulator:0, potionThreshold:75,
+    party:[], dex:[], dexIdCounter:1, currentEncounter:null, log:[],
+    missionDestination:'route1', missionBehavior:'research',
+    missionOrigin:'palletTown', currentLocation:'palletTown', autoRepeat:false,
+    travelPath:[], travelPathIndex:0, travelCyclesRemaining:0,
+    bag:{}, researchLog:{}, pendingFindings:[]
+  };
+  init();
+  setSaveIndicator('⬤ New game','');
+} else {
+  render();
+}
+
 window._gameTickInterval=setInterval(gameTick,1000);
 window._autoSaveInterval=setInterval(autoSaveTick,1000);
 
-// Handle tab coming back from sleep/background
 let _hiddenAt=null;
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden){
     _hiddenAt=Date.now();
-    saveGame(); // save when going to background
+    saveGame();
   } else {
     if(_hiddenAt&&state.missionActive){
       const secsAway=Math.floor((Date.now()-_hiddenAt)/1000);
       if(secsAway>5){
         const summary=processOfflineTime(secsAway);
-        if(summary&&(summary.encounters>0||summary.income>0)){
-          showOfflineBanner(secsAway,summary);
-        }
-        render();saveGame();
+        if(summary&&(summary.encounters>0||summary.income>0)) showOfflineBanner(secsAway,summary);
+        render(); saveGame();
       }
     }
     _hiddenAt=null;

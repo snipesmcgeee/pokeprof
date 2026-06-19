@@ -88,9 +88,9 @@
   .dex-entry .dex-details { color:#9090b0; line-height:1.5; }
   .dex-entry .dex-holder { color:#2ecc71; font-size:10px; margin-top:3px; }
   .dex-entry.unassigned .dex-holder { color:#e67e22; }
-  .party-sprite { width:32px;height:32px;image-rendering:pixelated;flex-shrink:0; }
+  .party-sprite { width:64px;height:64px;image-rendering:pixelated;flex-shrink:0; }
   .aide-party-sprites { display:flex;gap:2px;flex-wrap:wrap;margin-top:4px; }
-  .aide-sprite-mini { width:24px;height:24px;image-rendering:pixelated; }
+  .aide-sprite-mini { width:48px;height:48px;image-rendering:pixelated; }
   .shiny-badge { color:#f4d03f;font-size:10px;margin-left:2px; }
 </style>
 <!-- External database files — must be in same GitHub repo -->
@@ -101,6 +101,7 @@
 <script src="typechart.js"></script>
 <script src="evotree.js"></script>
 <script src="formtriggers.js"></script>
+<script src="items.js"></script>
 </head>
 <body>
 
@@ -134,6 +135,7 @@
     <div id="aide-info">
       <div class="aide-name">🧑‍🔬 Carl Oak</div>
       <div class="aide-location" id="aide-location">📍 Pallet Town — Idle</div>
+      <div id="aide-bag-display" style="font-size:10px;color:#5dade2;margin-top:2px;">🏐 0 balls in bag</div>
     </div>
     <div class="panel-title" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;" onclick="togglePartyList()">
       <span>Carl Oak's Party</span><span id="party-toggle-icon">▼</span>
@@ -142,7 +144,7 @@
     <div id="controls">
       <button class="primary" id="btn-start" onclick="startMission()">▶ Start Mission</button>
       <button class="danger" id="btn-recall" onclick="recallAide()" disabled>⏎ Recall</button>
-      <div class="potion-threshold">🧪 Potion at <input type="number" id="potion-threshold" value="75" min="1" max="100">%</div>
+      <div id="bag-display" style="font-size:10px;color:#a0a0c0;"></div>
     </div>
   </div>
 
@@ -207,19 +209,107 @@ if(typeof POKEDEX_DATA !== 'undefined'){
   console.error('pokedex.js not loaded — check GitHub file is uploaded');
 }
 
-// Build route encounter table from ENCOUNTERS data (fallback to hardcoded if empty)
+// Build encounter table for a location from encounters.js
+// Also filter by requiresItem if Carl has that item in his bag
 function buildRouteTable(locationId){
-  if(typeof ENCOUNTERS !== 'undefined' && ENCOUNTERS.length > 0){
-    return ENCOUNTERS.filter(e=>e.locationId===locationId).map(e=>({
-      dexId: e.dexId, minLv: e.minLevel, maxLv: e.maxLevel, weight: e.encounterRate
-    }));
-  }
-  // Fallback for Route 1 until encounters.js is populated
-  return [{dexId:19,minLv:2,maxLv:4,weight:50},{dexId:16,minLv:2,maxLv:5,weight:50}];
+  if(typeof ENCOUNTERS==='undefined'||!ENCOUNTERS.length) return [];
+  return ENCOUNTERS
+    .filter(e=>e.locationId===locationId)
+    .filter(e=>{
+      if(!e.requiresItem) return true; // no requirement
+      return !!(state.bag&&state.bag[e.requiresItem]&&state.bag[e.requiresItem]>0);
+    })
+    .map(e=>({dexId:e.dexId,minLv:e.minLevel,maxLv:e.maxLevel,weight:e.encounterRate,method:e.encounterMethod}));
 }
-const ROUTE1 = buildRouteTable('route1');
 const ENC_INTERVAL = 30;
 
+
+
+// ── ITEM SYSTEM ──
+function getItem(itemId){
+  if(typeof ITEMS_DATA==='undefined') return null;
+  return ITEMS_DATA.find(i=>i.itemId===itemId)||null;
+}
+
+function getShopItems(locId){
+  if(typeof ITEMS_DATA==='undefined') return [];
+  const locData=typeof LOCATIONS!=='undefined'?getLocation(locId):null;
+  const tier=locData?locData.shopTier:null;
+  if(!tier) return [];
+  const tierOrder=['basic','full'];
+  const tierIdx=tierOrder.indexOf(tier);
+  if(tierIdx<0) return [];
+  return ITEMS_DATA.filter(i=>i.shopPrice&&i.shopTier&&tierOrder.indexOf(i.shopTier)<=tierIdx);
+}
+
+function getBallCount(){
+  if(!state.bag) return 0;
+  let total=0;
+  Object.entries(state.bag).forEach(([id,qty])=>{
+    const item=getItem(id);
+    if(item&&item.itemCategory==='ball') total+=qty;
+  });
+  return total;
+}
+
+function getWeakestEffectivePotion(pokemon){
+  // Returns itemId of weakest potion that can help, or null
+  if(!state.bag) return null;
+  const missing=pokemon.maxHP-pokemon.currentHP;
+  if(missing<=0) return null;
+  const potionOrder=['potion','super-potion','max-potion'];
+  const healAmounts={potion:20,'super-potion':60,'max-potion':Infinity};
+  for(const id of potionOrder){
+    if((state.bag[id]||0)>0&&healAmounts[id]>=missing) return id;
+  }
+  // If nothing covers it exactly, use next best
+  for(const id of potionOrder){
+    if((state.bag[id]||0)>0) return id;
+  }
+  return null;
+}
+
+function useItemFromBag(itemId, pokemon){
+  if(!state.bag||!state.bag[itemId]) return false;
+  const item=getItem(itemId);
+  if(!item) return false;
+  if(item.itemCategory==='ball'){
+    state.bag[itemId]--;
+    if(state.bag[itemId]<=0) delete state.bag[itemId];
+    return true; // caller handles catch logic
+  }
+  if(item.effect==='heal-hp'){
+    const heal=parseInt(item.effectValue)||20;
+    const healed=Math.min(heal,pokemon.maxHP-pokemon.currentHP);
+    pokemon.currentHP=Math.min(pokemon.maxHP,pokemon.currentHP+heal);
+    addLog(item.name+' used on '+pokemon.species+': +'+healed+' HP ('+pokemon.currentHP+'/'+pokemon.maxHP+')','info');
+  } else if(item.effect==='heal-hp-full'){
+    const healed=pokemon.maxHP-pokemon.currentHP;
+    pokemon.currentHP=pokemon.maxHP;
+    addLog(item.name+' used on '+pokemon.species+': +'+healed+' HP (full)','info');
+  } else if(item.effect==='revive-half'){
+    pokemon.currentHP=Math.floor(pokemon.maxHP/2);
+    addLog(item.name+' used: '+pokemon.species+' revived to '+pokemon.currentHP+' HP','info');
+  } else if(item.effect==='revive-full'){
+    pokemon.currentHP=pokemon.maxHP;
+    addLog(item.name+' used: '+pokemon.species+' fully revived','info');
+  }
+  state.bag[itemId]--;
+  if(state.bag[itemId]<=0) delete state.bag[itemId];
+  return true;
+}
+
+function renderBagDisplay(){
+  const el=document.getElementById('bag-display');
+  if(!el) return;
+  if(!state.bag||!Object.keys(state.bag).length){ el.textContent='Bag: empty'; return; }
+  const parts=Object.entries(state.bag).map(([id,qty])=>{
+    const item=getItem(id);
+    const name=item?item.name:id;
+    return qty+'× '+name;
+  });
+  el.innerHTML='🎒 '+parts.join(' · ')+'<br><span style="color:#5dade2;">🏐 '+getBallCount()+' balls</span>';
+}
 
 // ── RESEARCH LOG ──
 function getResearch(dexId){
@@ -341,6 +431,62 @@ function checkLocationHeal(){
   }
 }
 
+
+// ── TRAVEL SYSTEM ──
+function buildTravelPath(fromId, toId){
+  // BFS to find path through connections
+  if(typeof CONNECTIONS==='undefined') return [toId];
+  const visited=new Set([fromId]);
+  const queue=[[fromId,[]]];
+  while(queue.length){
+    const [cur,path]=queue.shift();
+    const neighbors=getConnectedLocations(cur)||[];
+    for(const n of neighbors){
+      if(visited.has(n))continue;
+      visited.add(n);
+      const newPath=[...path,n];
+      if(n===toId) return newPath;
+      queue.push([n,newPath]);
+    }
+  }
+  return [toId]; // fallback direct
+}
+
+function advanceTravelPath(){
+  // Called each encounter cycle — advance through path
+  if(!state.travelPath||state.travelPathIndex>=state.travelPath.length){
+    // Already at destination
+    return;
+  }
+  state.travelCyclesRemaining--;
+  if(state.travelCyclesRemaining<=0){
+    // Arrive at next location in path
+    const arrivedAt=state.travelPath[state.travelPathIndex];
+    state.currentLocation=arrivedAt;
+    state.travelPathIndex++;
+    addLog('📍 Carl Oak arrived at '+(getLocation(arrivedAt)||{name:arrivedAt}).name+'!','info');
+    // Heal if this location heals
+    const locData=typeof LOCATIONS!=='undefined'?getLocation(arrivedAt):null;
+    if(locData&&(locData.heals==='TRUE'||locData.heals===true||locData.heals==='true')){
+      const needsHeal=state.party.some(p=>p.currentHP<p.maxHP||p.currentHP<=0);
+      if(needsHeal){
+        state.party.forEach(p=>{ p.currentHP=p.maxHP; });
+        addLog('🏥 Party healed at '+locData.name+'!','info');
+      }
+    }
+    // Set cycles for next leg
+    if(state.travelPathIndex<state.travelPath.length){
+      const nextLoc=state.travelPath[state.travelPathIndex];
+      const nextData=typeof LOCATIONS!=='undefined'?getLocation(nextLoc):null;
+      state.travelCyclesRemaining=nextData&&nextData.travelTime?parseInt(nextData.travelTime):1;
+    }
+  }
+}
+
+function isAtDestination(){
+  return state.currentLocation===state.missionDestination;
+}
+
 function expToLevel(lv,rate){
   if(lv<=1)return 0;
   const r=rate||'mediumFast'; // fallback if growthRate missing from DB
@@ -367,7 +513,9 @@ let state={
   missionActive:false,missionElapsed:0,nextEncounterIn:ENC_INTERVAL,
   incomeAccumulator:0,potionThreshold:75,
   party:[],dex:[],dexIdCounter:1,currentEncounter:null,log:[],
-  missionDestination:'route1', missionBehavior:'stop',
+  missionDestination:'route1', missionBehavior:'research',
+  missionOrigin:'palletTown', currentLocation:'palletTown',
+  travelPath:[], travelPathIndex:0, travelCyclesRemaining:0,
   researchLog:{},   // keyed by dexId: {evolutionConfirmed,nonEvolutionConfirmed,confirmedMethod,confirmedIntoId,testedMethods,highestLevelObserved,knownSince}
   pendingFindings:[] // queue of findings to show after mission
 };
@@ -402,6 +550,11 @@ function togglePartyList(){
   const hidden=list.style.display==='none';
   list.style.display=hidden?'':'none';
   icon.textContent=hidden?'▼':'▶';
+}
+
+
+function sortParty(){
+  state.party.sort((a,b)=>a.level-b.level);
 }
 
 function switchTab(name){
@@ -458,6 +611,21 @@ function showMissionModal(){
   state._missionBehavior='research';
 }
 
+
+function buyItem(itemId){
+  const item=getItem(itemId);
+  if(!item||!item.shopPrice) return;
+  const price=parseFloat(item.shopPrice);
+  if(state.funds<price){ addLog('Not enough funds for '+item.name+'!','fail'); return; }
+  state.funds=Math.round((state.funds-price)*100)/100;
+  state.bag[itemId]=(state.bag[itemId]||0)+1;
+  document.getElementById('funds-display').textContent=state.funds.toFixed(2);
+  // Update count in modal
+  const el=document.getElementById('bag-'+itemId);
+  if(el) el.textContent=state.bag[itemId];
+  addLog('Bought '+item.name+' ($'+price+')','info');
+}
+
 function selectMissionDest(locId){
   state._missionDest=locId;
   const locData=typeof LOCATIONS!=='undefined'?getLocation(locId):null;
@@ -473,6 +641,14 @@ function confirmMission(){
   state.missionActive=true;
   state.missionBehavior='research';
   state.missionDestination=state._missionDest||'route1';
+  state.missionOrigin=state.currentLocation||'palletTown';
+  // Build travel path: all locations between origin and destination
+  state.travelPath=buildTravelPath(state.missionOrigin, state.missionDestination);
+  state.travelPathIndex=0;
+  const firstLoc=state.travelPath[0]||state.missionDestination;
+  const firstLocData=typeof LOCATIONS!=='undefined'?getLocation(firstLoc):null;
+  state.travelCyclesRemaining=firstLocData&&firstLocData.travelTime?parseInt(firstLocData.travelTime):1;
+  state.currentLocation=state.missionOrigin; // still at origin until first cycle
   state.nextEncounterIn=ENC_INTERVAL;
   document.getElementById('btn-start').disabled=true;
   document.getElementById('btn-recall').disabled=false;
@@ -498,11 +674,23 @@ function allFainted(){return state.party.every(p=>p.currentHP<=0);}
 
 function endMission(reason='faint'){
   state.missionActive=false;state.currentEncounter=null;
+  // Return Carl to origin location
+  const originLocId=state.missionOrigin||'palletTown';
+  state.currentLocation=originLocId;
   document.getElementById('btn-start').disabled=false;
   document.getElementById('btn-recall').disabled=true;
   const msg=reason==='recall'?'Carl Oak recalled to Pallet Town.':'All fainted — Carl Oak returned to Pallet Town.';
   document.getElementById('enc-body').textContent=msg;
   addLog(msg, reason==='recall'?'info':'faint');
+  // Heal party if origin location heals
+  const originLoc=typeof LOCATIONS!=='undefined'?getLocation(originLocId):null;
+  if(originLoc&&(originLoc.heals==='TRUE'||originLoc.heals===true||originLoc.heals==='true')){
+    const needsHeal=state.party.some(p=>p.currentHP<p.maxHP||p.currentHP<=0);
+    if(needsHeal){
+      state.party.forEach(p=>{ p.currentHP=p.maxHP; });
+      addLog('🏥 Party fully healed at '+originLoc.name+'!','info');
+    }
+  }
   showFindingsReport();
   updateLocation();saveGame();
 }
@@ -532,7 +720,7 @@ function incomeTick(){
 }
 
 function rollEncounter(){
-  const dest=state.missionDestination||'route1';
+  const dest=state.currentLocation||state.missionDestination||'route1';
   const table=buildRouteTable(dest);
   if(!table||!table.length)return null;
   let roll=Math.random()*100,cum=0;
@@ -547,30 +735,42 @@ function rollEncounter(){
 function resolveEncounterStep(){
   const enc=state.currentEncounter;if(!enc)return;
   const lead=getLeadPokemon();if(!lead){endMission();return;}
-  const thr=parseInt(document.getElementById('potion-threshold').value)||75;
-  if((lead.currentHP/lead.maxHP)*100<thr&&state.funds>=10.00)usePotion(lead);
-  if(state.funds>=1.00)throwBall(lead,enc);else fight(lead,enc);
+  // Auto-revive fainted lower-level pokemon first
+  if(lead.currentHP<=0){
+    const fainted=state.party.filter(p=>p.currentHP<=0).sort((a,b)=>a.level-b.level);
+    for(const fp of fainted){
+      if((state.bag['revive']||0)>0){useItemFromBag('revive',fp);break;}
+      if((state.bag['max-revive']||0)>0){useItemFromBag('max-revive',fp);break;}
+    }
+  }
+  // Auto-potion: use weakest effective potion
+  const potionId=getWeakestEffectivePotion(lead);
+  if(potionId)useItemFromBag(potionId,lead);
+  // Auto-ball or fight
+  const hasBalls=getBallCount()>0;
+  if(hasBalls){throwBall(lead,enc);}else{fight(lead,enc);}
 }
 
 function throwBall(lead,enc){
-  state.funds=Math.round((state.funds-1.00)*100)/100;
-  if(Math.random()<0.75){
-    const caught=makePokemon(enc.species,enc.level,enc.gender);
-    caught.isShiny=(Math.random()<(1/4096)); // 1/4096 shiny rate
-    state.dex.push(caught);state.totalCatches++;state.totalSightings++;
-    if(caught.isShiny){addLog('✨ SHINY '+caught.species+' caught! ✨','evolve');}
-    const s_=SPECIES[enc.species];const exp=Math.floor(((s_?s_.baseExpYield||s_.baseExp:51)*enc.level)/7);
-    giveExp(lead,exp);
-    // Record research
-    recordSighting(enc.pokedexId||caught.pokedexId, enc.level);
-    const isNewSpecies=!isSpeciesKnown(caught.pokedexId)||!state.researchLog[caught.pokedexId].firstSeen;
-    if(isNewSpecies)recordNewSpecies(caught.pokedexId,enc.species);
-    addLog('Caught '+enc.species+' #'+caught.id+' (Lv'+enc.level+' '+enc.gender+')! +'+exp+' EXP','catch');
-    document.getElementById('total-catches').textContent=state.totalCatches;
-    document.getElementById('total-sightings').textContent=state.totalSightings;
-    state.currentEncounter=null;
-    document.getElementById('enc-body').textContent='Caught '+enc.species+' Lv'+enc.level+'!';
-    saveGame();
+  // Shiny auto-catch — no ball consumed
+  const isShiny=Math.random()<(1/4096);
+  if(isShiny){
+    catchPokemon(lead,enc,true,false); // auto catch, no ball used
+    return;
+  }
+  // Pick best available ball
+  const ballPriority=['master-ball','ultra-ball','great-ball','poke-ball'];
+  let ballUsed=null;
+  for(const b of ballPriority){
+    if((state.bag[b]||0)>0){ ballUsed=b; break; }
+  }
+  if(!ballUsed){ fight(lead,enc); return; }
+  useItemFromBag(ballUsed,null); // consume ball (no pokemon target)
+  const ballItem=getItem(ballUsed);
+  const modifier=ballItem&&ballItem.catchRateModifier?parseFloat(ballItem.catchRateModifier):1;
+  const catchRate=modifier>=255?1:Math.min(0.99,0.75*modifier); // base 75% × modifier
+  if(Math.random()<catchRate){
+    catchPokemon(lead,enc,false,false);
   }else{
     const dmg=Math.max(1,Math.floor((enc.level/lead.level)*0.5*0.25*lead.maxHP));
     lead.currentHP=Math.max(0,lead.currentHP-dmg);
@@ -578,6 +778,24 @@ function throwBall(lead,enc){
     document.getElementById('enc-body').textContent='Ball missed! '+lead.species+' at '+lead.currentHP+'/'+lead.maxHP+' HP';
     if(lead.currentHP<=0){addLog(lead.species+' #'+lead.id+' fainted!','faint');const next=getLeadPokemon();if(!next)endMission();}
   }
+}
+
+function catchPokemon(lead,enc,isShiny,ballUsed){
+  const caught=makePokemon(enc.species,enc.level,enc.gender);
+  caught.isShiny=isShiny;
+  state.dex.push(caught);state.totalCatches++;state.totalSightings++;
+  if(isShiny) addLog('✨ SHINY '+caught.species+' caught automatically! ✨','evolve');
+  const s_=SPECIES[enc.species];const exp=Math.floor(((s_?s_.baseExpYield||s_.baseExp:51)*enc.level)/7);
+  giveExp(lead,exp);
+  recordSighting(enc.pokedexId||caught.pokedexId,enc.level);
+  if(!isSpeciesKnown(caught.pokedexId)||!state.researchLog[caught.pokedexId].firstSeen)
+    recordNewSpecies(caught.pokedexId,enc.species);
+  addLog('Caught '+enc.species+' #'+caught.id+' (Lv'+enc.level+' '+enc.gender+(isShiny?' ✨':'')+')! +'+exp+' EXP','catch');
+  document.getElementById('total-catches').textContent=state.totalCatches;
+  document.getElementById('total-sightings').textContent=state.totalSightings;
+  state.currentEncounter=null;
+  document.getElementById('enc-body').textContent='Caught '+enc.species+' Lv'+enc.level+(isShiny?' ✨ SHINY!':'!');;
+  saveGame();
 }
 
 function fight(lead,enc){
@@ -598,12 +816,7 @@ function fight(lead,enc){
   }
 }
 
-function usePotion(p){
-  state.funds=Math.round((state.funds-10.00)*100)/100;
-  const h=Math.min(20,p.maxHP-p.currentHP);
-  p.currentHP=Math.min(p.maxHP,p.currentHP+20);
-  addLog('Potion used on '+p.species+': +'+h+' HP ('+p.currentHP+'/'+p.maxHP+')','info');
-}
+// usePotion removed — handled by useItemFromBag
 
 function giveExp(pokemon,amount){
   pokemon.exp+=amount;
@@ -700,15 +913,17 @@ function processOfflineTime(secsAway){
     const oldSp=lead.species;let resolved=false,tries=0;
     while(!resolved&&tries<20){
       tries++;
-      const thr=state.potionThreshold;
-      if((lead.currentHP/lead.maxHP)*100<thr&&state.funds>=1.00){
-        state.funds=Math.round((state.funds-1.00)*100)/100;
-        lead.currentHP=Math.min(lead.maxHP,lead.currentHP+20);
-      }
-      if(state.funds>=1.00){
-        state.funds=Math.round((state.funds-1.00)*100)/100;
+      // Auto-potion from bag
+      const potId=getWeakestEffectivePotion(lead);
+      if(potId){ useItemFromBag(potId,lead); }
+      const hasBalls=getBallCount()>0;
+      if(hasBalls){
+        // Use cheapest ball
+        const ballId=state.bag['poke-ball']>0?'poke-ball':state.bag['great-ball']>0?'great-ball':'ultra-ball';
+        state.bag[ballId]=Math.max(0,(state.bag[ballId]||1)-1);
         if(Math.random()<0.75){
           const caught=makePokemon(enc.species,enc.level,enc.gender);
+          caught.isShiny=Math.random()<(1/4096);
           state.dex.push(caught);state.totalCatches++;state.totalSightings++;
           const se1=SPECIES[enc.species];giveExpSilent(lead,Math.floor(((se1?se1.baseExpYield||se1.baseExp:51)*enc.level)/7));
           if(lead.species!==oldSp)summary.evolutions.push(oldSp+' → '+lead.species);
@@ -759,6 +974,9 @@ function renderAideHeader(){
   if(nameEl){
     nameEl.innerHTML='🧑‍🔬 Carl Oak'+spritesHtml;
   }
+  const bagEl=document.getElementById('aide-bag-display');
+  if(bagEl) bagEl.textContent='🏐 '+getBallCount()+' balls in bag';
+  renderBagDisplay();
 }
 
 function renderParty(){
@@ -1005,6 +1223,7 @@ function assignToAide(catchId){
   if(state.party.length>=6){addLog('Party is full (6 max)!','fail');return;}
   p.holder='Carl Oak';
   if(!state.party.find(x=>x.id===catchId)) state.party.push(p);
+  sortParty();
   saveGame(); renderDex();
   document.getElementById('poke-modal').remove();
   addLog(p.species+' #'+p.id+' assigned to Carl Oak.','info');
@@ -1054,9 +1273,11 @@ function gameTick(){
   state.missionElapsed++;state.nextEncounterIn--;
   if(state.currentEncounter){resolveEncounterStep();render();return;}
   if(state.nextEncounterIn<=0){
-    checkLocationHeal(); // heal between encounters if in healing location
+    advanceTravelPath(); // move through locations
+    checkLocationHeal(); // heal if in healing location
+    // Encounters happen in current location being traversed
     state.currentEncounter=rollEncounter();state.nextEncounterIn=ENC_INTERVAL;
-    if(!state.currentEncounter){state.nextEncounterIn=ENC_INTERVAL;return;}
+    if(!state.currentEncounter){state.nextEncounterIn=ENC_INTERVAL;updateLocation();return;}
     const enc=state.currentEncounter;
     addLog('Wild '+enc.species+' appeared! Lv'+enc.level+' '+enc.gender,'info');
     document.getElementById('enc-body').textContent='Wild '+enc.species+' Lv'+enc.level+' ('+enc.gender+') appeared!';
@@ -1065,7 +1286,7 @@ function gameTick(){
   }else{updateLocation();renderParty();}
 }
 
-const SAVE_KEY='pokeprof_save';const SAVE_VERSION=5;let saveTimer=0;
+const SAVE_KEY='pokeprof_save';const SAVE_VERSION=6;let saveTimer=0;
 
 function saveGame(){
   try{
@@ -1073,7 +1294,7 @@ function saveGame(){
       state:{funds:state.funds,totalCatches:state.totalCatches,totalSightings:state.totalSightings,
         missionActive:state.missionActive,missionElapsed:state.missionElapsed,nextEncounterIn:state.nextEncounterIn,
         incomeAccumulator:state.incomeAccumulator,potionThreshold:state.potionThreshold,
-        dexIdCounter:state.dexIdCounter,currentEncounter:null,party:state.party,dex:state.dex,log:state.log.slice(0,50),researchLog:state.researchLog,missionDestination:state.missionDestination,missionBehavior:state.missionBehavior}}));
+        dexIdCounter:state.dexIdCounter,currentEncounter:null,party:state.party,dex:state.dex,log:state.log.slice(0,50),researchLog:state.researchLog,missionDestination:state.missionDestination,missionBehavior:state.missionBehavior,missionOrigin:state.missionOrigin,currentLocation:state.currentLocation,bag:state.bag||{},travelPath:state.travelPath||[],travelPathIndex:state.travelPathIndex||0,travelCyclesRemaining:state.travelCyclesRemaining||0}}));
     setSaveIndicator('✔ Saved','saving');
     setTimeout(()=>setSaveIndicator('⬤ Auto-save on',''),2000);
   }catch(e){setSaveIndicator('✘ Failed','error');}
@@ -1090,7 +1311,9 @@ function loadGame(){
       potionThreshold:s.potionThreshold??75,dexIdCounter:s.dexIdCounter??1,
       currentEncounter:null,party:s.party??[],dex:s.dex??[],log:s.log??[],
       researchLog:s.researchLog??{},pendingFindings:[],
-      missionDestination:s.missionDestination??'route1',missionBehavior:s.missionBehavior??'stop'});
+      missionDestination:s.missionDestination??'route1',missionBehavior:s.missionBehavior??'research',
+      missionOrigin:s.missionOrigin??'palletTown',currentLocation:s.currentLocation??'palletTown',
+      bag:s.bag??{},travelPath:s.travelPath??[],travelPathIndex:s.travelPathIndex??0,travelCyclesRemaining:s.travelCyclesRemaining??0});
     const secsAway=Math.floor((Date.now()-data.savedAt)/1000);
     let offSum=null;
     if(secsAway>10&&data.missionWasActive)offSum=processOfflineTime(secsAway);

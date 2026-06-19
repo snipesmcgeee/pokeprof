@@ -1,5 +1,5 @@
 // PokeProf — Evolution Tree (branching evolutions)
-// Auto-generated: 6/18/2026, 9:18:29 PM
+// Auto-generated: 6/18/2026, 11:26:37 PM
 // Entries: 36
 
 const EVO_TREE = [

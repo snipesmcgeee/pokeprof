@@ -1,5 +1,5 @@
 // PokeProf — Connections Database
-// Auto-generated: 6/19/2026, 5:03:20 PM
+// Auto-generated: 6/19/2026, 5:22:04 PM
 // Connections: 10
 
 // Flat array with full data (used for requiresItem checks)
@@ -24,7 +24,7 @@ const CONNECTIONS_DATA = [
   },
   {
     "fromLocationId": "route1",
-    "toLocationId": "viridiancity",
+    "toLocationId": "viridianCity",
     "requiresItem": null,
     "travelTime": null
   },
@@ -74,7 +74,7 @@ const CONNECTIONS = {
   ],
   "route1": [
     "palletTown",
-    "viridiancity"
+    "viridianCity"
   ],
   "route21": [
     "palletTown"

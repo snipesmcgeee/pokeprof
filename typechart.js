@@ -1,5 +1,5 @@
 // PokeProf — Type Chart
-// Auto-generated: 6/18/2026, 11:58:40 PM
+// Auto-generated: 6/19/2026, 5:03:20 PM
 // Blank cells = 1x effectiveness
 
 const TYPE_CHART = {

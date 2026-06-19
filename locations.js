@@ -1,6 +1,6 @@
 // PokeProf — Locations Database
-// Auto-generated: 6/18/2026, 11:58:40 PM
-// Entries: 4
+// Auto-generated: 6/19/2026, 5:03:20 PM
+// Entries: 8
 
 const LOCATIONS = [
   {
@@ -28,12 +28,44 @@ const LOCATIONS = [
     "travelTime": 14
   },
   {
-    "locationId": "viridiancity",
+    "locationId": "viridianCity",
     "name": "Viridian City",
     "region": "Kanto",
     "heals": true,
     "shopTier": "basic",
     "travelTime": 0
+  },
+  {
+    "locationId": "celadonCity",
+    "name": "Celadon City",
+    "region": "Kanto",
+    "heals": true,
+    "shopTier": "full",
+    "travelTime": null
+  },
+  {
+    "locationId": "route2S",
+    "name": "Route 2 - South",
+    "region": "Kanto",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 1
+  },
+  {
+    "locationId": "route2N",
+    "name": "Route 2 - North",
+    "region": "Kanto",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 1
+  },
+  {
+    "locationId": "route22",
+    "name": "Route 22",
+    "region": "Kanto",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 2
   }
 ];
 

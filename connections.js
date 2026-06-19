@@ -1,6 +1,6 @@
 // PokeProf — Connections Database
-// Auto-generated: 6/18/2026, 11:58:40 PM
-// Connections: 4
+// Auto-generated: 6/19/2026, 5:03:20 PM
+// Connections: 10
 
 // Flat array with full data (used for requiresItem checks)
 const CONNECTIONS_DATA = [
@@ -27,6 +27,42 @@ const CONNECTIONS_DATA = [
     "toLocationId": "viridiancity",
     "requiresItem": null,
     "travelTime": null
+  },
+  {
+    "fromLocationId": "route21",
+    "toLocationId": "palletTown",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "viridianCity",
+    "toLocationId": "route1",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "viridianCity",
+    "toLocationId": "route2S",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "route2S",
+    "toLocationId": "viridianCity",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "viridianCity",
+    "toLocationId": "route22",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "route22",
+    "toLocationId": "viridianCity",
+    "requiresItem": null,
+    "travelTime": null
   }
 ];
 
@@ -39,6 +75,20 @@ const CONNECTIONS = {
   "route1": [
     "palletTown",
     "viridiancity"
+  ],
+  "route21": [
+    "palletTown"
+  ],
+  "viridianCity": [
+    "route1",
+    "route2S",
+    "route22"
+  ],
+  "route2S": [
+    "viridianCity"
+  ],
+  "route22": [
+    "viridianCity"
   ]
 };
 

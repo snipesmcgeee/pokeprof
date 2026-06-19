@@ -611,9 +611,11 @@ function showMissionModal(){
   // Get reachable destinations — filter by requiresItem
   const allConnected=typeof CONNECTIONS!=='undefined'?getConnectedLocations(currentLoc):['route1'];
   const connected=allConnected.filter(loc=>{
-    if(typeof CONNECTIONS_DATA==='undefined') return true;
+    if(typeof CONNECTIONS_DATA==='undefined') return true; // no data, show all
     const conn=(CONNECTIONS_DATA||[]).find(c=>c.fromLocationId===currentLoc&&c.toLocationId===loc);
-    if(!conn||!conn.requiresItem) return true;
+    if(!conn) return false; // connection not found in data — block it
+    if(!conn.requiresItem) return true; // no requirement — accessible
+    // Has a requirement — check Carl's bag or trainer unlocks
     return (state.bag&&state.bag[conn.requiresItem]&&state.bag[conn.requiresItem]>0)||
            (state.trainerUnlocks&&state.trainerUnlocks[conn.requiresItem]);
   });
@@ -625,11 +627,15 @@ function showMissionModal(){
     const name=locData?locData.name:loc;
     return `<button onclick="selectMissionDest('${loc}')" style="display:block;width:100%;margin-bottom:6px;padding:10px;text-align:left;border-color:#5dade2;color:#5dade2;">${name}</button>`;
   }).join('');
+  // Build shop section
+  const shopItems=typeof getShopItems==='function'?getShopItems(currentLoc):[];
+  const shopHtml=shopItems.length?`<div style="color:#a0a0c0;font-size:11px;margin:12px 0 6px;letter-spacing:1px;">🛒 SHOP</div><div style="max-height:180px;overflow-y:auto;margin-bottom:4px;">${shopItems.map(item=>`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;background:#0f1a2a;padding:6px 8px;border-radius:4px;"><div><span style="font-size:11px;color:#e0e0e0;">${item.name}</span><span style="color:#6080a0;font-size:10px;"> $${item.shopPrice}</span></div><div style="display:flex;align-items:center;gap:6px;"><span id="bag-${item.itemId}" style="color:#f4d03f;font-size:11px;min-width:18px;text-align:right;">${state.bag&&state.bag[item.itemId]?state.bag[item.itemId]:0}</span><button onclick="buyItem('${item.itemId}')" style="padding:4px 10px;font-size:12px;">+</button></div></div>`).join('')}</div>`:'';
   modal.innerHTML=`
-    <div style="background:#16213e;border:1px solid #e63946;border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:'Courier New',monospace;">
+    <div style="background:#16213e;border:1px solid #e63946;border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:'Courier New',monospace;max-height:90vh;overflow-y:auto;">
       <div style="color:#e63946;font-size:14px;font-weight:bold;margin-bottom:12px;">📋 Dispatch Carl Oak</div>
       <div style="color:#a0a0c0;font-size:11px;margin-bottom:8px;">DESTINATION</div>
       ${destOptions}
+      ${shopHtml}
       <div id="mission-summary" style="color:#6080a0;font-size:10px;margin:12px 0 8px;">Select a destination above.</div>
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;background:#0f1a2a;padding:8px;border-radius:4px;">
         <input type="checkbox" id="auto-repeat-toggle" ${state.autoRepeat?'checked':''} onchange="state.autoRepeat=this.checked" style="width:16px;height:16px;cursor:pointer;">

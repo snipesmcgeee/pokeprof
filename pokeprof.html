@@ -409,7 +409,7 @@ function getSpriteUrl(dexId, name, isShiny=false){
 
 function checkLocationHeal(){
   if(!state.missionActive)return;
-  const locData=typeof LOCATIONS!=='undefined'?getLocation(state.missionDestination):null;
+  const locData=typeof LOCATIONS!=='undefined'?getLocation(state.currentLocation):null;
   if(locData&&(locData.heals==='TRUE'||locData.heals===true||locData.heals==='true')){
     const needsHeal=state.party.some(p=>p.currentHP<p.maxHP||p.currentHP<=0);
     if(needsHeal){
@@ -709,7 +709,6 @@ function recallAide(){
   state.missionActive=false;state.currentEncounter=null;
   document.getElementById('btn-start').disabled=false;
   document.getElementById('btn-recall').disabled=true;
-  document.getElementById('enc-body').textContent='Aide recalled to Pallet Town.';
   endMission('recall');
   render();
 }
@@ -722,13 +721,14 @@ function endMission(reason='faint'){
   // Return Carl to origin location
   const originLocId=state.missionOrigin||'palletTown';
   state.currentLocation=originLocId;
+  const originLoc=typeof LOCATIONS!=='undefined'?getLocation(originLocId):null;
+  const originName=originLoc?originLoc.name:'Pallet Town';
   document.getElementById('btn-start').disabled=false;
   document.getElementById('btn-recall').disabled=true;
-  const msg=reason==='recall'?'Carl Oak recalled to Pallet Town.':'All fainted — Carl Oak returned to Pallet Town.';
+  const msg=reason==='recall'?'Carl Oak recalled to '+originName+'.':'All fainted — Carl Oak returned to '+originName+'.';
   document.getElementById('enc-body').textContent=msg;
   addLog(msg, reason==='recall'?'info':'faint');
   // Heal party if origin location heals
-  const originLoc=typeof LOCATIONS!=='undefined'?getLocation(originLocId):null;
   if(originLoc&&(originLoc.heals==='TRUE'||originLoc.heals===true||originLoc.heals==='true')){
     const needsHeal=state.party.some(p=>p.currentHP<p.maxHP||p.currentHP<=0);
     if(needsHeal){

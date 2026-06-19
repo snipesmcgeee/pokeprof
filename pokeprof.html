@@ -1417,7 +1417,7 @@ function loadGame(){
   }catch(e){setSaveIndicator('✘ Load error','error');return false;}
 }
 
-function resetGame(){if(!confirm('Wipe ALL progress? This cannot be undone.'))return;localStorage.clear();location.reload();}
+function resetGame(){if(!confirm('Wipe ALL progress? This cannot be undone.'))return;clearInterval(window._gameTickInterval);clearInterval(window._autoSaveInterval);localStorage.clear();location.reload();}
 function setSaveIndicator(msg,cls){const el=document.getElementById('save-indicator');el.textContent=msg;el.className=cls||'';}
 function autoSaveTick(){saveTimer++;if(saveTimer>=30){saveTimer=0;saveGame();}}
 
@@ -1431,8 +1431,8 @@ function init(){
 
 const hasSave=loadGame();
 if(!hasSave){state.party=[];state.dex=[];state.log=[];state.dexIdCounter=1;init();setSaveIndicator('⬤ New game','');}else{render();}
-setInterval(gameTick,1000);
-setInterval(autoSaveTick,1000);
+window._gameTickInterval=setInterval(gameTick,1000);
+window._autoSaveInterval=setInterval(autoSaveTick,1000);
 
 // Handle tab coming back from sleep/background
 let _hiddenAt=null;

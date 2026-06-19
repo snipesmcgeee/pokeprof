@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.10.2</title>
+<title>PokeProf v0.10.3</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body { background:#1a1a2e; color:#e0e0e0; font-family:'Courier New',monospace; font-size:13px; height:100dvh; display:flex; flex-direction:column; overflow:hidden; }
@@ -106,7 +106,7 @@
 <body>
 
 <div id="header">
-  <h1>🎓 PokeProf v0.10.1</h1>
+  <h1>🎓 PokeProf v0.10.3</h1>
   <div style="display:flex;align-items:center;gap:10px;">
     <button class="reset" onclick="resetGame()">⚠ Reset</button>
     <div style="text-align:right;">
@@ -1373,8 +1373,9 @@ function gameTick(){
 const SAVE_KEY='pokeprof_save';const SAVE_VERSION=7;let saveTimer=0;
 
 function saveGame(){
+  if(window._resetting)return;
   try{
-    localStorage.setItem(SAVE_KEY,JSON.stringify({version:SAVE_VERSION,savedAt:Date.now(),missionWasActive:state.missionActive,
+    localStorage.setItem(SAVE_KEY,,JSON.stringify({version:SAVE_VERSION,savedAt:Date.now(),missionWasActive:state.missionActive,
       state:{funds:state.funds,totalCatches:state.totalCatches,totalSightings:state.totalSightings,
         missionActive:state.missionActive,missionElapsed:state.missionElapsed,nextEncounterIn:state.nextEncounterIn,
         incomeAccumulator:state.incomeAccumulator,potionThreshold:state.potionThreshold,

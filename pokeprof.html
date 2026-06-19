@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf</title>
+<title>PokeProf v0.9</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body { background:#1a1a2e; color:#e0e0e0; font-family:'Courier New',monospace; font-size:13px; height:100dvh; display:flex; flex-direction:column; overflow:hidden; }
@@ -106,7 +106,7 @@
 <body>
 
 <div id="header">
-  <h1>🎓 PokeProf</h1>
+  <h1>🎓 PokeProf v0.9</h1>
   <div style="display:flex;align-items:center;gap:10px;">
     <button class="reset" onclick="resetGame()">⚠ Reset</button>
     <div style="text-align:right;">
@@ -231,16 +231,7 @@ function getItem(itemId){
   return ITEMS_DATA.find(i=>i.itemId===itemId)||null;
 }
 
-function getShopItems(locId){
-  if(typeof ITEMS_DATA==='undefined') return [];
-  const locData=typeof LOCATIONS!=='undefined'?getLocation(locId):null;
-  const tier=locData?locData.shopTier:null;
-  if(!tier) return [];
-  const tierOrder=['basic','full'];
-  const tierIdx=tierOrder.indexOf(tier);
-  if(tierIdx<0) return [];
-  return ITEMS_DATA.filter(i=>i.shopPrice&&i.shopTier&&tierOrder.indexOf(i.shopTier)<=tierIdx);
-}
+// getShopItems provided by items.js
 
 function getBallCount(){
   if(!state.bag) return 0;
@@ -434,14 +425,40 @@ function checkLocationHeal(){
 
 // ── TRAVEL SYSTEM ──
 function buildTravelPath(fromId, toId){
-  // BFS to find path through connections
-  if(typeof CONNECTIONS==='undefined') return [toId];
+  // BFS through connections, filtering out paths requiring items Carl doesn't have
+  if(typeof CONNECTIONS==='undefined'||typeof CONNECTIONS_DATA==='undefined') {
+    // Simple adjacency — no requiresItem check possible
+    if(typeof CONNECTIONS!=='undefined'){
+      const visited=new Set([fromId]);
+      const queue=[[fromId,[]]];
+      while(queue.length){
+        const [cur,path]=queue.shift();
+        const neighbors=getConnectedLocations(cur)||[];
+        for(const n of neighbors){
+          if(visited.has(n))continue;
+          visited.add(n);
+          const newPath=[...path,n];
+          if(n===toId) return newPath;
+          queue.push([n,newPath]);
+        }
+      }
+    }
+    return [toId];
+  }
+  // Full BFS with requiresItem check
   const visited=new Set([fromId]);
   const queue=[[fromId,[]]];
   while(queue.length){
     const [cur,path]=queue.shift();
-    const neighbors=getConnectedLocations(cur)||[];
-    for(const n of neighbors){
+    // Get connections from this location that Carl can use
+    const available=(CONNECTIONS_DATA||[]).filter(c=>{
+      if(c.fromLocationId!==cur) return false;
+      if(!c.requiresItem) return true;
+      return (state.bag&&state.bag[c.requiresItem]&&state.bag[c.requiresItem]>0)||
+             (state.trainerUnlocks&&state.trainerUnlocks[c.requiresItem]);
+    });
+    for(const conn of available){
+      const n=conn.toLocationId;
       if(visited.has(n))continue;
       visited.add(n);
       const newPath=[...path,n];
@@ -449,36 +466,42 @@ function buildTravelPath(fromId, toId){
       queue.push([n,newPath]);
     }
   }
-  return [toId]; // fallback direct
+  return []; // empty = unreachable
+}
+
+function arriveAtLocation(locId){
+  // Carl arrives at a new location
+  state.currentLocation=locId;
+  const locData=typeof LOCATIONS!=='undefined'?getLocation(locId):null;
+  const locName=locData?locData.name:locId;
+  addLog('📍 Carl Oak arrived at '+locName+'!','info');
+  // Heal if this location heals
+  if(locData&&(locData.heals==='TRUE'||locData.heals===true||locData.heals==='true')){
+    const needsHeal=state.party.some(p=>p.currentHP<p.maxHP||p.currentHP<=0);
+    if(needsHeal){
+      state.party.forEach(p=>{ p.currentHP=p.maxHP; });
+      addLog('🏥 Party healed at '+locName+'!','info');
+    }
+  }
+  // Set travelCycles for this location
+  const cycles=locData&&locData.travelTime?parseInt(locData.travelTime):1;
+  state.travelCyclesRemaining=Math.max(1,cycles);
 }
 
 function advanceTravelPath(){
-  // Called each encounter cycle — advance through path
-  if(!state.travelPath||state.travelPathIndex>=state.travelPath.length){
-    // Already at destination
-    return;
-  }
+  // Called AFTER each encounter — decrement cycles, advance when done
+  if(!state.travelPath||state.travelPath.length===0) return;
+  if(state.travelPathIndex>=state.travelPath.length) return; // at destination already
   state.travelCyclesRemaining--;
   if(state.travelCyclesRemaining<=0){
-    // Arrive at next location in path
-    const arrivedAt=state.travelPath[state.travelPathIndex];
-    state.currentLocation=arrivedAt;
+    // Move to next location in path
     state.travelPathIndex++;
-    addLog('📍 Carl Oak arrived at '+(getLocation(arrivedAt)||{name:arrivedAt}).name+'!','info');
-    // Heal if this location heals
-    const locData=typeof LOCATIONS!=='undefined'?getLocation(arrivedAt):null;
-    if(locData&&(locData.heals==='TRUE'||locData.heals===true||locData.heals==='true')){
-      const needsHeal=state.party.some(p=>p.currentHP<p.maxHP||p.currentHP<=0);
-      if(needsHeal){
-        state.party.forEach(p=>{ p.currentHP=p.maxHP; });
-        addLog('🏥 Party healed at '+locData.name+'!','info');
-      }
-    }
-    // Set cycles for next leg
     if(state.travelPathIndex<state.travelPath.length){
-      const nextLoc=state.travelPath[state.travelPathIndex];
-      const nextData=typeof LOCATIONS!=='undefined'?getLocation(nextLoc):null;
-      state.travelCyclesRemaining=nextData&&nextData.travelTime?parseInt(nextData.travelTime):1;
+      arriveAtLocation(state.travelPath[state.travelPathIndex]);
+    } else {
+      // Arrived at final destination
+      state.currentLocation=state.missionDestination;
+      addLog('🏁 Carl Oak reached '+( (typeof LOCATIONS!=='undefined'?getLocation(state.missionDestination):null)||{name:state.missionDestination}).name+'!','info');
     }
   }
 }
@@ -514,7 +537,7 @@ let state={
   incomeAccumulator:0,potionThreshold:75,
   party:[],dex:[],dexIdCounter:1,currentEncounter:null,log:[],
   missionDestination:'route1', missionBehavior:'research',
-  missionOrigin:'palletTown', currentLocation:'palletTown',
+  missionOrigin:'palletTown', currentLocation:'palletTown', autoRepeat:false,
   travelPath:[], travelPathIndex:0, travelCyclesRemaining:0,
   researchLog:{},   // keyed by dexId: {evolutionConfirmed,nonEvolutionConfirmed,confirmedMethod,confirmedIntoId,testedMethods,highestLevelObserved,knownSince}
   pendingFindings:[] // queue of findings to show after mission
@@ -584,9 +607,16 @@ function startMission(){
 function showMissionModal(){
   const existing=document.getElementById('mission-modal');
   if(existing)existing.remove();
-  // Get available destinations from connections (only Pallet Town for now)
-  const currentLoc='palletTown';
-  const connected=typeof CONNECTIONS!=='undefined'?getConnectedLocations(currentLoc):['route1'];
+  const currentLoc=state.currentLocation||'palletTown';
+  // Get reachable destinations — filter by requiresItem
+  const allConnected=typeof CONNECTIONS!=='undefined'?getConnectedLocations(currentLoc):['route1'];
+  const connected=allConnected.filter(loc=>{
+    if(typeof CONNECTIONS_DATA==='undefined') return true;
+    const conn=(CONNECTIONS_DATA||[]).find(c=>c.fromLocationId===currentLoc&&c.toLocationId===loc);
+    if(!conn||!conn.requiresItem) return true;
+    return (state.bag&&state.bag[conn.requiresItem]&&state.bag[conn.requiresItem]>0)||
+           (state.trainerUnlocks&&state.trainerUnlocks[conn.requiresItem]);
+  });
   const modal=document.createElement('div');
   modal.id='mission-modal';
   modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
@@ -600,7 +630,11 @@ function showMissionModal(){
       <div style="color:#e63946;font-size:14px;font-weight:bold;margin-bottom:12px;">📋 Dispatch Carl Oak</div>
       <div style="color:#a0a0c0;font-size:11px;margin-bottom:8px;">DESTINATION</div>
       ${destOptions}
-      <div id="mission-summary" style="color:#6080a0;font-size:10px;margin:12px 0 12px;">Select a destination above.</div>
+      <div id="mission-summary" style="color:#6080a0;font-size:10px;margin:12px 0 8px;">Select a destination above.</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;background:#0f1a2a;padding:8px;border-radius:4px;">
+        <input type="checkbox" id="auto-repeat-toggle" ${state.autoRepeat?'checked':''} onchange="state.autoRepeat=this.checked" style="width:16px;height:16px;cursor:pointer;">
+        <label for="auto-repeat-toggle" style="color:#a0a0c0;font-size:11px;cursor:pointer;">Auto-repeat on wipe</label>
+      </div>
       <div style="display:flex;gap:8px;">
         <button onclick="document.getElementById('mission-modal').remove()" style="flex:1;">✕ Cancel</button>
         <button id="confirm-mission" onclick="confirmMission()" class="primary" style="flex:1;" disabled>▶ Dispatch</button>
@@ -642,13 +676,18 @@ function confirmMission(){
   state.missionBehavior='research';
   state.missionDestination=state._missionDest||'route1';
   state.missionOrigin=state.currentLocation||'palletTown';
-  // Build travel path: all locations between origin and destination
+  // Build travel path
   state.travelPath=buildTravelPath(state.missionOrigin, state.missionDestination);
+  if(state.travelPath.length===0){
+    addLog('⚠ Cannot reach that destination — missing required item.','fail');
+    state.missionActive=false;
+    document.getElementById('btn-start').disabled=false;
+    document.getElementById('btn-recall').disabled=true;
+    return;
+  }
   state.travelPathIndex=0;
-  const firstLoc=state.travelPath[0]||state.missionDestination;
-  const firstLocData=typeof LOCATIONS!=='undefined'?getLocation(firstLoc):null;
-  state.travelCyclesRemaining=firstLocData&&firstLocData.travelTime?parseInt(firstLocData.travelTime):1;
-  state.currentLocation=state.missionOrigin; // still at origin until first cycle
+  // Arrive at first location immediately
+  arriveAtLocation(state.travelPath[0]);
   state.nextEncounterIn=ENC_INTERVAL;
   document.getElementById('btn-start').disabled=true;
   document.getElementById('btn-recall').disabled=false;
@@ -693,16 +732,49 @@ function endMission(reason='faint'){
   }
   showFindingsReport();
   updateLocation();saveGame();
+  // Auto-repeat: restart mission if wipe and autoRepeat is on
+  if(reason==='faint'&&state.autoRepeat){
+    setTimeout(()=>{
+      if(!state.missionActive&&state.party.find(p=>p.currentHP>0)){
+        addLog('🔄 Auto-repeating mission to '+(getLocation(state.missionDestination)||{name:state.missionDestination}).name+'...','info');
+        // Restart same mission
+        state.missionActive=true;
+        state.travelPath=buildTravelPath(state.missionOrigin, state.missionDestination);
+        state.travelPathIndex=0;
+        if(state.travelPath.length>0){
+          arriveAtLocation(state.travelPath[0]);
+        } else {
+          state.currentLocation=state.missionDestination;
+        }
+        state.nextEncounterIn=ENC_INTERVAL;
+        state.pendingFindings=[];
+        document.getElementById('btn-start').disabled=true;
+        document.getElementById('btn-recall').disabled=false;
+        updateLocation();render();
+      }
+    },2000); // 2 second pause before repeating
+  }
 }
 
 function updateLocation(){
   const el=document.getElementById('aide-location');
   if(state.missionActive){
     const m=Math.floor(state.nextEncounterIn/60),s=state.nextEncounterIn%60;
-    const locData=typeof LOCATIONS!=='undefined'?getLocation(state.missionDestination):null;
-    const locName=locData?locData.name:(state.missionDestination||'Route 1');
-    el.textContent='📍 '+locName+' — Next: '+m+':'+s.toString().padStart(2,'0');
-  }else{el.textContent='📍 Pallet Town — Idle';}
+    const curLocData=typeof LOCATIONS!=='undefined'?getLocation(state.currentLocation):null;
+    const curLocName=curLocData?curLocData.name:(state.currentLocation||'Route 1');
+    const destLocData=typeof LOCATIONS!=='undefined'?getLocation(state.missionDestination):null;
+    const destLocName=destLocData?destLocData.name:state.missionDestination;
+    const atDest=state.currentLocation===state.missionDestination;
+    const cyclesLeft=state.travelCyclesRemaining||0;
+    if(atDest){
+      el.textContent='📍 '+curLocName+' — Researching · Next: '+m+':'+s.toString().padStart(2,'0');
+    } else {
+      el.textContent='📍 '+curLocName+' (→ '+destLocName+', '+cyclesLeft+' enc left) · Next: '+m+':'+s.toString().padStart(2,'0');
+    }
+  }else{
+    const idleLoc=typeof LOCATIONS!=='undefined'?getLocation(state.currentLocation||'palletTown'):null;
+    el.textContent='📍 '+(idleLoc?idleLoc.name:'Pallet Town')+' — Idle';
+  }
 }
 
 function incomeTick(){
@@ -794,6 +866,7 @@ function catchPokemon(lead,enc,isShiny,ballUsed){
   document.getElementById('total-catches').textContent=state.totalCatches;
   document.getElementById('total-sightings').textContent=state.totalSightings;
   state.currentEncounter=null;
+  advanceTravelPath(); // advance travel after each resolved encounter
   document.getElementById('enc-body').textContent='Caught '+enc.species+' Lv'+enc.level+(isShiny?' ✨ SHINY!':'!');;
   saveGame();
 }
@@ -806,12 +879,14 @@ function fight(lead,enc){
     addLog(lead.species+' #'+lead.id+' fainted!','faint');
     const next=getLeadPokemon();if(!next){endMission();return;}
     addLog(enc.species+' fled.','info');state.currentEncounter=null;
+    advanceTravelPath();
     document.getElementById('enc-body').textContent=lead.species+' fainted. '+enc.species+' fled.';
   }else{
     const s_=SPECIES[enc.species];const exp=Math.floor(((s_?s_.baseExpYield||s_.baseExp:51)*enc.level)/7);
     giveExp(lead,exp);
     addLog('Won vs '+enc.species+' Lv'+enc.level+'! +'+exp+' EXP (no data)','win');
     state.currentEncounter=null;
+    advanceTravelPath(); // advance travel after each resolved encounter
     document.getElementById('enc-body').textContent='Won vs '+enc.species+' Lv'+enc.level+'. No Pokedex data.';
   }
 }
@@ -1273,11 +1348,14 @@ function gameTick(){
   state.missionElapsed++;state.nextEncounterIn--;
   if(state.currentEncounter){resolveEncounterStep();render();return;}
   if(state.nextEncounterIn<=0){
-    advanceTravelPath(); // move through locations
-    checkLocationHeal(); // heal if in healing location
-    // Encounters happen in current location being traversed
+    checkLocationHeal(); // heal if in healing location between encounters
+    // Roll encounter for CURRENT location
     state.currentEncounter=rollEncounter();state.nextEncounterIn=ENC_INTERVAL;
-    if(!state.currentEncounter){state.nextEncounterIn=ENC_INTERVAL;updateLocation();return;}
+    if(!state.currentEncounter){
+      // No encounter here — still advance travel
+      advanceTravelPath();
+      state.nextEncounterIn=ENC_INTERVAL;updateLocation();return;
+    }
     const enc=state.currentEncounter;
     addLog('Wild '+enc.species+' appeared! Lv'+enc.level+' '+enc.gender,'info');
     document.getElementById('enc-body').textContent='Wild '+enc.species+' Lv'+enc.level+' ('+enc.gender+') appeared!';
@@ -1286,7 +1364,7 @@ function gameTick(){
   }else{updateLocation();renderParty();}
 }
 
-const SAVE_KEY='pokeprof_save';const SAVE_VERSION=6;let saveTimer=0;
+const SAVE_KEY='pokeprof_save';const SAVE_VERSION=7;let saveTimer=0;
 
 function saveGame(){
   try{
@@ -1294,7 +1372,7 @@ function saveGame(){
       state:{funds:state.funds,totalCatches:state.totalCatches,totalSightings:state.totalSightings,
         missionActive:state.missionActive,missionElapsed:state.missionElapsed,nextEncounterIn:state.nextEncounterIn,
         incomeAccumulator:state.incomeAccumulator,potionThreshold:state.potionThreshold,
-        dexIdCounter:state.dexIdCounter,currentEncounter:null,party:state.party,dex:state.dex,log:state.log.slice(0,50),researchLog:state.researchLog,missionDestination:state.missionDestination,missionBehavior:state.missionBehavior,missionOrigin:state.missionOrigin,currentLocation:state.currentLocation,bag:state.bag||{},travelPath:state.travelPath||[],travelPathIndex:state.travelPathIndex||0,travelCyclesRemaining:state.travelCyclesRemaining||0}}));
+        dexIdCounter:state.dexIdCounter,currentEncounter:null,party:state.party,dex:state.dex,log:state.log.slice(0,50),researchLog:state.researchLog,missionDestination:state.missionDestination,missionBehavior:state.missionBehavior,missionOrigin:state.missionOrigin,currentLocation:state.currentLocation,autoRepeat:state.autoRepeat||false,bag:state.bag||{},travelPath:state.travelPath||[],travelPathIndex:state.travelPathIndex||0,travelCyclesRemaining:state.travelCyclesRemaining||0}}));
     setSaveIndicator('✔ Saved','saving');
     setTimeout(()=>setSaveIndicator('⬤ Auto-save on',''),2000);
   }catch(e){setSaveIndicator('✘ Failed','error');}
@@ -1312,7 +1390,7 @@ function loadGame(){
       currentEncounter:null,party:s.party??[],dex:s.dex??[],log:s.log??[],
       researchLog:s.researchLog??{},pendingFindings:[],
       missionDestination:s.missionDestination??'route1',missionBehavior:s.missionBehavior??'research',
-      missionOrigin:s.missionOrigin??'palletTown',currentLocation:s.currentLocation??'palletTown',
+      missionOrigin:s.missionOrigin??'palletTown',currentLocation:s.currentLocation??'palletTown',autoRepeat:s.autoRepeat??false,
       bag:s.bag??{},travelPath:s.travelPath??[],travelPathIndex:s.travelPathIndex??0,travelCyclesRemaining:s.travelCyclesRemaining??0});
     const secsAway=Math.floor((Date.now()-data.savedAt)/1000);
     let offSum=null;

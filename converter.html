@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PokeProf Database Converter</title>
+<title>PokeProf — Database Converter v2</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #1a1a2e; color: #e0e0e0; font-family: 'Courier New', monospace; font-size: 13px; padding: 20px; }
@@ -41,7 +41,7 @@
 </head>
 <body>
 
-<h1>🎓 PokeProf — Database Converter</h1>
+<h1>🎓 PokeProf — Database Converter v2</h1>
 <p class="subtitle">Upload your Excel file to generate the game database JS files</p>
 
 <div class="card">
@@ -312,20 +312,31 @@ function convertLocations() {
 function convertConnections() {
   const rows = getSheet('Connections');
   if (!rows || rows.length < 2) { warnings.push('Connections sheet is empty'); return; }
+  const headers = rows[0].map(h => String(h).trim());
+  const fromIdx = headers.findIndex(h => h.toLowerCase() === 'fromlocationid');
+  const toIdx   = headers.findIndex(h => h.toLowerCase() === 'tolocationid');
+  const reqIdx  = headers.findIndex(h => h.toLowerCase() === 'requiresitem');
+  const travelIdx = headers.findIndex(h => h.toLowerCase() === 'traveltime');
+  if (fromIdx < 0 || toIdx < 0) { warnings.push('Connections sheet missing fromLocationId or toLocationId column'); return; }
   const entries = [];
   for (let i = 1; i < rows.length; i++) {
     const r = rows[i];
-    if (!r[0] || !r[1]) continue;
-    entries.push({ from: String(r[0]).trim(), to: String(r[1]).trim() });
+    if (!r[fromIdx] || !r[toIdx]) continue;
+    entries.push({
+      fromLocationId: String(r[fromIdx]).trim(),
+      toLocationId:   String(r[toIdx]).trim(),
+      requiresItem:   reqIdx >= 0 ? val(r[reqIdx]) : null,
+      travelTime:     travelIdx >= 0 ? numVal(r[travelIdx]) : null
+    });
   }
-  // Build adjacency map
+  // Build simple adjacency map (for fast neighbor lookup)
   const map = {};
   entries.forEach(e => {
-    if (!map[e.from]) map[e.from] = [];
-    map[e.from].push(e.to);
+    if (!map[e.fromLocationId]) map[e.fromLocationId] = [];
+    map[e.fromLocationId].push(e.toLocationId);
   });
   outputFiles['connections.js'] =
-    `// PokeProf — Connections Database\n// Auto-generated: ${new Date().toLocaleString()}\n// Connections: ${entries.length}\n\nconst CONNECTIONS = ${JSON.stringify(map, null, 2)};\n\nfunction getConnectedLocations(locationId) {\n  return CONNECTIONS[locationId] || [];\n}\n`;
+    `// PokeProf — Connections Database\n// Auto-generated: ${new Date().toLocaleString()}\n// Connections: ${entries.length}\n\n// Flat array with full data (used for requiresItem checks)\nconst CONNECTIONS_DATA = ${JSON.stringify(entries, null, 2)};\n\n// Adjacency map (used for fast neighbor lookup)\nconst CONNECTIONS = ${JSON.stringify(map, null, 2)};\n\nfunction getConnectedLocations(locationId) {\n  return CONNECTIONS[locationId] || [];\n}\n`;
 }
 
 function convertTypeChart() {

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.11</title>
+<title>PokeProf v0.12</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body { background:#1a1a2e; color:#e0e0e0; font-family:'Courier New',monospace; font-size:13px; height:100dvh; display:flex; flex-direction:column; overflow:hidden; }
@@ -104,7 +104,7 @@
 <body>
 
 <div id="header">
-  <h1>🎓 PokeProf v0.11</h1>
+  <h1>🎓 PokeProf v0.12</h1>
   <div style="display:flex;align-items:center;gap:10px;">
     <button class="reset" onclick="resetGame()">⚠ Reset</button>
     <div style="text-align:right;">
@@ -125,6 +125,7 @@
   <button class="tab-btn active" onclick="switchTab('aide')" id="tab-aide"><span class="tab-icon">🧑‍🔬</span>Aides</button>
   <button class="tab-btn" onclick="switchTab('log')" id="tab-log"><span class="tab-icon">📋</span>Log</button>
   <button class="tab-btn" onclick="switchTab('dex')" id="tab-dex"><span class="tab-icon">📓</span>Dex (<span id="dex-count">0</span>)</button>
+  <button class="tab-btn" onclick="switchTab('map')" id="tab-map"><span class="tab-icon">🗺️</span>Map</button>
 </div>
 
 <div id="panels">
@@ -188,6 +189,19 @@
       </select>
     </div>
     <div id="dex-list" style="overflow-y:auto;flex:1;padding:6px;background:#16213e;"></div>
+  </div>
+
+  <!-- MAP TAB -->
+  <div class="panel" id="panel-map">
+    <div style="background:#0f3460;border-bottom:1px solid #1a4a80;padding:6px 12px;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#a0a0c0;flex-shrink:0;">
+      🗺️ Kanto — Discovered Locations
+    </div>
+    <div id="map-container" style="flex:1;overflow:hidden;position:relative;background:#0a0f1a;">
+      <svg id="map-svg" style="width:100%;height:100%;" onclick="handleMapClick(event)"></svg>
+    </div>
+    <div id="map-detail" style="flex-shrink:0;background:#16213e;border-top:1px solid #0f3460;max-height:45%;overflow-y:auto;display:none;">
+      <div id="map-detail-content" style="padding:12px;font-size:11px;"></div>
+    </div>
   </div>
 </div>
 
@@ -337,7 +351,9 @@ let state={
   missionOrigin:'palletTown', currentLocation:'palletTown', autoRepeat:false,
   travelPath:[], travelPathIndex:0, travelCyclesRemaining:0,
   bag:{},
-  researchLog:{}, pendingFindings:[]
+  researchLog:{}, pendingFindings:[],
+  discoveredLocations:new Set(['palletTown']),
+  locationEncounterLog:{}
 };
 
 function makePokemon(sp,lv,gender,holder=null){
@@ -425,6 +441,20 @@ function arriveAtLocation(locId){
   }
   const cycles=locData&&locData.travelTime?parseInt(locData.travelTime):1;
   state.travelCyclesRemaining=Math.max(1,cycles);
+  // Discover adjacent locations (no item required)
+  if(typeof CONNECTIONS_DATA!=='undefined'){
+    (CONNECTIONS_DATA||[]).forEach(conn=>{
+      if(conn.fromLocationId===locId&&!conn.requiresItem){
+        if(!state.discoveredLocations.has(conn.toLocationId)){
+          state.discoveredLocations.add(conn.toLocationId);
+          const newLoc=typeof LOCATIONS!=='undefined'?getLocation(conn.toLocationId):null;
+          addLog('🗺️ New area discovered: '+(newLoc?newLoc.name:conn.toLocationId)+'!','info');
+        }
+      }
+    });
+  }
+  // Refresh map if visible
+  if(document.getElementById('panel-map').classList.contains('active')) renderMap();
 }
 
 function advanceTravelPath(){
@@ -664,6 +694,9 @@ function rollEncounter(){
     if(roll<cum){
       const entry=POKEDEX_DATA?POKEDEX_DATA.find(p=>p.dexId===e.dexId&&!p.formName):null;
       if(!entry) continue;
+      // Log this encounter for map data
+      if(!state.locationEncounterLog[dest]) state.locationEncounterLog[dest]={};
+      state.locationEncounterLog[dest][e.dexId]=(state.locationEncounterLog[dest][e.dexId]||0)+1;
       return{species:entry.name,pokedexId:e.dexId,level:e.minLv+Math.floor(Math.random()*(e.maxLv-e.minLv+1)),gender:Math.random()<0.5?'M':'F'};
     }
   }
@@ -810,6 +843,8 @@ function showMissionModal(){
   const currentLoc=state.currentLocation||'palletTown';
   const allConnected=typeof CONNECTIONS!=='undefined'&&typeof getConnectedLocations==='function'?getConnectedLocations(currentLoc):['route1'];
   const connected=allConnected.filter(loc=>{
+    // Must be discovered
+    if(!state.discoveredLocations.has(loc)) return false;
     if(typeof CONNECTIONS_DATA==='undefined') return true;
     const conn=(CONNECTIONS_DATA||[]).find(c=>c.fromLocationId===currentLoc&&c.toLocationId===loc);
     if(!conn) return false;
@@ -1347,6 +1382,7 @@ function switchTab(name){
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('panel-'+name).classList.add('active');
   document.getElementById('tab-'+name).classList.add('active');
+  if(name==='map') renderMap();
 }
 
 function addLog(msg,type=''){
@@ -1362,7 +1398,7 @@ function addLog(msg,type=''){
 
 // ── SAVE / LOAD / RESET ──
 const SAVE_KEY='pokeprof_save';
-const SAVE_VERSION=8;
+const SAVE_VERSION=9;
 let saveTimer=0;
 
 function saveGame(){
@@ -1381,7 +1417,9 @@ function saveGame(){
         missionOrigin:state.missionOrigin, currentLocation:state.currentLocation,
         autoRepeat:state.autoRepeat||false, bag:state.bag||{},
         travelPath:state.travelPath||[], travelPathIndex:state.travelPathIndex||0,
-        travelCyclesRemaining:state.travelCyclesRemaining||0
+        travelCyclesRemaining:state.travelCyclesRemaining||0,
+        discoveredLocations:[...state.discoveredLocations],
+        locationEncounterLog:state.locationEncounterLog||{}
       }
     }));
     setSaveIndicator('✔ Saved','saving');
@@ -1405,7 +1443,9 @@ function loadGame(){
       missionOrigin:s.missionOrigin??'palletTown', currentLocation:s.currentLocation??'palletTown',
       autoRepeat:s.autoRepeat??false, bag:s.bag??{},
       travelPath:s.travelPath??[], travelPathIndex:s.travelPathIndex??0,
-      travelCyclesRemaining:s.travelCyclesRemaining??0
+      travelCyclesRemaining:s.travelCyclesRemaining??0,
+      discoveredLocations:new Set(s.discoveredLocations??['palletTown','route1']),
+      locationEncounterLog:s.locationEncounterLog??{}
     });
     const secsAway=Math.floor((Date.now()-data.savedAt)/1000);
     let offSum=null;
@@ -1459,6 +1499,15 @@ function init(){
 // ── BOOT ──
 const hasSave=loadGame();
 if(!hasSave){
+  // Build initial discovered set: palletTown + all free adjacencies
+  const initDiscovered=new Set(['palletTown']);
+  if(typeof CONNECTIONS_DATA!=='undefined'){
+    (CONNECTIONS_DATA||[]).forEach(c=>{
+      if(c.fromLocationId==='palletTown'&&!c.requiresItem) initDiscovered.add(c.toLocationId);
+    });
+  } else {
+    initDiscovered.add('route1'); // fallback
+  }
   state={
     funds:5.00, totalCatches:0, totalSightings:0,
     missionActive:false, missionElapsed:0, nextEncounterIn:ENC_INTERVAL,
@@ -1467,7 +1516,9 @@ if(!hasSave){
     missionDestination:'route1', missionBehavior:'research',
     missionOrigin:'palletTown', currentLocation:'palletTown', autoRepeat:false,
     travelPath:[], travelPathIndex:0, travelCyclesRemaining:0,
-    bag:{}, researchLog:{}, pendingFindings:[]
+    bag:{}, researchLog:{}, pendingFindings:[],
+    discoveredLocations:initDiscovered,
+    locationEncounterLog:{}
   };
   init();
   setSaveIndicator('⬤ New game','');
@@ -1475,7 +1526,262 @@ if(!hasSave){
   render();
 }
 
-window._gameTickInterval=setInterval(gameTick,1000);
+// ── MAP SYSTEM ──
+// Full Kanto grid layout (col, row) — based on canonical Kanto geography
+// Higher row = further south. This covers all Kanto for future expansion.
+const MAP_NODES = {
+  // Cities
+  'palletTown':    {col:5, row:10, label:'Pallet Town',   type:'town'},
+  'viridianCity':  {col:5, row:8,  label:'Viridian City', type:'city'},
+  'pewterCity':    {col:5, row:5,  label:'Pewter City',   type:'city'},
+  'ceruleanCity':  {col:8, row:3,  label:'Cerulean City', type:'city'},
+  'vermilionCity': {col:8, row:7,  label:'Vermilion City',type:'city'},
+  'lavenderTown':  {col:11,row:5,  label:'Lavender Town', type:'town'},
+  'celadonCity':   {col:6, row:5,  label:'Celadon City',  type:'city'},
+  'fuchsiaCity':   {col:6, row:8,  label:'Fuchsia City',  type:'city'},
+  'saffronCity':   {col:8, row:5,  label:'Saffron City',  type:'city'},
+  'cinnabarIsland':{col:5, row:13, label:'Cinnabar Island',type:'city'},
+  'indigoPlateau': {col:2, row:5,  label:'Indigo Plateau',type:'city'},
+  // Routes
+  'route1':  {col:5, row:9,  label:'Route 1',  type:'route'},
+  'route2':  {col:5, row:6,  label:'Route 2',  type:'route'},
+  'route3':  {col:6, row:4,  label:'Route 3',  type:'route'},
+  'route4':  {col:8, row:4,  label:'Route 4',  type:'route'},
+  'route5':  {col:8, row:6,  label:'Route 5',  type:'route'},
+  'route6':  {col:8, row:7,  label:'Route 6',  type:'route'},  // fixed: was row:6.5
+  'route7':  {col:7, row:5,  label:'Route 7',  type:'route'},
+  'route8':  {col:10,row:5,  label:'Route 8',  type:'route'},
+  'route9':  {col:10,row:3,  label:'Route 9',  type:'route'},
+  'route10': {col:11,row:4,  label:'Route 10', type:'route'},
+  'route11': {col:10,row:7,  label:'Route 11', type:'route'},
+  'route12': {col:11,row:7,  label:'Route 12', type:'route'},
+  'route13': {col:10,row:9,  label:'Route 13', type:'route'},
+  'route14': {col:9, row:9,  label:'Route 14', type:'route'},
+  'route15': {col:7, row:9,  label:'Route 15', type:'route'},
+  'route16': {col:5, row:7,  label:'Route 16', type:'route'},
+  'route17': {col:5, row:8,  label:'Route 17', type:'route'},
+  'route18': {col:5, row:9,  label:'Route 18', type:'route'},  // south of fuchsia
+  'route19': {col:6, row:10, label:'Route 19', type:'route'},
+  'route20': {col:5, row:12, label:'Route 20', type:'route'},
+  'route21': {col:5, row:11, label:'Route 21', type:'route'},
+  'route22': {col:4, row:8,  label:'Route 22', type:'route'},
+  'route23': {col:3, row:6,  label:'Route 23', type:'route'},
+  'route24': {col:8, row:2,  label:'Route 24', type:'route'},
+  'route25': {col:9, row:2,  label:'Route 25', type:'route'},
+  // Dungeons / special
+  'viridianForest': {col:5, row:7,  label:'Viridian Forest',type:'dungeon'},
+  'mtMoon':         {col:6, row:4,  label:'Mt. Moon',       type:'dungeon'},
+  'rockTunnel':     {col:11,row:4,  label:'Rock Tunnel',    type:'dungeon'},
+  'seafoamIslands': {col:4, row:12, label:'Seafoam Islands',type:'dungeon'},
+  'victoryRoad':    {col:3, row:5,  label:'Victory Road',   type:'dungeon'},
+  'powerPlant':     {col:12,row:4,  label:'Power Plant',    type:'dungeon'},
+  'safariZone':     {col:6, row:8,  label:'Safari Zone',    type:'dungeon'},
+  'pokemonTower':   {col:11,row:5,  label:'Pokémon Tower',  type:'dungeon'},
+  'silphCo':        {col:8, row:5,  label:'Silph Co.',      type:'dungeon'},
+  'diglettsCave':   {col:7, row:7,  label:"Diglett's Cave", type:'dungeon'},
+  'ceruleanCave':   {col:8, row:2,  label:'Cerulean Cave',  type:'dungeon'},
+  'pokemonMansion': {col:5, row:13, label:'Pokémon Mansion',type:'dungeon'},
+  'ssAnne':         {col:8, row:8,  label:'S.S. Anne',      type:'dungeon'},
+};
+
+// Node type colors
+const MAP_COLORS = {
+  town:    {fill:'#16213e', stroke:'#e63946', label:'#e0e0e0'},
+  city:    {fill:'#0f3460', stroke:'#2ecc71', label:'#2ecc71'},
+  route:   {fill:'#0a1a2a', stroke:'#5dade2', label:'#a0c4ff'},
+  dungeon: {fill:'#1a0f20', stroke:'#9b59b6', label:'#c39bd3'},
+};
+
+let mapSelectedLoc = null;
+
+function renderMap(){
+  const svg=document.getElementById('map-svg');
+  if(!svg) return;
+  svg.innerHTML='';
+
+  const discovered=[...state.discoveredLocations];
+  if(!discovered.length){ svg.innerHTML='<text x="50%" y="50%" text-anchor="middle" fill="#555" font-size="12">No locations discovered yet.</text>'; return; }
+
+  // Determine which node keys are in discovered (match locationId to MAP_NODES keys)
+  const visibleKeys=discovered.filter(id=>MAP_NODES[id]);
+
+  if(!visibleKeys.length){ svg.innerHTML='<text x="50%" y="50%" text-anchor="middle" fill="#555" font-size="12" font-family="monospace">Map data for these locations coming soon.</text>'; return; }
+
+  // Compute bounding box of visible nodes
+  const cols=visibleKeys.map(k=>MAP_NODES[k].col);
+  const rows=visibleKeys.map(k=>MAP_NODES[k].row);
+  const minCol=Math.min(...cols), maxCol=Math.max(...cols);
+  const minRow=Math.min(...rows), maxRow=Math.max(...rows);
+
+  // Grid cell size and padding
+  const CELL=72, PAD=48;
+  const gridW=(maxCol-minCol)*CELL+PAD*2;
+  const gridH=(maxRow-minRow)*CELL+PAD*2;
+  svg.setAttribute('viewBox',`0 0 ${gridW} ${gridH}`);
+
+  function nodeX(k){ return (MAP_NODES[k].col-minCol)*CELL+PAD; }
+  function nodeY(k){ return (MAP_NODES[k].row-minRow)*CELL+PAD; }
+
+  // Draw connections between visible discovered locations
+  if(typeof CONNECTIONS_DATA!=='undefined'){
+    const drawn=new Set();
+    (CONNECTIONS_DATA||[]).forEach(conn=>{
+      const key=([conn.fromLocationId,conn.toLocationId].sort().join('|'));
+      if(drawn.has(key)) return;
+      if(!state.discoveredLocations.has(conn.fromLocationId)||!state.discoveredLocations.has(conn.toLocationId)) return;
+      if(!MAP_NODES[conn.fromLocationId]||!MAP_NODES[conn.toLocationId]) return;
+      drawn.add(key);
+      const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1',nodeX(conn.fromLocationId));
+      line.setAttribute('y1',nodeY(conn.fromLocationId));
+      line.setAttribute('x2',nodeX(conn.toLocationId));
+      line.setAttribute('y2',nodeY(conn.toLocationId));
+      line.setAttribute('stroke',conn.requiresItem?'#9b59b6':'#1a4a80');
+      line.setAttribute('stroke-width','2');
+      line.setAttribute('stroke-dasharray',conn.requiresItem?'6,3':'none');
+      svg.appendChild(line);
+    });
+  }
+
+  // Draw nodes
+  visibleKeys.forEach(locId=>{
+    const node=MAP_NODES[locId];
+    const c=MAP_COLORS[node.type]||MAP_COLORS.route;
+    const x=nodeX(locId), y=nodeY(locId);
+    const isCurrent=state.currentLocation===locId;
+    const isSelected=mapSelectedLoc===locId;
+
+    const g=document.createElementNS('http://www.w3.org/2000/svg','g');
+    g.setAttribute('data-loc',locId);
+    g.style.cursor='pointer';
+
+    // Glow ring for current location
+    if(isCurrent){
+      const glow=document.createElementNS('http://www.w3.org/2000/svg','circle');
+      glow.setAttribute('cx',x); glow.setAttribute('cy',y); glow.setAttribute('r','20');
+      glow.setAttribute('fill','none'); glow.setAttribute('stroke','#f4d03f');
+      glow.setAttribute('stroke-width','3'); glow.setAttribute('opacity','0.6');
+      g.appendChild(glow);
+    }
+
+    // Node circle
+    const circle=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    circle.setAttribute('cx',x); circle.setAttribute('cy',y);
+    circle.setAttribute('r',node.type==='town'||node.type==='city'?14:10);
+    circle.setAttribute('fill',isSelected?'#1a3a5a':c.fill);
+    circle.setAttribute('stroke',isSelected?'#f4d03f':c.stroke);
+    circle.setAttribute('stroke-width',isSelected?'3':'2');
+    g.appendChild(circle);
+
+    // Label
+    const text=document.createElementNS('http://www.w3.org/2000/svg','text');
+    text.setAttribute('x',x); text.setAttribute('y',y+26);
+    text.setAttribute('text-anchor','middle');
+    text.setAttribute('font-size','9');
+    text.setAttribute('font-family','Courier New, monospace');
+    text.setAttribute('fill',isCurrent?'#f4d03f':c.label);
+    text.setAttribute('pointer-events','none');
+    text.textContent=node.label;
+    g.appendChild(text);
+
+    // Carl marker
+    if(isCurrent&&state.missionActive){
+      const dot=document.createElementNS('http://www.w3.org/2000/svg','text');
+      dot.setAttribute('x',x); dot.setAttribute('y',y+5);
+      dot.setAttribute('text-anchor','middle');
+      dot.setAttribute('font-size','10');
+      dot.setAttribute('pointer-events','none');
+      dot.textContent='🧑‍🔬';
+      g.appendChild(dot);
+    }
+
+    g.addEventListener('click',(e)=>{ e.stopPropagation(); selectMapLocation(locId); });
+    svg.appendChild(g);
+  });
+}
+
+function handleMapClick(e){
+  if(e.target===document.getElementById('map-svg')){
+    mapSelectedLoc=null;
+    document.getElementById('map-detail').style.display='none';
+    renderMap();
+  }
+}
+
+function selectMapLocation(locId){
+  mapSelectedLoc=locId;
+  renderMap();
+  showMapDetail(locId);
+}
+
+function showMapDetail(locId){
+  const detail=document.getElementById('map-detail');
+  const content=document.getElementById('map-detail-content');
+  const locData=typeof LOCATIONS!=='undefined'?getLocation(locId):null;
+  const node=MAP_NODES[locId];
+  const locName=locData?locData.name:(node?node.label:locId);
+
+  // Encounter data for this location
+  const encLog=state.locationEncounterLog[locId]||{};
+  const totalEncs=Object.values(encLog).reduce((a,b)=>a+b,0);
+
+  // Build encounter rows using DB for level range and method
+  let encHtml='';
+  if(totalEncs>0){
+    // Sort species by count descending
+    const sorted=Object.entries(encLog).sort((a,b)=>b[1]-a[1]);
+    encHtml=`<div style="color:#a0a0c0;font-size:10px;letter-spacing:1px;text-transform:uppercase;margin:10px 0 6px;">Observed Encounters (${totalEncs} total)</div>`;
+    encHtml+='<div style="display:flex;flex-direction:column;gap:4px;">';
+    sorted.forEach(([dexIdStr,count])=>{
+      const dexId=parseInt(dexIdStr);
+      const pEntry=typeof POKEDEX_DATA!=='undefined'?POKEDEX_DATA.find(x=>x.dexId===dexId&&!x.formName):null;
+      const name=pEntry?pEntry.name:'#'+dexId;
+      const sprite=getSpriteUrl(dexId,name,false);
+      const pct=Math.round((count/totalEncs)*100);
+      // Get level range and method from ENCOUNTERS DB
+      const encDb=typeof ENCOUNTERS!=='undefined'?ENCOUNTERS.filter(e=>e.locationId===locId&&e.dexId===dexId):[];
+      const minLv=encDb.length?Math.min(...encDb.map(e=>e.minLevel)):'?';
+      const maxLv=encDb.length?Math.max(...encDb.map(e=>e.maxLevel)):'?';
+      const methods=[...new Set(encDb.map(e=>e.encounterMethod).filter(Boolean))].join(', ')||'?';
+      encHtml+=`
+        <div style="display:flex;align-items:center;gap:8px;background:#0f1a2a;padding:6px 8px;border-radius:4px;">
+          <img src="${sprite}" style="width:48px;height:48px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display='none'">
+          <div style="flex:1;">
+            <div style="color:#fff;font-size:11px;font-weight:bold;">${name}</div>
+            <div style="color:#a0a0c0;font-size:10px;">Lv ${minLv}–${maxLv} · ${methods}</div>
+            <div style="margin-top:3px;background:#0a0a1a;border-radius:2px;height:5px;overflow:hidden;">
+              <div style="width:${pct}%;height:100%;background:#5dade2;border-radius:2px;"></div>
+            </div>
+            <div style="color:#5dade2;font-size:10px;margin-top:1px;">${pct}% (${count} seen)</div>
+          </div>
+        </div>`;
+    });
+    encHtml+='</div>';
+  } else {
+    encHtml='<div style="color:#555;font-size:11px;margin-top:8px;">No encounters recorded here yet.</div>';
+  }
+
+  const heals=locData&&(locData.heals===true||locData.heals==='TRUE'||locData.heals==='true');
+  const shop=locData&&locData.shopTier;
+  const isCurrent=state.currentLocation===locId;
+
+  content.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+      <div>
+        <div style="color:#e0e0e0;font-size:13px;font-weight:bold;">${locName}</div>
+        <div style="color:#6080a0;font-size:10px;">${locData?locData.region||'Kanto':'Kanto'}</div>
+      </div>
+      <div style="text-align:right;font-size:10px;">
+        ${isCurrent?'<span style="color:#f4d03f;">📍 Carl is here</span><br>':''}
+        ${heals?'<span style="color:#2ecc71;">🏥 Heals party</span><br>':''}
+        ${shop?'<span style="color:#f4d03f;">🛒 Shop: '+shop+'</span>':''}
+      </div>
+    </div>
+    ${encHtml}`;
+
+  detail.style.display='block';
+}
+
 window._autoSaveInterval=setInterval(autoSaveTick,1000);
 
 let _hiddenAt=null;

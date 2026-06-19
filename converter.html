@@ -155,6 +155,9 @@ function convertAll() {
     convertTypeChart();
     convertEvoTree();
     convertFormTriggers();
+    convertItems();
+    convertGeneric('Moves', 'moves.js', 'MOVES_DATA', ['movePower','accuracy','pp','priority'].map(f=>f), 'function getMove(name){ return MOVES_DATA.find(m=>m.name===name)||null; }');
+    convertGeneric('Abilities', 'abilities.js', 'ABILITIES_DATA', [], 'function getAbility(name){ return ABILITIES_DATA.find(a=>a.name===name)||null; }');
 
     // Show download section
     const grid = document.getElementById('download-grid');
@@ -380,6 +383,50 @@ function convertFormTriggers() {
   }
   outputFiles['formtriggers.js'] =
     `// PokeProf — Form Triggers\n// Auto-generated: ${new Date().toLocaleString()}\n// Entries: ${entries.length}\n\nconst FORM_TRIGGERS = ${JSON.stringify(entries, null, 2)};\n\nfunction getFormTriggers(dexId, formName) {\n  return FORM_TRIGGERS.filter(t => t.dexId === dexId && t.formName === formName);\n}\n`;
+}
+
+function convertItems() {
+  const rows = getSheet('Items');
+  if (!rows || rows.length < 2) { warnings.push('Items sheet is empty or missing'); return; }
+  const headers = rows[0].map(h => String(h).trim());
+  const col = (name) => headers.findIndex(h => h.toLowerCase() === name.toLowerCase());
+  const numCols = ['shopPrice','sellPrice','catchRateModifier','effectValue'];
+  const boolCols = ['isConsumable','requiresTarget','usableInField','usableInBattle'];
+  const entries = [];
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r[0]) continue;
+    const entry = {};
+    headers.forEach((h, idx) => {
+      if (!h) return;
+      if (numCols.includes(h)) entry[h] = numVal(r[idx]);
+      else if (boolCols.includes(h)) entry[h] = boolVal(r[idx]);
+      else entry[h] = val(r[idx]);
+    });
+    entries.push(entry);
+  }
+  outputFiles['items.js'] =
+    `// PokeProf — Items Database\n// Auto-generated: ${new Date().toLocaleString()}\n// Entries: ${entries.length}\n\nconst ITEMS_DATA = ${JSON.stringify(entries, null, 2)};\n\nfunction getItem(itemId) {\n  return ITEMS_DATA.find(i => i.itemId === itemId) || null;\n}\n\nfunction getShopItems(locId) {\n  if (typeof LOCATIONS === 'undefined') return [];\n  const loc = getLocation(locId);\n  if (!loc || !loc.shopTier) return [];\n  const tierOrder = ['basic', 'full'];\n  const tierIdx = tierOrder.indexOf(loc.shopTier);\n  if (tierIdx < 0) return [];\n  return ITEMS_DATA.filter(i => i.shopPrice && i.shopTier && tierOrder.indexOf(i.shopTier) <= tierIdx);\n}\n`;
+}
+
+// Generic pass-through converter — reads any tab and outputs a JS array
+function convertGeneric(sheetName, fileName, varName, numericFields, helperFns) {
+  const rows = getSheet(sheetName);
+  if (!rows || rows.length < 2) { warnings.push(sheetName + ' sheet is empty or missing'); return; }
+  const headers = rows[0].map(h => String(h).trim());
+  const entries = [];
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r[0]) continue;
+    const entry = {};
+    headers.forEach((h, idx) => {
+      if (!h) return;
+      entry[h] = numericFields.includes(h) ? numVal(r[idx]) : val(r[idx]);
+    });
+    entries.push(entry);
+  }
+  outputFiles[fileName] =
+    `// PokeProf — ${sheetName}\n// Auto-generated: ${new Date().toLocaleString()}\n// Entries: ${entries.length}\n\nconst ${varName} = ${JSON.stringify(entries, null, 2)};\n\n${helperFns}\n`;
 }
 
 function downloadFile(name, content) {

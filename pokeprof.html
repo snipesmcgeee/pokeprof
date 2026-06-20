@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.14</title>
+<title>PokeProf v0.14.1</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body { background:#1a1a2e; color:#e0e0e0; font-family:'Courier New',monospace; font-size:13px; height:100dvh; display:flex; flex-direction:column; overflow:hidden; }
@@ -104,7 +104,7 @@
 <body>
 
 <div id="header">
-  <h1>🎓 PokeProf v0.14</h1>
+  <h1>🎓 PokeProf v0.14.1</h1>
   <div style="display:flex;align-items:center;gap:10px;">
     <button class="reset" onclick="resetGame()">⚠ Reset</button>
     <div style="text-align:right;">
@@ -615,6 +615,45 @@ function showFindingsReport(){
 }
 
 // ── EXP / EVOLUTION ──
+function checkEvolution(p){
+  // Check SPECIES lookup first (simple linear evolutions from pokedex.js columns)
+  const s=SPECIES[p.species];
+  if(s&&s.evolveMethod==='level'&&s.evolvesIntoId&&p.level>=s.evolveLevel){
+    const newEntry=typeof POKEDEX_DATA!=='undefined'?POKEDEX_DATA.find(x=>x.dexId===s.evolvesIntoId&&!x.formName):null;
+    if(newEntry){
+      const old=p.species; const prevDexId=p.pokedexId;
+      p.species=newEntry.name; p.pokedexId=newEntry.dexId;
+      const om=p.maxHP; p.maxHP=calcMaxHP(p.species,p.level);
+      p.currentHP=Math.min(p.maxHP,p.currentHP+(p.maxHP-om));
+      if(!SPECIES[p.species]) SPECIES[p.species]=newEntry;
+      recordEvolution(prevDexId,newEntry.dexId,'level',p.level);
+      recordNewSpecies(newEntry.dexId,p.species);
+      addLog(old+' #'+p.id+' evolved into '+p.species+'!','evolve');
+      document.getElementById('enc-body').textContent=old+' evolved into '+p.species+'!';
+      return;
+    }
+  }
+  // Also check EVO_TREE for branching evolutions (evotree.js)
+  if(typeof EVO_TREE!=='undefined'){
+    const branches=getEvolutions(p.pokedexId).filter(b=>b.toDexId&&b.evolveMethod==='level'&&p.level>=b.evolveLevel);
+    if(branches.length>0){
+      const branch=branches[Math.floor(Math.random()*branches.length)];
+      const newEntry=typeof POKEDEX_DATA!=='undefined'?POKEDEX_DATA.find(x=>x.dexId===branch.toDexId&&!x.formName):null;
+      if(newEntry){
+        const old=p.species; const prevDexId=p.pokedexId;
+        p.species=newEntry.name; p.pokedexId=newEntry.dexId;
+        const om=p.maxHP; p.maxHP=calcMaxHP(p.species,p.level);
+        p.currentHP=Math.min(p.maxHP,p.currentHP+(p.maxHP-om));
+        if(!SPECIES[p.species]) SPECIES[p.species]=newEntry;
+        recordEvolution(prevDexId,newEntry.dexId,'level',p.level);
+        recordNewSpecies(newEntry.dexId,p.species);
+        addLog(old+' #'+p.id+' evolved into '+p.species+'!','evolve');
+        document.getElementById('enc-body').textContent=old+' evolved into '+p.species+'!';
+      }
+    }
+  }
+}
+
 function giveExp(pokemon,amount){
   pokemon.exp+=amount;
   addLog(pokemon.species+' #'+pokemon.id+' +'+amount+' EXP','exp');
@@ -628,22 +667,10 @@ function giveExp(pokemon,amount){
       const om=pokemon.maxHP; pokemon.maxHP=calcMaxHP(pokemon.species,pokemon.level);
       pokemon.currentHP=Math.min(pokemon.maxHP,pokemon.currentHP+(pokemon.maxHP-om));
       addLog(pokemon.species+' #'+pokemon.id+' → Lv'+pokemon.level+'!','evolve');
-      if(s&&s.evolveMethod==='level'&&s.evolvesIntoId&&pokemon.level>=s.evolveLevel){
-        const ne=typeof POKEDEX_DATA!=='undefined'?POKEDEX_DATA.find(x=>x.dexId===s.evolvesIntoId&&!x.formName):null;
-        if(ne){
-          const oldSpecies=pokemon.species;
-          const oldDexId=pokemon.pokedexId;
-          pokemon.species=ne.name; pokemon.pokedexId=ne.dexId;
-          if(!SPECIES[pokemon.species]) SPECIES[pokemon.species]=ne;
-          const om2=pokemon.maxHP; pokemon.maxHP=calcMaxHP(pokemon.species,pokemon.level);
-          pokemon.currentHP=Math.min(pokemon.maxHP,pokemon.currentHP+(pokemon.maxHP-om2));
-          recordEvolution(oldDexId,ne.dexId,'level',pokemon.level);
-          addLog('✨ '+oldSpecies+' evolved into '+pokemon.species+'!','evolve');
-          document.getElementById('enc-body').textContent=oldSpecies+' evolved into '+pokemon.species+'!';
-        }
-      }
+      checkEvolution(pokemon); saveGame();
     } else break;
   }
+  if(levelled) renderDex();
 }
 
 function giveExpSilent(p,amount){
@@ -655,8 +682,9 @@ function giveExpSilent(p,amount){
       p.level++;
       const om=p.maxHP; p.maxHP=calcMaxHP(p.species,p.level);
       p.currentHP=Math.min(p.maxHP,p.currentHP+(p.maxHP-om));
-      if(s&&s.evolveMethod==='level'&&s.evolvesIntoId&&p.level>=s.evolveLevel){
-        const ne=typeof POKEDEX_DATA!=='undefined'?POKEDEX_DATA.find(x=>x.dexId===s.evolvesIntoId&&!x.formName):null;
+      const evolveS=SPECIES[p.species];
+      if(evolveS&&evolveS.evolveMethod==='level'&&evolveS.evolvesIntoId&&p.level>=evolveS.evolveLevel){
+        const ne=typeof POKEDEX_DATA!=='undefined'?POKEDEX_DATA.find(x=>x.dexId===evolveS.evolvesIntoId&&!x.formName):null;
         if(ne){
           p.species=ne.name; p.pokedexId=ne.dexId;
           if(!SPECIES[p.species]) SPECIES[p.species]=ne;

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.13</title>
+<title>PokeProf v0.14</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body { background:#1a1a2e; color:#e0e0e0; font-family:'Courier New',monospace; font-size:13px; height:100dvh; display:flex; flex-direction:column; overflow:hidden; }
@@ -104,7 +104,7 @@
 <body>
 
 <div id="header">
-  <h1>🎓 PokeProf v0.13</h1>
+  <h1>🎓 PokeProf v0.14</h1>
   <div style="display:flex;align-items:center;gap:10px;">
     <button class="reset" onclick="resetGame()">⚠ Reset</button>
     <div style="text-align:right;">
@@ -141,39 +141,40 @@
     <div id="party-list"></div>
     <div id="controls">
       <button id="btn-start" onclick="startMission()">▶ Start Mission</button>
-      <button id="btn-recall" onclick="recallAide()" disabled>◀ Recall</button>
+      <button id="btn-recall" onclick="recallMission()" disabled>⏹ Recall</button>
       <div class="potion-threshold">
-        <label>Auto-potion %:</label>
-        <input type="number" id="potion-threshold" value="75" min="0" max="100" onchange="state.potionThreshold=parseInt(this.value)||75">
+        <label>Heal at</label>
+        <input type="number" id="potion-threshold" min="1" max="99" value="75" onchange="state.potionThreshold=parseInt(this.value)||75">
+        <label>% HP</label>
       </div>
-    </div>
-    <div style="background:#16213e;border-top:1px solid #0f3460;padding:6px 12px;font-size:10px;color:#6080a0;flex-shrink:0;">
-      Catches: <span id="total-catches" style="color:#f4d03f">0</span> &nbsp;·&nbsp; Sightings: <span id="total-sightings" style="color:#f4d03f">0</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="color:#a0a0c0;font-size:10px;">Catches: <span id="total-catches">0</span></span>
+        <span style="color:#a0a0c0;font-size:10px;">Seen: <span id="total-sightings">0</span></span>
+      </div>
     </div>
   </div>
 
   <!-- LOG TAB -->
   <div class="panel" id="panel-log">
-    <div class="panel-title">Mission Log</div>
     <div id="encounter-display">
-      <div class="enc-title">Current Encounter</div>
-      <div class="enc-body" id="enc-body">No active mission.</div>
+      <div class="enc-title">⚔ Encounter</div>
+      <div class="enc-body" id="enc-body">No active encounter.</div>
     </div>
     <div id="log"></div>
   </div>
 
   <!-- DEX TAB -->
   <div class="panel" id="panel-dex">
-    <div id="dex-chrome" style="background:#0f3460;border-bottom:1px solid #1a4a80;padding:6px 10px;display:flex;align-items:center;gap:8px;flex-shrink:0;">
-      <button id="dex-back-btn" onclick="dexBack()" style="display:none;padding:4px 10px;font-size:11px;">◀ Back</button>
-      <span id="dex-breadcrumb" style="color:#a0a0c0;font-size:11px;flex:1;">Pokédex — Families</span>
-      <button onclick="dexViewAll()" style="padding:4px 10px;font-size:10px;color:#6080a0;border-color:#333;">All Catches</button>
+    <div id="dex-stats">
+      <span>Catches: <span id="dex-count-detail">0</span></span>
+      <span>Families: <span id="dex-family-count">0</span></span>
     </div>
-    <div id="dex-stats" style="padding:6px 10px;border-bottom:1px solid #0f3460;font-size:10px;color:#a0a0c0;display:flex;gap:14px;flex-shrink:0;background:#16213e;">
-      Caught: <span id="dex-count-detail" style="color:#f4d03f">0</span> &nbsp;·&nbsp; Families: <span id="dex-family-count" style="color:#f4d03f">0</span>
+    <div style="background:#16213e;border-bottom:1px solid #0f3460;padding:6px 8px;display:flex;gap:6px;flex-shrink:0;">
+      <button id="dex-back-btn" onclick="dexBack()" style="display:none;padding:5px 10px;font-size:10px;">◀ Back</button>
+      <span id="dex-breadcrumb" style="color:#a0a0c0;font-size:10px;padding:6px 4px;flex:1;">Pokédex — Families</span>
+      <button onclick="dexViewAll()" style="padding:5px 10px;font-size:10px;">All Catches</button>
     </div>
-    <!-- View-all controls (only shown in viewall mode) -->
-    <div id="dex-viewall-controls" style="display:none;padding:8px;border-bottom:1px solid #0f3460;gap:6px;flex-shrink:0;background:#16213e;">
+    <div id="dex-viewall-controls" style="display:none;padding:6px 8px;border-bottom:1px solid #0f3460;display:flex;gap:6px;flex-shrink:0;background:#16213e;">
       <select id="sort-select" onchange="renderDex()" style="background:#0f3460;border:1px solid #1a4a80;color:#e0e0e0;font-family:'Courier New',monospace;font-size:11px;padding:6px;border-radius:4px;flex:1;">
         <option value="id">Sort: Catch #</option>
         <option value="dexid">Sort: Dex #</option>
@@ -226,12 +227,25 @@ function buildRouteTable(locationId){
     .filter(e=>e.locationId===locationId)
     .filter(e=>{
       if(!e.requiresItem) return true;
-      return !!(state.bag && state.bag[e.requiresItem] && state.bag[e.requiresItem]>0);
+      return !!(state.bag&&state.bag[e.requiresItem]&&state.bag[e.requiresItem]>0);
     })
     .map(e=>({dexId:e.dexId,minLv:e.minLevel,maxLv:e.maxLevel,weight:e.encounterRate,method:e.encounterMethod}));
 }
 
 const ENC_INTERVAL = 30;
+
+// ── UNIT CONVERSION HELPERS (Change #13) ──
+function metersToFeetStr(m){
+  if(m===null||m===undefined||isNaN(m)) return null;
+  const totalInches = m * 39.3701;
+  const feet = Math.floor(totalInches / 12);
+  const inches = Math.round(totalInches % 12);
+  return feet+"'"+inches+'"';
+}
+function kgToLbsStr(kg){
+  if(kg===null||kg===undefined||isNaN(kg)) return null;
+  return (kg*2.20462).toFixed(1)+' lbs';
+}
 
 // ── ITEM HELPERS ──
 function getItem(itemId){
@@ -249,28 +263,30 @@ function getBallCount(){
   return total;
 }
 
+// Change #6: Potion must give 100% of its HP benefit — no partial heals
 function getWeakestEffectivePotion(pokemon){
   if(!state.bag||!pokemon) return null;
   const missing=pokemon.maxHP-pokemon.currentHP;
-  // Don't use a potion if less than 20 HP missing (minimum useful threshold)
-  if(missing<20) return null;
+  if(missing<=0) return null;
   const pct=(pokemon.currentHP/pokemon.maxHP)*100;
   if(pct>=(state.potionThreshold||75)) return null;
-  // Heal amounts: potion=20, super-potion=60, hyper-potion=120, max-potion=full
-  // Max Potion activates at 1 HP more than Hyper Potion would cover (121+ missing)
+  // Only use a potion if the pokemon is missing at least as much HP as the potion heals
+  // Max Potion: only when missing > 120 (1 more than Hyper Potion's 120)
   const potions=[
     {id:'potion',        heal:20},
     {id:'super-potion',  heal:60},
     {id:'hyper-potion',  heal:120},
     {id:'max-potion',    heal:Infinity},
   ];
-  // Use smallest potion that covers the missing HP (prefer exact or slight overshot)
   for(const p of potions){
-    if((state.bag[p.id]||0)>0 && p.heal>=missing) return p.id;
-  }
-  // If nothing covers it fully, use the largest available
-  for(let i=potions.length-1;i>=0;i--){
-    if((state.bag[potions[i].id]||0)>0) return potions[i].id;
+    if((state.bag[p.id]||0)<=0) continue;
+    if(p.id==='max-potion'){
+      // Max Potion: use only when missing > 120
+      if(missing>120) return p.id;
+    } else {
+      // Only use if potion heals <= missing (no waste)
+      if(p.heal<=missing) return p.id;
+    }
   }
   return null;
 }
@@ -341,6 +357,17 @@ function calcBST(sp,lv){
   return calcMaxHP(sp,lv)+st(s.baseAtk)+st(s.baseDef)+st(s.baseSpatk)+st(s.baseSpdef)+st(s.baseSpd);
 }
 
+// ── ABILITY ASSIGNMENT (Change #7) ──
+function assignAbility(entry){
+  if(!entry) return null;
+  const roll=Math.random();
+  if(roll<0.45&&entry.ability1) return entry.ability1;
+  if(roll<0.90&&entry.ability2) return entry.ability2;
+  if(entry.hiddenAbility) return entry.hiddenAbility;
+  if(entry.ability1) return entry.ability1;
+  return null;
+}
+
 // ── STATE ──
 let state={
   funds:5.00, totalCatches:0, totalSightings:0,
@@ -353,7 +380,8 @@ let state={
   bag:{},
   researchLog:{}, pendingFindings:[],
   discoveredLocations:new Set(['palletTown']),
-  locationEncounterLog:{}
+  locationEncounterLog:{},
+  lastHealLocation:'palletTown'  // Change #9
 };
 
 function makePokemon(sp,lv,gender,holder=null){
@@ -369,20 +397,38 @@ function makePokemon(sp,lv,gender,holder=null){
   const growthRate=(entry&&entry.growthRate)||'mediumFast';
   const maxHP=calcMaxHP(sp,lv);
   const startExp=expToLevel(lv,growthRate);
+  // Change #7: assign ability on creation
+  const ability=assignAbility(entry);
+  // Change #8: start friendship at 0
   return{id:state.dexIdCounter++,species:sp,pokedexId:dexId,level:lv,gender,
     currentHP:maxHP,maxHP,growthRate,
     exp:isNaN(startExp)?0:startExp,
-    holder};
+    holder,
+    ability:ability||null,
+    friendship:0
+  };
 }
 
 // ── SPRITES ──
 const SPRITE_BASE='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon';
 function getSpriteUrl(dexId,name,isShiny=false){
-  if(POKEDEX_DATA){
+  if(typeof POKEDEX_DATA!=='undefined'){
     const entry=POKEDEX_DATA.find(x=>x.dexId===dexId&&!x.formName);
     if(entry&&entry.spriteUrl) return entry.spriteUrl;
   }
   return (isShiny?SPRITE_BASE+'/shiny':SPRITE_BASE)+'/'+dexId+'.png';
+}
+
+// ── PARTY SORT (Change #10) ──
+// Lowest level leads; ties preserved by inertia (stable sort)
+// Fainted Pokémon go to the back
+function sortParty(){
+  state.party.sort((a,b)=>{
+    const aFainted=a.currentHP<=0?1:0;
+    const bFainted=b.currentHP<=0?1:0;
+    if(aFainted!==bFainted) return aFainted-bFainted;
+    return a.level-b.level;
+  });
 }
 
 // ── TRAVEL ──
@@ -427,24 +473,54 @@ function buildTravelPath(fromId,toId){
   return [toId];
 }
 
+// Change #4: BFS to find all discovered reachable locations (respecting requiresItem)
+function getReachableDiscoveredLocations(fromId){
+  const reachable=[];
+  if(typeof CONNECTIONS_DATA==='undefined') return reachable;
+  const visited=new Set([fromId]);
+  const queue=[fromId];
+  while(queue.length){
+    const cur=queue.shift();
+    const available=(CONNECTIONS_DATA||[]).filter(c=>{
+      if(c.fromLocationId!==cur) return false;
+      if(!c.requiresItem) return true;
+      return (state.bag&&state.bag[c.requiresItem]&&state.bag[c.requiresItem]>0)||
+             (state.trainerUnlocks&&state.trainerUnlocks[c.requiresItem]);
+    });
+    for(const conn of available){
+      const n=conn.toLocationId;
+      if(visited.has(n)) continue;
+      visited.add(n);
+      if(state.discoveredLocations.has(n)) reachable.push(n);
+      queue.push(n);
+    }
+  }
+  return reachable;
+}
+
 function arriveAtLocation(locId){
   state.currentLocation=locId;
   const locData=typeof LOCATIONS!=='undefined'?getLocation(locId):null;
   const locName=locData?locData.name:locId;
   addLog('📍 Carl Oak arrived at '+locName+'!','info');
+
+  // Change #9: track last heal location
   if(locData&&(locData.heals==='TRUE'||locData.heals===true||locData.heals==='true')){
+    state.lastHealLocation=locId;
     const needsHeal=state.party.some(p=>p.currentHP<p.maxHP||p.currentHP<=0);
     if(needsHeal){
       state.party.forEach(p=>{ p.currentHP=p.maxHP; });
       addLog('🏥 Party healed at '+locName+'!','info');
     }
   }
+
   const cycles=locData&&locData.travelTime?parseInt(locData.travelTime):1;
   state.travelCyclesRemaining=Math.max(1,cycles);
-  // Discover adjacent locations (no item required)
+
+  // Change #2: discover ALL adjacent locations regardless of requiresItem
   if(typeof CONNECTIONS_DATA!=='undefined'){
     (CONNECTIONS_DATA||[]).forEach(conn=>{
-      if(conn.fromLocationId===locId&&!conn.requiresItem){
+      if(conn.fromLocationId===locId){
         if(!state.discoveredLocations.has(conn.toLocationId)){
           state.discoveredLocations.add(conn.toLocationId);
           const newLoc=typeof LOCATIONS!=='undefined'?getLocation(conn.toLocationId):null;
@@ -453,7 +529,7 @@ function arriveAtLocation(locId){
       }
     });
   }
-  // Refresh map if visible
+
   if(document.getElementById('panel-map').classList.contains('active')) renderMap();
 }
 
@@ -492,8 +568,8 @@ function recordEvolution(fromDexId,toDexId,method,level){
   if(!r.evolutionConfirmed){
     r.evolutionConfirmed=true; r.confirmedMethod=method; r.confirmedIntoId=toDexId;
     if(method==='level') r.testedMethods.push('level');
-    const fromEntry=POKEDEX_DATA?POKEDEX_DATA.find(x=>x.dexId===fromDexId&&!x.formName):null;
-    const toEntry=POKEDEX_DATA?POKEDEX_DATA.find(x=>x.dexId===toDexId&&!x.formName):null;
+    const fromEntry=typeof POKEDEX_DATA!=='undefined'?POKEDEX_DATA.find(x=>x.dexId===fromDexId&&!x.formName):null;
+    const toEntry=typeof POKEDEX_DATA!=='undefined'?POKEDEX_DATA.find(x=>x.dexId===toDexId&&!x.formName):null;
     addFinding('evolution',fromEntry?fromEntry.name:'#'+fromDexId,toEntry?toEntry.name:'#'+toDexId,method,level);
   }
 }
@@ -509,7 +585,7 @@ function getEvolutionDisplayText(dexId){
   if(!r) return 'Evolves into: ???';
   if(r.nonEvolutionConfirmed) return 'Does not evolve';
   if(r.evolutionConfirmed){
-    const toEntry=POKEDEX_DATA?POKEDEX_DATA.find(x=>x.dexId===r.confirmedIntoId&&!x.formName):null;
+    const toEntry=typeof POKEDEX_DATA!=='undefined'?POKEDEX_DATA.find(x=>x.dexId===r.confirmedIntoId&&!x.formName):null;
     const toName=toEntry?toEntry.name:'#'+r.confirmedIntoId;
     return 'Evolves into: '+toName+' ('+r.confirmedMethod+(r.confirmedMethod==='level'?' Lv'+r.highestLevelObserved:'')+')';
   }
@@ -551,48 +627,22 @@ function giveExp(pokemon,amount){
       pokemon.level++; levelled=true;
       const om=pokemon.maxHP; pokemon.maxHP=calcMaxHP(pokemon.species,pokemon.level);
       pokemon.currentHP=Math.min(pokemon.maxHP,pokemon.currentHP+(pokemon.maxHP-om));
-      addLog(pokemon.species+' #'+pokemon.id+' → Lv'+pokemon.level+'! HP:'+pokemon.maxHP,'info');
-      checkEvolution(pokemon); saveGame();
-    } else break;
-  }
-  if(levelled) renderDex();
-}
-
-function checkEvolution(p){
-  const s=SPECIES[p.species]; if(!s) return;
-  if(s.evolveMethod==='level'&&s.evolvesIntoId&&p.level>=s.evolveLevel){
-    const newEntry=POKEDEX_DATA?POKEDEX_DATA.find(x=>x.dexId===s.evolvesIntoId&&!x.formName):null;
-    if(newEntry){
-      const old=p.species; const prevDexId=p.pokedexId;
-      p.species=newEntry.name; p.pokedexId=newEntry.dexId;
-      const om=p.maxHP; p.maxHP=calcMaxHP(p.species,p.level);
-      p.currentHP=Math.min(p.maxHP,p.currentHP+(p.maxHP-om));
-      if(!SPECIES[p.species]) SPECIES[p.species]=newEntry;
-      recordEvolution(prevDexId,newEntry.dexId,'level',p.level);
-      recordNewSpecies(newEntry.dexId,p.species);
-      addLog(old+' #'+p.id+' evolved into '+p.species+'!','evolve');
-      document.getElementById('enc-body').textContent=old+' evolved into '+p.species+'!';
-    }
-  }
-  if(typeof EVO_TREE!=='undefined'){
-    const branches=getEvolutions(p.pokedexId);
-    if(branches.length>0){
-      const branch=branches[Math.floor(Math.random()*branches.length)];
-      if(branch.evolveMethod==='level'&&p.level>=branch.evolveLevel){
-        const newEntry=POKEDEX_DATA?POKEDEX_DATA.find(x=>x.dexId===branch.toDexId&&!x.formName):null;
-        if(newEntry){
-          const old=p.species; const prevDexId=p.pokedexId;
-          p.species=newEntry.name; p.pokedexId=newEntry.dexId;
-          const om=p.maxHP; p.maxHP=calcMaxHP(p.species,p.level);
-          p.currentHP=Math.min(p.maxHP,p.currentHP+(p.maxHP-om));
-          if(!SPECIES[p.species]) SPECIES[p.species]=newEntry;
-          recordEvolution(prevDexId,newEntry.dexId,'level',p.level);
-          recordNewSpecies(newEntry.dexId,p.species);
-          addLog(old+' #'+p.id+' evolved into '+p.species+'!','evolve');
-          document.getElementById('enc-body').textContent=old+' evolved into '+p.species+'!';
+      addLog(pokemon.species+' #'+pokemon.id+' → Lv'+pokemon.level+'!','evolve');
+      if(s&&s.evolveMethod==='level'&&s.evolvesIntoId&&pokemon.level>=s.evolveLevel){
+        const ne=typeof POKEDEX_DATA!=='undefined'?POKEDEX_DATA.find(x=>x.dexId===s.evolvesIntoId&&!x.formName):null;
+        if(ne){
+          const oldSpecies=pokemon.species;
+          const oldDexId=pokemon.pokedexId;
+          pokemon.species=ne.name; pokemon.pokedexId=ne.dexId;
+          if(!SPECIES[pokemon.species]) SPECIES[pokemon.species]=ne;
+          const om2=pokemon.maxHP; pokemon.maxHP=calcMaxHP(pokemon.species,pokemon.level);
+          pokemon.currentHP=Math.min(pokemon.maxHP,pokemon.currentHP+(pokemon.maxHP-om2));
+          recordEvolution(oldDexId,ne.dexId,'level',pokemon.level);
+          addLog('✨ '+oldSpecies+' evolved into '+pokemon.species+'!','evolve');
+          document.getElementById('enc-body').textContent=oldSpecies+' evolved into '+pokemon.species+'!';
         }
       }
-    }
+    } else break;
   }
 }
 
@@ -606,7 +656,7 @@ function giveExpSilent(p,amount){
       const om=p.maxHP; p.maxHP=calcMaxHP(p.species,p.level);
       p.currentHP=Math.min(p.maxHP,p.currentHP+(p.maxHP-om));
       if(s&&s.evolveMethod==='level'&&s.evolvesIntoId&&p.level>=s.evolveLevel){
-        const ne=POKEDEX_DATA?POKEDEX_DATA.find(x=>x.dexId===s.evolvesIntoId&&!x.formName):null;
+        const ne=typeof POKEDEX_DATA!=='undefined'?POKEDEX_DATA.find(x=>x.dexId===s.evolvesIntoId&&!x.formName):null;
         if(ne){
           p.species=ne.name; p.pokedexId=ne.dexId;
           if(!SPECIES[p.species]) SPECIES[p.species]=ne;
@@ -630,43 +680,25 @@ function processOfflineTime(secsAway){
   while(remaining>=nextIn){
     remaining-=nextIn; nextIn=ENC_INTERVAL; summary.encounters++;
     const enc=rollEncounter(); const lead=getLeadPokemon(); if(!lead) break;
-    let resolved=false, tries=0;
-    while(!resolved&&tries<20){
-      tries++;
-      const potId=getWeakestEffectivePotion(lead);
-      if(potId) useItemFromBag(potId,lead);
+    if(enc){
       const hasBalls=getBallCount()>0;
       if(hasBalls){
-        const ballPriority=['master-ball','ultra-ball','great-ball','poke-ball'];
-        let ballId=null;
-        for(const b of ballPriority){ if(state.bag&&state.bag[b]>0){ ballId=b; break; } }
-        if(ballId){
-          useItemFromBag(ballId,null);
-          const ballItem=getItem(ballId);
-          const modifier=ballItem&&ballItem.catchRateModifier?parseFloat(ballItem.catchRateModifier):1;
-          const catchRate=modifier>=255?1:Math.min(0.99,0.75*modifier);
-          if(Math.random()<catchRate){
-            const caught=makePokemon(enc.species,enc.level,enc.gender);
-            state.dex.push(caught); state.totalCatches++; state.totalSightings++;
-            recordSighting(enc.pokedexId||caught.pokedexId,enc.level);
-            recordNewSpecies(caught.pokedexId,enc.species);
-            const s_=SPECIES[enc.species];
-            const exp=Math.floor(((s_?s_.baseExpYield||s_.baseExp:51)*enc.level)/7);
-            giveExpSilent(lead,exp);
-            summary.catches++; resolved=true;
-          }
-        } else {
-          resolved=true;
-        }
+        const s_=SPECIES[enc.species];
+        const exp=Math.floor(((s_?s_.baseExpYield||s_.baseExp:51)*enc.level)/7);
+        giveExpSilent(lead,exp);
+        const caught=makePokemon(enc.species,enc.level,enc.gender);
+        state.dex.push(caught); state.totalCatches++; state.totalSightings++;
+        summary.catches++;
+        if(!isSpeciesKnown(caught.pokedexId)||!state.researchLog[caught.pokedexId].firstSeen)
+          recordNewSpecies(caught.pokedexId,enc.species);
+        recordSighting(enc.pokedexId||caught.pokedexId,enc.level);
       } else {
-        const dmg=Math.max(1,Math.floor((enc.level/lead.level)*0.5*0.25*lead.maxHP));
+        const dmg=Math.max(1,Math.floor((enc.level/lead.level)*0.5*lead.maxHP));
         lead.currentHP=Math.max(0,lead.currentHP-dmg);
-        if(lead.currentHP<=0){ resolved=true; }
-        else {
+        if(lead.currentHP>0){
           const s_=SPECIES[enc.species];
           const exp=Math.floor(((s_?s_.baseExpYield||s_.baseExp:51)*enc.level)/7);
-          giveExpSilent(lead,exp);
-          summary.wins++; resolved=true;
+          giveExpSilent(lead,exp); summary.wins++;
         }
       }
     }
@@ -677,32 +709,60 @@ function processOfflineTime(secsAway){
 }
 
 function showOfflineBanner(secsAway,summary){
-  const mins=Math.floor(secsAway/60);
-  const el=document.getElementById('offline-summary');
-  el.innerHTML='Away for '+mins+' min · Income: +$'+summary.income.toFixed(2)+' · Encounters: '+summary.encounters+' · Catches: '+summary.catches;
+  const mins=Math.floor(secsAway/60), secs=secsAway%60;
+  document.getElementById('offline-summary').innerHTML=
+    'Away for '+mins+'m '+secs+'s · '+summary.encounters+' encounters · '+
+    summary.catches+' catches · +$'+summary.income.toFixed(2);
   document.getElementById('offline-banner').style.display='block';
 }
 
-// ── COMBAT ──
+// ── ENCOUNTER ──
 function rollEncounter(){
-  const dest=state.currentLocation||state.missionDestination||'route1';
-  const table=buildRouteTable(dest);
-  if(!table||!table.length) return null;
-  let roll=Math.random()*100, cum=0;
-  for(const e of table){
-    cum+=e.weight;
-    if(roll<cum){
-      const entry=POKEDEX_DATA?POKEDEX_DATA.find(p=>p.dexId===e.dexId&&!p.formName):null;
-      if(!entry) continue;
-      // Log this encounter for map data
-      if(!state.locationEncounterLog[dest]) state.locationEncounterLog[dest]={};
-      state.locationEncounterLog[dest][e.dexId]=(state.locationEncounterLog[dest][e.dexId]||0)+1;
-      return{species:entry.name,pokedexId:e.dexId,level:e.minLv+Math.floor(Math.random()*(e.maxLv-e.minLv+1)),gender:Math.random()<0.5?'M':'F'};
+  const table=buildRouteTable(state.currentLocation);
+  if(!table.length) return null;
+  const hasGrass=table.some(e=>e.method==='grass'||!e.method);
+  if(!hasGrass) return null;
+  const grassTable=table.filter(e=>e.method==='grass'||!e.method);
+  const totalW=grassTable.reduce((s,e)=>s+(e.weight||10),0);
+  let r=Math.random()*totalW;
+  for(const e of grassTable){
+    r-=(e.weight||10);
+    if(r<=0){
+      const lv=Math.floor(Math.random()*(e.maxLv-e.minLv+1))+e.minLv;
+      const entry=typeof POKEDEX_DATA!=='undefined'?POKEDEX_DATA.find(x=>x.dexId===e.dexId&&!x.formName):null;
+      const name=entry?entry.name:'#'+e.dexId;
+      const genderMalePct=entry?entry.genderMalePct:50;
+      let gender='M';
+      if(genderMalePct===null||genderMalePct===undefined) gender='—';
+      else if(genderMalePct===0) gender='F';
+      else if(genderMalePct===100) gender='M';
+      else gender=Math.random()*100<genderMalePct?'M':'F';
+      return {species:name,level:lv,gender,pokedexId:e.dexId,baseSpd:entry?entry.baseSpd||50:50};
     }
   }
   return null;
 }
 
+function getLeadPokemon(){
+  // Change #10: always re-sort before getting lead
+  sortParty();
+  return state.party.find(p=>p.currentHP>0)||null;
+}
+
+function checkLocationHeal(){
+  if(!state.missionActive) return;
+  const locData=typeof LOCATIONS!=='undefined'?getLocation(state.currentLocation):null;
+  if(locData&&(locData.heals==='TRUE'||locData.heals===true||locData.heals==='true')){
+    const needsHeal=state.party.some(p=>p.currentHP<p.maxHP||p.currentHP<=0);
+    if(needsHeal){
+      state.party.forEach(p=>{ p.currentHP=p.maxHP; });
+      addLog('🏥 Party fully healed at '+locData.name+'!','info');
+    }
+  }
+}
+
+// ── COMBAT ──
+// Change #5: speed check determines action order
 function resolveEncounterStep(){
   const enc=state.currentEncounter; if(!enc) return;
   const lead=getLeadPokemon(); if(!lead){ endMission(); return; }
@@ -715,8 +775,32 @@ function resolveEncounterStep(){
   }
   const potionId=getWeakestEffectivePotion(lead);
   if(potionId) useItemFromBag(potionId,lead);
+
+  // Speed check: compare lead baseSpd (scaled) vs enc.baseSpd
+  const leadEntry=SPECIES[lead.species];
+  const leadSpd=leadEntry?Math.floor(((leadEntry.baseSpd||50)*2*lead.level)/100)+5:lead.level;
+  const encSpd=enc.baseSpd?Math.floor((enc.baseSpd*2*enc.level)/100)+5:enc.level;
+  const leadFaster=leadSpd>=encSpd; // ties go to lead (player advantage)
+
   const hasBalls=getBallCount()>0;
-  if(hasBalls){ throwBall(lead,enc); } else { fight(lead,enc); }
+
+  if(leadFaster){
+    // Lead acts first
+    if(hasBalls){ throwBall(lead,enc); } else { fight(lead,enc); }
+  } else {
+    // Enemy attacks first, then lead acts if still alive
+    const dmg=Math.max(1,Math.floor((enc.level/lead.level)*0.5*0.25*lead.maxHP));
+    lead.currentHP=Math.max(0,lead.currentHP-dmg);
+    addLog(enc.species+' Lv'+enc.level+' strikes first! '+lead.species+' takes '+dmg+' dmg. ('+lead.currentHP+'/'+lead.maxHP+' HP)','damage');
+    document.getElementById('enc-body').textContent=enc.species+' moves first! '+lead.species+' at '+lead.currentHP+'/'+lead.maxHP+' HP';
+    if(lead.currentHP<=0){
+      addLog(lead.species+' #'+lead.id+' fainted!','faint');
+      const next=getLeadPokemon(); if(!next){ endMission(); return; }
+      addLog(enc.species+' fled.','info'); state.currentEncounter=null;
+      advanceTravelPath(); return;
+    }
+    if(hasBalls){ throwBall(lead,enc); } else { fight(lead,enc); }
+  }
 }
 
 function throwBall(lead,enc){
@@ -733,6 +817,7 @@ function throwBall(lead,enc){
   if(Math.random()<catchRate){
     catchPokemon(lead,enc,false);
   } else {
+    // Change #5: missed throw → enemy attacks (speed already resolved above, this is the counter-attack)
     const dmg=Math.max(1,Math.floor((enc.level/lead.level)*0.5*0.25*lead.maxHP));
     lead.currentHP=Math.max(0,lead.currentHP-dmg);
     addLog('Ball failed! '+enc.species+' Lv'+enc.level+' deals '+dmg+' HP. ('+lead.species+': '+lead.currentHP+'/'+lead.maxHP+' HP)','fail');
@@ -755,6 +840,10 @@ function catchPokemon(lead,enc,isShiny){
   addLog('Caught '+enc.species+' #'+caught.id+' (Lv'+enc.level+' '+enc.gender+(isShiny?' ✨':'')+')! +'+exp+' EXP','catch');
   document.getElementById('total-catches').textContent=state.totalCatches;
   document.getElementById('total-sightings').textContent=state.totalSightings;
+  // Track encounter at this location
+  if(!state.locationEncounterLog[state.currentLocation]) state.locationEncounterLog[state.currentLocation]={};
+  const lid=caught.pokedexId;
+  state.locationEncounterLog[state.currentLocation][lid]=(state.locationEncounterLog[state.currentLocation][lid]||0)+1;
   state.currentEncounter=null;
   advanceTravelPath();
   document.getElementById('enc-body').textContent='Caught '+enc.species+' Lv'+enc.level+(isShiny?' ✨ SHINY!':'!');
@@ -799,6 +888,16 @@ function incomeTick(){
 // ── GAME TICK ──
 function gameTick(){
   incomeTick();
+
+  // Change #8: friendship accumulation — 1 point per 3 minutes (180 ticks) of active mission time
+  if(state.missionActive){
+    state._friendshipTick=(state._friendshipTick||0)+1;
+    if(state._friendshipTick>=180){
+      state._friendshipTick=0;
+      state.party.forEach(p=>{ if(p.currentHP>0) p.friendship=(p.friendship||0)+1; });
+    }
+  }
+
   if(!state.missionActive){ renderParty(); return; }
   state.missionElapsed++; state.nextEncounterIn--;
   if(state.currentEncounter){ resolveEncounterStep(); render(); return; }
@@ -810,24 +909,15 @@ function gameTick(){
       state.nextEncounterIn=ENC_INTERVAL; updateLocation(); return;
     }
     const enc=state.currentEncounter;
+    // Track sighting
+    if(!state.locationEncounterLog[state.currentLocation]) state.locationEncounterLog[state.currentLocation]={};
+    state.locationEncounterLog[state.currentLocation][enc.pokedexId]=(state.locationEncounterLog[state.currentLocation][enc.pokedexId]||0)+0; // sighting tracked on catch
     addLog('Wild '+enc.species+' appeared! Lv'+enc.level+' '+enc.gender,'info');
     document.getElementById('enc-body').textContent='Wild '+enc.species+' Lv'+enc.level+' ('+enc.gender+') appeared!';
     state.totalSightings++;
     document.getElementById('total-sightings').textContent=state.totalSightings;
     render();
   } else { updateLocation(); renderParty(); }
-}
-
-function checkLocationHeal(){
-  if(!state.missionActive) return;
-  const locData=typeof LOCATIONS!=='undefined'?getLocation(state.currentLocation):null;
-  if(locData&&(locData.heals==='TRUE'||locData.heals===true||locData.heals==='true')){
-    const needsHeal=state.party.some(p=>p.currentHP<p.maxHP||p.currentHP<=0);
-    if(needsHeal){
-      state.party.forEach(p=>{ p.currentHP=p.maxHP; });
-      addLog('🏥 Party fully healed at '+locData.name+'!','info');
-    }
-  }
 }
 
 // ── MISSION ──
@@ -841,49 +931,37 @@ function showMissionModal(){
   const existing=document.getElementById('mission-modal');
   if(existing) existing.remove();
   const currentLoc=state.currentLocation||'palletTown';
-  const allConnected=typeof CONNECTIONS!=='undefined'&&typeof getConnectedLocations==='function'?getConnectedLocations(currentLoc):['route1'];
-  const connected=allConnected.filter(loc=>{
-    // Must be discovered
-    if(!state.discoveredLocations.has(loc)) return false;
-    if(typeof CONNECTIONS_DATA==='undefined') return true;
-    const conn=(CONNECTIONS_DATA||[]).find(c=>c.fromLocationId===currentLoc&&c.toLocationId===loc);
-    if(!conn) return false;
-    if(!conn.requiresItem) return true;
-    return (state.bag&&state.bag[conn.requiresItem]&&state.bag[conn.requiresItem]>0)||
-           (state.trainerUnlocks&&state.trainerUnlocks[conn.requiresItem]);
-  });
+
+  // Change #4: BFS to find all reachable discovered locations
+  const reachable=getReachableDiscoveredLocations(currentLoc);
+
   const modal=document.createElement('div');
   modal.id='mission-modal';
   modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
   const shopItems=typeof getShopItems==='function'?getShopItems(currentLoc):[];
-  const destOptions=connected.length
-    ? connected.map(loc=>{
+  const destOptions=reachable.length
+    ? reachable.map(loc=>{
         const locData=typeof LOCATIONS!=='undefined'?getLocation(loc):null;
         const name=locData?locData.name:loc;
         return `<button onclick="selectMissionDest('${loc}')" style="display:block;width:100%;margin-bottom:6px;padding:10px;text-align:left;border-color:#5dade2;color:#5dade2;">${name}</button>`;
       }).join('')
     : '<div style="color:#e67e22;font-size:11px;padding:8px 0;">No destinations reachable from here.</div>';
   const shopHtml=shopItems.length
-    ? `<div style="color:#a0a0c0;font-size:11px;margin:12px 0 6px;letter-spacing:1px;">🛒 SHOP</div>
-       <div style="max-height:180px;overflow-y:auto;margin-bottom:4px;">
-         ${shopItems.map(item=>`
-           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;background:#0f1a2a;padding:6px 8px;border-radius:4px;">
-             <div><span style="font-size:11px;color:#e0e0e0;">${item.name}</span><span style="color:#6080a0;font-size:10px;"> $${item.shopPrice}</span></div>
-             <div style="display:flex;align-items:center;gap:6px;">
-               <span id="bag-${item.itemId}" style="color:#f4d03f;font-size:11px;min-width:18px;text-align:right;">${(state.bag&&state.bag[item.itemId])||0}</span>
-               <button onclick="buyItem('${item.itemId}')" style="padding:4px 10px;font-size:12px;">+</button>
-             </div>
-           </div>`).join('')}
-       </div>`
-    : '';
+    ?`<div style="margin-top:10px;border-top:1px solid #0f3460;padding-top:10px;">
+      <div style="color:#f4d03f;font-size:10px;letter-spacing:1px;margin-bottom:6px;">🛒 LOCAL SHOP</div>
+      ${shopItems.map(item=>`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <span style="color:#a0a0c0;font-size:11px;">${item.name}</span>
+        <button onclick="buyItem('${item.itemId}')" style="padding:4px 8px;font-size:10px;border-color:#f4d03f;color:#f4d03f;">$${item.shopPrice}</button>
+      </div>`).join('')}
+    </div>`:'';
   modal.innerHTML=`
-    <div style="background:#16213e;border:1px solid #e63946;border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:'Courier New',monospace;max-height:90vh;overflow-y:auto;">
-      <div style="color:#e63946;font-size:14px;font-weight:bold;margin-bottom:12px;">📋 Dispatch Carl Oak</div>
-      <div style="color:#a0a0c0;font-size:11px;margin-bottom:8px;">DESTINATION</div>
-      ${destOptions}
+    <div style="background:#16213e;border:1px solid #5dade2;border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:'Courier New',monospace;max-height:90vh;overflow-y:auto;">
+      <div style="color:#5dade2;font-size:13px;font-weight:bold;margin-bottom:12px;">🗺 Choose Destination</div>
+      <div style="font-size:10px;color:#6080a0;margin-bottom:8px;">From: ${currentLoc}</div>
+      <div style="max-height:220px;overflow-y:auto;">${destOptions}</div>
+      <div id="mission-summary" style="color:#a0a0c0;font-size:11px;margin:10px 0;min-height:18px;"></div>
       ${shopHtml}
-      <div id="mission-summary" style="color:#6080a0;font-size:10px;margin:12px 0 8px;">Select a destination above.</div>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;background:#0f1a2a;padding:8px;border-radius:4px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
         <input type="checkbox" id="auto-repeat-toggle" ${state.autoRepeat?'checked':''} onchange="state.autoRepeat=this.checked" style="width:16px;height:16px;cursor:pointer;">
         <label for="auto-repeat-toggle" style="color:#a0a0c0;font-size:11px;cursor:pointer;">Auto-repeat on wipe</label>
       </div>
@@ -934,6 +1012,8 @@ function confirmMission(){
     document.getElementById('btn-recall').disabled=true;
     return;
   }
+  // Change #10: sort party at start of mission
+  sortParty();
   state.travelPathIndex=0;
   arriveAtLocation(state.travelPath[0]);
   state.nextEncounterIn=ENC_INTERVAL;
@@ -942,32 +1022,30 @@ function confirmMission(){
   const locData=typeof LOCATIONS!=='undefined'?getLocation(state.missionDestination):null;
   addLog('Carl Oak dispatched to '+(locData?locData.name:state.missionDestination)+' (research on arrival).','info');
   state.pendingFindings=[];
-  updateLocation(); render();
-}
-
-function recallAide(){
-  if(!state.missionActive) return;
-  state.missionActive=false; state.currentEncounter=null;
-  document.getElementById('btn-start').disabled=false;
-  document.getElementById('btn-recall').disabled=true;
-  endMission('recall');
   render();
 }
 
-function getLeadPokemon(){ return state.party.find(p=>p.currentHP>0)||null; }
-function allFainted(){ return state.party.every(p=>p.currentHP<=0); }
+function recallMission(){
+  if(!state.missionActive) return;
+  endMission('recall');
+}
 
 function endMission(reason='faint'){
-  state.missionActive=false; state.currentEncounter=null;
-  const originLocId=state.missionOrigin||'palletTown';
-  state.currentLocation=originLocId;
-  const originLoc=typeof LOCATIONS!=='undefined'?getLocation(originLocId):null;
-  const originName=originLoc?originLoc.name:'Pallet Town';
+  state.missionActive=false;
+  state.currentEncounter=null;
   document.getElementById('btn-start').disabled=false;
   document.getElementById('btn-recall').disabled=true;
+
+  // Change #9: return to last heal location, not missionOrigin
+  const returnLocId=state.lastHealLocation||state.missionOrigin||'palletTown';
+  state.currentLocation=returnLocId;
+  const originLoc=typeof LOCATIONS!=='undefined'?getLocation(returnLocId):null;
+  const originName=originLoc?originLoc.name:returnLocId;
+
   const msg=reason==='recall'?'Carl Oak recalled to '+originName+'.':'All fainted — Carl Oak returned to '+originName+'.';
   document.getElementById('enc-body').textContent=msg;
   addLog(msg,reason==='recall'?'info':'faint');
+
   if(originLoc&&(originLoc.heals==='TRUE'||originLoc.heals===true||originLoc.heals==='true')){
     const needsHeal=state.party.some(p=>p.currentHP<p.maxHP||p.currentHP<=0);
     if(needsHeal){
@@ -982,7 +1060,9 @@ function endMission(reason='faint'){
       if(!state.missionActive&&state.party.find(p=>p.currentHP>0)){
         addLog('🔄 Auto-repeating mission...','info');
         state.missionActive=true;
-        state.travelPath=buildTravelPath(state.missionOrigin,state.missionDestination);
+        // Change #10: sort on auto-repeat too
+        sortParty();
+        state.travelPath=buildTravelPath(state.currentLocation,state.missionDestination);
         state.travelPathIndex=0;
         if(state.travelPath.length>0){ arriveAtLocation(state.travelPath[0]); }
         else { state.currentLocation=state.missionDestination; }
@@ -1050,7 +1130,7 @@ function revivePokemon(catchId){
 
 function showPokemonDetail(catchId){
   const p=state.dex.find(x=>x.id===catchId); if(!p) return;
-  const entry=POKEDEX_DATA?POKEDEX_DATA.find(x=>x.dexId===p.pokedexId&&(!p.formName||x.formName===p.formName))||null:null;
+  const entry=typeof POKEDEX_DATA!=='undefined'?POKEDEX_DATA.find(x=>x.dexId===p.pokedexId&&(!p.formName||x.formName===p.formName))||null:null;
   const existing=document.getElementById('poke-modal'); if(existing) existing.remove();
   const modal=document.createElement('div');
   modal.id='poke-modal';
@@ -1064,46 +1144,43 @@ function showPokemonDetail(catchId){
       <div style="color:#a0a0c0;font-size:11px;line-height:2;border-bottom:1px solid #0f3460;margin-bottom:10px;padding-bottom:10px;">
         <div>Level: <span style="color:#fff">${p.level}</span> &nbsp;·&nbsp; Gender: <span style="color:#fff">${p.gender}</span></div>
         <div>Type: <span style="color:#fff">${entry?entry.type1+(entry.type2?' / '+entry.type2:''):'?'}</span></div>
-        <div style="margin-top:6px;">
-          <div>HP: <span style="color:#2ecc71">${p.currentHP}/${p.maxHP}</span></div>
-          <div>ATK: <span style="color:#fff">${Math.floor(((entry?entry.baseAtk:50)*2*p.level)/100)+5}</span></div>
-          <div>DEF: <span style="color:#fff">${Math.floor(((entry?entry.baseDef:50)*2*p.level)/100)+5}</span></div>
-          <div>SpATK: <span style="color:#fff">${Math.floor(((entry?entry.baseSpatk:50)*2*p.level)/100)+5}</span></div>
-          <div>SpDEF: <span style="color:#fff">${Math.floor(((entry?entry.baseSpdef:50)*2*p.level)/100)+5}</span></div>
-          <div>SPD: <span style="color:#fff">${Math.floor(((entry?entry.baseSpd:50)*2*p.level)/100)+5}</span></div>
-          <div>BST: <span style="color:#f4d03f">${calcBST(p.species,p.level)}</span></div>
-        </div>
+        <div>HP: <span style="color:#fff">${p.currentHP}/${p.maxHP}</span></div>
+        <div>Ability: <span style="color:#fff">${p.ability||'Unknown'}</span></div>
+        <div>Friendship: <span style="color:#fff">${p.friendship||0}</span></div>
+        ${entry&&entry.heightM?'<div>Height: <span style="color:#fff">'+(metersToFeetStr(entry.heightM)||entry.heightM+'m')+'</span></div>':''}
+        ${entry&&entry.weightKg?'<div>Weight: <span style="color:#fff">'+(kgToLbsStr(entry.weightKg)||entry.weightKg+'kg')+'</span></div>':''}
+        <div>Holder: <span style="color:#2ecc71">${p.holder||'Unassigned'}</span></div>
+        ${p.isShiny?'<div style="color:#f4d03f;">✨ SHINY</div>':''}
       </div>
-      <div style="margin-bottom:10px;">
-        <div style="color:#a0a0c0;font-size:11px;margin-bottom:6px;">Assignment:</div>
-        <div style="color:${p.holder?'#2ecc71':'#e67e22'};font-size:12px;margin-bottom:8px;">${p.holder?'👤 '+p.holder:'📦 Unassigned'}</div>
-        ${p.currentHP<=0&&state.funds>=20?'<button onclick="revivePokemon('+p.id+')" style="width:100%;padding:8px;margin-bottom:6px;border-color:#e67e22;color:#e67e22;">💊 Revive ($20)</button>':''}
-        ${p.holder
-          ?'<button onclick="unassignPokemon('+p.id+')" class="danger" style="width:100%;padding:8px;">Unassign</button>'
-          :'<button onclick="assignToAide('+p.id+')" class="primary" style="width:100%;padding:8px;">Assign to Carl Oak</button>'}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        ${!p.holder?`<button onclick="assignToAide(${p.id})" class="primary" style="flex:1;">+ Party</button>`:''}
+        ${p.holder?`<button onclick="unassignPokemon(${p.id})" style="flex:1;">− Remove</button>`:''}
+        ${p.currentHP<=0?`<button onclick="revivePokemon(${p.id})" style="flex:1;border-color:#f4d03f;color:#f4d03f;">💊 Revive ($20)</button>`:''}
+        <button onclick="document.getElementById('poke-modal').remove()" style="flex:1;">Close</button>
       </div>
     </div>`;
+  modal.onclick=(e)=>{ if(e.target===modal) modal.remove(); };
   document.body.appendChild(modal);
 }
 
 // ── RENDER ──
-function render(){ renderParty(); renderDex(); updateLocation(); }
+function render(){
+  renderParty();
+  renderDex();
+  updateLocation();
+}
 
 function renderParty(){
   const c=document.getElementById('party-list'); c.innerHTML='';
-  if(!state.party.length){ c.innerHTML='<div style="color:#555;padding:10px;font-size:11px;">No Pokémon in party</div>'; return; }
   let spritesHtml='<div class="aide-party-sprites">';
   state.party.forEach(p=>{
     const hpPct=Math.max(0,(p.currentHP/p.maxHP)*100);
     const hpColor=hpPct>50?'#2ecc71':hpPct>20?'#f4d03f':'#e74c3c';
     const s=SPECIES[p.species];
     const gr=p.growthRate||(s?s.growthRate:null)||'mediumFast';
-    const expAtLevel=expToLevel(p.level,gr);
-    const expAtNext=expToLevel(p.level+1,gr);
-    if(isNaN(p.exp)||p.exp<expAtLevel) p.exp=expAtLevel;
-    const ec=p.exp-expAtLevel;
-    const en=Math.max(1,expAtNext-expAtLevel);
-    const ePct=Math.min(100,(ec/en)*100);
+    const nextExp=expToLevel(p.level+1,gr);
+    const curExp=expToLevel(p.level,gr);
+    const ePct=nextExp>curExp?Math.min(100,Math.floor(((p.exp-curExp)/(nextExp-curExp))*100)):100;
     const fainted=p.currentHP<=0;
     const d=document.createElement('div');
     d.className='party-slot'+(fainted?' fainted':'');
@@ -1113,7 +1190,8 @@ function renderParty(){
       <img src="${spriteUrl}" class="party-sprite" onerror="this.style.display='none'">
       <div style="flex:1;">
         <div class="poke-name">${fainted?'💀':'🐾'} ${p.species} #${p.id}${p.isShiny?'<span class="shiny-badge">✨</span>':''}</div>
-        <div class="poke-level">Lv ${p.level} · ${p.gender}</div>
+        <div class="poke-level">Lv ${p.level} · ${p.gender}${p.ability?' · '+p.ability:''}</div>
+        <div style="color:#6080a0;font-size:10px;">❤ ${p.friendship||0} friendship</div>
         <div class="hp-bar-wrap"><div class="hp-bar" style="width:${hpPct}%;background:${hpColor};"></div></div>
         <div class="hp-text">HP: ${p.currentHP}/${p.maxHP}</div>
         <div class="exp-bar-wrap"><div class="exp-bar" style="width:${ePct}%;"></div></div>
@@ -1131,15 +1209,13 @@ function renderParty(){
 }
 
 // ── DEX STATE ──
-let dexView='families'; // 'families' | 'species' | 'detail' | 'viewall'
+let dexView='families';
 let dexSelectedFamily=null;
 let dexSelectedDexId=null;
 
 function renderDex(){
-  // Update shared counts
   document.getElementById('dex-count').textContent=state.dex.length;
   document.getElementById('dex-count-detail').textContent=state.totalCatches;
-  // Count unique families seen
   const seenFams=new Set();
   state.dex.forEach(p=>{ if(p.pokedexId&&typeof POKEDEX_DATA!=='undefined'){ const e=POKEDEX_DATA.find(x=>x.dexId===p.pokedexId&&!x.formName); if(e) seenFams.add(e.familyId); } });
   document.getElementById('dex-family-count').textContent=seenFams.size;
@@ -1190,7 +1266,6 @@ function renderDexFamilies(){
     const caughtInFamily=state.dex.filter(p=>p.pokedexId&&POKEDEX_DATA.find(x=>x.dexId===p.pokedexId&&x.familyId===famId));
     const speciesSeen=new Set(caughtInFamily.map(p=>p.pokedexId));
     const knownMembers=allMembers.filter(m=>speciesSeen.has(m.dexId));
-    // Chain display: only known species, with ??? if last one hasn't confirmed no-evo
     const chainParts=knownMembers.map(m=>'#'+m.dexId+' '+m.name);
     const lastKnown=knownMembers[knownMembers.length-1];
     const lastR=lastKnown?state.researchLog[lastKnown.dexId]:null;
@@ -1244,7 +1319,6 @@ function renderDexSpecies(){
     d.onclick=()=>{ dexSelectedDexId=entry.dexId; dexView='detail'; renderDex(); };
     c.appendChild(d);
   });
-  // Show ??? placeholder if last species hasn't confirmed non-evolution
   const lastEntry=visibleMembers[visibleMembers.length-1];
   const lastR=state.researchLog[lastEntry.dexId];
   if(!lastR||(!lastR.evolutionConfirmed&&!lastR.nonEvolutionConfirmed)){
@@ -1258,7 +1332,7 @@ function renderDexSpecies(){
   }
 }
 
-// LAYER 3: Species detail page + list of individual catches
+// LAYER 3: Species detail page (Change #12 + #13)
 function renderDexDetail(){
   const c=document.getElementById('dex-list'); c.innerHTML='';
   const entry=typeof POKEDEX_DATA!=='undefined'?POKEDEX_DATA.find(x=>x.dexId===dexSelectedDexId&&!x.formName):null;
@@ -1268,19 +1342,61 @@ function renderDexDetail(){
   const typeColors={'Normal':'#a8a878','Fire':'#f08030','Water':'#6890f0','Grass':'#78c850','Electric':'#f8d030','Ice':'#98d8d8','Fighting':'#c03028','Poison':'#a040a0','Ground':'#e0c068','Flying':'#a890f0','Psychic':'#f85888','Bug':'#a8b820','Rock':'#b8a038','Ghost':'#705898','Dragon':'#7038f8','Dark':'#705848','Steel':'#b8b8d0','Fairy':'#ee99ac'};
   const typeBadge=(t)=>t?`<span style="background:${typeColors[t]||'#444'};color:#fff;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:bold;">${t}</span>`:'';
 
-  // Species header card
+  // Change #13: convert height/weight to imperial
+  const heightDisplay=entry&&entry.heightM?metersToFeetStr(entry.heightM):null;
+  const weightDisplay=entry&&entry.weightKg?kgToLbsStr(entry.weightKg):null;
+
+  // Change #12: ability rarity tracker
+  let abilityHtml='';
+  if(caughtOfSpecies.length>0&&entry&&(entry.ability1||entry.ability2||entry.hiddenAbility)){
+    const abilityCounts={};
+    caughtOfSpecies.forEach(p=>{
+      if(p.ability) abilityCounts[p.ability]=(abilityCounts[p.ability]||0)+1;
+    });
+    const total=Object.values(abilityCounts).reduce((a,b)=>a+b,0);
+    abilityHtml=`<div style="margin-top:10px;padding-top:10px;border-top:1px solid #1a4a80;">
+      <div style="color:#a0a0c0;font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Observed Abilities</div>`;
+    const abilities=[];
+    if(entry.ability1) abilities.push({name:entry.ability1,slot:'Ability 1'});
+    if(entry.ability2) abilities.push({name:entry.ability2,slot:'Ability 2'});
+    if(entry.hiddenAbility) abilities.push({name:entry.hiddenAbility,slot:'Hidden'});
+    abilities.forEach(ab=>{
+      const cnt=abilityCounts[ab.name]||0;
+      const pct=total>0?Math.round((cnt/total)*100):0;
+      abilityHtml+=`<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+        <span style="color:#6080a0;font-size:10px;width:46px;">${ab.slot}</span>
+        <span style="color:#fff;font-size:10px;flex:1;">${ab.name}</span>
+        <span style="color:#5dade2;font-size:10px;">${cnt} (${pct}%)</span>
+      </div>`;
+    });
+    abilityHtml+='</div>';
+  }
+
+  // Change #12: observed gender ratio
+  let genderHtml='';
+  if(caughtOfSpecies.length>0){
+    const males=caughtOfSpecies.filter(p=>p.gender==='M').length;
+    const females=caughtOfSpecies.filter(p=>p.gender==='F').length;
+    const genderless=caughtOfSpecies.filter(p=>p.gender==='—').length;
+    if(males>0||females>0||genderless>0){
+      genderHtml=`<div style="margin-top:8px;font-size:10px;color:#a0a0c0;">
+        Gender observed: <span style="color:#5dade2;">♂${males}</span> · <span style="color:#e67e22;">♀${females}</span>${genderless>0?' · <span style="color:#777;">—'+genderless+'</span>':''}
+      </div>`;
+    }
+  }
+
   const header=document.createElement('div');
   header.style.cssText='background:#0f3460;border:1px solid #1a4a80;border-radius:8px;padding:14px;margin-bottom:8px;';
   header.innerHTML=`
     <div style="display:flex;gap:14px;align-items:flex-start;">
       <img src="${sprite}" style="width:91px;height:91px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display='none'">
       <div style="flex:1;">
-        <div style="color:#fff;font-size:15px;font-weight:bold;">${entry?entry.name:'#'+dexSelectedDexId}${entry&&entry.formName?' <span style="color:#a0a0c0;font-size:11px;">('+entry.formName+')</span>':''}</div>
+        <div style="color:#fff;font-size:15px;font-weight:bold;">${entry?entry.name:'#'+dexSelectedDexId}${entry&&entry.formName?'<span style="color:#a0a0c0;font-size:11px;">('+entry.formName+')</span>':''}</div>
         <div style="color:#5dade2;font-size:11px;margin-top:1px;">Dex #${dexSelectedDexId}</div>
         ${entry&&entry.category?`<div style="color:#a0a0c0;font-size:10px;margin-top:2px;">"${entry.category} Pokémon"</div>`:''}
         <div style="display:flex;gap:5px;margin-top:6px;">${typeBadge(entry?entry.type1:null)}${typeBadge(entry?entry.type2:null)}</div>
         <div style="color:#9090b0;font-size:10px;margin-top:5px;">
-          ${entry&&entry.heightM?'📏 '+entry.heightM+'m':''} ${entry&&entry.weightKg?'⚖️ '+entry.weightKg+'kg':''}
+          ${heightDisplay?'📏 '+heightDisplay:''}${heightDisplay&&weightDisplay?' · ':''}${weightDisplay?'⚖️ '+weightDisplay:''}
         </div>
       </div>
     </div>
@@ -1303,10 +1419,14 @@ function renderDexDetail(){
           </div>
         </div>`).join(''):'<div style="color:#555;font-size:10px;">No stat data available.</div>'}
       ${entry?`<div style="color:#f4d03f;font-size:10px;text-align:right;margin-top:4px;">BST: ${entry.bst||'?'}</div>`:''}
+    </div>
+    ${abilityHtml}
+    ${genderHtml}
+    <div style="margin-top:10px;padding-top:10px;border-top:1px solid #1a4a80;font-size:10px;">
+      <span style="color:#a0a0c0;">Evolution: </span><span style="color:#5dade2;">${getEvolutionDisplayText(dexSelectedDexId)}</span>
     </div>`;
   c.appendChild(header);
 
-  // Individual catches list
   if(!caughtOfSpecies.length){
     const el=document.createElement('div');
     el.style.cssText='color:#555;padding:10px;font-size:11px;';
@@ -1332,7 +1452,7 @@ function renderDexDetail(){
             <span class="dex-name">${p.species} #${p.id}${p.isShiny?'<span class="shiny-badge">✨</span>':''}</span>
             <span class="dex-id">${p.holder?'👤 '+p.holder:'📦'}</span>
           </div>
-          <div class="dex-details">Lv${p.level} · ${p.gender} · HP ${p.currentHP}/${p.maxHP}</div>
+          <div class="dex-details">Lv${p.level} · ${p.gender}${p.ability?' · '+p.ability:''} · Friendship:${p.friendship||0}</div>
           <div style="background:#0a0a1a;border-radius:2px;height:4px;margin-top:3px;overflow:hidden;"><div style="width:${hpPct}%;height:100%;background:${hpColor};border-radius:2px;"></div></div>
         </div>
       </div>`;
@@ -1398,7 +1518,7 @@ function addLog(msg,type=''){
 
 // ── SAVE / LOAD / RESET ──
 const SAVE_KEY='pokeprof_save';
-const SAVE_VERSION=9;
+const SAVE_VERSION=10; // Change #7/#8/#9: new fields (ability, friendship, lastHealLocation)
 let saveTimer=0;
 
 function saveGame(){
@@ -1419,7 +1539,8 @@ function saveGame(){
         travelPath:state.travelPath||[], travelPathIndex:state.travelPathIndex||0,
         travelCyclesRemaining:state.travelCyclesRemaining||0,
         discoveredLocations:[...state.discoveredLocations],
-        locationEncounterLog:state.locationEncounterLog||{}
+        locationEncounterLog:state.locationEncounterLog||{},
+        lastHealLocation:state.lastHealLocation||'palletTown'
       }
     }));
     setSaveIndicator('✔ Saved','saving');
@@ -1445,7 +1566,13 @@ function loadGame(){
       travelPath:s.travelPath??[], travelPathIndex:s.travelPathIndex??0,
       travelCyclesRemaining:s.travelCyclesRemaining??0,
       discoveredLocations:new Set(s.discoveredLocations??['palletTown','route1']),
-      locationEncounterLog:s.locationEncounterLog??{}
+      locationEncounterLog:s.locationEncounterLog??{},
+      lastHealLocation:s.lastHealLocation??'palletTown'
+    });
+    // Backfill ability/friendship on loaded pokemon that predate v10
+    state.dex.forEach(p=>{
+      if(p.ability===undefined) p.ability=null;
+      if(p.friendship===undefined) p.friendship=0;
     });
     const secsAway=Math.floor((Date.now()-data.savedAt)/1000);
     let offSum=null;
@@ -1499,14 +1626,14 @@ function init(){
 // ── BOOT ──
 const hasSave=loadGame();
 if(!hasSave){
-  // Build initial discovered set: palletTown + all free adjacencies
+  // Change #3: boot discovers ALL adjacencies from palletTown (free AND gated)
   const initDiscovered=new Set(['palletTown']);
   if(typeof CONNECTIONS_DATA!=='undefined'){
     (CONNECTIONS_DATA||[]).forEach(c=>{
-      if(c.fromLocationId==='palletTown'&&!c.requiresItem) initDiscovered.add(c.toLocationId);
+      if(c.fromLocationId==='palletTown') initDiscovered.add(c.toLocationId);
     });
   } else {
-    initDiscovered.add('route1'); // fallback
+    initDiscovered.add('route1');
   }
   state={
     funds:5.00, totalCatches:0, totalSightings:0,
@@ -1518,7 +1645,8 @@ if(!hasSave){
     travelPath:[], travelPathIndex:0, travelCyclesRemaining:0,
     bag:{}, researchLog:{}, pendingFindings:[],
     discoveredLocations:initDiscovered,
-    locationEncounterLog:{}
+    locationEncounterLog:{},
+    lastHealLocation:'palletTown'
   };
   init();
   setSaveIndicator('⬤ New game','');
@@ -1527,64 +1655,52 @@ if(!hasSave){
 }
 
 // ── MAP SYSTEM ──
-// Full Kanto grid layout (col, row) — based on canonical Kanto geography
-// Higher row = further south. This covers all Kanto for future expansion.
 const MAP_NODES = {
-  // Cities
-  'palletTown':    {col:5, row:10, label:'Pallet Town',   type:'town'},
-  'viridianCity':  {col:5, row:8,  label:'Viridian City', type:'city'},
-  'pewterCity':    {col:5, row:5,  label:'Pewter City',   type:'city'},
-  'ceruleanCity':  {col:8, row:3,  label:'Cerulean City', type:'city'},
-  'vermilionCity': {col:8, row:7,  label:'Vermilion City',type:'city'},
-  'lavenderTown':  {col:11,row:5,  label:'Lavender Town', type:'town'},
-  'celadonCity':   {col:6, row:5,  label:'Celadon City',  type:'city'},
-  'fuchsiaCity':   {col:6, row:8,  label:'Fuchsia City',  type:'city'},
-  'saffronCity':   {col:8, row:5,  label:'Saffron City',  type:'city'},
-  'cinnabarIsland':{col:5, row:13, label:'Cinnabar Island',type:'city'},
-  'indigoPlateau': {col:2, row:5,  label:'Indigo Plateau',type:'city'},
-  // Routes
-  'route1':  {col:5, row:9,  label:'Route 1',  type:'route'},
-  'route2':  {col:5, row:6,  label:'Route 2',  type:'route'},
-  'route3':  {col:6, row:4,  label:'Route 3',  type:'route'},
-  'route4':  {col:8, row:4,  label:'Route 4',  type:'route'},
-  'route5':  {col:8, row:6,  label:'Route 5',  type:'route'},
-  'route6':  {col:8, row:7,  label:'Route 6',  type:'route'},  // fixed: was row:6.5
-  'route7':  {col:7, row:5,  label:'Route 7',  type:'route'},
-  'route8':  {col:10,row:5,  label:'Route 8',  type:'route'},
-  'route9':  {col:10,row:3,  label:'Route 9',  type:'route'},
-  'route10': {col:11,row:4,  label:'Route 10', type:'route'},
-  'route11': {col:10,row:7,  label:'Route 11', type:'route'},
-  'route12': {col:11,row:7,  label:'Route 12', type:'route'},
-  'route13': {col:10,row:9,  label:'Route 13', type:'route'},
-  'route14': {col:9, row:9,  label:'Route 14', type:'route'},
-  'route15': {col:7, row:9,  label:'Route 15', type:'route'},
-  'route16': {col:5, row:7,  label:'Route 16', type:'route'},
-  'route17': {col:5, row:8,  label:'Route 17', type:'route'},
-  'route18': {col:5, row:9,  label:'Route 18', type:'route'},  // south of fuchsia
-  'route19': {col:6, row:10, label:'Route 19', type:'route'},
-  'route20': {col:5, row:12, label:'Route 20', type:'route'},
-  'route21': {col:5, row:11, label:'Route 21', type:'route'},
-  'route22': {col:4, row:8,  label:'Route 22', type:'route'},
-  'route23': {col:3, row:6,  label:'Route 23', type:'route'},
-  'route24': {col:8, row:2,  label:'Route 24', type:'route'},
-  'route25': {col:9, row:2,  label:'Route 25', type:'route'},
-  // Dungeons / special
-  'viridianForest': {col:5, row:7,  label:'Viridian Forest',type:'dungeon'},
-  'mtMoon':         {col:6, row:4,  label:'Mt. Moon',       type:'dungeon'},
+  'palletTown':     {col:8, row:10, label:'Pallet Town',    type:'town'},
+  'route1':         {col:8, row:9,  label:'Route 1',        type:'route'},
+  'viridianCity':   {col:8, row:8,  label:'Viridian City',  type:'city'},
+  'route22':        {col:7, row:8,  label:'Route 22',       type:'route'},
+  'route2S':        {col:8, row:7,  label:'Route 2 (S)',    type:'route'},
+  'route2N':        {col:8, row:6,  label:'Route 2 (N)',    type:'route'},
+  'pewterCity':     {col:8, row:5,  label:'Pewter City',    type:'city'},
+  'route21':        {col:8, row:11, label:'Route 21',       type:'route'},
+  'route3':         {col:9, row:5,  label:'Route 3',        type:'route'},
+  'route4W':        {col:10,row:5,  label:'Route 4 (W)',    type:'route'},
+  'ceruleanCity':   {col:10,row:4,  label:'Cerulean City',  type:'city'},
+  'route24':        {col:10,row:3,  label:'Route 24',       type:'route'},
+  'route25':        {col:11,row:3,  label:'Route 25',       type:'route'},
+  'route5':         {col:10,row:5,  label:'Route 5',        type:'route'},
+  'vermilionCity':  {col:10,row:8,  label:'Vermilion City', type:'city'},
+  'route6':         {col:10,row:7,  label:'Route 6',        type:'route'},
+  'lavenderTown':   {col:11,row:5,  label:'Lavender Town',  type:'town'},
+  'route9':         {col:11,row:4,  label:'Route 9',        type:'route'},
+  'route10N':       {col:11,row:4,  label:'Route 10 (N)',   type:'route'},
+  'celadonCity':    {col:9, row:6,  label:'Celadon City',   type:'city'},
+  'route7':         {col:9, row:6,  label:'Route 7',        type:'route'},
+  'route8':         {col:10,row:6,  label:'Route 8',        type:'route'},
+  'fuchsiaCity':    {col:7, row:10, label:'Fuchsia City',   type:'city'},
+  'route13':        {col:9, row:10, label:'Route 13',       type:'route'},
+  'route14':        {col:9, row:11, label:'Route 14',       type:'route'},
+  'route15':        {col:8, row:11, label:'Route 15',       type:'route'},
+  'saffronCity':    {col:10,row:6,  label:'Saffron City',   type:'city'},
+  'cinnabarIsland': {col:5, row:13, label:'Cinnabar Island',type:'city'},
+  'route20':        {col:6, row:12, label:'Route 20',       type:'route'},
+  'route19':        {col:7, row:11, label:'Route 19',       type:'route'},
+  'viridianForest': {col:8, row:7,  label:'Viridian Forest',type:'dungeon'},
+  'mtMoon':         {col:9, row:5,  label:'Mt. Moon',       type:'dungeon'},
   'rockTunnel':     {col:11,row:4,  label:'Rock Tunnel',    type:'dungeon'},
-  'seafoamIslands': {col:4, row:12, label:'Seafoam Islands',type:'dungeon'},
-  'victoryRoad':    {col:3, row:5,  label:'Victory Road',   type:'dungeon'},
+  'seafoamIslands': {col:6, row:12, label:'Seafoam Islands',type:'dungeon'},
+  'victoryRoad':    {col:7, row:5,  label:'Victory Road',   type:'dungeon'},
   'powerPlant':     {col:12,row:4,  label:'Power Plant',    type:'dungeon'},
-  'safariZone':     {col:6, row:8,  label:'Safari Zone',    type:'dungeon'},
+  'safariZone':     {col:7, row:9,  label:'Safari Zone',    type:'dungeon'},
   'pokemonTower':   {col:11,row:5,  label:'Pokémon Tower',  type:'dungeon'},
-  'silphCo':        {col:8, row:5,  label:'Silph Co.',      type:'dungeon'},
-  'diglettsCave':   {col:7, row:7,  label:"Diglett's Cave", type:'dungeon'},
-  'ceruleanCave':   {col:8, row:2,  label:'Cerulean Cave',  type:'dungeon'},
+  'silphCo':        {col:10,row:6,  label:'Silph Co.',      type:'dungeon'},
+  'diglettsCave':   {col:8, row:8,  label:"Diglett's Cave", type:'dungeon'},
+  'ceruleanCave':   {col:10,row:3,  label:'Cerulean Cave',  type:'dungeon'},
   'pokemonMansion': {col:5, row:13, label:'Pokémon Mansion',type:'dungeon'},
-  'ssAnne':         {col:8, row:8,  label:'S.S. Anne',      type:'dungeon'},
+  'ssAnne':         {col:10,row:8,  label:'S.S. Anne',      type:'dungeon'},
 };
 
-// Node type colors
 const MAP_COLORS = {
   town:    {fill:'#16213e', stroke:'#e63946', label:'#e0e0e0'},
   city:    {fill:'#0f3460', stroke:'#2ecc71', label:'#2ecc71'},
@@ -1602,18 +1718,14 @@ function renderMap(){
   const discovered=[...state.discoveredLocations];
   if(!discovered.length){ svg.innerHTML='<text x="50%" y="50%" text-anchor="middle" fill="#555" font-size="12">No locations discovered yet.</text>'; return; }
 
-  // Determine which node keys are in discovered (match locationId to MAP_NODES keys)
   const visibleKeys=discovered.filter(id=>MAP_NODES[id]);
-
   if(!visibleKeys.length){ svg.innerHTML='<text x="50%" y="50%" text-anchor="middle" fill="#555" font-size="12" font-family="monospace">Map data for these locations coming soon.</text>'; return; }
 
-  // Compute bounding box of visible nodes
   const cols=visibleKeys.map(k=>MAP_NODES[k].col);
   const rows=visibleKeys.map(k=>MAP_NODES[k].row);
   const minCol=Math.min(...cols), maxCol=Math.max(...cols);
   const minRow=Math.min(...rows), maxRow=Math.max(...rows);
 
-  // Grid cell size and padding
   const CELL=72, PAD=48;
   const gridW=(maxCol-minCol)*CELL+PAD*2;
   const gridH=(maxRow-minRow)*CELL+PAD*2;
@@ -1622,7 +1734,6 @@ function renderMap(){
   function nodeX(k){ return (MAP_NODES[k].col-minCol)*CELL+PAD; }
   function nodeY(k){ return (MAP_NODES[k].row-minRow)*CELL+PAD; }
 
-  // Draw connections between visible discovered locations
   if(typeof CONNECTIONS_DATA!=='undefined'){
     const drawn=new Set();
     (CONNECTIONS_DATA||[]).forEach(conn=>{
@@ -1638,12 +1749,11 @@ function renderMap(){
       line.setAttribute('y2',nodeY(conn.toLocationId));
       line.setAttribute('stroke',conn.requiresItem?'#9b59b6':'#1a4a80');
       line.setAttribute('stroke-width','2');
-      line.setAttribute('stroke-dasharray',conn.requiresItem?'6,3':'none');
+      if(conn.requiresItem) line.setAttribute('stroke-dasharray','4,4');
       svg.appendChild(line);
     });
   }
 
-  // Draw nodes
   visibleKeys.forEach(locId=>{
     const node=MAP_NODES[locId];
     const c=MAP_COLORS[node.type]||MAP_COLORS.route;
@@ -1652,28 +1762,15 @@ function renderMap(){
     const isSelected=mapSelectedLoc===locId;
 
     const g=document.createElementNS('http://www.w3.org/2000/svg','g');
-    g.setAttribute('data-loc',locId);
     g.style.cursor='pointer';
 
-    // Glow ring for current location
-    if(isCurrent){
-      const glow=document.createElementNS('http://www.w3.org/2000/svg','circle');
-      glow.setAttribute('cx',x); glow.setAttribute('cy',y); glow.setAttribute('r','20');
-      glow.setAttribute('fill','none'); glow.setAttribute('stroke','#f4d03f');
-      glow.setAttribute('stroke-width','3'); glow.setAttribute('opacity','0.6');
-      g.appendChild(glow);
-    }
-
-    // Node circle
     const circle=document.createElementNS('http://www.w3.org/2000/svg','circle');
-    circle.setAttribute('cx',x); circle.setAttribute('cy',y);
-    circle.setAttribute('r',node.type==='town'||node.type==='city'?14:10);
-    circle.setAttribute('fill',isSelected?'#1a3a5a':c.fill);
+    circle.setAttribute('cx',x); circle.setAttribute('cy',y); circle.setAttribute('r','14');
+    circle.setAttribute('fill',isCurrent?'#1a3a5a':c.fill);
     circle.setAttribute('stroke',isSelected?'#f4d03f':c.stroke);
     circle.setAttribute('stroke-width',isSelected?'3':'2');
     g.appendChild(circle);
 
-    // Label
     const text=document.createElementNS('http://www.w3.org/2000/svg','text');
     text.setAttribute('x',x); text.setAttribute('y',y+26);
     text.setAttribute('text-anchor','middle');
@@ -1684,7 +1781,6 @@ function renderMap(){
     text.textContent=node.label;
     g.appendChild(text);
 
-    // Carl marker
     if(isCurrent&&state.missionActive){
       const dot=document.createElementNS('http://www.w3.org/2000/svg','text');
       dot.setAttribute('x',x); dot.setAttribute('y',y+5);
@@ -1721,14 +1817,11 @@ function showMapDetail(locId){
   const node=MAP_NODES[locId];
   const locName=locData?locData.name:(node?node.label:locId);
 
-  // Encounter data for this location
   const encLog=state.locationEncounterLog[locId]||{};
   const totalEncs=Object.values(encLog).reduce((a,b)=>a+b,0);
 
-  // Build encounter rows using DB for level range and method
   let encHtml='';
   if(totalEncs>0){
-    // Sort species by count descending
     const sorted=Object.entries(encLog).sort((a,b)=>b[1]-a[1]);
     encHtml=`<div style="color:#a0a0c0;font-size:10px;letter-spacing:1px;text-transform:uppercase;margin:10px 0 6px;">Observed Encounters (${totalEncs} total)</div>`;
     encHtml+='<div style="display:flex;flex-direction:column;gap:4px;">';
@@ -1738,7 +1831,6 @@ function showMapDetail(locId){
       const name=pEntry?pEntry.name:'#'+dexId;
       const sprite=getSpriteUrl(dexId,name,false);
       const pct=Math.round((count/totalEncs)*100);
-      // Get level range and method from ENCOUNTERS DB
       const encDb=typeof ENCOUNTERS!=='undefined'?ENCOUNTERS.filter(e=>e.locationId===locId&&e.dexId===dexId):[];
       const minLv=encDb.length?Math.min(...encDb.map(e=>e.minLevel)):'?';
       const maxLv=encDb.length?Math.max(...encDb.map(e=>e.maxLevel)):'?';
@@ -1782,9 +1874,23 @@ function showMapDetail(locId){
   detail.style.display='block';
 }
 
+// ── LOCATION HELPERS ──
+function getLocation(locId){
+  if(typeof LOCATIONS==='undefined') return null;
+  return LOCATIONS.find?LOCATIONS.find(l=>l.locationId===locId):LOCATIONS[locId]||null;
+}
+
+function getShopItems(locId){
+  if(typeof ITEMS_DATA==='undefined') return [];
+  const loc=getLocation(locId);
+  if(!loc||!loc.shopTier) return [];
+  return ITEMS_DATA.filter(i=>i.shopTier&&i.shopTier<=loc.shopTier&&i.shopPrice);
+}
+
+// Boot intervals — set AFTER loadGame/init completes, never inside confirmMission
 window._autoSaveInterval=setInterval(autoSaveTick,1000);
 window._gameTickInterval=setInterval(gameTick,1000);
- 
+
 let _hiddenAt=null;
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden){

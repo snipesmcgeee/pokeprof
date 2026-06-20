@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>PokeProf v0.15</title>
+<script src="pokedex.js"></script>
+<script src="encounters.js"></script>
+<script src="locations.js"></script>
+<script src="connections.js"></script>
+<script src="typechart.js"></script>
+<script src="evotree.js"></script>
+<script src="formtriggers.js"></script>
+<script src="items.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body { background:#1a1a2e; color:#e0e0e0; font-family:'Courier New',monospace; font-size:13px; height:100dvh; display:flex; flex-direction:column; overflow:hidden; }
@@ -1684,7 +1692,7 @@ function renderMap(){
     text.textContent=node.label;
     g.appendChild(text);
 
-    g.onclick=(e)=>{ e.stopPropagation(); mapSelectedLoc=locId; renderMap(); showMapDetail(locId); };
+    g.onclick=(e)=>{ e.stopPropagation(); selectMapLocation(locId); };
     svg.appendChild(g);
   });
 }
@@ -1697,35 +1705,50 @@ function handleMapClick(e){
   }
 }
 
+function selectMapLocation(locId){
+  mapSelectedLoc=locId;
+  renderMap();
+  showMapDetail(locId);
+}
+
 function showMapDetail(locId){
   const detail=document.getElementById('map-detail');
   const content=document.getElementById('map-detail-content');
   const locData=typeof LOCATIONS!=='undefined'?getLocation(locId):null;
-  const name=locData?locData.name:locId;
-  const heals=locData&&(locData.heals==='TRUE'||locData.heals===true||locData.heals==='true');
-  const shop=locData?locData.shopTier:null;
-  const isCurrent=state.currentLocation===locId;
+  const node=MAP_NODES[locId];
+  const locName=locData?locData.name:(node?node.label:locId);
 
-  // Encounter data for this location
   const encLog=state.locationEncounterLog[locId]||{};
+  const totalEncs=Object.values(encLog).reduce((a,b)=>a+b,0);
+
   let encHtml='';
-  if(Object.keys(encLog).length){
-    const table=buildRouteTable(locId);
-    const totalSeen=Object.values(encLog).reduce((a,b)=>a+b,0);
-    const rows=Object.entries(encLog).map(([dexId,cnt])=>{
-      // Change #2: use getPokemonEntry for form-only species
-      const entry=getPokemonEntry(parseInt(dexId));
-      const name=entry?entry.name:'#'+dexId;
-      const pct=totalSeen>0?Math.round((cnt/totalSeen)*100):0;
-      const sprite=getSpriteUrl(parseInt(dexId),name,false);
-      const tableEntry=table.find(e=>e.dexId===parseInt(dexId));
-      const lvRange=tableEntry?'Lv '+tableEntry.minLv+'-'+tableEntry.maxLv:'';
-      return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #0f3460;"><img src="'+sprite+'" style="width:28px;height:28px;image-rendering:pixelated;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div style="font-size:11px;color:#e0e0e0;">'+name+'</div><div style="font-size:10px;color:#5dade2;">'+lvRange+' · '+tableEntry?(tableEntry.method||'grass'):'grass'+'</div></div><div style="text-align:right;"><div style="font-size:12px;color:#f4d03f;">'+pct+'%</div><div style="font-size:10px;color:#a0a0c0;">('+cnt+' seen)</div></div></div>';
+  if(totalEncs>0){
+    const sorted=Object.entries(encLog).sort((a,b)=>b[1]-a[1]);
+    encHtml='<div style="color:#a0a0c0;font-size:10px;letter-spacing:1px;text-transform:uppercase;margin:10px 0 6px;">Observed Encounters ('+totalEncs+' total)</div>';
+    encHtml+='<div style="display:flex;flex-direction:column;gap:4px;">';
+    sorted.forEach(([dexIdStr,count])=>{
+      const dexId=parseInt(dexIdStr);
+      // use getPokemonEntry for form-only species like Nidoran
+      const pEntry=getPokemonEntry(dexId);
+      const name=pEntry?pEntry.name:'#'+dexId;
+      const sprite=getSpriteUrl(dexId,name,false);
+      const pct=Math.round((count/totalEncs)*100);
+      const encDb=typeof ENCOUNTERS!=='undefined'?ENCOUNTERS.filter(e=>e.locationId===locId&&e.dexId===dexId):[];
+      const minLv=encDb.length?Math.min(...encDb.map(e=>e.minLevel)):'?';
+      const maxLv=encDb.length?Math.max(...encDb.map(e=>e.maxLevel)):'?';
+      const methods=[...new Set(encDb.map(e=>e.encounterMethod).filter(Boolean))].join(', ')||'?';
+      encHtml+='<div style="display:flex;align-items:center;gap:8px;background:#0f1a2a;padding:6px 8px;border-radius:4px;"><img src="'+sprite+'" style="width:48px;height:48px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div style="color:#fff;font-size:11px;font-weight:bold;">'+name+'</div><div style="color:#a0a0c0;font-size:10px;">Lv '+minLv+'–'+maxLv+' · '+methods+'</div><div style="margin-top:3px;background:#0a0a1a;border-radius:2px;height:5px;overflow:hidden;"><div style="width:'+pct+'%;height:100%;background:#5dade2;border-radius:2px;"></div></div><div style="color:#5dade2;font-size:10px;margin-top:1px;">'+pct+'% ('+count+' seen)</div></div></div>';
     });
-    encHtml='<div style="margin-top:10px;"><div style="color:#a0a0c0;font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Encounters</div>'+rows.join('')+'</div>';
+    encHtml+='</div>';
+  } else {
+    encHtml='<div style="color:#555;font-size:11px;margin-top:8px;">No encounters recorded here yet.</div>';
   }
 
-  content.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><div style="color:#e0e0e0;font-size:13px;font-weight:bold;">'+name+'</div><button onclick="document.getElementById(\'map-detail\').style.display=\'none\'" style="padding:3px 8px;font-size:10px;">✕</button></div><div style="font-size:11px;color:#a0a0c0;line-height:1.8;">'+(isCurrent?'<span style="color:#f4d03f;">📍 Carl is here</span><br>':'')+(heals?'<span style="color:#2ecc71;">🏥 Heals party</span><br>':'')+(shop?'<span style="color:#f4d03f;">🛒 Shop: '+shop+'</span>':'')+'</div>'+encHtml;
+  const heals=locData&&(locData.heals===true||locData.heals==='TRUE'||locData.heals==='true');
+  const shop=locData&&locData.shopTier;
+  const isCurrent=state.currentLocation===locId;
+
+  content.innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;"><div><div style="color:#e0e0e0;font-size:13px;font-weight:bold;">'+locName+'</div><div style="color:#6080a0;font-size:10px;">'+(locData?locData.region||'Kanto':'Kanto')+'</div></div><div style="text-align:right;font-size:10px;">'+(isCurrent?'<span style="color:#f4d03f;">📍 Carl is here</span><br>':'')+(heals?'<span style="color:#2ecc71;">🏥 Heals party</span><br>':'')+(shop?'<span style="color:#f4d03f;">🛒 Shop: '+shop+'</span>':'')+'</div></div>'+encHtml;
 
   detail.style.display='block';
 }

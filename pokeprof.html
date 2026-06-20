@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.14.1</title>
+<title>PokeProf v0.14.2</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body { background:#1a1a2e; color:#e0e0e0; font-family:'Courier New',monospace; font-size:13px; height:100dvh; display:flex; flex-direction:column; overflow:hidden; }
@@ -104,7 +104,7 @@
 <body>
 
 <div id="header">
-  <h1>🎓 PokeProf v0.14.1</h1>
+  <h1>🎓 PokeProf v0.14.2</h1>
   <div style="display:flex;align-items:center;gap:10px;">
     <button class="reset" onclick="resetGame()">⚠ Reset</button>
     <div style="text-align:right;">
@@ -1602,6 +1602,11 @@ function loadGame(){
       if(p.ability===undefined) p.ability=null;
       if(p.friendship===undefined) p.friendship=0;
     });
+    // Re-link party entries to their canonical dex objects by id.
+    // JSON.parse breaks shared references, so after load party and dex
+    // are separate objects — mutations (level-ups, evolution) must be on
+    // the same object or they won't reflect in both arrays.
+    state.party = state.party.map(pp => state.dex.find(d => d.id === pp.id) || pp);
     const secsAway=Math.floor((Date.now()-data.savedAt)/1000);
     let offSum=null;
     if(secsAway>10&&data.missionWasActive) offSum=processOfflineTime(secsAway);

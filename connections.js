@@ -1,6 +1,6 @@
 // PokeProf — Connections Database
-// Auto-generated: 6/19/2026, 5:22:04 PM
-// Connections: 10
+// Auto-generated: 6/21/2026, 12:09:51 AM
+// Connections: 20
 
 // Flat array with full data (used for requiresItem checks)
 const CONNECTIONS_DATA = [
@@ -63,6 +63,66 @@ const CONNECTIONS_DATA = [
     "toLocationId": "viridianCity",
     "requiresItem": null,
     "travelTime": null
+  },
+  {
+    "fromLocationId": "route2N",
+    "toLocationId": "viridianForest",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "viridianForest",
+    "toLocationId": "route2N",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "route2N",
+    "toLocationId": "pewterCity",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "pewterCity",
+    "toLocationId": "route2N",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "pewterCity",
+    "toLocationId": "route3",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "route3",
+    "toLocationId": "pewterCity",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "route3",
+    "toLocationId": "route4",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "route4",
+    "toLocationId": "route3",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "route3E",
+    "toLocationId": "route4",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "route4",
+    "toLocationId": "route3E",
+    "requiresItem": null,
+    "travelTime": null
   }
 ];
 
@@ -89,6 +149,28 @@ const CONNECTIONS = {
   ],
   "route22": [
     "viridianCity"
+  ],
+  "route2N": [
+    "viridianForest",
+    "pewterCity"
+  ],
+  "viridianForest": [
+    "route2N"
+  ],
+  "pewterCity": [
+    "route2N",
+    "route3"
+  ],
+  "route3": [
+    "pewterCity",
+    "route4"
+  ],
+  "route4": [
+    "route3",
+    "route3E"
+  ],
+  "route3E": [
+    "route4"
   ]
 };
 

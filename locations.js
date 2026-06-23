@@ -1,6 +1,6 @@
 // PokeProf — Locations Database
-// Auto-generated: 6/21/2026, 12:09:51 AM
-// Entries: 14
+// Auto-generated: 6/23/2026, 12:40:38 AM
+// Entries: 15
 
 const LOCATIONS = [
   {
@@ -114,6 +114,14 @@ const LOCATIONS = [
     "heals": false,
     "shopTier": null,
     "travelTime": 0
+  },
+  {
+    "locationId": "route4",
+    "name": "Route 4",
+    "region": "Kanto",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 2
   }
 ];
 

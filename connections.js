@@ -1,6 +1,6 @@
 // PokeProf — Connections Database
-// Auto-generated: 6/21/2026, 12:09:51 AM
-// Connections: 20
+// Auto-generated: 6/23/2026, 12:40:38 AM
+// Connections: 24
 
 // Flat array with full data (used for requiresItem checks)
 const CONNECTIONS_DATA = [
@@ -31,7 +31,7 @@ const CONNECTIONS_DATA = [
   {
     "fromLocationId": "route21",
     "toLocationId": "palletTown",
-    "requiresItem": null,
+    "requiresItem": "hm-surf",
     "travelTime": null
   },
   {
@@ -102,26 +102,50 @@ const CONNECTIONS_DATA = [
   },
   {
     "fromLocationId": "route3",
-    "toLocationId": "route4",
+    "toLocationId": "route4W",
     "requiresItem": null,
     "travelTime": null
   },
   {
-    "fromLocationId": "route4",
+    "fromLocationId": "route4W",
     "toLocationId": "route3",
     "requiresItem": null,
     "travelTime": null
   },
   {
-    "fromLocationId": "route3E",
-    "toLocationId": "route4",
+    "fromLocationId": "route2S",
+    "toLocationId": "viridianForest",
     "requiresItem": null,
     "travelTime": null
   },
   {
-    "fromLocationId": "route4",
-    "toLocationId": "route3E",
+    "fromLocationId": "viridianForest",
+    "toLocationId": "route2S",
     "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "route2N",
+    "toLocationId": "diglettsCave1F",
+    "requiresItem": "hm-cut",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "diglettsCave1F",
+    "toLocationId": "route2N",
+    "requiresItem": "hm-cut",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "route2S",
+    "toLocationId": "diglettsCave1F",
+    "requiresItem": "hm-cut",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "diglettsCave1F",
+    "toLocationId": "route2S",
+    "requiresItem": "hm-cut",
     "travelTime": null
   }
 ];
@@ -145,17 +169,21 @@ const CONNECTIONS = {
     "route22"
   ],
   "route2S": [
-    "viridianCity"
+    "viridianCity",
+    "viridianForest",
+    "diglettsCave1F"
   ],
   "route22": [
     "viridianCity"
   ],
   "route2N": [
     "viridianForest",
-    "pewterCity"
+    "pewterCity",
+    "diglettsCave1F"
   ],
   "viridianForest": [
-    "route2N"
+    "route2N",
+    "route2S"
   ],
   "pewterCity": [
     "route2N",
@@ -163,14 +191,14 @@ const CONNECTIONS = {
   ],
   "route3": [
     "pewterCity",
-    "route4"
+    "route4W"
   ],
-  "route4": [
-    "route3",
-    "route3E"
+  "route4W": [
+    "route3"
   ],
-  "route3E": [
-    "route4"
+  "diglettsCave1F": [
+    "route2N",
+    "route2S"
   ]
 };
 

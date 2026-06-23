@@ -1,6 +1,6 @@
 // PokeProf — Items Database
-// Auto-generated: 6/21/2026, 12:09:51 AM
-// Entries: 23
+// Auto-generated: 6/23/2026, 12:40:38 AM
+// Entries: 24
 
 const ITEMS_DATA = [
   {
@@ -393,6 +393,23 @@ const ITEMS_DATA = [
     "usableInField": true,
     "usableInBattle": false,
     "sprite": "link-cable"
+  },
+  {
+    "itemId": "hm-cut",
+    "name": "Cut",
+    "itemCategory": "hm",
+    "description": "Teaches a trainer's Pokémon to cut, enabling travel past bushes",
+    "effect": "unlock-cut",
+    "effectValue": null,
+    "shopPrice": 5000,
+    "sellPrice": 0,
+    "shopTier": "full",
+    "isConsumable": true,
+    "catchRateModifier": null,
+    "requiresTarget": false,
+    "usableInField": true,
+    "usableInBattle": false,
+    "sprite": "hm-cut"
   }
 ];
 

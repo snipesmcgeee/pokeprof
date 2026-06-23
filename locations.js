@@ -1,5 +1,5 @@
 // PokeProf — Locations Database
-// Auto-generated: 6/23/2026, 12:40:38 AM
+// Auto-generated: 6/23/2026, 1:04:32 AM
 // Entries: 15
 
 const LOCATIONS = [
@@ -9,7 +9,7 @@ const LOCATIONS = [
     "region": "Kanto",
     "heals": true,
     "shopTier": "basic",
-    "travelTime": 0
+    "travelTime": 1
   },
   {
     "locationId": "route1",
@@ -17,7 +17,7 @@ const LOCATIONS = [
     "region": "Kanto",
     "heals": false,
     "shopTier": null,
-    "travelTime": 5
+    "travelTime": 6
   },
   {
     "locationId": "route21",
@@ -25,7 +25,7 @@ const LOCATIONS = [
     "region": "Kanto",
     "heals": false,
     "shopTier": null,
-    "travelTime": 14
+    "travelTime": 15
   },
   {
     "locationId": "viridianCity",
@@ -33,7 +33,7 @@ const LOCATIONS = [
     "region": "Kanto",
     "heals": true,
     "shopTier": "basic",
-    "travelTime": 0
+    "travelTime": 1
   },
   {
     "locationId": "celadonCity",
@@ -41,7 +41,7 @@ const LOCATIONS = [
     "region": "Kanto",
     "heals": true,
     "shopTier": "full",
-    "travelTime": null
+    "travelTime": 1
   },
   {
     "locationId": "route2S",
@@ -49,7 +49,7 @@ const LOCATIONS = [
     "region": "Kanto",
     "heals": false,
     "shopTier": null,
-    "travelTime": 1
+    "travelTime": 2
   },
   {
     "locationId": "route2N",
@@ -57,7 +57,7 @@ const LOCATIONS = [
     "region": "Kanto",
     "heals": false,
     "shopTier": null,
-    "travelTime": 1
+    "travelTime": 2
   },
   {
     "locationId": "route22",
@@ -65,7 +65,7 @@ const LOCATIONS = [
     "region": "Kanto",
     "heals": false,
     "shopTier": null,
-    "travelTime": 2
+    "travelTime": 3
   },
   {
     "locationId": "viridianForest",
@@ -73,7 +73,7 @@ const LOCATIONS = [
     "region": "Kanto",
     "heals": false,
     "shopTier": null,
-    "travelTime": 20
+    "travelTime": 21
   },
   {
     "locationId": "pewterCity",
@@ -81,7 +81,7 @@ const LOCATIONS = [
     "region": "Kanto",
     "heals": true,
     "shopTier": "basic",
-    "travelTime": 0
+    "travelTime": 1
   },
   {
     "locationId": "diglettsCave1F",
@@ -97,7 +97,7 @@ const LOCATIONS = [
     "region": "Kanto",
     "heals": false,
     "shopTier": null,
-    "travelTime": 14
+    "travelTime": 15
   },
   {
     "locationId": "route3",
@@ -105,7 +105,7 @@ const LOCATIONS = [
     "region": "Kanto",
     "heals": false,
     "shopTier": null,
-    "travelTime": 3
+    "travelTime": 4
   },
   {
     "locationId": "route4W",
@@ -113,7 +113,7 @@ const LOCATIONS = [
     "region": "Kanto",
     "heals": false,
     "shopTier": null,
-    "travelTime": 0
+    "travelTime": 1
   },
   {
     "locationId": "route4",
@@ -121,7 +121,7 @@ const LOCATIONS = [
     "region": "Kanto",
     "heals": false,
     "shopTier": null,
-    "travelTime": 2
+    "travelTime": 3
   }
 ];
 

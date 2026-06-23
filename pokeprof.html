@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.16.1</title>
+<title>PokeProf v0.16.2</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -105,7 +105,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span style="font-size:11px;color:#6080a0;">v0.16.1</span></h1>
+  <h1>PokeProf <span style="font-size:11px;color:#6080a0;">v0.16.2</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">5.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -825,7 +825,15 @@ function recallMission(){
   state.currentEncounter=null;
   document.getElementById('btn-recall').disabled=true;
   document.getElementById('btn-start').disabled=false;
-  addLog('Carl recalled.','info');
+  const returnLocId=state.lastHealLocation||state.missionOrigin||'palletTown';
+  state.currentLocation=returnLocId;
+  const returnLoc=typeof LOCATIONS!=='undefined'?getLocation(returnLocId):null;
+  const returnName=returnLoc?returnLoc.name:returnLocId;
+  if(returnLoc&&(returnLoc.heals==='TRUE'||returnLoc.heals===true||returnLoc.heals==='true')){
+    state.party.forEach(p=>{ p.currentHP=p.maxHP; });
+  }
+  addLog('Carl recalled to '+returnName+'.','info');
+  document.getElementById('enc-body').textContent='Carl recalled to '+returnName+'.';
   showFindings();
   saveGame(); render();
 }
@@ -916,22 +924,25 @@ function renderParty(){
 }
 
 function updateLocation(){
-  const locData=typeof LOCATIONS!=='undefined'?getLocation(state.currentLocation):null;
-  const locName=locData?locData.name:state.currentLocation;
-  document.getElementById('aide-location').textContent='📍 '+locName+(state.missionActive?' — On Mission':' — Idle');
-}
-
-// ── DEX VIEW STATE ──
-let dexView='families'; // 'families' | 'species' | 'detail' | 'all'
-let dexSelectedFamily=null;
-let dexSelectedDexId=null;
-
-function dexViewAll(){
-  dexView='all';
-  document.getElementById('dex-back-btn').style.display='inline-block';
-  document.getElementById('dex-breadcrumb').textContent='All Catches';
-  document.getElementById('dex-viewall-controls').style.display='flex';
-  renderDex();
+  const el=document.getElementById('aide-location');
+  if(state.missionActive){
+    const curLocData=typeof LOCATIONS!=='undefined'?getLocation(state.currentLocation):null;
+    const curLocName=curLocData?curLocData.name:(state.currentLocation||'Unknown');
+    const destLocData=typeof LOCATIONS!=='undefined'?getLocation(state.missionDestination):null;
+    const destLocName=destLocData?destLocData.name:state.missionDestination;
+    const atDest=state.currentLocation===state.missionDestination;
+    const secs=state.nextEncounterIn%60;
+    const mins=Math.floor(state.nextEncounterIn/60);
+    const timer=mins+':'+secs.toString().padStart(2,'0');
+    if(atDest){
+      el.textContent='📍 '+curLocName+' — Researching · Next enc: '+timer;
+    } else {
+      el.textContent='📍 '+curLocName+' → '+destLocName+' ('+( state.travelCyclesRemaining||0)+' enc left) · Next: '+timer;
+    }
+  } else {
+    const idleLoc=typeof LOCATIONS!=='undefined'?getLocation(state.currentLocation||'palletTown'):null;
+    el.textContent='📍 '+(idleLoc?idleLoc.name:'Pallet Town')+' — Idle';
+  }
 }
 
 function dexBack(){
@@ -1186,7 +1197,7 @@ function addLog(msg,type=''){
 
 // ── SAVE / LOAD / RESET ──
 const SAVE_KEY='pokeprof_save';
-const SAVE_VERSION=11; // unchanged — no state structure changes in v0.16.1
+const SAVE_VERSION=11; // unchanged — no state structure changes in v0.16.2
 let saveTimer=0;
 
 function saveGame(){
@@ -1594,7 +1605,7 @@ function recordNewSpecies(dexId,name){
 function addFinding(type,...args){ state.pendingFindings.push({type,args,time:Date.now()}); }
 function isSpeciesKnown(dexId){ return !!state.researchLog[dexId]; }
 
-// v0.16.1 fix #5: "Evolved into" format showing the observed level, not a rule
+// v0.16.2 fix #5: "Evolved into" format showing the observed level, not a rule
 function getEvolutionDisplayText(dexId){
   const r=state.researchLog[dexId];
   if(!r) return 'Evolves into: ???';
@@ -1704,7 +1715,7 @@ function processOfflineTime(secsAway){
   state.funds=Math.round((state.funds+income)*100)/100;
   summary.income=income;
 
-  // v0.16.1 fix #4: apply offline friendship ticks
+  // v0.16.2 fix #4: apply offline friendship ticks
   const friendshipTicks=Math.floor(secsAway/180);
   if(friendshipTicks>0){
     state.party.forEach(p=>{ if(p.currentHP>0) p.friendship=(p.friendship||0)+friendshipTicks; });
@@ -1715,7 +1726,7 @@ function processOfflineTime(secsAway){
     remaining-=nextIn; nextIn=ENC_INTERVAL; summary.encounters++;
     const enc=rollEncounter(); const lead=getLeadPokemon(); if(!lead) break;
     if(enc){
-      // v0.16.1 fix #3: write to locationEncounterLog during offline processing
+      // v0.16.2 fix #3: write to locationEncounterLog during offline processing
       const encLocKey=state.currentLocation;
       if(!state.locationEncounterLog[encLocKey]) state.locationEncounterLog[encLocKey]={};
       const encDexKey=parseInt(enc.pokedexId)||0;
@@ -1779,7 +1790,7 @@ function rollEncounter(){
       else if(genderMalePct===0) gender='F';
       else if(genderMalePct===100) gender='M';
       else gender=Math.random()*100<genderMalePct?'M':'F';
-      // v0.16.1 fix #6: always use parseInt(e.dexId) to ensure numeric key
+      // v0.16.2 fix #6: always use parseInt(e.dexId) to ensure numeric key
       return {species:name,level:lv,gender,pokedexId:parseInt(e.dexId),baseSpd:entry?entry.baseSpd||50:50};
     }
   }

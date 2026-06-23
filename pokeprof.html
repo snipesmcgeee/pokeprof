@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.16</title>
+<title>PokeProf v0.16.1</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -105,7 +105,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span style="font-size:11px;color:#6080a0;">v0.16</span></h1>
+  <h1>PokeProf <span style="font-size:11px;color:#6080a0;">v0.16.1</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">5.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -707,7 +707,7 @@ function gameTick(){
       state.nextEncounterIn=ENC_INTERVAL; updateLocation(); return;
     }
     const enc=state.currentEncounter;
-    // v0.16 fix #6: use parseInt to ensure dexId key is always numeric
+    // v0.16.1 fix #6: use parseInt to ensure dexId key is always numeric
     const encLocKey=state.currentLocation;
     if(!state.locationEncounterLog[encLocKey]) state.locationEncounterLog[encLocKey]={};
     const encDexKey=parseInt(enc.pokedexId)||0;
@@ -744,7 +744,7 @@ function showMissionModal(){
       }).join('')
     : '<div style="color:#e67e22;font-size:11px;padding:8px 0;">No destinations reachable from here.</div>';
 
-  // v0.16 fix #1 & #2: show funds in shop; bulk buy buttons (×1, ×10, ×100)
+  // v0.16.1 fix #1 & #2: show funds in shop; bulk buy buttons (×1, ×10, ×100)
   const shopHtml=shopItems.length
     ?'<div style="margin-top:10px;border-top:1px solid #0f3460;padding-top:10px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><div style="color:#f4d03f;font-size:10px;letter-spacing:1px;">🛒 LOCAL SHOP</div><div style="color:#f4d03f;font-size:11px;font-weight:bold;">$<span id="shop-funds-display">'+state.funds.toFixed(2)+'</span></div></div>'+
       shopItems.map(item=>{
@@ -799,6 +799,7 @@ function confirmMission(){
   const dest=state.missionDestination;
   const origin=state.currentLocation||'palletTown';
   state.missionOrigin=origin;
+  state.lastHealLocation=origin;
   state.missionActive=true;
   state.missionElapsed=0;
   state.nextEncounterIn=ENC_INTERVAL;
@@ -830,7 +831,7 @@ function recallMission(){
 }
 
 // ── SHOP BUY ──
-// v0.16 fix #1: buyItem now accepts qty, clamps to max affordable
+// v0.16.1 fix #1: buyItem now accepts qty, clamps to max affordable
 function buyItem(itemId, qty){
   qty=parseInt(qty)||1;
   const item=getItem(itemId);
@@ -1185,7 +1186,7 @@ function addLog(msg,type=''){
 
 // ── SAVE / LOAD / RESET ──
 const SAVE_KEY='pokeprof_save';
-const SAVE_VERSION=11; // unchanged — no state structure changes in v0.16
+const SAVE_VERSION=11; // unchanged — no state structure changes in v0.16.1
 let saveTimer=0;
 
 function saveGame(){
@@ -1593,7 +1594,7 @@ function recordNewSpecies(dexId,name){
 function addFinding(type,...args){ state.pendingFindings.push({type,args,time:Date.now()}); }
 function isSpeciesKnown(dexId){ return !!state.researchLog[dexId]; }
 
-// v0.16 fix #5: "Evolved into" format showing the observed level, not a rule
+// v0.16.1 fix #5: "Evolved into" format showing the observed level, not a rule
 function getEvolutionDisplayText(dexId){
   const r=state.researchLog[dexId];
   if(!r) return 'Evolves into: ???';
@@ -1703,7 +1704,7 @@ function processOfflineTime(secsAway){
   state.funds=Math.round((state.funds+income)*100)/100;
   summary.income=income;
 
-  // v0.16 fix #4: apply offline friendship ticks
+  // v0.16.1 fix #4: apply offline friendship ticks
   const friendshipTicks=Math.floor(secsAway/180);
   if(friendshipTicks>0){
     state.party.forEach(p=>{ if(p.currentHP>0) p.friendship=(p.friendship||0)+friendshipTicks; });
@@ -1714,7 +1715,7 @@ function processOfflineTime(secsAway){
     remaining-=nextIn; nextIn=ENC_INTERVAL; summary.encounters++;
     const enc=rollEncounter(); const lead=getLeadPokemon(); if(!lead) break;
     if(enc){
-      // v0.16 fix #3: write to locationEncounterLog during offline processing
+      // v0.16.1 fix #3: write to locationEncounterLog during offline processing
       const encLocKey=state.currentLocation;
       if(!state.locationEncounterLog[encLocKey]) state.locationEncounterLog[encLocKey]={};
       const encDexKey=parseInt(enc.pokedexId)||0;
@@ -1778,7 +1779,7 @@ function rollEncounter(){
       else if(genderMalePct===0) gender='F';
       else if(genderMalePct===100) gender='M';
       else gender=Math.random()*100<genderMalePct?'M':'F';
-      // v0.16 fix #6: always use parseInt(e.dexId) to ensure numeric key
+      // v0.16.1 fix #6: always use parseInt(e.dexId) to ensure numeric key
       return {species:name,level:lv,gender,pokedexId:parseInt(e.dexId),baseSpd:entry?entry.baseSpd||50:50};
     }
   }

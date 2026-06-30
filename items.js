@@ -1,6 +1,6 @@
 // PokeProf — Items Database
-// Auto-generated: 6/23/2026, 12:40:38 AM
-// Entries: 24
+// Auto-generated: 6/29/2026, 7:32:33 PM
+// Entries: 29
 
 const ITEMS_DATA = [
   {
@@ -410,6 +410,91 @@ const ITEMS_DATA = [
     "usableInField": true,
     "usableInBattle": false,
     "sprite": "hm-cut"
+  },
+  {
+    "itemId": "silphScope",
+    "name": "Silph Scope",
+    "itemCategory": null,
+    "description": null,
+    "effect": null,
+    "effectValue": null,
+    "shopPrice": null,
+    "sellPrice": null,
+    "shopTier": null,
+    "isConsumable": false,
+    "catchRateModifier": null,
+    "requiresTarget": false,
+    "usableInField": false,
+    "usableInBattle": false,
+    "sprite": null
+  },
+  {
+    "itemId": "sSTicket",
+    "name": "S.S. Ticket",
+    "itemCategory": null,
+    "description": null,
+    "effect": null,
+    "effectValue": null,
+    "shopPrice": null,
+    "sellPrice": null,
+    "shopTier": null,
+    "isConsumable": false,
+    "catchRateModifier": null,
+    "requiresTarget": false,
+    "usableInField": false,
+    "usableInBattle": false,
+    "sprite": null
+  },
+  {
+    "itemId": "safariBall",
+    "name": "Safari Ball",
+    "itemCategory": null,
+    "description": null,
+    "effect": null,
+    "effectValue": null,
+    "shopPrice": null,
+    "sellPrice": null,
+    "shopTier": null,
+    "isConsumable": false,
+    "catchRateModifier": null,
+    "requiresTarget": false,
+    "usableInField": false,
+    "usableInBattle": false,
+    "sprite": null
+  },
+  {
+    "itemId": "bicycle",
+    "name": "Bicycle",
+    "itemCategory": null,
+    "description": null,
+    "effect": null,
+    "effectValue": null,
+    "shopPrice": null,
+    "sellPrice": null,
+    "shopTier": null,
+    "isConsumable": false,
+    "catchRateModifier": null,
+    "requiresTarget": false,
+    "usableInField": false,
+    "usableInBattle": false,
+    "sprite": null
+  },
+  {
+    "itemId": "hm-strength",
+    "name": "Strength",
+    "itemCategory": null,
+    "description": null,
+    "effect": null,
+    "effectValue": null,
+    "shopPrice": null,
+    "sellPrice": null,
+    "shopTier": null,
+    "isConsumable": false,
+    "catchRateModifier": null,
+    "requiresTarget": false,
+    "usableInField": false,
+    "usableInBattle": false,
+    "sprite": null
   }
 ];
 

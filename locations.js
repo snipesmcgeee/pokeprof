@@ -1,5 +1,5 @@
 // PokeProf — Locations Database
-// Auto-generated: 6/29/2026, 8:51:42 PM
+// Auto-generated: 7/1/2026, 12:19:32 AM
 // Entries: 100
 
 const LOCATIONS = [
@@ -11,7 +11,8 @@ const LOCATIONS = [
     "shopTier": "basic",
     "travelTime": 1,
     "mapCol": 111,
-    "mapRow": 97
+    "mapRow": 97,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "route1",
@@ -21,7 +22,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 6,
     "mapCol": 111,
-    "mapRow": 96
+    "mapRow": 96,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "route21",
@@ -31,7 +33,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 15,
     "mapCol": 111,
-    "mapRow": 98
+    "mapRow": 98,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "viridianCity",
@@ -41,7 +44,8 @@ const LOCATIONS = [
     "shopTier": "basic",
     "travelTime": 1,
     "mapCol": 111,
-    "mapRow": 95
+    "mapRow": 95,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "celadonCity",
@@ -51,7 +55,8 @@ const LOCATIONS = [
     "shopTier": "full",
     "travelTime": 1,
     "mapCol": 117,
-    "mapRow": 97
+    "mapRow": 97,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "route2S",
@@ -61,7 +66,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 2,
     "mapCol": 111,
-    "mapRow": 94
+    "mapRow": 94,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "route2N",
@@ -71,7 +77,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 2,
     "mapCol": 111,
-    "mapRow": 91
+    "mapRow": 91,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "route22",
@@ -81,7 +88,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 3,
     "mapCol": 110,
-    "mapRow": 95
+    "mapRow": 95,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "viridianForest",
@@ -91,7 +99,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 21,
     "mapCol": 111,
-    "mapRow": 92
+    "mapRow": 92,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "pewterCity",
@@ -101,7 +110,8 @@ const LOCATIONS = [
     "shopTier": "basic",
     "travelTime": 1,
     "mapCol": 111,
-    "mapRow": 90
+    "mapRow": 90,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "diglettsCaveN",
@@ -111,7 +121,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 1,
     "mapCol": 112,
-    "mapRow": 91
+    "mapRow": 91,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "diglettsCaveB1F",
@@ -121,7 +132,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 15,
     "mapCol": 122,
-    "mapRow": 91
+    "mapRow": 91,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "route3",
@@ -131,7 +143,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 4,
     "mapCol": 112,
-    "mapRow": 90
+    "mapRow": 90,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "route4W",
@@ -141,7 +154,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 1,
     "mapCol": 114,
-    "mapRow": 90
+    "mapRow": 90,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "route4",
@@ -151,7 +165,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 3,
     "mapCol": 118,
-    "mapRow": 90
+    "mapRow": 90,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "diglettsCaveS",
@@ -161,7 +176,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 1,
     "mapCol": 122,
-    "mapRow": 99
+    "mapRow": 99,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "mtMoon",
@@ -171,7 +187,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 14,
     "mapCol": 116,
-    "mapRow": 90
+    "mapRow": 90,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "mtMoonB1F",
@@ -181,7 +198,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 2,
     "mapCol": 117,
-    "mapRow": 90
+    "mapRow": 90,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "mtMoonB2F",
@@ -191,7 +209,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 10,
     "mapCol": 117,
-    "mapRow": 89
+    "mapRow": 89,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "ceruleanCity",
@@ -201,7 +220,8 @@ const LOCATIONS = [
     "shopTier": "basic",
     "travelTime": 1,
     "mapCol": 120,
-    "mapRow": 90
+    "mapRow": 90,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "route24",
@@ -211,7 +231,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 2,
     "mapCol": 120,
-    "mapRow": 89
+    "mapRow": 89,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "route25",
@@ -221,7 +242,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 3,
     "mapCol": 121,
-    "mapRow": 89
+    "mapRow": 89,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "ceruleanCave",
@@ -231,7 +253,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 11,
     "mapCol": 119,
-    "mapRow": 89
+    "mapRow": 89,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "ceruleanCave2F",
@@ -241,7 +264,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 10,
     "mapCol": 119,
-    "mapRow": 88
+    "mapRow": 88,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -251,7 +275,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 10,
     "mapCol": 120,
-    "mapRow": 88
+    "mapRow": 88,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "route5",
@@ -261,7 +286,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 3,
     "mapCol": 120,
-    "mapRow": 96
+    "mapRow": 96,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "undergroundPath5",
@@ -271,7 +297,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 1,
     "mapCol": 121,
-    "mapRow": 96
+    "mapRow": 96,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "undergroundPath6",
@@ -281,7 +308,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 1,
     "mapCol": 121,
-    "mapRow": 99
+    "mapRow": 99,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "route6",
@@ -291,7 +319,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 5,
     "mapCol": 120,
-    "mapRow": 99
+    "mapRow": 99,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "vermillionCity",
@@ -301,7 +330,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 1,
     "mapCol": 120,
-    "mapRow": 100
+    "mapRow": 100,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "sSAnne",
@@ -311,7 +341,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 4,
     "mapCol": 120,
-    "mapRow": 101
+    "mapRow": 101,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "route11",
@@ -321,7 +352,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 9,
     "mapCol": 122,
-    "mapRow": 100
+    "mapRow": 100,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "route12",
@@ -331,7 +363,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 17,
     "mapCol": 123,
-    "mapRow": 100
+    "mapRow": 100,
+    "defaultEncounterMethod": "surf"
   },
   {
     "locationId": "route9",
@@ -341,7 +374,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 5,
     "mapCol": 122,
-    "mapRow": 90
+    "mapRow": 90,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "route10N",
@@ -351,7 +385,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 2,
     "mapCol": 123,
-    "mapRow": 90
+    "mapRow": 90,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "powerPlant",
@@ -361,7 +396,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 15,
     "mapCol": 124,
-    "mapRow": 90
+    "mapRow": 90,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "rockTunnel",
@@ -371,7 +407,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 6,
     "mapCol": 123,
-    "mapRow": 91
+    "mapRow": 91,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "rockTunnelB1FE",
@@ -381,7 +418,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 7,
     "mapCol": 123,
-    "mapRow": 92
+    "mapRow": 92,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "rockTunnel1FW",
@@ -391,7 +429,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 5,
     "mapCol": 123,
-    "mapRow": 93
+    "mapRow": 93,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "rockTunnelB1FW",
@@ -401,7 +440,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 6,
     "mapCol": 123,
-    "mapRow": 94
+    "mapRow": 94,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "rockTunnel1FS",
@@ -411,7 +451,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 4,
     "mapCol": 123,
-    "mapRow": 95
+    "mapRow": 95,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "route10S",
@@ -421,7 +462,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 1,
     "mapCol": 123,
-    "mapRow": 96
+    "mapRow": 96,
+    "defaultEncounterMethod": "surf"
   },
   {
     "locationId": "lavenderTown",
@@ -431,7 +473,8 @@ const LOCATIONS = [
     "shopTier": "basic",
     "travelTime": 1,
     "mapCol": 123,
-    "mapRow": 97
+    "mapRow": 97,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "pokemonTower",
@@ -441,7 +484,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 1,
     "mapCol": 124,
-    "mapRow": 97
+    "mapRow": 97,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "pokemonTower2F",
@@ -451,7 +495,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 1,
     "mapCol": 124,
-    "mapRow": 98
+    "mapRow": 98,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "pokemonTower3F",
@@ -461,7 +506,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 1,
     "mapCol": 124,
-    "mapRow": 99
+    "mapRow": 99,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "pokemonTower4F",
@@ -471,7 +517,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 1,
     "mapCol": 125,
-    "mapRow": 99
+    "mapRow": 99,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "pokemonTower5F",
@@ -481,7 +528,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 1,
     "mapCol": 125,
-    "mapRow": 98
+    "mapRow": 98,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "pokemonTower6F",
@@ -491,7 +539,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 1,
     "mapCol": 125,
-    "mapRow": 97
+    "mapRow": 97,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "pokemonTower7F",
@@ -501,7 +550,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 1,
     "mapCol": 125,
-    "mapRow": 96
+    "mapRow": 96,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "route8",
@@ -511,7 +561,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 4,
     "mapCol": 121,
-    "mapRow": 97
+    "mapRow": 97,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "undergroundPath8",
@@ -521,7 +572,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 1,
     "mapCol": 121,
-    "mapRow": 98
+    "mapRow": 98,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "undergroundPath7",
@@ -531,7 +583,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 1,
     "mapCol": 119,
-    "mapRow": 98
+    "mapRow": 98,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "route7",
@@ -541,7 +594,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 2,
     "mapCol": 119,
-    "mapRow": 97
+    "mapRow": 97,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "saffronCity",
@@ -551,7 +605,8 @@ const LOCATIONS = [
     "shopTier": "basic",
     "travelTime": 1,
     "mapCol": 120,
-    "mapRow": 97
+    "mapRow": 97,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "silphCo",
@@ -561,7 +616,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 1,
     "mapCol": 119,
-    "mapRow": 96
+    "mapRow": 96,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "silphCo2F",
@@ -571,7 +627,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 1,
     "mapCol": 119,
-    "mapRow": 95
+    "mapRow": 95,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "silphCo3F",
@@ -581,7 +638,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 1,
     "mapCol": 118,
-    "mapRow": 95
+    "mapRow": 95,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "silphCo4F",
@@ -591,7 +649,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 1,
     "mapCol": 118,
-    "mapRow": 96
+    "mapRow": 96,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "silphCo5F",
@@ -601,7 +660,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 1,
     "mapCol": 117,
-    "mapRow": 96
+    "mapRow": 96,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "silphCo6F",
@@ -611,7 +671,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 1,
     "mapCol": 117,
-    "mapRow": 95
+    "mapRow": 95,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "silphCo7F",
@@ -621,7 +682,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 1,
     "mapCol": 117,
-    "mapRow": 94
+    "mapRow": 94,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "silphCo8F",
@@ -631,7 +693,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 1,
     "mapCol": 118,
-    "mapRow": 94
+    "mapRow": 94,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "silphCo9F",
@@ -641,7 +704,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 1,
     "mapCol": 119,
-    "mapRow": 94
+    "mapRow": 94,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "silphCo10F",
@@ -651,7 +715,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 1,
     "mapCol": 119,
-    "mapRow": 93
+    "mapRow": 93,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "silphCo11F",
@@ -661,7 +726,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 1,
     "mapCol": 118,
-    "mapRow": 93
+    "mapRow": 93,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "rocketHideout",
@@ -671,7 +737,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 17,
     "mapCol": 117,
-    "mapRow": 98
+    "mapRow": 98,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "route13",
@@ -681,7 +748,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 5,
     "mapCol": 123,
-    "mapRow": 102
+    "mapRow": 102,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "route14",
@@ -691,7 +759,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 6,
     "mapCol": 122,
-    "mapRow": 102
+    "mapRow": 102,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "route15",
@@ -701,7 +770,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 5,
     "mapCol": 118,
-    "mapRow": 102
+    "mapRow": 102,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "fuchsiaCity",
@@ -711,7 +781,8 @@ const LOCATIONS = [
     "shopTier": "basic",
     "travelTime": 1,
     "mapCol": 117,
-    "mapRow": 102
+    "mapRow": 102,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "safariZone1",
@@ -721,7 +792,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 9,
     "mapCol": 117,
-    "mapRow": 101
+    "mapRow": 101,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "safariZone2",
@@ -731,7 +803,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 9,
     "mapCol": 118,
-    "mapRow": 101
+    "mapRow": 101,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "safariZone3",
@@ -741,7 +814,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 9,
     "mapCol": 117,
-    "mapRow": 100
+    "mapRow": 100,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "safariZone4",
@@ -751,7 +825,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 9,
     "mapCol": 116,
-    "mapRow": 101
+    "mapRow": 101,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "route16",
@@ -761,7 +836,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 2,
     "mapCol": 115,
-    "mapRow": 97
+    "mapRow": 97,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "route17",
@@ -771,7 +847,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 8,
     "mapCol": 115,
-    "mapRow": 99
+    "mapRow": 99,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "route18",
@@ -781,7 +858,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 4,
     "mapCol": 115,
-    "mapRow": 102
+    "mapRow": 102,
+    "defaultEncounterMethod": "surf"
   },
   {
     "locationId": "route19",
@@ -791,7 +869,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 8,
     "mapCol": 117,
-    "mapRow": 103
+    "mapRow": 103,
+    "defaultEncounterMethod": "surf"
   },
   {
     "locationId": "route20E",
@@ -801,7 +880,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 5,
     "mapCol": 115,
-    "mapRow": 103
+    "mapRow": 103,
+    "defaultEncounterMethod": "surf"
   },
   {
     "locationId": "route20W",
@@ -811,7 +891,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 7,
     "mapCol": 112,
-    "mapRow": 103
+    "mapRow": 103,
+    "defaultEncounterMethod": "surf"
   },
   {
     "locationId": "seafoamIslandsW",
@@ -821,7 +902,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 1,
     "mapCol": 114,
-    "mapRow": 103
+    "mapRow": 103,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "seafoamIslandsB1FW",
@@ -831,7 +913,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 5,
     "mapCol": 114,
-    "mapRow": 104
+    "mapRow": 104,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "seafoamIslandsB2FW",
@@ -841,7 +924,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 3,
     "mapCol": 115,
-    "mapRow": 104
+    "mapRow": 104,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -851,7 +935,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 3,
     "mapCol": 115,
-    "mapRow": 105
+    "mapRow": 105,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -861,7 +946,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 10,
     "mapCol": 114,
-    "mapRow": 105
+    "mapRow": 105,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -871,7 +957,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 7,
     "mapCol": 112,
-    "mapRow": 105
+    "mapRow": 105,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "seafoamIslandsB2FE",
@@ -881,7 +968,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 7,
     "mapCol": 112,
-    "mapRow": 104
+    "mapRow": 104,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "seafoamIslandsB1FE",
@@ -891,7 +979,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 5,
     "mapCol": 113,
-    "mapRow": 104
+    "mapRow": 104,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "seafoamIslandsE",
@@ -901,7 +990,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 9,
     "mapCol": 113,
-    "mapRow": 103
+    "mapRow": 103,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "cinnabarIsland",
@@ -911,7 +1001,8 @@ const LOCATIONS = [
     "shopTier": "basic",
     "travelTime": 1,
     "mapCol": 111,
-    "mapRow": 103
+    "mapRow": 103,
+    "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "pokemonMansion",
@@ -921,7 +1012,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 11,
     "mapCol": 110,
-    "mapRow": 103
+    "mapRow": 103,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "pokemonMansionB1F",
@@ -931,7 +1023,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 11,
     "mapCol": 110,
-    "mapRow": 104
+    "mapRow": 104,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "pokemonMansion2F",
@@ -941,7 +1034,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 11,
     "mapCol": 110,
-    "mapRow": 102
+    "mapRow": 102,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "pokemonMansion3F",
@@ -951,7 +1045,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 7,
     "mapCol": 109,
-    "mapRow": 102
+    "mapRow": 102,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "route23",
@@ -961,7 +1056,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 19,
     "mapCol": 109,
-    "mapRow": 95
+    "mapRow": 95,
+    "defaultEncounterMethod": "surf"
   },
   {
     "locationId": "victoryRoad",
@@ -971,7 +1067,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 13,
     "mapCol": 109,
-    "mapRow": 94
+    "mapRow": 94,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "victoryRoad2F",
@@ -981,7 +1078,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 18,
     "mapCol": 109,
-    "mapRow": 93
+    "mapRow": 93,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "victoryRoad3F",
@@ -991,7 +1089,8 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 16,
     "mapCol": 109,
-    "mapRow": 92
+    "mapRow": 92,
+    "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "indigoPlateau",
@@ -1001,7 +1100,8 @@ const LOCATIONS = [
     "shopTier": "basic",
     "travelTime": 1,
     "mapCol": 109,
-    "mapRow": 91
+    "mapRow": 91,
+    "defaultEncounterMethod": "grass"
   }
 ];
 

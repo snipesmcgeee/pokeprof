@@ -1,6 +1,6 @@
 // PokeProf — Items Database
-// Auto-generated: 6/29/2026, 8:51:42 PM
-// Entries: 29
+// Auto-generated: 7/1/2026, 12:19:32 AM
+// Entries: 32
 
 const ITEMS_DATA = [
   {
@@ -18,7 +18,8 @@ const ITEMS_DATA = [
     "requiresTarget": true,
     "usableInField": true,
     "usableInBattle": false,
-    "sprite": "potion"
+    "sprite": "potion",
+    "bagType": "Professor"
   },
   {
     "itemId": "super-potion",
@@ -35,7 +36,8 @@ const ITEMS_DATA = [
     "requiresTarget": true,
     "usableInField": true,
     "usableInBattle": false,
-    "sprite": "super-potion"
+    "sprite": "super-potion",
+    "bagType": "Professor"
   },
   {
     "itemId": "max-potion",
@@ -52,7 +54,8 @@ const ITEMS_DATA = [
     "requiresTarget": true,
     "usableInField": true,
     "usableInBattle": false,
-    "sprite": "max-potion"
+    "sprite": "max-potion",
+    "bagType": "Professor"
   },
   {
     "itemId": "revive",
@@ -69,7 +72,8 @@ const ITEMS_DATA = [
     "requiresTarget": true,
     "usableInField": true,
     "usableInBattle": false,
-    "sprite": "revive"
+    "sprite": "revive",
+    "bagType": "Professor"
   },
   {
     "itemId": "max-revive",
@@ -86,7 +90,8 @@ const ITEMS_DATA = [
     "requiresTarget": true,
     "usableInField": true,
     "usableInBattle": false,
-    "sprite": "max-revive"
+    "sprite": "max-revive",
+    "bagType": "Professor"
   },
   {
     "itemId": "poke-ball",
@@ -103,7 +108,8 @@ const ITEMS_DATA = [
     "requiresTarget": false,
     "usableInField": true,
     "usableInBattle": false,
-    "sprite": "poke-ball"
+    "sprite": "poke-ball",
+    "bagType": "Professor"
   },
   {
     "itemId": "great-ball",
@@ -120,7 +126,8 @@ const ITEMS_DATA = [
     "requiresTarget": false,
     "usableInField": true,
     "usableInBattle": false,
-    "sprite": "great-ball"
+    "sprite": "great-ball",
+    "bagType": "Professor"
   },
   {
     "itemId": "ultra-ball",
@@ -137,7 +144,8 @@ const ITEMS_DATA = [
     "requiresTarget": false,
     "usableInField": true,
     "usableInBattle": false,
-    "sprite": "ultra-ball"
+    "sprite": "ultra-ball",
+    "bagType": "Professor"
   },
   {
     "itemId": "master-ball",
@@ -154,7 +162,8 @@ const ITEMS_DATA = [
     "requiresTarget": false,
     "usableInField": true,
     "usableInBattle": false,
-    "sprite": "master-ball"
+    "sprite": "master-ball",
+    "bagType": "Professor"
   },
   {
     "itemId": "hm-surf",
@@ -171,7 +180,8 @@ const ITEMS_DATA = [
     "requiresTarget": false,
     "usableInField": true,
     "usableInBattle": false,
-    "sprite": "hm-surf"
+    "sprite": "hm-surf",
+    "bagType": "Trainer"
   },
   {
     "itemId": "hm-fly",
@@ -188,7 +198,8 @@ const ITEMS_DATA = [
     "requiresTarget": false,
     "usableInField": true,
     "usableInBattle": false,
-    "sprite": "hm-fly"
+    "sprite": "hm-fly",
+    "bagType": "Trainer"
   },
   {
     "itemId": "fire-stone",
@@ -205,7 +216,8 @@ const ITEMS_DATA = [
     "requiresTarget": true,
     "usableInField": true,
     "usableInBattle": false,
-    "sprite": "fire-stone"
+    "sprite": "fire-stone",
+    "bagType": "Professor"
   },
   {
     "itemId": "water-stone",
@@ -222,7 +234,8 @@ const ITEMS_DATA = [
     "requiresTarget": true,
     "usableInField": true,
     "usableInBattle": false,
-    "sprite": "water-stone"
+    "sprite": "water-stone",
+    "bagType": "Professor"
   },
   {
     "itemId": "thunder-stone",
@@ -239,7 +252,8 @@ const ITEMS_DATA = [
     "requiresTarget": true,
     "usableInField": true,
     "usableInBattle": false,
-    "sprite": "thunder-stone"
+    "sprite": "thunder-stone",
+    "bagType": "Professor"
   },
   {
     "itemId": "leaf-stone",
@@ -256,7 +270,8 @@ const ITEMS_DATA = [
     "requiresTarget": true,
     "usableInField": true,
     "usableInBattle": false,
-    "sprite": "leaf-stone"
+    "sprite": "leaf-stone",
+    "bagType": "Professor"
   },
   {
     "itemId": "moon-stone",
@@ -273,7 +288,8 @@ const ITEMS_DATA = [
     "requiresTarget": true,
     "usableInField": true,
     "usableInBattle": false,
-    "sprite": "moon-stone"
+    "sprite": "moon-stone",
+    "bagType": "Professor"
   },
   {
     "itemId": "sun-stone",
@@ -290,7 +306,8 @@ const ITEMS_DATA = [
     "requiresTarget": true,
     "usableInField": true,
     "usableInBattle": false,
-    "sprite": "sun-stone"
+    "sprite": "sun-stone",
+    "bagType": "Professor"
   },
   {
     "itemId": "shiny-stone",
@@ -307,7 +324,8 @@ const ITEMS_DATA = [
     "requiresTarget": true,
     "usableInField": true,
     "usableInBattle": false,
-    "sprite": "shiny-stone"
+    "sprite": "shiny-stone",
+    "bagType": "Professor"
   },
   {
     "itemId": "dusk-stone",
@@ -324,7 +342,8 @@ const ITEMS_DATA = [
     "requiresTarget": true,
     "usableInField": true,
     "usableInBattle": false,
-    "sprite": "dusk-stone"
+    "sprite": "dusk-stone",
+    "bagType": "Professor"
   },
   {
     "itemId": "dawn-stone",
@@ -341,7 +360,8 @@ const ITEMS_DATA = [
     "requiresTarget": true,
     "usableInField": true,
     "usableInBattle": false,
-    "sprite": "dawn-stone"
+    "sprite": "dawn-stone",
+    "bagType": "Professor"
   },
   {
     "itemId": "ice-stone",
@@ -358,7 +378,8 @@ const ITEMS_DATA = [
     "requiresTarget": true,
     "usableInField": true,
     "usableInBattle": false,
-    "sprite": "ice-stone"
+    "sprite": "ice-stone",
+    "bagType": "Professor"
   },
   {
     "itemId": "oval-stone",
@@ -375,7 +396,8 @@ const ITEMS_DATA = [
     "requiresTarget": true,
     "usableInField": true,
     "usableInBattle": false,
-    "sprite": "oval-stone"
+    "sprite": "oval-stone",
+    "bagType": "Professor"
   },
   {
     "itemId": "link-cable",
@@ -392,7 +414,8 @@ const ITEMS_DATA = [
     "requiresTarget": true,
     "usableInField": true,
     "usableInBattle": false,
-    "sprite": "link-cable"
+    "sprite": "link-cable",
+    "bagType": "Professor"
   },
   {
     "itemId": "hm-cut",
@@ -409,7 +432,8 @@ const ITEMS_DATA = [
     "requiresTarget": false,
     "usableInField": true,
     "usableInBattle": false,
-    "sprite": "hm-cut"
+    "sprite": "hm-cut",
+    "bagType": "Trainer"
   },
   {
     "itemId": "silphScope",
@@ -426,7 +450,8 @@ const ITEMS_DATA = [
     "requiresTarget": false,
     "usableInField": false,
     "usableInBattle": false,
-    "sprite": null
+    "sprite": null,
+    "bagType": null
   },
   {
     "itemId": "sSTicket",
@@ -443,11 +468,12 @@ const ITEMS_DATA = [
     "requiresTarget": false,
     "usableInField": false,
     "usableInBattle": false,
-    "sprite": null
+    "sprite": null,
+    "bagType": null
   },
   {
-    "itemId": "safariBall",
-    "name": "Safari Ball",
+    "itemId": "safariPass",
+    "name": "Safari Pass",
     "itemCategory": null,
     "description": null,
     "effect": null,
@@ -460,7 +486,8 @@ const ITEMS_DATA = [
     "requiresTarget": false,
     "usableInField": false,
     "usableInBattle": false,
-    "sprite": null
+    "sprite": null,
+    "bagType": null
   },
   {
     "itemId": "bicycle",
@@ -477,7 +504,8 @@ const ITEMS_DATA = [
     "requiresTarget": false,
     "usableInField": false,
     "usableInBattle": false,
-    "sprite": null
+    "sprite": null,
+    "bagType": null
   },
   {
     "itemId": "hm-strength",
@@ -494,7 +522,62 @@ const ITEMS_DATA = [
     "requiresTarget": false,
     "usableInField": false,
     "usableInBattle": false,
-    "sprite": null
+    "sprite": null,
+    "bagType": null
+  },
+  {
+    "itemId": "oldRod",
+    "name": "Old Rod",
+    "itemCategory": null,
+    "description": null,
+    "effect": null,
+    "effectValue": null,
+    "shopPrice": null,
+    "sellPrice": null,
+    "shopTier": null,
+    "isConsumable": false,
+    "catchRateModifier": null,
+    "requiresTarget": false,
+    "usableInField": false,
+    "usableInBattle": false,
+    "sprite": null,
+    "bagType": null
+  },
+  {
+    "itemId": "goodRod",
+    "name": "Good Rod",
+    "itemCategory": null,
+    "description": null,
+    "effect": null,
+    "effectValue": null,
+    "shopPrice": null,
+    "sellPrice": null,
+    "shopTier": null,
+    "isConsumable": false,
+    "catchRateModifier": null,
+    "requiresTarget": false,
+    "usableInField": false,
+    "usableInBattle": false,
+    "sprite": null,
+    "bagType": null
+  },
+  {
+    "itemId": "superRod",
+    "name": "Super Rod",
+    "itemCategory": null,
+    "description": null,
+    "effect": null,
+    "effectValue": null,
+    "shopPrice": null,
+    "sellPrice": null,
+    "shopTier": null,
+    "isConsumable": false,
+    "catchRateModifier": null,
+    "requiresTarget": false,
+    "usableInField": false,
+    "usableInBattle": false,
+    "sprite": null,
+    "bagType": null
   }
 ];
 

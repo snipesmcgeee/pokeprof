@@ -1,5 +1,5 @@
 // PokeProf — Connections Database
-// Auto-generated: 6/29/2026, 8:51:42 PM
+// Auto-generated: 7/1/2026, 12:19:32 AM
 // Connections: 218
 
 // Flat array with full data (used for requiresItem checks)
@@ -955,7 +955,7 @@ const CONNECTIONS_DATA = [
   {
     "fromLocationId": "fuchsiaCity",
     "toLocationId": "safariZone1",
-    "requiresItem": "safariBall",
+    "requiresItem": "safariPass",
     "travelTime": null
   },
   {

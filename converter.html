@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PokeProf — Database Converter v3</title>
+<title>PokeProf — Database Converter v4</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #1a1a2e; color: #e0e0e0; font-family: 'Courier New', monospace; font-size: 13px; padding: 20px; }
@@ -41,7 +41,7 @@
 </head>
 <body>
 
-<h1>🎓 PokeProf — Database Converter v3</h1>
+<h1>🎓 PokeProf — Database Converter v4</h1>
 <p class="subtitle">Upload your Excel file to generate the game database JS files</p>
 
 <div class="card">
@@ -253,6 +253,7 @@ function convertPokedex() {
       baseFormId: numVal(r[col('baseFormId')]),
       isLegendary: boolVal(r[col('isLegendary')]),
       isMythical: boolVal(r[col('isMythical')]),
+      spriteUrl: val(r[col('spriteURL')] !== undefined ? r[col('spriteURL')] : r[col('spriteUrl')]),
     };
 
     // Derived fields
@@ -307,6 +308,12 @@ function convertLocations() {
   }
   outputFiles['locations.js'] =
     `// PokeProf — Locations Database\n// Auto-generated: ${new Date().toLocaleString()}\n// Entries: ${entries.length}\n\nconst LOCATIONS = ${JSON.stringify(entries, null, 2)};\n\nfunction getLocation(locationId) {\n  return LOCATIONS.find(l => l.locationId === locationId) || null;\n}\n`;
+
+  // Validate defaultEncounterMethod on all locations
+  const missingMethod = entries.filter(e => !e.defaultEncounterMethod).map(e => e.locationId || e.name);
+  if (missingMethod.length > 0) {
+    warnings.push(`Locations missing defaultEncounterMethod: ${missingMethod.join(', ')}`);
+  }
 }
 
 function convertConnections() {
@@ -418,6 +425,12 @@ function convertItems() {
   }
   outputFiles['items.js'] =
     `// PokeProf — Items Database\n// Auto-generated: ${new Date().toLocaleString()}\n// Entries: ${entries.length}\n\nconst ITEMS_DATA = ${JSON.stringify(entries, null, 2)};\n\nfunction getItem(itemId) {\n  return ITEMS_DATA.find(i => i.itemId === itemId) || null;\n}\n\nfunction getShopItems(locId) {\n  if (typeof LOCATIONS === 'undefined') return [];\n  const loc = getLocation(locId);\n  if (!loc || !loc.shopTier) return [];\n  const tierOrder = ['basic', 'full'];\n  const tierIdx = tierOrder.indexOf(loc.shopTier);\n  if (tierIdx < 0) return [];\n  return ITEMS_DATA.filter(i => i.shopPrice && i.shopTier && tierOrder.indexOf(i.shopTier) <= tierIdx);\n}\n`;
+
+  // Validate bagType on all items
+  const missingBagType = entries.filter(e => !e.bagType).map(e => e.itemId || e.name);
+  if (missingBagType.length > 0) {
+    warnings.push(`Items missing bagType (should be "Professor" or "Trainer"): ${missingBagType.join(', ')}`);
+  }
 }
 
 // Generic pass-through converter — reads any tab and outputs a JS array

@@ -227,12 +227,6 @@ function getPokemonEntry(dexId){
   return POKEDEX_DATA.find(x=>x.dexId===dexId) || null;
 }
 
-// ── SPECIES LOOKUP (name-keyed, populated lazily via checkEvolution) ──
-let SPECIES = {};
-if (typeof POKEDEX_DATA !== 'undefined') {
-  POKEDEX_DATA.forEach(p => { if (!p.formName && !SPECIES[p.name]) SPECIES[p.name] = p; });
-}
-
 // ── ENCOUNTER METHODS ──
 const EVOLUTION_METHODS = [
   'level','friendship',

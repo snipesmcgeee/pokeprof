@@ -1,257 +1,61 @@
 // PokeProf — Evolution Tree (branching evolutions)
-// Auto-generated: 7/1/2026, 12:19:32 AM
-// Entries: 36
+// Auto-generated: 7/4/2026, 5:32:29 PM
+// Entries: 8
 
 const EVO_TREE = [
   {
-    "fromDexId": 43,
-    "toDexId": null,
-    "evolveMethod": null,
-    "evolveLevel": null,
-    "evolveItem": null
-  },
-  {
-    "fromDexId": 60,
-    "toDexId": null,
-    "evolveMethod": null,
-    "evolveLevel": null,
-    "evolveItem": null
-  },
-  {
-    "fromDexId": 79,
-    "toDexId": null,
-    "evolveMethod": null,
-    "evolveLevel": null,
-    "evolveItem": null
-  },
-  {
-    "fromDexId": 79,
-    "toDexId": null,
-    "evolveMethod": null,
-    "evolveLevel": null,
-    "evolveItem": null
-  },
-  {
-    "fromDexId": 123,
-    "toDexId": null,
-    "evolveMethod": null,
+    "fromDexId": 133,
+    "toDexId": 134,
+    "evolveMethod": "use-item",
     "evolveLevel": null,
     "evolveItem": null
   },
   {
     "fromDexId": 133,
-    "toDexId": null,
-    "evolveMethod": null,
+    "toDexId": 135,
+    "evolveMethod": "use-item",
     "evolveLevel": null,
     "evolveItem": null
   },
   {
-    "fromDexId": 236,
-    "toDexId": null,
-    "evolveMethod": null,
+    "fromDexId": 133,
+    "toDexId": 136,
+    "evolveMethod": "use-item",
     "evolveLevel": null,
     "evolveItem": null
   },
   {
-    "fromDexId": 265,
-    "toDexId": null,
-    "evolveMethod": null,
+    "fromDexId": 133,
+    "toDexId": 196,
+    "evolveMethod": "friendship-day",
     "evolveLevel": null,
     "evolveItem": null
   },
   {
-    "fromDexId": 280,
-    "toDexId": null,
-    "evolveMethod": null,
+    "fromDexId": 133,
+    "toDexId": 197,
+    "evolveMethod": "friendship-night",
     "evolveLevel": null,
     "evolveItem": null
   },
   {
-    "fromDexId": 290,
-    "toDexId": null,
-    "evolveMethod": null,
+    "fromDexId": 133,
+    "toDexId": 470,
+    "evolveMethod": "use-item",
     "evolveLevel": null,
     "evolveItem": null
   },
   {
-    "fromDexId": 361,
-    "toDexId": null,
-    "evolveMethod": null,
+    "fromDexId": 133,
+    "toDexId": 471,
+    "evolveMethod": "use-item",
     "evolveLevel": null,
     "evolveItem": null
   },
   {
-    "fromDexId": 366,
-    "toDexId": null,
-    "evolveMethod": null,
-    "evolveLevel": null,
-    "evolveItem": null
-  },
-  {
-    "fromDexId": 412,
-    "toDexId": null,
-    "evolveMethod": null,
-    "evolveLevel": null,
-    "evolveItem": null
-  },
-  {
-    "fromDexId": 789,
-    "toDexId": null,
-    "evolveMethod": null,
-    "evolveLevel": null,
-    "evolveItem": null
-  },
-  {
-    "fromDexId": 840,
-    "toDexId": null,
-    "evolveMethod": null,
-    "evolveLevel": null,
-    "evolveItem": null
-  },
-  {
-    "fromDexId": 935,
-    "toDexId": null,
-    "evolveMethod": null,
-    "evolveLevel": null,
-    "evolveItem": null
-  },
-  {
-    "fromDexId": 744,
-    "toDexId": null,
-    "evolveMethod": null,
-    "evolveLevel": null,
-    "evolveItem": null
-  },
-  {
-    "fromDexId": 677,
-    "toDexId": null,
-    "evolveMethod": null,
-    "evolveLevel": null,
-    "evolveItem": null
-  },
-  {
-    "fromDexId": 848,
-    "toDexId": null,
-    "evolveMethod": null,
-    "evolveLevel": null,
-    "evolveItem": null
-  },
-  {
-    "fromDexId": 891,
-    "toDexId": null,
-    "evolveMethod": null,
-    "evolveLevel": null,
-    "evolveItem": null
-  },
-  {
-    "fromDexId": 550,
-    "toDexId": null,
-    "evolveMethod": null,
-    "evolveLevel": null,
-    "evolveItem": null
-  },
-  {
-    "fromDexId": 915,
-    "toDexId": null,
-    "evolveMethod": null,
-    "evolveLevel": null,
-    "evolveItem": null
-  },
-  {
-    "fromDexId": 924,
-    "toDexId": null,
-    "evolveMethod": null,
-    "evolveLevel": null,
-    "evolveItem": null
-  },
-  {
-    "fromDexId": 206,
-    "toDexId": null,
-    "evolveMethod": null,
-    "evolveLevel": null,
-    "evolveItem": null
-  },
-  {
-    "fromDexId": 102,
-    "toDexId": null,
-    "evolveMethod": null,
-    "evolveLevel": null,
-    "evolveItem": null
-  },
-  {
-    "fromDexId": 104,
-    "toDexId": null,
-    "evolveMethod": null,
-    "evolveLevel": null,
-    "evolveItem": null
-  },
-  {
-    "fromDexId": 109,
-    "toDexId": null,
-    "evolveMethod": null,
-    "evolveLevel": null,
-    "evolveItem": null
-  },
-  {
-    "fromDexId": 156,
-    "toDexId": null,
-    "evolveMethod": null,
-    "evolveLevel": null,
-    "evolveItem": null
-  },
-  {
-    "fromDexId": 25,
-    "toDexId": null,
-    "evolveMethod": null,
-    "evolveLevel": null,
-    "evolveItem": null
-  },
-  {
-    "fromDexId": 439,
-    "toDexId": null,
-    "evolveMethod": null,
-    "evolveLevel": null,
-    "evolveItem": null
-  },
-  {
-    "fromDexId": 502,
-    "toDexId": null,
-    "evolveMethod": null,
-    "evolveLevel": null,
-    "evolveItem": null
-  },
-  {
-    "fromDexId": 548,
-    "toDexId": null,
-    "evolveMethod": null,
-    "evolveLevel": null,
-    "evolveItem": null
-  },
-  {
-    "fromDexId": 627,
-    "toDexId": null,
-    "evolveMethod": null,
-    "evolveLevel": null,
-    "evolveItem": null
-  },
-  {
-    "fromDexId": 704,
-    "toDexId": null,
-    "evolveMethod": null,
-    "evolveLevel": null,
-    "evolveItem": null
-  },
-  {
-    "fromDexId": 712,
-    "toDexId": null,
-    "evolveMethod": null,
-    "evolveLevel": null,
-    "evolveItem": null
-  },
-  {
-    "fromDexId": 723,
-    "toDexId": null,
-    "evolveMethod": null,
+    "fromDexId": 133,
+    "toDexId": 700,
+    "evolveMethod": "use-move",
     "evolveLevel": null,
     "evolveItem": null
   }

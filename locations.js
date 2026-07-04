@@ -1,6 +1,6 @@
 // PokeProf — Locations Database
-// Auto-generated: 7/1/2026, 12:19:32 AM
-// Entries: 100
+// Auto-generated: 7/4/2026, 5:32:29 PM
+// Entries: 102
 
 const LOCATIONS = [
   {
@@ -286,7 +286,7 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 3,
     "mapCol": 120,
-    "mapRow": 96,
+    "mapRow": 95,
     "defaultEncounterMethod": "grass"
   },
   {
@@ -297,7 +297,7 @@ const LOCATIONS = [
     "shopTier": null,
     "travelTime": 1,
     "mapCol": 121,
-    "mapRow": 96,
+    "mapRow": 95,
     "defaultEncounterMethod": "grass"
   },
   {
@@ -524,7 +524,7 @@ const LOCATIONS = [
     "locationId": "pokemonTower5F",
     "name": "Pokemon Tower - 5F",
     "region": "Kanto",
-    "heals": false,
+    "heals": true,
     "shopTier": null,
     "travelTime": 1,
     "mapCol": 125,
@@ -1101,6 +1101,28 @@ const LOCATIONS = [
     "travelTime": 1,
     "mapCol": 109,
     "mapRow": 91,
+    "defaultEncounterMethod": "grass"
+  },
+  {
+    "locationId": "gameCorner",
+    "name": "Game Corner",
+    "region": "Kanto",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 1,
+    "mapCol": 118,
+    "mapRow": 98,
+    "defaultEncounterMethod": "cave"
+  },
+  {
+    "locationId": "fightingDojo",
+    "name": "Fighting Dojo",
+    "region": "Kanto",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 1,
+    "mapCol": 121,
+    "mapRow": 96,
     "defaultEncounterMethod": "grass"
   }
 ];

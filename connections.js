@@ -1,6 +1,6 @@
 // PokeProf — Connections Database
-// Auto-generated: 7/1/2026, 12:19:32 AM
-// Connections: 218
+// Auto-generated: 7/4/2026, 5:32:29 PM
+// Connections: 222
 
 // Flat array with full data (used for requiresItem checks)
 const CONNECTIONS_DATA = [
@@ -319,7 +319,7 @@ const CONNECTIONS_DATA = [
   {
     "fromLocationId": "route10N",
     "toLocationId": "rockTunnel",
-    "requiresItem": null,
+    "requiresItem": "hm-flash",
     "travelTime": null
   },
   {
@@ -331,49 +331,49 @@ const CONNECTIONS_DATA = [
   {
     "fromLocationId": "rockTunnel",
     "toLocationId": "rockTunnelB1FE",
-    "requiresItem": null,
+    "requiresItem": "hm-flash",
     "travelTime": null
   },
   {
     "fromLocationId": "rockTunnelB1FE",
     "toLocationId": "rockTunnel",
-    "requiresItem": null,
+    "requiresItem": "hm-flash",
     "travelTime": null
   },
   {
     "fromLocationId": "rockTunnelB1FE",
     "toLocationId": "rockTunnel1FW",
-    "requiresItem": null,
+    "requiresItem": "hm-flash",
     "travelTime": null
   },
   {
     "fromLocationId": "rockTunnel1FW",
     "toLocationId": "rockTunnelB1FE",
-    "requiresItem": null,
+    "requiresItem": "hm-flash",
     "travelTime": null
   },
   {
     "fromLocationId": "rockTunnel1FW",
     "toLocationId": "rockTunnelB1FW",
-    "requiresItem": null,
+    "requiresItem": "hm-flash",
     "travelTime": null
   },
   {
     "fromLocationId": "rockTunnelB1FW",
     "toLocationId": "rockTunnel1FW",
-    "requiresItem": null,
+    "requiresItem": "hm-flash",
     "travelTime": null
   },
   {
     "fromLocationId": "rockTunnelB1FW",
     "toLocationId": "rockTunnel1FS",
-    "requiresItem": null,
+    "requiresItem": "hm-flash",
     "travelTime": null
   },
   {
     "fromLocationId": "rockTunnel1FS",
     "toLocationId": "rockTunnelB1FW",
-    "requiresItem": null,
+    "requiresItem": "hm-flash",
     "travelTime": null
   },
   {
@@ -385,7 +385,7 @@ const CONNECTIONS_DATA = [
   {
     "fromLocationId": "route10S",
     "toLocationId": "rockTunnel1FS",
-    "requiresItem": null,
+    "requiresItem": "hm-flash",
     "travelTime": null
   },
   {
@@ -1311,6 +1311,30 @@ const CONNECTIONS_DATA = [
     "toLocationId": "victoryRoad3F",
     "requiresItem": null,
     "travelTime": null
+  },
+  {
+    "fromLocationId": "gameCorner",
+    "toLocationId": "celadonCity",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "celadonCity",
+    "toLocationId": "gameCorner",
+    "requiresItem": "coinCase",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "fightingDojo",
+    "toLocationId": "saffronCity",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "saffronCity",
+    "toLocationId": "fightingDojo",
+    "requiresItem": null,
+    "travelTime": null
   }
 ];
 
@@ -1493,7 +1517,8 @@ const CONNECTIONS = {
     "route5",
     "route7",
     "route6",
-    "silphCo"
+    "silphCo",
+    "fightingDojo"
   ],
   "undergroundPath8": [
     "route8",
@@ -1567,7 +1592,8 @@ const CONNECTIONS = {
   "celadonCity": [
     "route7",
     "rocketHideout",
-    "route16"
+    "route16",
+    "gameCorner"
   ],
   "rocketHideout": [
     "celadonCity"
@@ -1733,6 +1759,12 @@ const CONNECTIONS = {
   ],
   "indigoPlateau": [
     "victoryRoad3F"
+  ],
+  "gameCorner": [
+    "celadonCity"
+  ],
+  "fightingDojo": [
+    "saffronCity"
   ]
 };
 

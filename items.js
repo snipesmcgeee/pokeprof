@@ -1,6 +1,6 @@
 // PokeProf — Items Database
-// Auto-generated: 7/1/2026, 12:19:32 AM
-// Entries: 32
+// Auto-generated: 7/4/2026, 5:32:29 PM
+// Entries: 35
 
 const ITEMS_DATA = [
   {
@@ -564,6 +564,60 @@ const ITEMS_DATA = [
   {
     "itemId": "superRod",
     "name": "Super Rod",
+    "itemCategory": null,
+    "description": null,
+    "effect": null,
+    "effectValue": null,
+    "shopPrice": null,
+    "sellPrice": null,
+    "shopTier": null,
+    "isConsumable": false,
+    "catchRateModifier": null,
+    "requiresTarget": false,
+    "usableInField": false,
+    "usableInBattle": false,
+    "sprite": null,
+    "bagType": null
+  },
+  {
+    "itemId": "hm-rockSmash",
+    "name": "Rock Smash",
+    "itemCategory": null,
+    "description": null,
+    "effect": null,
+    "effectValue": null,
+    "shopPrice": null,
+    "sellPrice": null,
+    "shopTier": null,
+    "isConsumable": false,
+    "catchRateModifier": null,
+    "requiresTarget": false,
+    "usableInField": false,
+    "usableInBattle": false,
+    "sprite": null,
+    "bagType": null
+  },
+  {
+    "itemId": "hm-flash",
+    "name": "Flash",
+    "itemCategory": null,
+    "description": null,
+    "effect": null,
+    "effectValue": null,
+    "shopPrice": null,
+    "sellPrice": null,
+    "shopTier": null,
+    "isConsumable": false,
+    "catchRateModifier": null,
+    "requiresTarget": false,
+    "usableInField": false,
+    "usableInBattle": false,
+    "sprite": null,
+    "bagType": null
+  },
+  {
+    "itemId": "coinCase",
+    "name": "Coin Case",
     "itemCategory": null,
     "description": null,
     "effect": null,

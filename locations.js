@@ -1,5 +1,5 @@
 // PokeProf — Locations Database
-// Auto-generated: 7/4/2026, 5:32:29 PM
+// Auto-generated: 7/4/2026, 11:59:27 PM
 // Entries: 102
 
 const LOCATIONS = [
@@ -381,7 +381,7 @@ const LOCATIONS = [
     "locationId": "route10N",
     "name": "Route 10 - North",
     "region": "Kanto",
-    "heals": false,
+    "heals": true,
     "shopTier": null,
     "travelTime": 2,
     "mapCol": 123,

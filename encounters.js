@@ -1,6 +1,6 @@
 // PokeProf — Encounters Database
-// Auto-generated: 7/4/2026, 5:32:29 PM
-// Entries: 372
+// Auto-generated: 7/5/2026, 1:22:28 PM
+// Entries: 677
 
 const ENCOUNTERS = [
   {
@@ -3344,11 +3344,2756 @@ const ENCOUNTERS = [
   },
   {
     "locationId": "route12",
-    "dexId": null,
-    "minLevel": null,
-    "maxLevel": null,
-    "encounterRate": null,
+    "dexId": 43,
+    "minLevel": 22,
+    "maxLevel": 26,
+    "encounterRate": 92.5,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route12",
+    "dexId": 16,
+    "minLevel": 23,
+    "maxLevel": 27,
+    "encounterRate": 115,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route12",
+    "dexId": 48,
+    "minLevel": 24,
+    "maxLevel": 26,
+    "encounterRate": 70,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route12",
+    "dexId": 44,
+    "minLevel": 28,
+    "maxLevel": 30,
+    "encounterRate": 12.5,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route12",
+    "dexId": 69,
+    "minLevel": 22,
+    "maxLevel": 26,
+    "encounterRate": 82.5,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route12",
+    "dexId": 70,
+    "minLevel": 28,
+    "maxLevel": 30,
+    "encounterRate": 12.5,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route12",
+    "dexId": 17,
+    "minLevel": 28,
+    "maxLevel": 28,
+    "encounterRate": 10,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route12",
+    "dexId": 83,
+    "minLevel": 26,
+    "maxLevel": 31,
+    "encounterRate": 5,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route12",
+    "dexId": 79,
+    "minLevel": 15,
+    "maxLevel": 15,
+    "encounterRate": 95,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf"
+  },
+  {
+    "locationId": "route12",
+    "dexId": 80,
+    "minLevel": 15,
+    "maxLevel": 20,
+    "encounterRate": 5,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf"
+  },
+  {
+    "locationId": "route12",
+    "dexId": 72,
+    "minLevel": 5,
+    "maxLevel": 40,
+    "encounterRate": 100,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf"
+  },
+  {
+    "locationId": "route12",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 400,
+    "encounterMethod": "fish",
+    "requiresItem": "oldRod"
+  },
+  {
+    "locationId": "route12",
+    "dexId": 60,
+    "minLevel": 10,
+    "maxLevel": 10,
+    "encounterRate": 150,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "route12",
+    "dexId": 118,
+    "minLevel": 10,
+    "maxLevel": 10,
+    "encounterRate": 150,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "route12",
+    "dexId": 116,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 110,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "route12",
+    "dexId": 98,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "route12",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 20,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "route12",
+    "dexId": 116,
+    "minLevel": 15,
+    "maxLevel": 35,
+    "encounterRate": 42,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route12",
+    "dexId": 130,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 15,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route12",
+    "dexId": 54,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 0.5,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route12",
+    "dexId": 98,
+    "minLevel": 15,
+    "maxLevel": 35,
+    "encounterRate": 42,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route12",
+    "dexId": 79,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 0.5,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route12",
+    "dexId": 72,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 50,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route12",
+    "dexId": 118,
+    "minLevel": 15,
+    "maxLevel": 15,
+    "encounterRate": 50,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route12",
+    "dexId": 117,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 30,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route12",
+    "dexId": 143,
+    "minLevel": 30,
+    "maxLevel": 30,
+    "encounterRate": 2,
+    "encounterMethod": "grass",
+    "requiresItem": "pokeFlute"
+  },
+  {
+    "locationId": "route13",
+    "dexId": 43,
+    "minLevel": 22,
+    "maxLevel": 26,
+    "encounterRate": 92.5,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route13",
+    "dexId": 48,
+    "minLevel": 24,
+    "maxLevel": 26,
+    "encounterRate": 70,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route13",
+    "dexId": 16,
+    "minLevel": 25,
+    "maxLevel": 27,
+    "encounterRate": 90,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route13",
+    "dexId": 17,
+    "minLevel": 29,
+    "maxLevel": 29,
+    "encounterRate": 20,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route13",
+    "dexId": 44,
+    "minLevel": 28,
+    "maxLevel": 30,
+    "encounterRate": 12.5,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route13",
+    "dexId": 132,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 15,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route13",
+    "dexId": 69,
+    "minLevel": 22,
+    "maxLevel": 26,
+    "encounterRate": 82.5,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route13",
+    "dexId": 70,
+    "minLevel": 28,
+    "maxLevel": 30,
+    "encounterRate": 12.5,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route13",
+    "dexId": 83,
+    "minLevel": 26,
+    "maxLevel": 31,
+    "encounterRate": 5,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route13",
+    "dexId": 79,
+    "minLevel": 15,
+    "maxLevel": 15,
+    "encounterRate": 95,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf"
+  },
+  {
+    "locationId": "route13",
+    "dexId": 80,
+    "minLevel": 15,
+    "maxLevel": 20,
+    "encounterRate": 5,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf"
+  },
+  {
+    "locationId": "route13",
+    "dexId": 72,
+    "minLevel": 5,
+    "maxLevel": 40,
+    "encounterRate": 100,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf"
+  },
+  {
+    "locationId": "route13",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 400,
+    "encounterMethod": "fish",
+    "requiresItem": "oldRod"
+  },
+  {
+    "locationId": "route13",
+    "dexId": 60,
+    "minLevel": 10,
+    "maxLevel": 10,
+    "encounterRate": 150,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "route13",
+    "dexId": 118,
+    "minLevel": 10,
+    "maxLevel": 10,
+    "encounterRate": 150,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "route13",
+    "dexId": 116,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 110,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "route13",
+    "dexId": 98,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "route13",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 20,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "route13",
+    "dexId": 116,
+    "minLevel": 15,
+    "maxLevel": 35,
+    "encounterRate": 42,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route13",
+    "dexId": 130,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 15,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route13",
+    "dexId": 54,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 0.5,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route13",
+    "dexId": 98,
+    "minLevel": 15,
+    "maxLevel": 35,
+    "encounterRate": 42,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route13",
+    "dexId": 79,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 0.5,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route13",
+    "dexId": 72,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 50,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route13",
+    "dexId": 118,
+    "minLevel": 15,
+    "maxLevel": 15,
+    "encounterRate": 50,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route13",
+    "dexId": 117,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 30,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route14",
+    "dexId": 43,
+    "minLevel": 22,
+    "maxLevel": 26,
+    "encounterRate": 92.5,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route14",
+    "dexId": 48,
+    "minLevel": 24,
+    "maxLevel": 26,
+    "encounterRate": 109,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route14",
+    "dexId": 132,
+    "minLevel": 23,
+    "maxLevel": 23,
+    "encounterRate": 45,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route14",
+    "dexId": 16,
+    "minLevel": 27,
+    "maxLevel": 27,
+    "encounterRate": 40,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route14",
+    "dexId": 17,
+    "minLevel": 29,
+    "maxLevel": 29,
+    "encounterRate": 25,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route14",
+    "dexId": 44,
+    "minLevel": 30,
+    "maxLevel": 30,
+    "encounterRate": 12.5,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route14",
+    "dexId": 69,
+    "minLevel": 22,
+    "maxLevel": 26,
+    "encounterRate": 82.5,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route14",
+    "dexId": 70,
+    "minLevel": 30,
+    "maxLevel": 30,
+    "encounterRate": 12.5,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route14",
+    "dexId": 49,
+    "minLevel": 30,
+    "maxLevel": 30,
+    "encounterRate": 1,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route15",
+    "dexId": 43,
+    "minLevel": 22,
+    "maxLevel": 26,
+    "encounterRate": 92.5,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route15",
+    "dexId": 48,
+    "minLevel": 24,
+    "maxLevel": 26,
+    "encounterRate": 89,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route15",
+    "dexId": 16,
+    "minLevel": 25,
+    "maxLevel": 27,
+    "encounterRate": 50,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route15",
+    "dexId": 17,
+    "minLevel": 29,
+    "maxLevel": 29,
+    "encounterRate": 15,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route15",
+    "dexId": 44,
+    "minLevel": 28,
+    "maxLevel": 30,
+    "encounterRate": 12.5,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route15",
+    "dexId": 132,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 35,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route15",
+    "dexId": 69,
+    "minLevel": 22,
+    "maxLevel": 26,
+    "encounterRate": 82.5,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route15",
+    "dexId": 70,
+    "minLevel": 28,
+    "maxLevel": 30,
+    "encounterRate": 12.5,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route15",
+    "dexId": 49,
+    "minLevel": 30,
+    "maxLevel": 30,
+    "encounterRate": 1,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route16",
+    "dexId": 84,
+    "minLevel": 18,
+    "maxLevel": 26,
+    "encounterRate": 102.5,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route16",
+    "dexId": 19,
+    "minLevel": 18,
+    "maxLevel": 24,
+    "encounterRate": 115,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route16",
+    "dexId": 21,
+    "minLevel": 20,
+    "maxLevel": 23,
+    "encounterRate": 140,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route16",
+    "dexId": 20,
+    "minLevel": 23,
+    "maxLevel": 26,
+    "encounterRate": 20,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route16",
+    "dexId": 143,
+    "minLevel": 30,
+    "maxLevel": 30,
+    "encounterRate": 2,
+    "encounterMethod": "grass",
+    "requiresItem": "pokeFlute"
+  },
+  {
+    "locationId": "route16",
+    "dexId": 22,
+    "minLevel": 24,
+    "maxLevel": 24,
+    "encounterRate": 5,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route17",
+    "dexId": 84,
+    "minLevel": 24,
+    "maxLevel": 28,
+    "encounterRate": 140,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route17",
+    "dexId": 21,
+    "minLevel": 20,
+    "maxLevel": 22,
+    "encounterRate": 110,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route17",
+    "dexId": 20,
+    "minLevel": 25,
+    "maxLevel": 29,
+    "encounterRate": 85,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route17",
+    "dexId": 19,
+    "minLevel": 22,
+    "maxLevel": 22,
+    "encounterRate": 5,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route17",
+    "dexId": 22,
+    "minLevel": 25,
+    "maxLevel": 29,
+    "encounterRate": 35,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route17",
+    "dexId": 77,
+    "minLevel": 28,
+    "maxLevel": 32,
+    "encounterRate": 24,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route17",
+    "dexId": 85,
+    "minLevel": 29,
+    "maxLevel": 29,
+    "encounterRate": 1,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route17",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 300,
+    "encounterMethod": "fish",
+    "requiresItem": "oldRod"
+  },
+  {
+    "locationId": "route17",
+    "dexId": 60,
+    "minLevel": 10,
+    "maxLevel": 10,
+    "encounterRate": 150,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "route17",
+    "dexId": 118,
+    "minLevel": 10,
+    "maxLevel": 10,
+    "encounterRate": 150,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "route17",
+    "dexId": 72,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 120,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route17",
+    "dexId": 98,
+    "minLevel": 15,
+    "maxLevel": 15,
+    "encounterRate": 50,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route17",
+    "dexId": 118,
+    "minLevel": 15,
+    "maxLevel": 15,
+    "encounterRate": 50,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route17",
+    "dexId": 129,
+    "minLevel": 15,
+    "maxLevel": 15,
+    "encounterRate": 50,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route17",
+    "dexId": 90,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 30,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route18",
+    "dexId": 84,
+    "minLevel": 22,
+    "maxLevel": 28,
+    "encounterRate": 120,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route18",
+    "dexId": 21,
+    "minLevel": 20,
+    "maxLevel": 23,
+    "encounterRate": 140,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route18",
+    "dexId": 20,
+    "minLevel": 25,
+    "maxLevel": 29,
+    "encounterRate": 60,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route18",
+    "dexId": 22,
+    "minLevel": 24,
+    "maxLevel": 29,
+    "encounterRate": 50,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route18",
+    "dexId": 19,
+    "minLevel": 22,
+    "maxLevel": 22,
+    "encounterRate": 30,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "route18",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 300,
+    "encounterMethod": "fish",
+    "requiresItem": "oldRod"
+  },
+  {
+    "locationId": "route18",
+    "dexId": 60,
+    "minLevel": 10,
+    "maxLevel": 10,
+    "encounterRate": 150,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "route18",
+    "dexId": 118,
+    "minLevel": 10,
+    "maxLevel": 10,
+    "encounterRate": 150,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "route18",
+    "dexId": 72,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 120,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route18",
+    "dexId": 98,
+    "minLevel": 15,
+    "maxLevel": 15,
+    "encounterRate": 50,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route18",
+    "dexId": 118,
+    "minLevel": 15,
+    "maxLevel": 15,
+    "encounterRate": 50,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route18",
+    "dexId": 129,
+    "minLevel": 15,
+    "maxLevel": 15,
+    "encounterRate": 50,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route18",
+    "dexId": 90,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 30,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "fuchsiaCity",
+    "dexId": 54,
+    "minLevel": 20,
+    "maxLevel": 40,
+    "encounterRate": 50,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf"
+  },
+  {
+    "locationId": "fuchsiaCity",
+    "dexId": 79,
+    "minLevel": 20,
+    "maxLevel": 40,
+    "encounterRate": 50,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf"
+  },
+  {
+    "locationId": "fuchsiaCity",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 400,
+    "encounterMethod": "fish",
+    "requiresItem": "oldRod"
+  },
+  {
+    "locationId": "fuchsiaCity",
+    "dexId": 118,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 210,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "fuchsiaCity",
+    "dexId": 60,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 170,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "fuchsiaCity",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 20,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "fuchsiaCity",
+    "dexId": 118,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 90,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "fuchsiaCity",
+    "dexId": 119,
+    "minLevel": 20,
+    "maxLevel": 30,
+    "encounterRate": 90,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "fuchsiaCity",
+    "dexId": 130,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 25,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "fuchsiaCity",
+    "dexId": 54,
+    "minLevel": 15,
+    "maxLevel": 35,
+    "encounterRate": 2.5,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "fuchsiaCity",
+    "dexId": 79,
+    "minLevel": 15,
+    "maxLevel": 35,
+    "encounterRate": 2.5,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "fuchsiaCity",
+    "dexId": 98,
+    "minLevel": 15,
+    "maxLevel": 15,
+    "encounterRate": 50,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "fuchsiaCity",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 90,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "safariZone1",
+    "dexId": 32,
+    "minLevel": 14,
+    "maxLevel": 22,
+    "encounterRate": 60,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone1",
+    "dexId": 102,
+    "minLevel": 24,
+    "maxLevel": 25,
+    "encounterRate": 75,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone1",
+    "dexId": 111,
+    "minLevel": 20,
+    "maxLevel": 25,
+    "encounterRate": 60,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone1",
+    "dexId": 48,
+    "minLevel": 22,
+    "maxLevel": 22,
+    "encounterRate": 45,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone1",
+    "dexId": 33,
+    "minLevel": 23,
+    "maxLevel": 31,
+    "encounterRate": 32.5,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone1",
+    "dexId": 30,
+    "minLevel": 23,
+    "maxLevel": 31,
+    "encounterRate": 22.5,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone1",
+    "dexId": 47,
+    "minLevel": 27,
+    "maxLevel": 32,
+    "encounterRate": 30,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone1",
+    "dexId": 123,
+    "minLevel": 23,
+    "maxLevel": 23,
+    "encounterRate": 6,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone1",
+    "dexId": 113,
+    "minLevel": 7,
+    "maxLevel": 23,
+    "encounterRate": 4,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone1",
+    "dexId": 29,
+    "minLevel": 22,
+    "maxLevel": 22,
+    "encounterRate": 60,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone1",
+    "dexId": 127,
+    "minLevel": 23,
+    "maxLevel": 23,
+    "encounterRate": 6,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone1",
+    "dexId": 114,
+    "minLevel": 22,
+    "maxLevel": 22,
+    "encounterRate": 4,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone1",
+    "dexId": 46,
+    "minLevel": 27,
+    "maxLevel": 27,
+    "encounterRate": 5,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone1",
+    "dexId": 79,
+    "minLevel": 20,
+    "maxLevel": 40,
+    "encounterRate": 50,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf"
+  },
+  {
+    "locationId": "safariZone1",
+    "dexId": 54,
+    "minLevel": 20,
+    "maxLevel": 40,
+    "encounterRate": 50,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf"
+  },
+  {
+    "locationId": "safariZone1",
+    "dexId": 118,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 210,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "safariZone1",
+    "dexId": 60,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 170,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "safariZone1",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 20,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "safariZone1",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 400,
+    "encounterMethod": "fish",
+    "requiresItem": "oldRod"
+  },
+  {
+    "locationId": "safariZone1",
+    "dexId": 118,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "safariZone1",
+    "dexId": 119,
+    "minLevel": 20,
+    "maxLevel": 30,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "safariZone1",
+    "dexId": 147,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 85,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "safariZone1",
+    "dexId": 54,
+    "minLevel": 15,
+    "maxLevel": 35,
+    "encounterRate": 52,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "safariZone1",
+    "dexId": 148,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 11,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "safariZone1",
+    "dexId": 79,
+    "minLevel": 15,
+    "maxLevel": 35,
+    "encounterRate": 52,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "safariZone1",
+    "dexId": 98,
+    "minLevel": 15,
+    "maxLevel": 15,
+    "encounterRate": 52,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "safariZone1",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 10,
+    "encounterRate": 70,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "safariZone2",
+    "dexId": 32,
+    "minLevel": 21,
+    "maxLevel": 24,
+    "encounterRate": 67.5,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone2",
+    "dexId": 84,
+    "minLevel": 26,
+    "maxLevel": 26,
+    "encounterRate": 50,
     "encounterMethod": null,
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone2",
+    "dexId": 102,
+    "minLevel": 22,
+    "maxLevel": 26,
+    "encounterRate": 80,
+    "encounterMethod": null,
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone2",
+    "dexId": 46,
+    "minLevel": 22,
+    "maxLevel": 22,
+    "encounterRate": 45,
+    "encounterMethod": null,
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone2",
+    "dexId": 33,
+    "minLevel": 33,
+    "maxLevel": 33,
+    "encounterRate": 15,
+    "encounterMethod": null,
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone2",
+    "dexId": 29,
+    "minLevel": 21,
+    "maxLevel": 24,
+    "encounterRate": 57.5,
+    "encounterMethod": null,
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone2",
+    "dexId": 47,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 15,
+    "encounterMethod": null,
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone2",
+    "dexId": 115,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 12,
+    "encounterMethod": null,
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone2",
+    "dexId": 123,
+    "minLevel": 15,
+    "maxLevel": 28,
+    "encounterRate": 2.5,
+    "encounterMethod": null,
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone2",
+    "dexId": 127,
+    "minLevel": 28,
+    "maxLevel": 28,
+    "encounterRate": 1.5,
+    "encounterMethod": null,
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone2",
+    "dexId": 30,
+    "minLevel": 32,
+    "maxLevel": 33,
+    "encounterRate": 25,
+    "encounterMethod": null,
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone2",
+    "dexId": 104,
+    "minLevel": 19,
+    "maxLevel": 19,
+    "encounterRate": 10,
+    "encounterMethod": null,
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone2",
+    "dexId": 128,
+    "minLevel": 21,
+    "maxLevel": 21,
+    "encounterRate": 10,
+    "encounterMethod": null,
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone2",
+    "dexId": 105,
+    "minLevel": 24,
+    "maxLevel": 24,
+    "encounterRate": 5,
+    "encounterMethod": null,
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone2",
+    "dexId": 113,
+    "minLevel": 21,
+    "maxLevel": 21,
+    "encounterRate": 4,
+    "encounterMethod": null,
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone2",
+    "dexId": 79,
+    "minLevel": 20,
+    "maxLevel": 40,
+    "encounterRate": 50,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf"
+  },
+  {
+    "locationId": "safariZone2",
+    "dexId": 54,
+    "minLevel": 20,
+    "maxLevel": 40,
+    "encounterRate": 50,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf"
+  },
+  {
+    "locationId": "safariZone2",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 400,
+    "encounterMethod": "fish",
+    "requiresItem": "oldRod"
+  },
+  {
+    "locationId": "safariZone2",
+    "dexId": 118,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 210,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "safariZone2",
+    "dexId": 60,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 170,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "safariZone2",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 20,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "safariZone2",
+    "dexId": 118,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "safariZone2",
+    "dexId": 119,
+    "minLevel": 20,
+    "maxLevel": 30,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "safariZone2",
+    "dexId": 147,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 75,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "safariZone2",
+    "dexId": 54,
+    "minLevel": 15,
+    "maxLevel": 35,
+    "encounterRate": 52,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "safariZone2",
+    "dexId": 148,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 1,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "safariZone2",
+    "dexId": 79,
+    "minLevel": 15,
+    "maxLevel": 35,
+    "encounterRate": 52,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "safariZone2",
+    "dexId": 98,
+    "minLevel": 15,
+    "maxLevel": 15,
+    "encounterRate": 50,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "safariZone2",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 90,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "safariZone3",
+    "dexId": 32,
+    "minLevel": 30,
+    "maxLevel": 30,
+    "encounterRate": 60,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone3",
+    "dexId": 102,
+    "minLevel": 25,
+    "maxLevel": 27,
+    "encounterRate": 75,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone3",
+    "dexId": 111,
+    "minLevel": 26,
+    "maxLevel": 26,
+    "encounterRate": 60,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone3",
+    "dexId": 46,
+    "minLevel": 23,
+    "maxLevel": 23,
+    "encounterRate": 45,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone3",
+    "dexId": 33,
+    "minLevel": 30,
+    "maxLevel": 30,
+    "encounterRate": 22.5,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone3",
+    "dexId": 30,
+    "minLevel": 30,
+    "maxLevel": 30,
+    "encounterRate": 32.5,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone3",
+    "dexId": 49,
+    "minLevel": 32,
+    "maxLevel": 32,
+    "encounterRate": 15,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone3",
+    "dexId": 113,
+    "minLevel": 26,
+    "maxLevel": 26,
+    "encounterRate": 12,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone3",
+    "dexId": 128,
+    "minLevel": 28,
+    "maxLevel": 28,
+    "encounterRate": 3,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone3",
+    "dexId": 29,
+    "minLevel": 30,
+    "maxLevel": 30,
+    "encounterRate": 50,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone3",
+    "dexId": 104,
+    "minLevel": 16,
+    "maxLevel": 16,
+    "encounterRate": 5,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone3",
+    "dexId": 127,
+    "minLevel": 15,
+    "maxLevel": 15,
+    "encounterRate": 1,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone3",
+    "dexId": 123,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 4,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone3",
+    "dexId": 79,
+    "minLevel": 20,
+    "maxLevel": 40,
+    "encounterRate": 50,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf"
+  },
+  {
+    "locationId": "safariZone3",
+    "dexId": 54,
+    "minLevel": 20,
+    "maxLevel": 40,
+    "encounterRate": 50,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf"
+  },
+  {
+    "locationId": "safariZone3",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 400,
+    "encounterMethod": "fish",
+    "requiresItem": "oldRod"
+  },
+  {
+    "locationId": "safariZone3",
+    "dexId": 118,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 210,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "safariZone3",
+    "dexId": 60,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 170,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "safariZone3",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 20,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "safariZone3",
+    "dexId": 118,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "safariZone3",
+    "dexId": 119,
+    "minLevel": 20,
+    "maxLevel": 30,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "safariZone3",
+    "dexId": 147,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 75,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "safariZone3",
+    "dexId": 54,
+    "minLevel": 15,
+    "maxLevel": 35,
+    "encounterRate": 52,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "safariZone3",
+    "dexId": 148,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 1,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "safariZone3",
+    "dexId": 79,
+    "minLevel": 15,
+    "maxLevel": 35,
+    "encounterRate": 52,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "safariZone3",
+    "dexId": 98,
+    "minLevel": 15,
+    "maxLevel": 15,
+    "encounterRate": 50,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "safariZone3",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 90,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "safariZone4",
+    "dexId": 32,
+    "minLevel": 22,
+    "maxLevel": 30,
+    "encounterRate": 67.5,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone4",
+    "dexId": 84,
+    "minLevel": 26,
+    "maxLevel": 26,
+    "encounterRate": 50,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone4",
+    "dexId": 102,
+    "minLevel": 25,
+    "maxLevel": 27,
+    "encounterRate": 80,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone4",
+    "dexId": 48,
+    "minLevel": 23,
+    "maxLevel": 23,
+    "encounterRate": 45,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone4",
+    "dexId": 33,
+    "minLevel": 30,
+    "maxLevel": 30,
+    "encounterRate": 25,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone4",
+    "dexId": 29,
+    "minLevel": 22,
+    "maxLevel": 30,
+    "encounterRate": 57.5,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone4",
+    "dexId": 49,
+    "minLevel": 32,
+    "maxLevel": 32,
+    "encounterRate": 15,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone4",
+    "dexId": 128,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 22,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone4",
+    "dexId": 115,
+    "minLevel": 28,
+    "maxLevel": 28,
+    "encounterRate": 3,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone4",
+    "dexId": 104,
+    "minLevel": 19,
+    "maxLevel": 19,
+    "encounterRate": 10,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone4",
+    "dexId": 105,
+    "minLevel": 24,
+    "maxLevel": 24,
+    "encounterRate": 5,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone4",
+    "dexId": 127,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 4,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone4",
+    "dexId": 114,
+    "minLevel": 27,
+    "maxLevel": 27,
+    "encounterRate": 1,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "safariZone4",
+    "dexId": 79,
+    "minLevel": 20,
+    "maxLevel": 40,
+    "encounterRate": 50,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf"
+  },
+  {
+    "locationId": "safariZone4",
+    "dexId": 54,
+    "minLevel": 20,
+    "maxLevel": 40,
+    "encounterRate": 50,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf"
+  },
+  {
+    "locationId": "safariZone4",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 400,
+    "encounterMethod": "fish",
+    "requiresItem": "oldRod"
+  },
+  {
+    "locationId": "safariZone4",
+    "dexId": 118,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 210,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "safariZone4",
+    "dexId": 60,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 170,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "safariZone4",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 20,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "safariZone4",
+    "dexId": 118,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "safariZone4",
+    "dexId": 119,
+    "minLevel": 20,
+    "maxLevel": 30,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "safariZone4",
+    "dexId": 147,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 75,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "safariZone4",
+    "dexId": 54,
+    "minLevel": 15,
+    "maxLevel": 35,
+    "encounterRate": 52,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "safariZone4",
+    "dexId": 148,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 1,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "safariZone4",
+    "dexId": 79,
+    "minLevel": 15,
+    "maxLevel": 35,
+    "encounterRate": 52,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "safariZone4",
+    "dexId": 98,
+    "minLevel": 15,
+    "maxLevel": 15,
+    "encounterRate": 50,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "safariZone4",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 90,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route19",
+    "dexId": 72,
+    "minLevel": 5,
+    "maxLevel": 40,
+    "encounterRate": 400,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf"
+  },
+  {
+    "locationId": "route19",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 400,
+    "encounterMethod": "fish",
+    "requiresItem": "oldRod"
+  },
+  {
+    "locationId": "route19",
+    "dexId": 116,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "route19",
+    "dexId": 98,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "route19",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 20,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "route19",
+    "dexId": 60,
+    "minLevel": 10,
+    "maxLevel": 10,
+    "encounterRate": 150,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "route19",
+    "dexId": 118,
+    "minLevel": 10,
+    "maxLevel": 10,
+    "encounterRate": 150,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "route19",
+    "dexId": 116,
+    "minLevel": 15,
+    "maxLevel": 35,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route19",
+    "dexId": 130,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 15,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route19",
+    "dexId": 117,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 2,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route19",
+    "dexId": 54,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 0.5,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route19",
+    "dexId": 98,
+    "minLevel": 15,
+    "maxLevel": 35,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route19",
+    "dexId": 99,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 2,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route19",
+    "dexId": 79,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 0.5,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route19",
+    "dexId": 90,
+    "minLevel": 15,
+    "maxLevel": 15,
+    "encounterRate": 50,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route19",
+    "dexId": 118,
+    "minLevel": 15,
+    "maxLevel": 15,
+    "encounterRate": 50,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route19",
+    "dexId": 120,
+    "minLevel": 15,
+    "maxLevel": 15,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route19",
+    "dexId": 72,
+    "minLevel": 15,
+    "maxLevel": 30,
+    "encounterRate": 60,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route19",
+    "dexId": 73,
+    "minLevel": 30,
+    "maxLevel": 30,
+    "encounterRate": 10,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route20W",
+    "dexId": 72,
+    "minLevel": 5,
+    "maxLevel": 40,
+    "encounterRate": 400,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf"
+  },
+  {
+    "locationId": "route20W",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 400,
+    "encounterMethod": "fish",
+    "requiresItem": "oldRod"
+  },
+  {
+    "locationId": "route20W",
+    "dexId": 116,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "route20W",
+    "dexId": 98,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "route20W",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 20,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "route20W",
+    "dexId": 60,
+    "minLevel": 10,
+    "maxLevel": 10,
+    "encounterRate": 150,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "route20W",
+    "dexId": 118,
+    "minLevel": 10,
+    "maxLevel": 10,
+    "encounterRate": 150,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "route20W",
+    "dexId": 116,
+    "minLevel": 15,
+    "maxLevel": 35,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route20W",
+    "dexId": 130,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 15,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route20W",
+    "dexId": 117,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 2,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route20W",
+    "dexId": 54,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 0.5,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route20W",
+    "dexId": 98,
+    "minLevel": 15,
+    "maxLevel": 35,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route20W",
+    "dexId": 99,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 2,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route20W",
+    "dexId": 79,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 0.5,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route20W",
+    "dexId": 90,
+    "minLevel": 15,
+    "maxLevel": 15,
+    "encounterRate": 50,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route20W",
+    "dexId": 118,
+    "minLevel": 15,
+    "maxLevel": 15,
+    "encounterRate": 50,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route20W",
+    "dexId": 120,
+    "minLevel": 15,
+    "maxLevel": 15,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route20W",
+    "dexId": 72,
+    "minLevel": 15,
+    "maxLevel": 30,
+    "encounterRate": 60,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route20W",
+    "dexId": 73,
+    "minLevel": 30,
+    "maxLevel": 30,
+    "encounterRate": 10,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route20E",
+    "dexId": 72,
+    "minLevel": 5,
+    "maxLevel": 40,
+    "encounterRate": 400,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf"
+  },
+  {
+    "locationId": "route20E",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 400,
+    "encounterMethod": "fish",
+    "requiresItem": "oldRod"
+  },
+  {
+    "locationId": "route20E",
+    "dexId": 116,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "route20E",
+    "dexId": 98,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "route20E",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 20,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "route20E",
+    "dexId": 60,
+    "minLevel": 10,
+    "maxLevel": 10,
+    "encounterRate": 150,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "route20E",
+    "dexId": 118,
+    "minLevel": 10,
+    "maxLevel": 10,
+    "encounterRate": 150,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "route20E",
+    "dexId": 116,
+    "minLevel": 15,
+    "maxLevel": 35,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route20E",
+    "dexId": 130,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 15,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route20E",
+    "dexId": 117,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 2,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route20E",
+    "dexId": 54,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 0.5,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route20E",
+    "dexId": 98,
+    "minLevel": 15,
+    "maxLevel": 35,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route20E",
+    "dexId": 99,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 2,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route20E",
+    "dexId": 79,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 0.5,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route20E",
+    "dexId": 90,
+    "minLevel": 15,
+    "maxLevel": 15,
+    "encounterRate": 50,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route20E",
+    "dexId": 118,
+    "minLevel": 15,
+    "maxLevel": 15,
+    "encounterRate": 50,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route20E",
+    "dexId": 120,
+    "minLevel": 15,
+    "maxLevel": 15,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route20E",
+    "dexId": 72,
+    "minLevel": 15,
+    "maxLevel": 30,
+    "encounterRate": 60,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "route20E",
+    "dexId": 73,
+    "minLevel": 30,
+    "maxLevel": 30,
+    "encounterRate": 10,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "seafoamIslandsW",
+    "dexId": 54,
+    "minLevel": 26,
+    "maxLevel": 33,
+    "encounterRate": 47.5,
+    "encounterMethod": "cave",
+    "requiresItem": null
+  },
+  {
+    "locationId": "seafoamIslandsW",
+    "dexId": 41,
+    "minLevel": 9,
+    "maxLevel": 36,
+    "encounterRate": 104,
+    "encounterMethod": "cave",
+    "requiresItem": null
+  },
+  {
+    "locationId": "seafoamIslandsW",
+    "dexId": 42,
+    "minLevel": 26,
+    "maxLevel": 36,
+    "encounterRate": 26,
+    "encounterMethod": "cave",
+    "requiresItem": null
+  },
+  {
+    "locationId": "seafoamIslandsW",
+    "dexId": 79,
+    "minLevel": 26,
+    "maxLevel": 33,
+    "encounterRate": 42.5,
+    "encounterMethod": "cave",
+    "requiresItem": null
+  },
+  {
+    "locationId": "seafoamIslandsW",
+    "dexId": 86,
+    "minLevel": 30,
+    "maxLevel": 30,
+    "encounterRate": 50,
+    "encounterMethod": "cave",
+    "requiresItem": null
+  },
+  {
+    "locationId": "seafoamIslandsW",
+    "dexId": 116,
+    "minLevel": 28,
+    "maxLevel": 30,
+    "encounterRate": 20,
+    "encounterMethod": "cave",
+    "requiresItem": null
+  },
+  {
+    "locationId": "seafoamIslandsW",
+    "dexId": 90,
+    "minLevel": 28,
+    "maxLevel": 30,
+    "encounterRate": 19,
+    "encounterMethod": "cave",
+    "requiresItem": null
+  },
+  {
+    "locationId": "seafoamIslandsW",
+    "dexId": 55,
+    "minLevel": 38,
+    "maxLevel": 38,
+    "encounterRate": 1,
+    "encounterMethod": "cave",
+    "requiresItem": null
+  },
+  {
+    "locationId": "seafoamIslandsW",
+    "dexId": 98,
+    "minLevel": 25,
+    "maxLevel": 30,
+    "encounterRate": 50,
+    "encounterMethod": "cave",
+    "requiresItem": null
+  },
+  {
+    "locationId": "seafoamIslandsW",
+    "dexId": 120,
+    "minLevel": 28,
+    "maxLevel": 30,
+    "encounterRate": 19,
+    "encounterMethod": "cave",
+    "requiresItem": null
+  },
+  {
+    "locationId": "seafoamIslandsW",
+    "dexId": 80,
+    "minLevel": 38,
+    "maxLevel": 38,
+    "encounterRate": 1,
+    "encounterMethod": "cave",
+    "requiresItem": null
+  },
+  {
+    "locationId": "seafoamIslandsE",
+    "dexId": 54,
+    "minLevel": 26,
+    "maxLevel": 33,
+    "encounterRate": 47.5,
+    "encounterMethod": "cave",
+    "requiresItem": null
+  },
+  {
+    "locationId": "seafoamIslandsE",
+    "dexId": 41,
+    "minLevel": 9,
+    "maxLevel": 36,
+    "encounterRate": 104,
+    "encounterMethod": "cave",
+    "requiresItem": null
+  },
+  {
+    "locationId": "seafoamIslandsE",
+    "dexId": 42,
+    "minLevel": 26,
+    "maxLevel": 36,
+    "encounterRate": 26,
+    "encounterMethod": "cave",
+    "requiresItem": null
+  },
+  {
+    "locationId": "seafoamIslandsE",
+    "dexId": 79,
+    "minLevel": 26,
+    "maxLevel": 33,
+    "encounterRate": 42.5,
+    "encounterMethod": "cave",
+    "requiresItem": null
+  },
+  {
+    "locationId": "seafoamIslandsE",
+    "dexId": 86,
+    "minLevel": 30,
+    "maxLevel": 30,
+    "encounterRate": 50,
+    "encounterMethod": "cave",
+    "requiresItem": null
+  },
+  {
+    "locationId": "seafoamIslandsE",
+    "dexId": 116,
+    "minLevel": 28,
+    "maxLevel": 30,
+    "encounterRate": 20,
+    "encounterMethod": "cave",
+    "requiresItem": null
+  },
+  {
+    "locationId": "seafoamIslandsE",
+    "dexId": 90,
+    "minLevel": 28,
+    "maxLevel": 30,
+    "encounterRate": 19,
+    "encounterMethod": "cave",
+    "requiresItem": null
+  },
+  {
+    "locationId": "seafoamIslandsE",
+    "dexId": 55,
+    "minLevel": 38,
+    "maxLevel": 38,
+    "encounterRate": 1,
+    "encounterMethod": "cave",
+    "requiresItem": null
+  },
+  {
+    "locationId": "seafoamIslandsE",
+    "dexId": 98,
+    "minLevel": 25,
+    "maxLevel": 30,
+    "encounterRate": 50,
+    "encounterMethod": "cave",
+    "requiresItem": null
+  },
+  {
+    "locationId": "seafoamIslandsE",
+    "dexId": 120,
+    "minLevel": 28,
+    "maxLevel": 30,
+    "encounterRate": 19,
+    "encounterMethod": "cave",
+    "requiresItem": null
+  },
+  {
+    "locationId": "seafoamIslandsE",
+    "dexId": 80,
+    "minLevel": 38,
+    "maxLevel": 38,
+    "encounterRate": 1,
+    "encounterMethod": "cave",
     "requiresItem": null
   }
 ];

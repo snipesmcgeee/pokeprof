@@ -1,5 +1,5 @@
 // PokeProf — Locations Database
-// Auto-generated: 7/4/2026, 11:59:27 PM
+// Auto-generated: 7/5/2026, 1:22:28 PM
 // Entries: 102
 
 const LOCATIONS = [
@@ -326,8 +326,8 @@ const LOCATIONS = [
     "locationId": "vermillionCity",
     "name": "Vermillion City",
     "region": "Kanto",
-    "heals": false,
-    "shopTier": null,
+    "heals": true,
+    "shopTier": "basic",
     "travelTime": 1,
     "mapCol": 120,
     "mapRow": 100,

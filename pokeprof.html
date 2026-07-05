@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.20</title>
+<title>PokeProf v0.20.1</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -105,7 +105,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span style="font-size:11px;color:#6080a0;">v0.20</span></h1>
+  <h1>PokeProf <span style="font-size:11px;color:#6080a0;">v0.20.1</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">5.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -588,9 +588,9 @@ function calcBST(sp,lv,dexId=null){
 function getResearch(dexId){
   if(!state.researchLog[dexId]) state.researchLog[dexId]={
     evolutionConfirmed:false, nonEvolutionConfirmed:false,
-    confirmedBranches:[], // v0.20 — [{method,intoId}], replaces confirmedMethod/confirmedIntoId
+    confirmedBranches:[], // v0.20.1 — [{method,intoId}], replaces confirmedMethod/confirmedIntoId
     testedMethods:[], highestLevelObserved:0,
-    abilitiesObserved:{}, // v0.20 — {ability1:true, ability2:true, hiddenAbility:true}
+    abilitiesObserved:{}, // v0.20.1 — {ability1:true, ability2:true, hiddenAbility:true}
     knownSince:Date.now()
   };
   return state.researchLog[dexId];
@@ -650,7 +650,7 @@ function isSpeciesKnown(dexId){ return !!state.researchLog[dexId]; }
 // Auto-tests every owned evolution item against every known species.
 // Fires on stone acquisition (buyItem) and on new species catch.
 // Failed tests cost nothing — only successes consume an item.
-// v0.20: also tests EVO_TREE `use-item` branches (branching species like Eevee),
+// v0.20.1: also tests EVO_TREE `use-item` branches (branching species like Eevee),
 // matched by itemId (a string slug, e.g. "water-stone") — distinct from the single-target
 // pokedex.js evolveItem field, which stays matched by item NAME ("Water Stone").
 function professorAutoTestEvolutions(){
@@ -688,7 +688,7 @@ function professorAutoTestEvolutions(){
         if(evolvesByStone||evolvesByTrade){ matched=true; targetId=entry.evolvesIntoId; }
       }
 
-      // Path 2 (v0.20): EVO_TREE branching evolutions — matched by itemId
+      // Path 2 (v0.20.1): EVO_TREE branching evolutions — matched by itemId
       if(!matched){
         const branch=getEvolutions(dexId).find(b=>b.evolveMethod==='use-item'&&b.evolveItem===itemId);
         if(branch&&branch.toDexId){ matched=true; targetId=branch.toDexId; }
@@ -745,7 +745,7 @@ function applyItemEvolution(catchId,intoId){
 }
 
 // Family/Species card display: lists every confirmed evolution target for a species.
-// Shows ??? until at least one branch is confirmed. No per-branch ??? granularity (v0.20 scope).
+// Shows ??? until at least one branch is confirmed. No per-branch ??? granularity (v0.20.1 scope).
 function getEvolutionDisplayText(dexId){
   const r=state.researchLog[dexId];
   if(!r) return 'Evolves into: ???';
@@ -768,7 +768,7 @@ function getEvolutionDisplayText(dexId){
 
 // ── EVOLUTION ──
 function checkEvolution(p){
-  if(p.evolveBlocked) return; // v0.20 — per-individual block, skip entirely regardless of path
+  if(p.evolveBlocked) return; // v0.20.1 — per-individual block, skip entirely regardless of path
   // Path 1: dexId-based lookup — simple linear (single-target) evolutions from pokedex.js.
   // Must resolve by p.pokedexId, never by p.species name — some names (Nidoran M/F) map to
   // multiple distinct database rows with different evolution targets.
@@ -790,7 +790,7 @@ function checkEvolution(p){
       return;
     }
   }
-  // v0.20 — friendship evolution (single-target): was tracked but never checked before this fix
+  // v0.20.1 — friendship evolution (single-target): was tracked but never checked before this fix
   if(s&&s.evolveMethod==='friendship'&&s.evolvesIntoId&&p.friendship>=FRIENDSHIP_THRESHOLD){
     const newEntry=getPokemonEntry(s.evolvesIntoId);
     if(newEntry){
@@ -808,7 +808,7 @@ function checkEvolution(p){
       return;
     }
   }
-  // Path 2 (v0.20): EVO_TREE lookup — branching evolutions (e.g. Eevee).
+  // Path 2 (v0.20.1): EVO_TREE lookup — branching evolutions (e.g. Eevee).
   // Handles level, friendship-day, and friendship-night branches automatically.
   // use-item branches are NOT auto-applied here — see professorAutoTestEvolutions()/applyItemEvolution().
   if(typeof EVO_TREE!=='undefined'){
@@ -842,7 +842,7 @@ function checkEvolution(p){
 }
 
 // Returns all EVO_TREE branch rows for a given fromDexId.
-// v0.20 fix: this previously indexed EVO_TREE (an array) directly by dexId — e.g. EVO_TREE[133] —
+// v0.20.1 fix: this previously indexed EVO_TREE (an array) directly by dexId — e.g. EVO_TREE[133] —
 // which is not the same as filtering for fromDexId===133, and silently returned wrong/empty
 // results for every species. Branching evolutions never worked correctly until this fix.
 function getEvolutions(dexId){
@@ -945,7 +945,7 @@ function processOfflineTime(secsAway){
     remaining-=nextIn; nextIn=ENC_INTERVAL; summary.encounters++;
     const enc=rollEncounter(); const lead=getLeadPokemon();
     if(!lead){
-      // v0.20 fix: previously broke the whole catch-up loop unconditionally on a wipe,
+      // v0.20.1 fix: previously broke the whole catch-up loop unconditionally on a wipe,
       // abandoning the rest of the away period even with autoRepeat on. Now mirrors
       // endMission()'s auto-repeat path: heal at lastHealLocation, rebuild the travel path
       // to missionDestination, and keep simulating instead of stopping.
@@ -1624,7 +1624,7 @@ function showPokemonDetail(catchId){
   modal.id='poke-modal';
   modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
 
-  // Build one evolve button per confirmed item-based branch (v0.20 — branching evolutions
+  // Build one evolve button per confirmed item-based branch (v0.20.1 — branching evolutions
   // like Eevee can have several simultaneously confirmed). Hidden entirely if evolveBlocked.
   const r=state.researchLog[p.pokedexId];
   const nonManualMethods=['level','friendship','friendship-day','friendship-night','use-move'];
@@ -1637,11 +1637,11 @@ function showPokemonDetail(catchId){
     }).join('');
   }
 
-  // v0.20 — nickname field, poke-modal only
+  // v0.20.1 — nickname field, poke-modal only
   const nickEsc=p.nickname?String(p.nickname).replace(/"/g,'&quot;'):'';
   const nicknameHtml='<div style="margin-bottom:10px;"><div style="color:#a0a0c0;font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Nickname</div><div style="display:flex;gap:6px;"><input id="nickname-input" type="text" maxlength="30" value="'+nickEsc+'" placeholder="'+p.species+'" style="flex:1;background:#0f1a2a;border:1px solid #1a4a80;border-radius:4px;padding:6px 8px;color:#fff;font-family:\'Courier New\',monospace;font-size:12px;"><button onclick="saveNickname('+p.id+')" style="padding:6px 10px;font-size:11px;">Save</button></div></div>';
 
-  // v0.20 — per-individual evolution block checkbox
+  // v0.20.1 — per-individual evolution block checkbox
   const evolveBlockHtml='<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#a0a0c0;margin-bottom:10px;cursor:pointer;"><input type="checkbox" id="evolve-block-input" '+(p.evolveBlocked?'checked':'')+' onchange="toggleEvolveBlock('+p.id+',this.checked)"> Block evolution for this Pokémon</label>';
 
   modal.innerHTML='<div style="background:#16213e;border:1px solid #e63946;border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:#e63946;font-size:14px;font-weight:bold;">#'+(p.pokedexId||'?')+' '+getDisplayName(p)+(p.nickname?' <span style="color:#6080a0;font-size:11px;">('+p.species+')</span>':'')+(p.formName?' ('+p.formName+')':'')+' (catch #'+p.id+')</div><button onclick="document.getElementById(\'poke-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div><div style="color:#a0a0c0;font-size:11px;line-height:2;border-bottom:1px solid #0f3460;margin-bottom:10px;padding-bottom:10px;"><div>Level: <span style="color:#fff">'+p.level+'</span> &nbsp;·&nbsp; Gender: <span style="color:#fff">'+p.gender+'</span></div><div>Type: <span style="color:#fff">'+(entry?entry.type1+(entry.type2?' / '+entry.type2:''):'?')+'</span></div><div>HP: <span style="color:#fff">'+p.currentHP+'/'+p.maxHP+'</span></div><div>Ability: <span style="color:#fff">'+(p.ability||'Unknown')+'</span></div><div>Friendship: <span style="color:#fff">'+(p.friendship||0)+'</span></div>'+(entry&&entry.heightM?'<div>Height: <span style="color:#fff">'+(metersToFeetStr(entry.heightM)||entry.heightM+'m')+'</span></div>':'')+(entry&&entry.weightKg?'<div>Weight: <span style="color:#fff">'+(kgToLbsStr(entry.weightKg)||entry.weightKg+'kg')+'</span></div>':'')+'<div>Holder: <span style="color:#2ecc71">'+(p.holder||'Unassigned')+'</span></div>'+(p.isShiny?'<div style="color:#f4d03f;">✨ SHINY</div>':'')+'</div>'+nicknameHtml+evolveBlockHtml+'<div style="display:flex;gap:8px;flex-wrap:wrap;">'+((!p.holder)?'<button onclick="assignToAide('+p.id+')" class="primary" style="flex:1;">+ Party</button>':'')+(p.holder?'<button onclick="unassignPokemon('+p.id+')" style="flex:1;">− Remove</button>':'')+(p.currentHP<=0?'<button onclick="revivePokemon('+p.id+')" style="flex:1;border-color:#f4d03f;color:#f4d03f;">💊 Revive ($20)</button>':'')+evolveBtnHtml+'<button onclick="document.getElementById(\'poke-modal\').remove()" style="flex:1;">Close</button></div></div>';
@@ -1649,7 +1649,7 @@ function showPokemonDetail(catchId){
   document.body.appendChild(modal);
 }
 
-// v0.20 — nickname editing, poke-modal only. 30-char cap enforced via maxlength attribute.
+// v0.20.1 — nickname editing, poke-modal only. 30-char cap enforced via maxlength attribute.
 // Submitting empty/whitespace-only input clears the nickname back to the species name.
 function saveNickname(catchId){
   const p=state.dex.find(x=>x.id===catchId); if(!p) return;
@@ -1660,7 +1660,7 @@ function saveNickname(catchId){
   showPokemonDetail(catchId);
 }
 
-// v0.20 — per-individual evolution block toggle. Blocks both level-up and item-based evolution.
+// v0.20.1 — per-individual evolution block toggle. Blocks both level-up and item-based evolution.
 function toggleEvolveBlock(catchId,checked){
   const p=state.dex.find(x=>x.id===catchId); if(!p) return;
   p.evolveBlocked=!!checked;
@@ -1846,7 +1846,7 @@ function buildEvoMethodsHtml(dexId){
   if(r&&r.nonEvolutionConfirmed){
     inner='<div style="font-size:11px;color:#5dade2;padding:4px 0;">Does not evolve</div>';
   } else {
-    // Confirmed — v0.20: a species can have multiple simultaneously confirmed branches
+    // Confirmed — v0.20.1: a species can have multiple simultaneously confirmed branches
     const confirmedMethods=(r&&r.confirmedBranches)?r.confirmedBranches.map(b=>b.method):[];
     confirmedMethods.forEach(m=>{
       inner+='<div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0;"><span style="color:#e0e0e0;">'+m+'</span><span style="color:#2ecc71;">✓</span></div>';
@@ -1999,7 +1999,7 @@ function addLog(msg,type=''){
 
 // ── SAVE / LOAD / RESET ──
 const SAVE_KEY='pokeprof_save';
-// SAVE_VERSION 13 (v0.20) — nickname + evolveBlocked fields on Pokemon objects;
+// SAVE_VERSION 13 (v0.20.1) — nickname + evolveBlocked fields on Pokemon objects;
 // researchLog[dexId].abilitiesObserved added; researchLog[dexId].confirmedBranches[]
 // replaces singular confirmedMethod/confirmedIntoId (supports branching evolutions like Eevee).
 const SAVE_VERSION=13;
@@ -2097,10 +2097,10 @@ function loadGame(){
       if(p.ability===undefined) p.ability=null;
       if(p.friendship===undefined) p.friendship=0;
       if(p.isShiny===undefined) p.isShiny=false;
-      if(p.nickname===undefined) p.nickname=null; // v0.20
-      if(p.evolveBlocked===undefined) p.evolveBlocked=false; // v0.20
+      if(p.nickname===undefined) p.nickname=null; // v0.20.1
+      if(p.evolveBlocked===undefined) p.evolveBlocked=false; // v0.20.1
     });
-    // v0.20 migration: researchLog schema changes
+    // v0.20.1 migration: researchLog schema changes
     Object.keys(state.researchLog).forEach(dexIdStr=>{
       const r=state.researchLog[dexIdStr];
       if(!r) return;
@@ -2111,7 +2111,7 @@ function loadGame(){
         delete r.confirmedMethod; delete r.confirmedIntoId;
       }
       // abilitiesObserved — best-effort backfill from currently-held individuals only;
-      // cannot recover abilities from Pokemon already released before v0.20.
+      // cannot recover abilities from Pokemon already released before v0.20.1.
       if(!r.abilitiesObserved) r.abilitiesObserved={};
     });
     state.dex.forEach(p=>{ if(p.pokedexId&&p.ability) recordAbilityObserved(p.pokedexId,p.ability); });

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.20.1</title>
+<title>PokeProf v0.21</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -105,7 +105,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span style="font-size:11px;color:#6080a0;">v0.20.1</span></h1>
+  <h1>PokeProf <span style="font-size:11px;color:#6080a0;">v0.21</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">5.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -241,6 +241,16 @@ const EVOLUTION_METHODS = [
 ];
 
 // ── ENCOUNTER TABLE ──
+// v0.21 — scoped fix: fishing splits into per-rod-tier sub-methods so each rod can be
+// independently checked/unchecked in the mission modal (e.g. turning off Old Rod's guaranteed
+// Lv5 Magikarp without losing Good/Super Rod encounters). No other encounterMethod is affected.
+const FISH_ROD_SUBMETHODS={oldRod:'fish-old',goodRod:'fish-good',superRod:'fish-super'};
+const FISH_ROD_LABELS={'fish-old':'Old Rod','fish-good':'Good Rod','fish-super':'Super Rod'};
+function getEncounterSubMethod(method,requiresItem){
+  if(method==='fish'&&requiresItem&&FISH_ROD_SUBMETHODS[requiresItem]) return FISH_ROD_SUBMETHODS[requiresItem];
+  return method;
+}
+
 function buildRouteTable(locationId){
   if(typeof ENCOUNTERS==='undefined'||!ENCOUNTERS.length) return [];
   return ENCOUNTERS
@@ -249,7 +259,7 @@ function buildRouteTable(locationId){
       if(!e.requiresItem) return true;
       return !!(state.trainerBag&&state.trainerBag[e.requiresItem]&&state.trainerBag[e.requiresItem]>0);
     })
-    .map(e=>({dexId:e.dexId,minLv:e.minLevel,maxLv:e.maxLevel,weight:e.encounterRate,method:e.encounterMethod||'grass'}));
+    .map(e=>({dexId:e.dexId,minLv:e.minLevel,maxLv:e.maxLevel,weight:e.encounterRate,method:getEncounterSubMethod(e.encounterMethod||'grass',e.requiresItem),requiresItem:e.requiresItem||null}));
 }
 
 const ENC_INTERVAL = 30;
@@ -588,9 +598,9 @@ function calcBST(sp,lv,dexId=null){
 function getResearch(dexId){
   if(!state.researchLog[dexId]) state.researchLog[dexId]={
     evolutionConfirmed:false, nonEvolutionConfirmed:false,
-    confirmedBranches:[], // v0.20.1 — [{method,intoId}], replaces confirmedMethod/confirmedIntoId
+    confirmedBranches:[], // v0.20 — [{method,intoId}], replaces confirmedMethod/confirmedIntoId
     testedMethods:[], highestLevelObserved:0,
-    abilitiesObserved:{}, // v0.20.1 — {ability1:true, ability2:true, hiddenAbility:true}
+    abilitiesObserved:{}, // v0.20 — {ability1:true, ability2:true, hiddenAbility:true}
     knownSince:Date.now()
   };
   return state.researchLog[dexId];
@@ -646,13 +656,29 @@ function recordNewSpecies(dexId,name){
 function addFinding(type,...args){ state.pendingFindings.push({type,args,time:Date.now()}); }
 function isSpeciesKnown(dexId){ return !!state.researchLog[dexId]; }
 
+// Shared evolution apply-logic: species/dexId swap, maxHP recalc (preserving missing HP),
+// SPECIES registration, and research bookkeeping (recordNewSpecies, recordAbilityObserved,
+// dexHistory increment). Used by checkEvolution()'s three paths, applyItemEvolution(), and
+// professorAutoTestEvolutions()'s auto-apply (v0.21) — do not duplicate this block elsewhere.
+function applySpeciesSwap(p,newEntry){
+  const om=p.maxHP;
+  p.species=newEntry.name; p.pokedexId=newEntry.dexId;
+  p.maxHP=calcMaxHP(p.species,p.level,p.pokedexId);
+  p.currentHP=Math.min(p.maxHP,p.currentHP+(p.maxHP-om));
+  if(!SPECIES[p.species]) SPECIES[p.species]=newEntry;
+  recordNewSpecies(newEntry.dexId,p.species);
+  recordAbilityObserved(newEntry.dexId,p.ability);
+  state.dexHistory[newEntry.dexId]=(state.dexHistory[newEntry.dexId]||0)+1;
+}
+
 // ── PROFESSOR EVOLUTION RESEARCH ──
 // Auto-tests every owned evolution item against every known species.
 // Fires on stone acquisition (buyItem) and on new species catch.
 // Failed tests cost nothing — only successes consume an item.
-// v0.20.1: also tests EVO_TREE `use-item` branches (branching species like Eevee),
+// v0.20: also tests EVO_TREE `use-item` branches (branching species like Eevee),
 // matched by itemId (a string slug, e.g. "water-stone") — distinct from the single-target
 // pokedex.js evolveItem field, which stays matched by item NAME ("Water Stone").
+// v0.21: a successful test also immediately evolves a matching owned individual (see below).
 function professorAutoTestEvolutions(){
   if(!state.professorBag) return;
   const knownDexIds=Object.keys(state.dexHistory).map(Number).filter(id=>id>0);
@@ -677,7 +703,6 @@ function professorAutoTestEvolutions(){
       if(r.testedMethods.includes(itemName)) continue; // already tested this item against this species
 
       const entry=getPokemonEntry(dexId);
-      r.testedMethods.push(itemName); // mark tested regardless of outcome
       let matched=false;
       let targetId=null;
 
@@ -688,20 +713,38 @@ function professorAutoTestEvolutions(){
         if(evolvesByStone||evolvesByTrade){ matched=true; targetId=entry.evolvesIntoId; }
       }
 
-      // Path 2 (v0.20.1): EVO_TREE branching evolutions — matched by itemId
+      // Path 2 (v0.20): EVO_TREE branching evolutions — matched by itemId
       if(!matched){
         const branch=getEvolutions(dexId).find(b=>b.evolveMethod==='use-item'&&b.evolveItem===itemId);
         if(branch&&branch.toDexId){ matched=true; targetId=branch.toDexId; }
       }
 
-      if(matched){
-        recordEvolution(dexId,targetId,itemName,0);
-        state.professorBag[itemId]--;
-        if(state.professorBag[itemId]<=0) delete state.professorBag[itemId];
-        const toEntry=getPokemonEntry(targetId);
-        addLog('🔬 Research: '+(entry?entry.name:'#'+dexId)+' can evolve with '+itemName+' → '+(toEntry?toEntry.name:'#'+targetId)+'!','evolve');
-        anyChange=true;
+      if(!matched){
+        r.testedMethods.push(itemName); // ruled out — costs nothing, mark tested
+        continue;
       }
+
+      // v0.21: matched — find an eligible individual to auto-evolve.
+      // Eligible = owned, in the Professor's possession (!p.holder — not with an aide), not evolveBlocked.
+      // Highest level wins; ties broken by array order.
+      const candidates=state.dex.filter(p=>p.pokedexId===dexId&&!p.holder&&!p.evolveBlocked);
+      if(!candidates.length){
+        // No eligible individual right now — defer entirely. Not marked tested, item not consumed.
+        // Retried automatically the next time this function runs (next purchase or new-species catch).
+        continue;
+      }
+      candidates.sort((a,b)=>b.level-a.level);
+      const chosen=candidates[0];
+
+      r.testedMethods.push(itemName);
+      state.professorBag[itemId]--;
+      if(state.professorBag[itemId]<=0) delete state.professorBag[itemId];
+      const toEntry=getPokemonEntry(targetId);
+      recordEvolution(dexId,targetId,itemName,chosen.level);
+      const oldName=getDisplayName(chosen);
+      if(toEntry) applySpeciesSwap(chosen,toEntry);
+      addLog('🔬 Research: '+(entry?entry.name:'#'+dexId)+' confirmed to evolve with '+itemName+' → '+(toEntry?toEntry.name:'#'+targetId)+'! '+oldName+' #'+chosen.id+' evolved into '+getDisplayName(chosen)+'!','evolve');
+      anyChange=true;
     }
   }
   if(anyChange){ renderDex(); renderBagDisplay(); }
@@ -730,14 +773,8 @@ function applyItemEvolution(catchId,intoId){
   state.professorBag[itemId]--;
   if(state.professorBag[itemId]<=0) delete state.professorBag[itemId];
   // Apply evolution
-  const old=getDisplayName(p); const prevDexId=p.pokedexId;
-  p.species=newEntry.name; p.pokedexId=newEntry.dexId;
-  const om=p.maxHP; p.maxHP=calcMaxHP(p.species,p.level,p.pokedexId);
-  p.currentHP=Math.min(p.maxHP,p.currentHP+(p.maxHP-om));
-  if(!SPECIES[p.species]) SPECIES[p.species]=newEntry;
-  recordAbilityObserved(newEntry.dexId,p.ability);
-  recordNewSpecies(newEntry.dexId,p.species);
-  state.dexHistory[newEntry.dexId]=(state.dexHistory[newEntry.dexId]||0)+1;
+  const old=getDisplayName(p);
+  applySpeciesSwap(p,newEntry);
   addLog(old+' #'+p.id+' evolved into '+getDisplayName(p)+' using '+methodName+'!','evolve');
   document.getElementById('enc-body').textContent=old+' evolved into '+getDisplayName(p)+'!';
   saveGame(); render();
@@ -745,7 +782,7 @@ function applyItemEvolution(catchId,intoId){
 }
 
 // Family/Species card display: lists every confirmed evolution target for a species.
-// Shows ??? until at least one branch is confirmed. No per-branch ??? granularity (v0.20.1 scope).
+// Shows ??? until at least one branch is confirmed. No per-branch ??? granularity (v0.20 scope).
 function getEvolutionDisplayText(dexId){
   const r=state.researchLog[dexId];
   if(!r) return 'Evolves into: ???';
@@ -768,7 +805,7 @@ function getEvolutionDisplayText(dexId){
 
 // ── EVOLUTION ──
 function checkEvolution(p){
-  if(p.evolveBlocked) return; // v0.20.1 — per-individual block, skip entirely regardless of path
+  if(p.evolveBlocked) return; // v0.20 — per-individual block, skip entirely regardless of path
   // Path 1: dexId-based lookup — simple linear (single-target) evolutions from pokedex.js.
   // Must resolve by p.pokedexId, never by p.species name — some names (Nidoran M/F) map to
   // multiple distinct database rows with different evolution targets.
@@ -777,38 +814,26 @@ function checkEvolution(p){
     const newEntry=getPokemonEntry(s.evolvesIntoId);
     if(newEntry){
       const old=getDisplayName(p); const prevDexId=p.pokedexId;
-      p.species=newEntry.name; p.pokedexId=newEntry.dexId;
-      const om=p.maxHP; p.maxHP=calcMaxHP(p.species,p.level,p.pokedexId);
-      p.currentHP=Math.min(p.maxHP,p.currentHP+(p.maxHP-om));
-      if(!SPECIES[p.species]) SPECIES[p.species]=newEntry;
+      applySpeciesSwap(p,newEntry);
       recordEvolution(prevDexId,newEntry.dexId,'level',p.level);
-      recordNewSpecies(newEntry.dexId,p.species);
-      recordAbilityObserved(newEntry.dexId,p.ability);
-      state.dexHistory[newEntry.dexId]=(state.dexHistory[newEntry.dexId]||0)+1;
       addLog(old+' #'+p.id+' evolved into '+getDisplayName(p)+'!','evolve');
       document.getElementById('enc-body').textContent=old+' evolved into '+getDisplayName(p)+'!';
       return;
     }
   }
-  // v0.20.1 — friendship evolution (single-target): was tracked but never checked before this fix
+  // v0.20 — friendship evolution (single-target): was tracked but never checked before this fix
   if(s&&s.evolveMethod==='friendship'&&s.evolvesIntoId&&p.friendship>=FRIENDSHIP_THRESHOLD){
     const newEntry=getPokemonEntry(s.evolvesIntoId);
     if(newEntry){
       const old=getDisplayName(p); const prevDexId=p.pokedexId;
-      p.species=newEntry.name; p.pokedexId=newEntry.dexId;
-      const om=p.maxHP; p.maxHP=calcMaxHP(p.species,p.level,p.pokedexId);
-      p.currentHP=Math.min(p.maxHP,p.currentHP+(p.maxHP-om));
-      if(!SPECIES[p.species]) SPECIES[p.species]=newEntry;
+      applySpeciesSwap(p,newEntry);
       recordEvolution(prevDexId,newEntry.dexId,'friendship',p.level);
-      recordNewSpecies(newEntry.dexId,p.species);
-      recordAbilityObserved(newEntry.dexId,p.ability);
-      state.dexHistory[newEntry.dexId]=(state.dexHistory[newEntry.dexId]||0)+1;
       addLog(old+' #'+p.id+' evolved into '+getDisplayName(p)+'!','evolve');
       document.getElementById('enc-body').textContent=old+' evolved into '+getDisplayName(p)+'!';
       return;
     }
   }
-  // Path 2 (v0.20.1): EVO_TREE lookup — branching evolutions (e.g. Eevee).
+  // Path 2 (v0.20): EVO_TREE lookup — branching evolutions (e.g. Eevee).
   // Handles level, friendship-day, and friendship-night branches automatically.
   // use-item branches are NOT auto-applied here — see professorAutoTestEvolutions()/applyItemEvolution().
   if(typeof EVO_TREE!=='undefined'){
@@ -826,14 +851,8 @@ function checkEvolution(p){
       const newEntry=getPokemonEntry(branch.toDexId);
       if(newEntry){
         const old=getDisplayName(p); const prevDexId=p.pokedexId;
-        p.species=newEntry.name; p.pokedexId=newEntry.dexId;
-        const om=p.maxHP; p.maxHP=calcMaxHP(p.species,p.level,p.pokedexId);
-        p.currentHP=Math.min(p.maxHP,p.currentHP+(p.maxHP-om));
-        if(!SPECIES[p.species]) SPECIES[p.species]=newEntry;
+        applySpeciesSwap(p,newEntry);
         recordEvolution(prevDexId,newEntry.dexId,branch.evolveMethod,p.level);
-        recordNewSpecies(newEntry.dexId,p.species);
-        recordAbilityObserved(newEntry.dexId,p.ability);
-        state.dexHistory[newEntry.dexId]=(state.dexHistory[newEntry.dexId]||0)+1;
         addLog(old+' #'+p.id+' evolved into '+getDisplayName(p)+'!','evolve');
         document.getElementById('enc-body').textContent=old+' evolved into '+getDisplayName(p)+'!';
       }
@@ -842,7 +861,7 @@ function checkEvolution(p){
 }
 
 // Returns all EVO_TREE branch rows for a given fromDexId.
-// v0.20.1 fix: this previously indexed EVO_TREE (an array) directly by dexId — e.g. EVO_TREE[133] —
+// v0.20 fix: this previously indexed EVO_TREE (an array) directly by dexId — e.g. EVO_TREE[133] —
 // which is not the same as filtering for fromDexId===133, and silently returned wrong/empty
 // results for every species. Branching evolutions never worked correctly until this fix.
 function getEvolutions(dexId){
@@ -892,14 +911,8 @@ function applyEvolutionSilent(p){
     const ne=getPokemonEntry(toDexId);
     if(!ne) return false;
     const prevDexId=p.pokedexId;
-    p.species=ne.name; p.pokedexId=ne.dexId;
-    if(!SPECIES[p.species]) SPECIES[p.species]=ne;
-    const om=p.maxHP; p.maxHP=calcMaxHP(p.species,p.level,p.pokedexId);
-    p.currentHP=Math.min(p.maxHP,p.currentHP+(p.maxHP-om));
-    state.dexHistory[ne.dexId]=(state.dexHistory[ne.dexId]||0)+1;
+    applySpeciesSwap(p,ne);
     recordEvolution(prevDexId,ne.dexId,method,p.level);
-    recordNewSpecies(ne.dexId,p.species);
-    recordAbilityObserved(ne.dexId,p.ability);
     return true;
   };
   if(s&&s.evolveMethod==='level'&&s.evolvesIntoId&&p.level>=s.evolveLevel){
@@ -945,7 +958,7 @@ function processOfflineTime(secsAway){
     remaining-=nextIn; nextIn=ENC_INTERVAL; summary.encounters++;
     const enc=rollEncounter(); const lead=getLeadPokemon();
     if(!lead){
-      // v0.20.1 fix: previously broke the whole catch-up loop unconditionally on a wipe,
+      // v0.20 fix: previously broke the whole catch-up loop unconditionally on a wipe,
       // abandoning the rest of the away period even with autoRepeat on. Now mirrors
       // endMission()'s auto-repeat path: heal at lastHealLocation, rebuild the travel path
       // to missionDestination, and keep simulating instead of stopping.
@@ -1326,22 +1339,95 @@ function startMission(){
   showMissionModal();
 }
 
+// ── MISSION MODAL — DESTINATION SORT (v0.21) ──
+// Transient UI-only state — not persisted to `state`, resets every time the modal opens.
+let missionSortField=null; // null|'distance'|'alpha'|'encounters'
+let missionSortDir='asc';
+
+// Distance = encounter-cycles to REACH a destination: sum of travelTime for every waypoint
+// strictly before the destination itself (excludes the destination's own travelTime, per the
+// settled travelTime rule — a destination never delays arrival at itself). One-hop = 0.
+function computeMissionDistance(fromId,toId){
+  const path=buildTravelPath(fromId,toId);
+  if(!path.length) return Infinity;
+  let total=0;
+  for(let i=0;i<path.length-1;i++){
+    const locData=typeof LOCATIONS!=='undefined'?getLocation(path[i]):null;
+    total+=Math.max(1,locData&&locData.travelTime?parseInt(locData.travelTime):1);
+  }
+  return total;
+}
+
+// Encounters sort metric = sightings ('seen') summed across all species logged at a location.
+function computeLocationSightings(locId){
+  const log=state.locationEncounterLog[locId];
+  if(!log) return 0;
+  return Object.values(log).reduce((sum,v)=>sum+((v&&v.seen)||0),0);
+}
+
+function destSortButtonHtml(field,label){
+  const active=missionSortField===field;
+  const arrow=active?(missionSortDir==='asc'?' ▲':' ▼'):'';
+  return '<button onclick="setMissionSort(\''+field+'\')" style="flex:1;padding:6px 2px;font-size:10px;'+(active?'border-color:#5dade2;color:#5dade2;':'')+'">'+label+arrow+'</button>';
+}
+
+function setMissionSort(field){
+  if(missionSortField===field){
+    missionSortDir=missionSortDir==='asc'?'desc':'asc';
+  } else {
+    missionSortField=field;
+    missionSortDir='asc';
+  }
+  renderDestList();
+}
+
+// Re-renders only the destination list + sort buttons — leaves any in-progress
+// destination selection / method prefs / shop panel untouched.
+function renderDestList(){
+  const currentLoc=state.currentLocation||'palletTown';
+  let reachable=getReachableDiscoveredLocations(currentLoc);
+  if(missionSortField){
+    reachable=[...reachable].sort((a,b)=>{
+      let av,bv;
+      if(missionSortField==='distance'){
+        av=computeMissionDistance(currentLoc,a); bv=computeMissionDistance(currentLoc,b);
+      } else if(missionSortField==='alpha'){
+        const aLoc=typeof LOCATIONS!=='undefined'?getLocation(a):null;
+        const bLoc=typeof LOCATIONS!=='undefined'?getLocation(b):null;
+        av=(aLoc?aLoc.name:a).toLowerCase(); bv=(bLoc?bLoc.name:b).toLowerCase();
+      } else {
+        av=computeLocationSightings(a); bv=computeLocationSightings(b);
+      }
+      if(av<bv) return missionSortDir==='asc'?-1:1;
+      if(av>bv) return missionSortDir==='asc'?1:-1;
+      return 0;
+    });
+  }
+  const listEl=document.getElementById('dest-list-container');
+  if(listEl){
+    listEl.innerHTML=reachable.length
+      ?reachable.map(loc=>{
+          const locData=typeof LOCATIONS!=='undefined'?getLocation(loc):null;
+          const name=locData?locData.name:loc;
+          return '<button onclick="selectMissionDest(\''+loc+'\')" style="display:block;width:100%;margin-bottom:6px;padding:10px;text-align:left;border-color:#5dade2;color:#5dade2;">'+name+'</button>';
+        }).join('')
+      : '<div style="color:#e67e22;font-size:11px;padding:8px 0;">No destinations reachable from here.</div>';
+  }
+  const btnWrap=document.getElementById('dest-sort-buttons');
+  if(btnWrap) btnWrap.innerHTML=destSortButtonHtml('distance','Distance')+destSortButtonHtml('alpha','Alphabetical')+destSortButtonHtml('encounters','Encounters');
+}
+
 function showMissionModal(){
   const existing=document.getElementById('mission-modal');
   if(existing) existing.remove();
+  missionSortField=null;
+  missionSortDir='asc';
   const currentLoc=state.currentLocation||'palletTown';
-  const reachable=getReachableDiscoveredLocations(currentLoc);
   const modal=document.createElement('div');
   modal.id='mission-modal';
   modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
   const shopItems=typeof getShopItems==='function'?getShopItems(currentLoc):[];
-  const destOptions=reachable.length
-    ?reachable.map(loc=>{
-        const locData=typeof LOCATIONS!=='undefined'?getLocation(loc):null;
-        const name=locData?locData.name:loc;
-        return '<button onclick="selectMissionDest(\''+loc+'\')" style="display:block;width:100%;margin-bottom:6px;padding:10px;text-align:left;border-color:#5dade2;color:#5dade2;">'+name+'</button>';
-      }).join('')
-    : '<div style="color:#e67e22;font-size:11px;padding:8px 0;">No destinations reachable from here.</div>';
+  const sortButtonsHtml='<div id="dest-sort-buttons" style="display:flex;gap:4px;margin-bottom:8px;">'+destSortButtonHtml('distance','Distance')+destSortButtonHtml('alpha','Alphabetical')+destSortButtonHtml('encounters','Encounters')+'</div>';
   const shopHtml=shopItems.length
     ?'<div style="margin-top:10px;border-top:1px solid #0f3460;padding-top:10px;">'
       +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
@@ -1364,8 +1450,9 @@ function showMissionModal(){
           +'</div></div>';
       }).join('')+'</div>'
     :'';
-  modal.innerHTML='<div style="background:#16213e;border:1px solid #5dade2;border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;"><div style="color:#5dade2;font-size:13px;font-weight:bold;margin-bottom:12px;">🗺 Choose Destination</div><div style="font-size:10px;color:#6080a0;margin-bottom:8px;">From: '+currentLoc+'</div><div style="max-height:220px;overflow-y:auto;">'+destOptions+'</div><div id="mission-summary" style="color:#a0a0c0;font-size:11px;margin:10px 0;min-height:18px;"></div><div id="method-prefs"></div>'+shopHtml+'<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><input type="checkbox" id="auto-repeat-toggle" '+(state.autoRepeat?'checked':'')+' onchange="state.autoRepeat=this.checked" style="width:16px;height:16px;cursor:pointer;"><label for="auto-repeat-toggle" style="color:#a0a0c0;font-size:11px;cursor:pointer;">Auto-repeat on wipe</label></div><div style="display:flex;gap:8px;"><button onclick="document.getElementById(\'mission-modal\').remove()" style="flex:1;">✕ Cancel</button><button id="confirm-mission" onclick="confirmMission()" class="primary" style="flex:1;" disabled>▶ Dispatch</button></div></div>';
+  modal.innerHTML='<div style="background:#16213e;border:1px solid #5dade2;border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;"><div style="color:#5dade2;font-size:13px;font-weight:bold;margin-bottom:12px;">🗺 Choose Destination</div><div style="font-size:10px;color:#6080a0;margin-bottom:8px;">From: '+currentLoc+'</div>'+sortButtonsHtml+'<div id="dest-list-container" style="max-height:220px;overflow-y:auto;"></div><div id="mission-summary" style="color:#a0a0c0;font-size:11px;margin:10px 0;min-height:18px;"></div><div id="method-prefs"></div>'+shopHtml+'<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><input type="checkbox" id="auto-repeat-toggle" '+(state.autoRepeat?'checked':'')+' onchange="state.autoRepeat=this.checked" style="width:16px;height:16px;cursor:pointer;"><label for="auto-repeat-toggle" style="color:#a0a0c0;font-size:11px;cursor:pointer;">Auto-repeat on wipe</label></div><div style="display:flex;gap:8px;"><button onclick="document.getElementById(\'mission-modal\').remove()" style="flex:1;">✕ Cancel</button><button id="confirm-mission" onclick="confirmMission()" class="primary" style="flex:1;" disabled>▶ Dispatch</button></div></div>';
   document.body.appendChild(modal);
+  renderDestList();
   state._missionDest=null;
 }
 
@@ -1387,12 +1474,13 @@ function renderMethodPrefs(locId){
   const allEncs=typeof ENCOUNTERS!=='undefined'?ENCOUNTERS.filter(e=>e.locationId===locId):[];
   if(!allEncs.length){ el.innerHTML=''; return; }
 
-  // Methods present at this location
-  const allMethods=[...new Set(allEncs.map(e=>e.encounterMethod||'grass'))];
+  // Methods present at this location (fishing split into per-rod-tier sub-methods — v0.21 scoped fix)
+  const allMethods=[...new Set(allEncs.map(e=>getEncounterSubMethod(e.encounterMethod||'grass',e.requiresItem)))];
   // Which methods are locked (requiresItem not owned)
   const lockedMethods=new Set();
   allEncs.forEach(e=>{
-    if(e.requiresItem&&!(state.trainerBag[e.requiresItem]>0)) lockedMethods.add(e.encounterMethod||'grass');
+    const m=getEncounterSubMethod(e.encounterMethod||'grass',e.requiresItem);
+    if(e.requiresItem&&!(state.trainerBag[e.requiresItem]>0)) lockedMethods.add(m);
   });
   // Available (non-locked) methods
   const availMethods=allMethods.filter(m=>!lockedMethods.has(m));
@@ -1408,9 +1496,10 @@ function renderMethodPrefs(locId){
     const locked=lockedMethods.has(method);
     const checked=locked?false:(prefs?prefs.methods.includes(method):defaultChecked.includes(method));
     const weight=prefs&&prefs.weights?(prefs.weights[method]||1):1;
+    const label=FISH_ROD_LABELS[method]||method;
     html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;opacity:'+(locked?'0.4':'1')+'">';
     html+='<input type="checkbox" id="meth-'+method+'" '+(checked?'checked':'')+' '+(locked?'disabled':'')+' onchange="updateMethodPrefs(\''+locId+'\')" style="width:14px;height:14px;cursor:'+(locked?'not-allowed':'pointer')+'">';
-    html+='<label for="meth-'+method+'" style="color:#e0e0e0;font-size:11px;flex:1;cursor:'+(locked?'not-allowed':'pointer')+'">'+method+(locked?' 🔒':'')+' </label>';
+    html+='<label for="meth-'+method+'" style="color:#e0e0e0;font-size:11px;flex:1;cursor:'+(locked?'not-allowed':'pointer')+'">'+label+(locked?' 🔒':'')+' </label>';
     html+='<input type="number" id="wt-'+method+'" value="'+weight+'" min="1" max="99" '+(locked?'disabled':'')+' oninput="updateMethodPrefs(\''+locId+'\')" style="width:38px;padding:2px 4px;background:#0a1a2a;border:1px solid #1a4a80;color:#e0e0e0;font-family:\'Courier New\',monospace;font-size:10px;border-radius:2px;">';
     html+='</div>';
   });
@@ -1424,7 +1513,7 @@ function renderMethodPrefs(locId){
 
 function updateMethodPrefs(locId){
   const allEncs=typeof ENCOUNTERS!=='undefined'?ENCOUNTERS.filter(e=>e.locationId===locId):[];
-  const allMethods=[...new Set(allEncs.map(e=>e.encounterMethod||'grass'))];
+  const allMethods=[...new Set(allEncs.map(e=>getEncounterSubMethod(e.encounterMethod||'grass',e.requiresItem)))];
   const methods=[]; const weights={};
   allMethods.forEach(method=>{
     const cb=document.getElementById('meth-'+method);
@@ -1624,7 +1713,7 @@ function showPokemonDetail(catchId){
   modal.id='poke-modal';
   modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
 
-  // Build one evolve button per confirmed item-based branch (v0.20.1 — branching evolutions
+  // Build one evolve button per confirmed item-based branch (v0.20 — branching evolutions
   // like Eevee can have several simultaneously confirmed). Hidden entirely if evolveBlocked.
   const r=state.researchLog[p.pokedexId];
   const nonManualMethods=['level','friendship','friendship-day','friendship-night','use-move'];
@@ -1637,11 +1726,11 @@ function showPokemonDetail(catchId){
     }).join('');
   }
 
-  // v0.20.1 — nickname field, poke-modal only
+  // v0.20 — nickname field, poke-modal only
   const nickEsc=p.nickname?String(p.nickname).replace(/"/g,'&quot;'):'';
   const nicknameHtml='<div style="margin-bottom:10px;"><div style="color:#a0a0c0;font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Nickname</div><div style="display:flex;gap:6px;"><input id="nickname-input" type="text" maxlength="30" value="'+nickEsc+'" placeholder="'+p.species+'" style="flex:1;background:#0f1a2a;border:1px solid #1a4a80;border-radius:4px;padding:6px 8px;color:#fff;font-family:\'Courier New\',monospace;font-size:12px;"><button onclick="saveNickname('+p.id+')" style="padding:6px 10px;font-size:11px;">Save</button></div></div>';
 
-  // v0.20.1 — per-individual evolution block checkbox
+  // v0.20 — per-individual evolution block checkbox
   const evolveBlockHtml='<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#a0a0c0;margin-bottom:10px;cursor:pointer;"><input type="checkbox" id="evolve-block-input" '+(p.evolveBlocked?'checked':'')+' onchange="toggleEvolveBlock('+p.id+',this.checked)"> Block evolution for this Pokémon</label>';
 
   modal.innerHTML='<div style="background:#16213e;border:1px solid #e63946;border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:#e63946;font-size:14px;font-weight:bold;">#'+(p.pokedexId||'?')+' '+getDisplayName(p)+(p.nickname?' <span style="color:#6080a0;font-size:11px;">('+p.species+')</span>':'')+(p.formName?' ('+p.formName+')':'')+' (catch #'+p.id+')</div><button onclick="document.getElementById(\'poke-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div><div style="color:#a0a0c0;font-size:11px;line-height:2;border-bottom:1px solid #0f3460;margin-bottom:10px;padding-bottom:10px;"><div>Level: <span style="color:#fff">'+p.level+'</span> &nbsp;·&nbsp; Gender: <span style="color:#fff">'+p.gender+'</span></div><div>Type: <span style="color:#fff">'+(entry?entry.type1+(entry.type2?' / '+entry.type2:''):'?')+'</span></div><div>HP: <span style="color:#fff">'+p.currentHP+'/'+p.maxHP+'</span></div><div>Ability: <span style="color:#fff">'+(p.ability||'Unknown')+'</span></div><div>Friendship: <span style="color:#fff">'+(p.friendship||0)+'</span></div>'+(entry&&entry.heightM?'<div>Height: <span style="color:#fff">'+(metersToFeetStr(entry.heightM)||entry.heightM+'m')+'</span></div>':'')+(entry&&entry.weightKg?'<div>Weight: <span style="color:#fff">'+(kgToLbsStr(entry.weightKg)||entry.weightKg+'kg')+'</span></div>':'')+'<div>Holder: <span style="color:#2ecc71">'+(p.holder||'Unassigned')+'</span></div>'+(p.isShiny?'<div style="color:#f4d03f;">✨ SHINY</div>':'')+'</div>'+nicknameHtml+evolveBlockHtml+'<div style="display:flex;gap:8px;flex-wrap:wrap;">'+((!p.holder)?'<button onclick="assignToAide('+p.id+')" class="primary" style="flex:1;">+ Party</button>':'')+(p.holder?'<button onclick="unassignPokemon('+p.id+')" style="flex:1;">− Remove</button>':'')+(p.currentHP<=0?'<button onclick="revivePokemon('+p.id+')" style="flex:1;border-color:#f4d03f;color:#f4d03f;">💊 Revive ($20)</button>':'')+evolveBtnHtml+'<button onclick="document.getElementById(\'poke-modal\').remove()" style="flex:1;">Close</button></div></div>';
@@ -1649,7 +1738,7 @@ function showPokemonDetail(catchId){
   document.body.appendChild(modal);
 }
 
-// v0.20.1 — nickname editing, poke-modal only. 30-char cap enforced via maxlength attribute.
+// v0.20 — nickname editing, poke-modal only. 30-char cap enforced via maxlength attribute.
 // Submitting empty/whitespace-only input clears the nickname back to the species name.
 function saveNickname(catchId){
   const p=state.dex.find(x=>x.id===catchId); if(!p) return;
@@ -1660,7 +1749,7 @@ function saveNickname(catchId){
   showPokemonDetail(catchId);
 }
 
-// v0.20.1 — per-individual evolution block toggle. Blocks both level-up and item-based evolution.
+// v0.20 — per-individual evolution block toggle. Blocks both level-up and item-based evolution.
 function toggleEvolveBlock(catchId,checked){
   const p=state.dex.find(x=>x.id===catchId); if(!p) return;
   p.evolveBlocked=!!checked;
@@ -1846,7 +1935,7 @@ function buildEvoMethodsHtml(dexId){
   if(r&&r.nonEvolutionConfirmed){
     inner='<div style="font-size:11px;color:#5dade2;padding:4px 0;">Does not evolve</div>';
   } else {
-    // Confirmed — v0.20.1: a species can have multiple simultaneously confirmed branches
+    // Confirmed — v0.20: a species can have multiple simultaneously confirmed branches
     const confirmedMethods=(r&&r.confirmedBranches)?r.confirmedBranches.map(b=>b.method):[];
     confirmedMethods.forEach(m=>{
       inner+='<div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0;"><span style="color:#e0e0e0;">'+m+'</span><span style="color:#2ecc71;">✓</span></div>';
@@ -1901,7 +1990,7 @@ function renderDexDetail(){
   const totalEver=Math.max(historyCount,caughtOfSpecies.length);
   const header=document.createElement('div');
   header.className='dex-entry';
-  header.innerHTML='<div style="display:flex;gap:12px;align-items:flex-start;"><img src="'+sprite+'" style="width:91px;height:91px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div style="color:#fff;font-size:14px;font-weight:bold;">#'+dexSelectedDexId+' '+(entry?entry.name:'???')+(entry&&entry.formName?'<span style="color:#a0a0c0;font-size:11px;"> ('+entry.formName+')</span>':'')+'</div><div style="color:#5dade2;font-size:11px;margin-top:1px;">Dex #'+dexSelectedDexId+'</div>'+(entry&&entry.category?'<div style="color:#a0a0c0;font-size:10px;margin-top:2px;">"'+entry.category+' Pokémon"</div>':'')+'<div style="display:flex;gap:5px;margin-top:6px;">'+typeBadge(entry?entry.type1:null)+typeBadge(entry?entry.type2:null)+'</div><div style="color:#9090b0;font-size:10px;margin-top:5px;">'+(heightDisplay?'📏 '+heightDisplay:'')+(heightDisplay&&weightDisplay?' · ':'')+(weightDisplay?'⚖️ '+weightDisplay:'')+'</div></div></div>'+(entry&&entry.flavorText?'<div style="color:#a0c0a0;font-size:11px;font-style:italic;margin-top:10px;padding-top:10px;border-top:1px solid #1a4a80;line-height:1.6;">'+entry.flavorText+'</div>':'')+'<div style="margin-top:10px;padding-top:10px;border-top:1px solid #1a4a80;"><div style="color:#a0a0c0;font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Base Stats</div>'+(entry?[{label:'HP',val:entry.baseHP,color:'#2ecc71'},{label:'ATK',val:entry.baseAtk,color:'#e74c3c'},{label:'DEF',val:entry.baseDef,color:'#f4d03f'},{label:'SpATK',val:entry.baseSpatk,color:'#9b59b6'},{label:'SpDEF',val:entry.baseSpdef,color:'#5dade2'},{label:'SPD',val:entry.baseSpd,color:'#2ecc71'}].map(s=>'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;"><span style="color:#6080a0;font-size:10px;width:40px;text-align:right;">'+s.label+'</span><span style="color:#fff;font-size:10px;width:28px;text-align:right;">'+(s.val||'?')+'</span><div style="flex:1;background:#0a0a1a;border-radius:2px;height:6px;overflow:hidden;"><div style="width:'+Math.min(100,Math.round(((s.val||0)/255)*100))+'%;height:100%;background:'+s.color+';border-radius:2px;"></div></div></div>').join(''):'<div style="color:#555;font-size:10px;">No stat data available.</div>')+(entry?'<div style="color:#f4d03f;font-size:10px;text-align:right;margin-top:4px;">BST: '+(entry.bst||'?')+'</div>':'')+'</div>'+abilityHtml+genderHtml+buildEvoMethodsHtml(dexSelectedDexId);
+  header.innerHTML='<div style="display:flex;gap:12px;align-items:flex-start;"><img src="'+sprite+'" style="width:91px;height:91px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div style="color:#fff;font-size:14px;font-weight:bold;">#'+dexSelectedDexId+' '+(entry?entry.name:'???')+(entry&&entry.formName?'<span style="color:#a0a0c0;font-size:11px;"> ('+entry.formName+')</span>':'')+'</div><div style="color:#5dade2;font-size:11px;margin-top:1px;">Dex #'+dexSelectedDexId+'</div>'+(entry&&entry.category?'<div style="color:#a0a0c0;font-size:10px;margin-top:2px;">"'+entry.category+'"</div>':'')+'<div style="display:flex;gap:5px;margin-top:6px;">'+typeBadge(entry?entry.type1:null)+typeBadge(entry?entry.type2:null)+'</div><div style="color:#9090b0;font-size:10px;margin-top:5px;">'+(heightDisplay?'📏 '+heightDisplay:'')+(heightDisplay&&weightDisplay?' · ':'')+(weightDisplay?'⚖️ '+weightDisplay:'')+'</div></div></div>'+(entry&&entry.flavorText?'<div style="color:#a0c0a0;font-size:11px;font-style:italic;margin-top:10px;padding-top:10px;border-top:1px solid #1a4a80;line-height:1.6;">'+entry.flavorText+'</div>':'')+'<div style="margin-top:10px;padding-top:10px;border-top:1px solid #1a4a80;"><div style="color:#a0a0c0;font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Base Stats</div>'+(entry?[{label:'HP',val:entry.baseHP,color:'#2ecc71'},{label:'ATK',val:entry.baseAtk,color:'#e74c3c'},{label:'DEF',val:entry.baseDef,color:'#f4d03f'},{label:'SpATK',val:entry.baseSpatk,color:'#9b59b6'},{label:'SpDEF',val:entry.baseSpdef,color:'#5dade2'},{label:'SPD',val:entry.baseSpd,color:'#2ecc71'}].map(s=>'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;"><span style="color:#6080a0;font-size:10px;width:40px;text-align:right;">'+s.label+'</span><span style="color:#fff;font-size:10px;width:28px;text-align:right;">'+(s.val||'?')+'</span><div style="flex:1;background:#0a0a1a;border-radius:2px;height:6px;overflow:hidden;"><div style="width:'+Math.min(100,Math.round(((s.val||0)/255)*100))+'%;height:100%;background:'+s.color+';border-radius:2px;"></div></div></div>').join(''):'<div style="color:#555;font-size:10px;">No stat data available.</div>')+(entry?'<div style="color:#f4d03f;font-size:10px;text-align:right;margin-top:4px;">BST: '+(entry.bst||'?')+'</div>':'')+'</div>'+abilityHtml+genderHtml+buildEvoMethodsHtml(dexSelectedDexId);
   c.appendChild(header);
   if(totalEver>0&&caughtOfSpecies.length===0){
     const el=document.createElement('div');
@@ -1999,10 +2088,13 @@ function addLog(msg,type=''){
 
 // ── SAVE / LOAD / RESET ──
 const SAVE_KEY='pokeprof_save';
-// SAVE_VERSION 13 (v0.20.1) — nickname + evolveBlocked fields on Pokemon objects;
+// SAVE_VERSION 13 (v0.20) — nickname + evolveBlocked fields on Pokemon objects;
 // researchLog[dexId].abilitiesObserved added; researchLog[dexId].confirmedBranches[]
 // replaces singular confirmedMethod/confirmedIntoId (supports branching evolutions like Eevee).
-const SAVE_VERSION=13;
+// SAVE_VERSION 14 (v0.21) — fishing splits into per-rod-tier sub-methods (fish-old/fish-good/
+// fish-super) instead of a single 'fish' method. Any locationMethodPrefs entry referencing the
+// old bare 'fish' method is dropped on load; that location recalculates fresh defaults on next visit.
+const SAVE_VERSION=14;
 let saveTimer=0;
 
 function saveGame(){
@@ -2042,9 +2134,9 @@ function loadGame(){
     const data=JSON.parse(raw);
     if(!data) return false;
 
-    // ── SAVE_VERSION 13 MIGRATION ──
-    // Accepts v11/v12 saves and migrates them; rejects anything older.
-    if(data.version!==SAVE_VERSION&&data.version!==12&&data.version!==11) return false;
+    // ── SAVE_VERSION 14 MIGRATION ──
+    // Accepts v11/v12/v13 saves and migrates them; rejects anything older.
+    if(data.version!==SAVE_VERSION&&data.version!==13&&data.version!==12&&data.version!==11) return false;
     const s=data.state;
 
     // Migrate inventory: v11 had a single `bag`; v12 splits to professorBag/trainerBag.
@@ -2097,10 +2189,10 @@ function loadGame(){
       if(p.ability===undefined) p.ability=null;
       if(p.friendship===undefined) p.friendship=0;
       if(p.isShiny===undefined) p.isShiny=false;
-      if(p.nickname===undefined) p.nickname=null; // v0.20.1
-      if(p.evolveBlocked===undefined) p.evolveBlocked=false; // v0.20.1
+      if(p.nickname===undefined) p.nickname=null; // v0.20
+      if(p.evolveBlocked===undefined) p.evolveBlocked=false; // v0.20
     });
-    // v0.20.1 migration: researchLog schema changes
+    // v0.20 migration: researchLog schema changes
     Object.keys(state.researchLog).forEach(dexIdStr=>{
       const r=state.researchLog[dexIdStr];
       if(!r) return;
@@ -2111,10 +2203,20 @@ function loadGame(){
         delete r.confirmedMethod; delete r.confirmedIntoId;
       }
       // abilitiesObserved — best-effort backfill from currently-held individuals only;
-      // cannot recover abilities from Pokemon already released before v0.20.1.
+      // cannot recover abilities from Pokemon already released before v0.20.
       if(!r.abilitiesObserved) r.abilitiesObserved={};
     });
     state.dex.forEach(p=>{ if(p.pokedexId&&p.ability) recordAbilityObserved(p.pokedexId,p.ability); });
+    // v0.21 migration: fishing split into fish-old/fish-good/fish-super sub-methods.
+    // Any saved location preference referencing the old bare 'fish' method is dropped entirely —
+    // that location recalculates fresh defaults (all currently-unlocked methods checked evenly)
+    // the next time it's visited, rather than attempting to expand/preserve the old preference.
+    Object.keys(state.locationMethodPrefs).forEach(locId=>{
+      const prefs=state.locationMethodPrefs[locId];
+      if(prefs&&prefs.methods&&prefs.methods.includes('fish')){
+        delete state.locationMethodPrefs[locId];
+      }
+    });
     // Backfill dexHistory from live dex for pre-v11 saves
     if(!s.dexHistory){
       state.dex.forEach(p=>{

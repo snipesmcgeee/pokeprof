@@ -1,6 +1,6 @@
 // PokeProf — Items Database
-// Auto-generated: 7/5/2026, 10:31:32 PM
-// Entries: 36
+// Auto-generated: 7/12/2026, 11:52:20 AM
+// Entries: 40
 
 const ITEMS_DATA = [
   {
@@ -73,6 +73,24 @@ const ITEMS_DATA = [
     "usableInField": false,
     "usableInBattle": false,
     "sprite": "ultra-ball",
+    "bagType": "Professor"
+  },
+  {
+    "itemId": "poke-ball",
+    "name": "Poké Ball",
+    "itemCategory": "ball",
+    "description": "A basic ball for catching Pokémon",
+    "effect": "catch",
+    "effectValue": null,
+    "shopPrice": 1,
+    "sellPrice": null,
+    "shopTier": "lab",
+    "isConsumable": true,
+    "catchRateModifier": 1,
+    "requiresTarget": false,
+    "usableInField": true,
+    "usableInBattle": false,
+    "sprite": "poke-ball",
     "bagType": "Professor"
   },
   {
@@ -379,6 +397,60 @@ const ITEMS_DATA = [
     "usableInField": true,
     "usableInBattle": false,
     "sprite": "water-stone",
+    "bagType": "Professor"
+  },
+  {
+    "itemId": "kings-rock",
+    "name": "King's Rock",
+    "itemCategory": "evolutionItem",
+    "description": "Causes certain Pokémon to evolve when this is used",
+    "effect": "evolve-stone",
+    "effectValue": null,
+    "shopPrice": 100,
+    "sellPrice": null,
+    "shopTier": "full",
+    "isConsumable": true,
+    "catchRateModifier": null,
+    "requiresTarget": false,
+    "usableInField": true,
+    "usableInBattle": false,
+    "sprite": "kings-rock",
+    "bagType": "Professor"
+  },
+  {
+    "itemId": "metal-coat",
+    "name": "Metal Coat",
+    "itemCategory": "evolutionItem",
+    "description": "Causes certain Pokémon to evolve when this is used",
+    "effect": "evolve-stone",
+    "effectValue": null,
+    "shopPrice": 100,
+    "sellPrice": null,
+    "shopTier": "full",
+    "isConsumable": true,
+    "catchRateModifier": null,
+    "requiresTarget": false,
+    "usableInField": true,
+    "usableInBattle": false,
+    "sprite": "metal-coat",
+    "bagType": "Professor"
+  },
+  {
+    "itemId": "black-augurite",
+    "name": "Black Augurite",
+    "itemCategory": "evolutionItem",
+    "description": "Causes certain Pokémon to evolve when this is used",
+    "effect": "evolve-stone",
+    "effectValue": null,
+    "shopPrice": 100,
+    "sellPrice": null,
+    "shopTier": "full",
+    "isConsumable": true,
+    "catchRateModifier": null,
+    "requiresTarget": false,
+    "usableInField": true,
+    "usableInBattle": false,
+    "sprite": "black-augurite",
     "bagType": "Professor"
   },
   {

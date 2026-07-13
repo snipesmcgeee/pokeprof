@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.22</title>
+<title>PokeProf v0.23</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -105,7 +105,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span style="font-size:11px;color:#6080a0;">v0.22</span></h1>
+  <h1>PokeProf <span style="font-size:11px;color:#6080a0;">v0.23</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">5.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -233,6 +233,10 @@ function getPokemonEntry(dexId){
   if(nullForm) return nullForm;
   return POKEDEX_DATA.find(x=>x.dexId===dexId) || null;
 }
+
+// v0.23 — promoted from a local redeclaration inside renderDexDetail() so the Trainer Battle
+// System's move-slot rectangles can share the same type colors.
+const TYPE_COLORS={'Normal':'#a8a878','Fire':'#f08030','Water':'#6890f0','Grass':'#78c850','Electric':'#f8d030','Ice':'#98d8d8','Fighting':'#c03028','Poison':'#a040a0','Ground':'#e0c068','Flying':'#a890f0','Psychic':'#f85888','Bug':'#a8b820','Rock':'#b8a038','Ghost':'#705898','Dragon':'#7038f8','Dark':'#705848','Steel':'#b8b8d0','Fairy':'#ee99ac'};
 
 // ── ENCOUNTER METHODS ──
 const EVOLUTION_METHODS = [
@@ -414,7 +418,8 @@ function makePokemon(sp,lv,gender,holder=null,dexId=null){
     ability:ability||null,
     friendship:0,
     nickname:null,
-    evolveBlocked:false
+    evolveBlocked:false,
+    equippedMoves:getDefaultEquippedMoves(entry) // v0.23 — Trainer Battle System
   };
 }
 
@@ -433,6 +438,12 @@ function getSpriteUrl(dexId,name,isShiny=false){
     if(entry&&entry.spriteUrl) return entry.spriteUrl;
   }
   return (isShiny?SPRITE_BASE+'/shiny':SPRITE_BASE)+'/'+dexId+'.png';
+}
+
+// v0.23 — reflects a CURRENTLY HELD shiny only, purely derived from live state (no new field,
+// no SAVE_VERSION impact). Badge disappears automatically if released or evolved past.
+function hasLiveShiny(dexId){
+  return state.dex.some(p=>p.pokedexId===dexId&&p.isShiny);
 }
 
 // ── PARTY SORT ──
@@ -597,22 +608,161 @@ function calcMaxHP(sp,lv,dexId=null){
   return Math.floor((s.baseHP*2*lv)/100)+lv+10;
 }
 
+// v0.23 — extracted from the inline st() helper that used to live only inside calcBST(),
+// so the Trainer Battle System's damage formula can reuse the same level-scaled stat calc.
+function calcStat(base,level){
+  return Math.floor(((base||0)*2*level)/100)+5;
+}
+
 function calcBST(sp,lv,dexId=null){
   const s=dexId?getPokemonEntry(dexId):SPECIES[sp]; if(!s) return 0;
-  const st=(b)=>Math.floor(((b||0)*2*lv)/100)+5;
-  return calcMaxHP(sp,lv,dexId)+st(s.baseAtk)+st(s.baseDef)+st(s.baseSpatk)+st(s.baseSpdef)+st(s.baseSpd);
+  return calcMaxHP(sp,lv,dexId)+calcStat(s.baseAtk,lv)+calcStat(s.baseDef,lv)+calcStat(s.baseSpatk,lv)+calcStat(s.baseSpdef,lv)+calcStat(s.baseSpd,lv);
+}
+
+// ── TRAINER BATTLE SYSTEM (v0.23) ──
+// Applies ONLY to a new trainer/gym battle context — wild encounters (fight(), ball-throwing,
+// resolveEncounterStep(), processOfflineTime()) are completely untouched by any code below.
+// This is the data + engine foundation only: battle triggers, badges, and opposing trainer
+// rosters/AI are NOT designed yet and are explicitly out of scope for v0.23 — see DESIGN.md.
+
+// 18 types × Physical/Special — must match converter.html's MOVE_TYPES and MoveFetcher's
+// MOVE_COLUMNS exactly, or the 36-column data won't line up.
+const MOVE_TYPES=['normal','fire','water','electric','grass','ice','fighting','poison',
+  'ground','flying','psychic','bug','rock','ghost','dragon','dark','steel','fairy'];
+function capitalizeType(t){ return t?t.charAt(0).toUpperCase()+t.slice(1):t; }
+
+// Every non-null {type}Physical/{type}Special column on a Pokedex entry is one available slot.
+function getAvailableMoveSlots(entry){
+  if(!entry) return [];
+  const slots=[];
+  MOVE_TYPES.forEach(t=>{
+    const physCap=entry[t+'Physical'], specCap=entry[t+'Special'];
+    if(physCap!=null) slots.push({type:capitalizeType(t),category:'Physical',powerCap:physCap});
+    if(specCap!=null) slots.push({type:capitalizeType(t),category:'Special',powerCap:specCap});
+  });
+  return slots;
+}
+
+// Default move at catch/migration: type1 slot (random Physical/Special if both exist) → else
+// type2 slot (same logic) → else Normal-Physical fallback (always Physical, no randomness).
+function pickDefaultMove(entry){
+  if(!entry) return null;
+  const slots=getAvailableMoveSlots(entry);
+  const forType=(typeName)=>slots.filter(s=>s.type===typeName);
+  let candidates=forType(entry.type1);
+  if(!candidates.length&&entry.type2) candidates=forType(entry.type2);
+  if(!candidates.length){
+    const nf=slots.find(s=>s.type==='Normal'&&s.category==='Physical');
+    return nf?{type:'Normal',category:'Physical',power:40}:null;
+  }
+  const chosen=candidates.length>1?candidates[Math.floor(Math.random()*candidates.length)]:candidates[0];
+  return {type:chosen.type,category:chosen.category,power:40};
+}
+
+// Returns a fixed 4-slot array — slot 0 filled with the default move if one exists, slots 1-3
+// always start empty (require a TM to fill). Used both for newly-caught Pokemon (makePokemon)
+// and for backfilling pre-v0.23 saves on load.
+function getDefaultEquippedMoves(entry){
+  return [pickDefaultMove(entry)||null,null,null,null];
+}
+
+// Type+category keys currently equipped elsewhere on this Pokemon (excludes the slot being
+// edited) — used to prevent equipping a duplicate type+category combo on the same Pokemon.
+function getEquippedMoveKeys(p,excludeIndex){
+  return (p.equippedMoves||[]).map((m,i)=>(m&&i!==excludeIndex)?(m.type+'|'+m.category):null).filter(Boolean);
+}
+
+// Real-game damage formula: floor(floor(floor(2*Level/5+2)*Power*A/D)/50)+2, then
+// × STAB(1.5x) × TypeEffectiveness × Random(0.85-1.00). No crits/status/priority, 100% accuracy.
+function calcBattleDamage(attacker,defender,move){
+  const atkEntry=getPokemonEntry(attacker.pokedexId);
+  const defEntry=getPokemonEntry(defender.pokedexId);
+  if(!atkEntry||!defEntry||!move) return 0;
+  const isPhysical=move.category==='Physical';
+  const A=calcStat(isPhysical?atkEntry.baseAtk:atkEntry.baseSpatk,attacker.level);
+  const D=calcStat(isPhysical?defEntry.baseDef:defEntry.baseSpdef,defender.level);
+  const base=Math.floor(Math.floor(Math.floor((2*attacker.level)/5+2)*move.power*A/D)/50)+2;
+  const stab=(move.type===atkEntry.type1||move.type===atkEntry.type2)?1.5:1;
+  const eff=(typeof getTypeEffectiveness==='function')?getTypeEffectiveness(move.type,defEntry.type1,defEntry.type2):1;
+  const rand=0.85+Math.random()*0.15;
+  return Math.max(1,Math.floor(base*stab*eff*rand));
+}
+
+// Turn order — reuses the same effective-speed formula as calcStat (identical to the existing
+// wild-encounter speed calc), evaluated every round rather than once per battle.
+function getBattleSpeed(p){
+  const entry=getPokemonEntry(p.pokedexId);
+  return calcStat(entry?entry.baseSpd:0,p.level);
+}
+
+// AI move selection: highest expected damage among equipped moves against the current target
+// (type effectiveness + STAB already baked into calcBattleDamage). A move can't be used a 3rd
+// consecutive turn in a row — history is a {catchId:[last two move keys]} map the caller owns
+// and resets (delete history[catchId]) whenever that Pokemon switches out and back in.
+function selectAIMove(attacker,defender,history){
+  const moves=(attacker.equippedMoves||[]).filter(m=>m);
+  if(!moves.length) return null;
+  const scored=moves.map(m=>({move:m,dmg:calcBattleDamage(attacker,defender,m)}));
+  scored.sort((a,b)=>b.dmg-a.dmg);
+  const moveKey=m=>m.type+'|'+m.category;
+  const recent=(history&&history[attacker.id])||[];
+  const banned=(recent.length===2&&recent[0]===recent[1])?recent[0]:null;
+  const pick=scored.find(s=>moveKey(s.move)!==banned)||scored[0];
+  return pick.move;
+}
+
+// Executes one attacker's turn, applies damage, and updates the recently-used-move tracker.
+function runBattleTurn(attacker,defender,history){
+  const move=selectAIMove(attacker,defender,history);
+  if(!move) return {damage:0,move:null};
+  const dmg=calcBattleDamage(attacker,defender,move);
+  defender.currentHP=Math.max(0,defender.currentHP-dmg);
+  if(!history[attacker.id]) history[attacker.id]=[];
+  history[attacker.id].push(move.type+'|'+move.category);
+  if(history[attacker.id].length>2) history[attacker.id].shift();
+  return {damage:dmg,move};
+}
+
+// Multi-Pokemon gauntlet: speed-based turn order (random tie-break), auto-cycles to the next
+// non-fainted teammate on either side, ends when a full team of up to 6 is fainted. Engine only —
+// not wired to any UI trigger yet (battle triggers are explicitly out of scope for v0.23).
+function runTrainerBattle(playerTeam,enemyTeam){
+  const history={};
+  let playerActive=playerTeam.find(p=>p.currentHP>0);
+  let enemyActive=enemyTeam.find(p=>p.currentHP>0);
+  const log=[];
+  while(playerActive&&enemyActive){
+    const pFirst=getBattleSpeed(playerActive)>getBattleSpeed(enemyActive)||
+      (getBattleSpeed(playerActive)===getBattleSpeed(enemyActive)&&Math.random()<0.5);
+    const order=pFirst?[[playerActive,enemyActive],[enemyActive,playerActive]]:[[enemyActive,playerActive],[playerActive,enemyActive]];
+    for(const [atk,def] of order){
+      if(atk.currentHP<=0||def.currentHP<=0) continue;
+      const result=runBattleTurn(atk,def,history);
+      log.push({attacker:atk.id,defender:def.id,damage:result.damage,move:result.move});
+      if(def.currentHP<=0) log.push({faint:def.id});
+    }
+    if(playerActive.currentHP<=0){ delete history[playerActive.id]; playerActive=playerTeam.find(p=>p.currentHP>0); }
+    if(enemyActive.currentHP<=0){ delete history[enemyActive.id]; enemyActive=enemyTeam.find(p=>p.currentHP>0); }
+  }
+  return {winner:playerTeam.some(p=>p.currentHP>0)?'player':'enemy',log};
 }
 
 // ── RESEARCH ──
 function getResearch(dexId){
   if(!state.researchLog[dexId]) state.researchLog[dexId]={
-    evolutionConfirmed:false, nonEvolutionConfirmed:false,
+    evolutionConfirmed:false,
     confirmedBranches:[], // v0.20 — [{method,intoId}], replaces confirmedMethod/confirmedIntoId
     testedMethods:[], highestLevelObserved:0,
     abilitiesObserved:{}, // v0.20 — {ability1:true, ability2:true, hiddenAbility:true}
     knownSince:Date.now()
   };
   return state.researchLog[dexId];
+}
+// v0.23 — computed live, never persisted. Guarantees correctness even after EVOLUTION_METHODS
+// grows (e.g. Black Augurite is added later) — a species previously "fully tested" against N
+// methods correctly reverts to "not yet ruled out" once a new method exists it hasn't seen.
+function isNonEvolutionConfirmed(r){
+  return !!r && r.testedMethods.length>=EVOLUTION_METHODS.length;
 }
 function recordSighting(dexId,level){
   const r=getResearch(dexId);
@@ -811,7 +961,7 @@ function applyItemEvolution(catchId,intoId){
 function getEvolutionDisplayText(dexId){
   const r=state.researchLog[dexId];
   if(!r) return 'Evolves into: ???';
-  if(r.nonEvolutionConfirmed) return 'Does not evolve';
+  if(isNonEvolutionConfirmed(r)) return 'Does not evolve';
   if(r.evolutionConfirmed&&r.confirmedBranches&&r.confirmedBranches.length){
     const fromEntry=getPokemonEntry(dexId);
     const names=r.confirmedBranches.map(b=>{
@@ -1794,7 +1944,10 @@ function showPokemonDetail(catchId){
   // v0.20 — per-individual evolution block checkbox
   const evolveBlockHtml='<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#a0a0c0;margin-bottom:10px;cursor:pointer;"><input type="checkbox" id="evolve-block-input" '+(p.evolveBlocked?'checked':'')+' onchange="toggleEvolveBlock('+p.id+',this.checked)"> Block evolution for this Pokémon</label>';
 
-  modal.innerHTML='<div style="background:#16213e;border:1px solid #e63946;border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:#e63946;font-size:14px;font-weight:bold;">#'+(p.pokedexId||'?')+' '+getDisplayName(p)+(p.nickname?' <span style="color:#6080a0;font-size:11px;">('+p.species+')</span>':'')+(p.formName?' ('+p.formName+')':'')+' (catch #'+p.id+')</div><button onclick="document.getElementById(\'poke-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div><div style="color:#a0a0c0;font-size:11px;line-height:2;border-bottom:1px solid #0f3460;margin-bottom:10px;padding-bottom:10px;"><div>Level: <span style="color:#fff">'+p.level+'</span> &nbsp;·&nbsp; Gender: <span style="color:#fff">'+p.gender+'</span></div><div>Type: <span style="color:#fff">'+(entry?entry.type1+(entry.type2?' / '+entry.type2:''):'?')+'</span></div><div>HP: <span style="color:#fff">'+p.currentHP+'/'+p.maxHP+'</span></div><div>Ability: <span style="color:#fff">'+(p.ability||'Unknown')+'</span></div><div>Friendship: <span style="color:#fff">'+(p.friendship||0)+'</span></div>'+(entry&&entry.heightM?'<div>Height: <span style="color:#fff">'+(metersToFeetStr(entry.heightM)||entry.heightM+'m')+'</span></div>':'')+(entry&&entry.weightKg?'<div>Weight: <span style="color:#fff">'+(kgToLbsStr(entry.weightKg)||entry.weightKg+'kg')+'</span></div>':'')+'<div>Holder: <span style="color:#2ecc71">'+(p.holder||'Unassigned')+'</span></div>'+(p.isShiny?'<div style="color:#f4d03f;">✨ SHINY</div>':'')+'</div>'+nicknameHtml+evolveBlockHtml+'<div style="display:flex;gap:8px;flex-wrap:wrap;">'+((!p.holder)?'<button onclick="assignToAide('+p.id+')" class="primary" style="flex:1;">+ Party</button>':'')+(p.holder?'<button onclick="unassignPokemon('+p.id+')" style="flex:1;">− Remove</button>':'')+(p.currentHP<=0?'<button onclick="revivePokemon('+p.id+')" style="flex:1;border-color:#f4d03f;color:#f4d03f;">💊 Revive ($20)</button>':'')+evolveBtnHtml+'<button onclick="document.getElementById(\'poke-modal\').remove()" style="flex:1;">Close</button></div></div>';
+  // v0.23 — Trainer Battle System: tappable move slots (Upgrade/Change/Add, gated by TM)
+  const movesHtml='<div style="margin-bottom:10px;"><div style="color:#a0a0c0;font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Moves</div>'+getMoveSlotsHtml(p,false)+'</div>';
+
+  modal.innerHTML='<div style="background:#16213e;border:1px solid #e63946;border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:#e63946;font-size:14px;font-weight:bold;">#'+(p.pokedexId||'?')+' '+getDisplayName(p)+(p.nickname?' <span style="color:#6080a0;font-size:11px;">('+p.species+')</span>':'')+(p.formName?' ('+p.formName+')':'')+' (catch #'+p.id+')</div><button onclick="document.getElementById(\'poke-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div><div style="color:#a0a0c0;font-size:11px;line-height:2;border-bottom:1px solid #0f3460;margin-bottom:10px;padding-bottom:10px;"><div>Level: <span style="color:#fff">'+p.level+'</span> &nbsp;·&nbsp; Gender: <span style="color:#fff">'+p.gender+'</span></div><div>Type: <span style="color:#fff">'+(entry?entry.type1+(entry.type2?' / '+entry.type2:''):'?')+'</span></div><div>HP: <span style="color:#fff">'+p.currentHP+'/'+p.maxHP+'</span></div><div>Ability: <span style="color:#fff">'+(p.ability||'Unknown')+'</span></div><div>Friendship: <span style="color:#fff">'+(p.friendship||0)+'</span></div>'+(entry&&entry.heightM?'<div>Height: <span style="color:#fff">'+(metersToFeetStr(entry.heightM)||entry.heightM+'m')+'</span></div>':'')+(entry&&entry.weightKg?'<div>Weight: <span style="color:#fff">'+(kgToLbsStr(entry.weightKg)||entry.weightKg+'kg')+'</span></div>':'')+'<div>Holder: <span style="color:#2ecc71">'+(p.holder||'Unassigned')+'</span></div>'+(p.isShiny?'<div style="color:#f4d03f;">✨ SHINY</div>':'')+'</div>'+nicknameHtml+evolveBlockHtml+movesHtml+'<div style="display:flex;gap:8px;flex-wrap:wrap;">'+((!p.holder)?'<button onclick="assignToAide('+p.id+')" class="primary" style="flex:1;">+ Party</button>':'')+(p.holder?'<button onclick="unassignPokemon('+p.id+')" style="flex:1;">− Remove</button>':'')+(p.currentHP<=0?'<button onclick="revivePokemon('+p.id+')" style="flex:1;border-color:#f4d03f;color:#f4d03f;">💊 Revive ($20)</button>':'')+evolveBtnHtml+'<button onclick="document.getElementById(\'poke-modal\').remove()" style="flex:1;">Close</button></div></div>';
   modal.onclick=(e)=>{ if(e.target===modal) modal.remove(); };
   document.body.appendChild(modal);
 }
@@ -1816,6 +1969,109 @@ function toggleEvolveBlock(catchId,checked){
   p.evolveBlocked=!!checked;
   saveGame();
   showPokemonDetail(catchId);
+}
+
+// ── TRAINER BATTLE SYSTEM — MOVE UI (v0.23) ──
+function getTMCount(){
+  return (state.professorBag&&state.professorBag['tm'])||0;
+}
+
+// 4 rounded-rect slots — type-colored background, 💥/🌀 category emoji + power number.
+// compact=true (party card): read-only. compact=false (poke-modal): tappable → openMoveSlot().
+function getMoveSlotsHtml(p,compact){
+  const slots=p.equippedMoves||[null,null,null,null];
+  return '<div style="display:flex;gap:4px;margin-top:'+(compact?'8px':'0')+';">'+slots.map((m,i)=>{
+    const tapAttr=compact?'':' onclick="event.stopPropagation();openMoveSlot('+p.id+','+i+')" style="cursor:pointer;"';
+    if(!m){
+      return '<div'+tapAttr+' style="flex:1;background:#0f1a2a;border:1px dashed #3a4a5a;border-radius:6px;padding:6px 2px;text-align:center;font-size:9px;color:#5a6a7a;'+(compact?'':'cursor:pointer;')+'">+ Add Move</div>';
+    }
+    const color=TYPE_COLORS[m.type]||'#444';
+    const emoji=m.category==='Physical'?'💥':'🌀';
+    return '<div'+tapAttr+' style="flex:1;background:'+color+';border-radius:6px;padding:6px 2px;text-align:center;font-size:10px;color:#fff;font-weight:bold;'+(compact?'':'cursor:pointer;')+'">'+emoji+' '+m.power+'</div>';
+  }).join('')+'</div>';
+}
+
+// Opens the per-slot action modal: Upgrade/Change for a filled slot, or the Add picker for an
+// empty one. Layered above poke-modal (higher z-index) so poke-modal stays open behind it.
+function openMoveSlot(catchId,slotIndex){
+  const p=state.dex.find(x=>x.id===catchId); if(!p) return;
+  const entry=getPokemonEntry(p.pokedexId); if(!entry) return;
+  const slot=(p.equippedMoves||[])[slotIndex];
+  const tmCount=getTMCount();
+  const existing=document.getElementById('move-modal'); if(existing) existing.remove();
+  const modal=document.createElement('div');
+  modal.id='move-modal';
+  modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:1100;display:flex;align-items:center;justify-content:center;padding:16px;';
+  let body;
+  if(!slot){
+    body='<div style="color:#a0a0c0;font-size:11px;margin-bottom:10px;">Empty slot — choose a move to add.</div>'+buildMovePickerHtml(catchId,slotIndex,'add');
+  } else {
+    const cap=entry[slot.type.toLowerCase()+slot.category];
+    const atCap=cap!=null&&slot.power>=cap;
+    body='<div style="color:#fff;font-size:13px;margin-bottom:10px;">'+slot.type+' '+slot.category+' — Power '+slot.power+(cap?'/'+cap:'')+'</div>'+
+      '<div style="display:flex;gap:8px;">'+
+        '<button '+((tmCount<1||atCap)?'disabled':'')+' onclick="confirmMoveAction('+catchId+','+slotIndex+',\'upgrade\')" style="flex:1;'+(atCap?'':'border-color:#2ecc71;color:#2ecc71;')+'">'+(atCap?'Maxed':'⬆ Upgrade (1 TM)')+'</button>'+
+        '<button '+(tmCount<1?'disabled':'')+' onclick="showMoveChangeOptions('+catchId+','+slotIndex+')" style="flex:1;border-color:#5dade2;color:#5dade2;">🔁 Change</button>'+
+      '</div>'+
+      (tmCount<1?'<div style="color:#e63946;font-size:10px;margin-top:8px;">Need 1 TM</div>':'');
+  }
+  modal.innerHTML='<div style="background:#16213e;border:1px solid #5dade2;border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;max-height:85vh;overflow-y:auto;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:#5dade2;font-size:13px;font-weight:bold;">Move Slot '+(slotIndex+1)+'</div><button onclick="document.getElementById(\'move-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div><div id="move-modal-body">'+body+'</div></div>';
+  modal.onclick=(e)=>{ if(e.target===modal) modal.remove(); };
+  document.body.appendChild(modal);
+}
+
+// Swaps the move-modal body to the replacement picker (used by the "Change" button).
+function showMoveChangeOptions(catchId,slotIndex){
+  const body=document.getElementById('move-modal-body'); if(!body) return;
+  body.innerHTML='<div style="color:#a0a0c0;font-size:11px;margin-bottom:8px;">Choose a replacement move:</div>'+buildMovePickerHtml(catchId,slotIndex,'change');
+}
+
+// Lists every available (type,category) slot from the species' pool, excluding whatever's
+// already equipped in this Pokemon's OTHER slots (no duplicate type+category combos).
+function buildMovePickerHtml(catchId,slotIndex,mode){
+  const p=state.dex.find(x=>x.id===catchId); if(!p) return '';
+  const entry=getPokemonEntry(p.pokedexId); if(!entry) return '';
+  const tmCount=getTMCount();
+  const excluded=new Set(getEquippedMoveKeys(p,slotIndex));
+  const options=getAvailableMoveSlots(entry).filter(o=>!excluded.has(o.type+'|'+o.category));
+  if(!options.length){
+    return '<div style="color:#6080a0;font-size:11px;">No available moves to '+mode+' — every learnable slot is already equipped elsewhere on this Pokémon.</div>';
+  }
+  return '<div style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;">'+options.map(o=>{
+    const color=TYPE_COLORS[o.type]||'#444';
+    const emoji=o.category==='Physical'?'💥':'🌀';
+    return '<button '+(tmCount<1?'disabled':'')+' onclick="confirmMoveAction('+catchId+','+slotIndex+',\''+mode+'\',\''+o.type+'\',\''+o.category+'\')" style="text-align:left;background:'+color+';color:#fff;border:none;padding:8px 10px;">'+emoji+' '+o.type+' '+o.category+' (cap '+o.powerCap+')</button>';
+  }).join('')+'</div>'+(tmCount<1?'<div style="color:#e63946;font-size:10px;margin-top:6px;">Need 1 TM</div>':'');
+}
+
+// Spends 1 TM (state.professorBag — TM's bagType is Professor, matching the Items sheet row)
+// and applies the requested action. Re-renders poke-modal in place so the player sees the result.
+function confirmMoveAction(catchId,slotIndex,mode,type,category){
+  const p=state.dex.find(x=>x.id===catchId); if(!p) return;
+  const entry=getPokemonEntry(p.pokedexId); if(!entry) return;
+  if(getTMCount()<1){ addLog('Need 1 TM.','fail'); return; }
+  if(!p.equippedMoves) p.equippedMoves=[null,null,null,null];
+
+  if(mode==='upgrade'){
+    const slot=p.equippedMoves[slotIndex]; if(!slot) return;
+    const cap=entry[slot.type.toLowerCase()+slot.category];
+    if(cap!=null&&slot.power>=cap){ addLog(slot.type+' '+slot.category+' is already maxed.','fail'); return; }
+    if(!confirm('Use 1 TM to upgrade '+slot.type+' '+slot.category+' from '+slot.power+' to '+(slot.power+5)+'?')) return;
+    state.professorBag['tm']--;
+    slot.power+=5;
+    addLog('Upgraded '+getDisplayName(p)+"'s "+slot.type+' '+slot.category+' to power '+slot.power+'.','info');
+  } else if(mode==='add'||mode==='change'){
+    if(!type||!category) return;
+    if(!confirm('Use 1 TM to '+(mode==='add'?'add':'change to')+' '+type+' '+category+'?')) return;
+    state.professorBag['tm']--;
+    p.equippedMoves[slotIndex]={type,category,power:40};
+    addLog((mode==='add'?'Added ':'Changed to ')+type+' '+category+' on '+getDisplayName(p)+'.','info');
+  }
+
+  saveGame(); render();
+  const moveModal=document.getElementById('move-modal'); if(moveModal) moveModal.remove();
+  const pokeModal=document.getElementById('poke-modal');
+  if(pokeModal){ pokeModal.remove(); showPokemonDetail(catchId); }
 }
 
 // ── BAG DISPLAY ──
@@ -1861,7 +2117,7 @@ function renderParty(){
     d.className='party-slot'+(fainted?' fainted':'');
     const spriteUrl=getSpriteUrl(p.pokedexId,p.species,p.isShiny||false);
     spritesHtml+='<img src="'+spriteUrl+'" class="aide-sprite-mini" style="opacity:'+(fainted?'0.3':'1')+';image-rendering:pixelated;" onerror="this.style.display=\'none\'">';
-    d.innerHTML='<div style="display:flex;align-items:flex-start;gap:8px;"><img src="'+spriteUrl+'" class="party-sprite" onerror="this.style.display=\'none\'"><div style="flex:1;"><div class="poke-name">'+(fainted?'💀':'🐾')+' '+getDisplayName(p)+' #'+p.id+(p.isShiny?'<span class="shiny-badge">✨</span>':'')+'</div><div class="poke-level">Lv '+p.level+' · '+p.gender+(p.ability?' · '+p.ability:'')+'</div><div style="color:#6080a0;font-size:10px;">❤ '+(p.friendship||0)+' friendship</div><div class="hp-bar-wrap"><div class="hp-bar" style="width:'+hpPct+'%;background:'+hpColor+';"></div></div><div class="hp-text">HP: '+p.currentHP+'/'+p.maxHP+'</div><div class="exp-bar-wrap"><div class="exp-bar" style="width:'+ePct+'%;"></div></div></div></div>';
+    d.innerHTML='<div style="display:flex;align-items:flex-start;gap:8px;"><img src="'+spriteUrl+'" class="party-sprite" onerror="this.style.display=\'none\'"><div style="flex:1;"><div class="poke-name">'+(fainted?'💀':'🐾')+' '+getDisplayName(p)+' #'+p.id+(p.isShiny?'<span class="shiny-badge">✨</span>':'')+'</div><div class="poke-level">Lv '+p.level+' · '+p.gender+(p.ability?' · '+p.ability:'')+'</div><div style="color:#6080a0;font-size:10px;">❤ '+(p.friendship||0)+' friendship</div><div class="hp-bar-wrap"><div class="hp-bar" style="width:'+hpPct+'%;background:'+hpColor+';"></div></div><div class="hp-text">HP: '+p.currentHP+'/'+p.maxHP+'</div><div class="exp-bar-wrap"><div class="exp-bar" style="width:'+ePct+'%;"></div></div></div></div>'+getMoveSlotsHtml(p,true);
     d.onclick=()=>showPokemonDetail(p.id);
     c.appendChild(d);
   });
@@ -1951,9 +2207,10 @@ function evoMethodLabel(e){
 function evoNodeHtml(entry,isHighlight){
   const sprite=getSpriteUrl(entry.dexId,entry.name,false);
   const border=isHighlight?'border:2px solid #f4d03f;':'border:1px solid #1a4a80;';
+  const shinyBadge=hasLiveShiny(entry.dexId)?'<span class="shiny-badge">✨</span>':'';
   return '<div style="display:inline-flex;flex-direction:column;align-items:center;'+border+'border-radius:6px;padding:4px;background:#0f3460;min-width:52px;">'+
     '<img src="'+sprite+'" style="width:40px;height:40px;image-rendering:pixelated;" onerror="this.style.display=\'none\'">'+
-    '<div style="font-size:8px;color:#a0a0c0;margin-top:2px;text-align:center;white-space:nowrap;">#'+entry.dexId+' '+entry.name+'</div></div>';
+    '<div style="font-size:8px;color:#a0a0c0;margin-top:2px;text-align:center;white-space:nowrap;">#'+entry.dexId+' '+entry.name+shinyBadge+'</div></div>';
 }
 function evoPlaceholderHtml(){
   return '<div style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid #333;border-radius:6px;padding:4px;background:#0a0a1a;min-width:52px;min-height:48px;">'+
@@ -1992,11 +2249,17 @@ function renderEvolutionChainVisual(famId,highlightDexId){
     if(!entry) return '';
     const html=evoNodeHtml(entry,dexId===highlightDexId);
     const outgoing=edges.filter(e=>e.from===dexId);
-    if(!outgoing.length) return html;
     const r=state.researchLog[dexId];
+    // v0.23 — terminal node (no data-defined evolution target at all, e.g. Sandslash) no longer
+    // returns silently. Missing data isn't proof of "no further evolution" — only exhaustive
+    // method testing is. Same ???-arrow treatment as an unconfirmed branch, unless ruled out.
+    if(!outgoing.length){
+      if(r&&isNonEvolutionConfirmed(r)) return html;
+      return html+evoArrowHtml('?')+evoPlaceholderHtml();
+    }
     const confirmed=outgoing.filter(e=>r&&r.confirmedBranches&&r.confirmedBranches.some(b=>b.method===e.method&&b.intoId===e.to));
     if(!confirmed.length){
-      if(r&&r.nonEvolutionConfirmed) return html;
+      if(r&&isNonEvolutionConfirmed(r)) return html;
       return html+evoArrowHtml('?')+evoPlaceholderHtml();
     }
     const branches=confirmed.map(e=>evoArrowHtml(evoMethodLabel(e))+walk(e.to));
@@ -2035,7 +2298,8 @@ function renderDexPokedexGrid(){
     if(captured||seen){
       const sprite=getSpriteUrl(dexId,entry.name,false);
       const filter=captured?'':'filter:brightness(0);';
-      cell.innerHTML='<img src="'+sprite+'" style="width:48px;height:48px;image-rendering:pixelated;'+filter+'" onerror="this.style.display=\'none\'"><div style="font-size:9px;color:#a0a0c0;margin-top:2px;">#'+dexId+'</div>';
+      const shinyBadge=hasLiveShiny(dexId)?'<span class="shiny-badge">✨</span>':'';
+      cell.innerHTML='<img src="'+sprite+'" style="width:48px;height:48px;image-rendering:pixelated;'+filter+'" onerror="this.style.display=\'none\'"><div style="font-size:9px;color:#a0a0c0;margin-top:2px;text-align:center;">#'+dexId+' '+entry.name+shinyBadge+'</div>';
       cell.onclick=()=>{ dexSelectedDexId=dexId; dexSelectedFamily=entry.familyId; dexView='detail'; renderDex(); };
     } else {
       cell.innerHTML='<div style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;font-size:22px;color:#555;">?</div><div style="font-size:9px;color:#555;margin-top:2px;">#'+dexId+'</div>';
@@ -2067,7 +2331,7 @@ function renderDexFamilies(){
     const knownMembers=allMembers.filter(m=>speciesSeen.has(m.dexId));
     const lastKnown=knownMembers[knownMembers.length-1];
     const lastR=lastKnown?state.researchLog[lastKnown.dexId]:null;
-    const allFamKnown=allMembers.every(m=>speciesSeen.has(m.dexId))&&allMembers.length>0&&(lastR&&(lastR.evolutionConfirmed||lastR.nonEvolutionConfirmed));
+    const allFamKnown=allMembers.every(m=>speciesSeen.has(m.dexId))&&allMembers.length>0&&(lastR&&(lastR.evolutionConfirmed||isNonEvolutionConfirmed(lastR)));
     const speciesDisplay=allFamKnown?speciesSeen.size+'/'+allMembers.length:speciesSeen.size+'/?';
     let totalEverCaught=0;
     speciesSeen.forEach(dexId=>{ totalEverCaught+=(state.dexHistory[dexId]||0); });
@@ -2101,7 +2365,7 @@ function renderDexSpecies(){
   });
   const lastEntry=visibleMembers[visibleMembers.length-1];
   const lastR=state.researchLog[lastEntry.dexId];
-  if(!lastR||(!lastR.evolutionConfirmed&&!lastR.nonEvolutionConfirmed)){
+  if(!lastR||(!lastR.evolutionConfirmed&&!isNonEvolutionConfirmed(lastR))){
     const ph=document.createElement('div');
     ph.className='dex-entry'; ph.style.opacity='0.45';
     ph.innerHTML='<div style="display:flex;align-items:center;gap:10px;"><div style="width:40px;height:40px;background:#0f1a2a;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#333;font-size:20px;">?</div><div><div class="dex-name" style="color:#555;">??? — Unknown</div><div class="dex-details">Further research needed</div></div></div>';
@@ -2110,14 +2374,16 @@ function renderDexSpecies(){
 }
 
 // Builds the evolution research three-bucket HTML for a species detail page.
-// Button: "X/34 Evolution Methods Tested". Expands to show ✓ Confirmed, ? Unknown, N Ruled Out.
+// Button: "X/N Evolution Methods Tested" — N = EVOLUTION_METHODS.length, read live (never
+// hardcode this; the list is expected to grow, e.g. Black Augurite in a future data update).
+// Expands to show ✓ Confirmed, ? Unknown, N Ruled Out.
 function buildEvoMethodsHtml(dexId){
   const r=state.researchLog[dexId];
   const total=EVOLUTION_METHODS.length;
   const tested=r?r.testedMethods.length:0;
 
   let inner='';
-  if(r&&r.nonEvolutionConfirmed){
+  if(r&&isNonEvolutionConfirmed(r)){
     inner='<div style="font-size:11px;color:#5dade2;padding:4px 0;">Does not evolve</div>';
   } else {
     // Confirmed — v0.20: a species can have multiple simultaneously confirmed branches
@@ -2180,8 +2446,7 @@ function renderDexDetail(){
   const caughtOfSpecies=state.dex.filter(p=>p.pokedexId===dexSelectedDexId);
   if(!entry&&!caughtOfSpecies.length){ c.innerHTML='<div style="color:#555;padding:12px;font-size:11px;">No data found.</div>'; return; }
   const sprite=getSpriteUrl(dexSelectedDexId,entry?entry.name:'',false);
-  const typeColors={'Normal':'#a8a878','Fire':'#f08030','Water':'#6890f0','Grass':'#78c850','Electric':'#f8d030','Ice':'#98d8d8','Fighting':'#c03028','Poison':'#a040a0','Ground':'#e0c068','Flying':'#a890f0','Psychic':'#f85888','Bug':'#a8b820','Rock':'#b8a038','Ghost':'#705898','Dragon':'#7038f8','Dark':'#705848','Steel':'#b8b8d0','Fairy':'#ee99ac'};
-  const typeBadge=(t)=>t?'<span style="background:'+(typeColors[t]||'#444')+';color:#fff;padding:2px 7px;border-radius:3px;font-size:10px;">'+t+'</span>':'';
+  const typeBadge=(t)=>t?'<span style="background:'+(TYPE_COLORS[t]||'#444')+';color:#fff;padding:2px 7px;border-radius:3px;font-size:10px;">'+t+'</span>':'';
   const heightDisplay=entry&&entry.heightM?metersToFeetStr(entry.heightM):null;
   const weightDisplay=entry&&entry.weightKg?kgToLbsStr(entry.weightKg):null;
   let abilityHtml='';
@@ -2208,7 +2473,7 @@ function renderDexDetail(){
   const encounteredAtHtml=buildEncounteredAtHtml(dexSelectedDexId);
   const header=document.createElement('div');
   header.className='dex-entry';
-  header.innerHTML='<div style="display:flex;gap:12px;align-items:flex-start;"><img src="'+sprite+'" style="width:91px;height:91px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div style="color:#fff;font-size:14px;font-weight:bold;">#'+dexSelectedDexId+' '+(entry?entry.name:'???')+(entry&&entry.formName?'<span style="color:#a0a0c0;font-size:11px;"> ('+entry.formName+')</span>':'')+'</div><div style="color:#5dade2;font-size:11px;margin-top:1px;">Dex #'+dexSelectedDexId+'</div>'+(entry&&entry.category?'<div style="color:#a0a0c0;font-size:10px;margin-top:2px;">"'+entry.category+'"</div>':'')+'<div style="display:flex;gap:5px;margin-top:6px;">'+typeBadge(entry?entry.type1:null)+typeBadge(entry?entry.type2:null)+'</div><div style="color:#9090b0;font-size:10px;margin-top:5px;">'+(heightDisplay?'📏 '+heightDisplay:'')+(heightDisplay&&weightDisplay?' · ':'')+(weightDisplay?'⚖️ '+weightDisplay:'')+'</div></div></div>'+(entry&&entry.flavorText?'<div style="color:#a0c0a0;font-size:11px;font-style:italic;margin-top:10px;padding-top:10px;border-top:1px solid #1a4a80;line-height:1.6;">'+entry.flavorText+'</div>':'')+'<div style="margin-top:10px;padding-top:10px;border-top:1px solid #1a4a80;"><div style="color:#a0a0c0;font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Base Stats</div>'+(entry?[{label:'HP',val:entry.baseHP,color:'#2ecc71'},{label:'ATK',val:entry.baseAtk,color:'#e74c3c'},{label:'DEF',val:entry.baseDef,color:'#f4d03f'},{label:'SpATK',val:entry.baseSpatk,color:'#9b59b6'},{label:'SpDEF',val:entry.baseSpdef,color:'#5dade2'},{label:'SPD',val:entry.baseSpd,color:'#2ecc71'}].map(s=>'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;"><span style="color:#6080a0;font-size:10px;width:40px;text-align:right;">'+s.label+'</span><span style="color:#fff;font-size:10px;width:28px;text-align:right;">'+(s.val||'?')+'</span><div style="flex:1;background:#0a0a1a;border-radius:2px;height:6px;overflow:hidden;"><div style="width:'+Math.min(100,Math.round(((s.val||0)/255)*100))+'%;height:100%;background:'+s.color+';border-radius:2px;"></div></div></div>').join(''):'<div style="color:#555;font-size:10px;">No stat data available.</div>')+(entry?'<div style="color:#f4d03f;font-size:10px;text-align:right;margin-top:4px;">BST: '+(entry.bst||'?')+'</div>':'')+'</div>'+evoChainHtml+abilityHtml+genderHtml+buildEvoMethodsHtml(dexSelectedDexId)+encounteredAtHtml;
+  header.innerHTML='<div style="display:flex;gap:12px;align-items:flex-start;"><img src="'+sprite+'" style="width:91px;height:91px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div style="color:#fff;font-size:14px;font-weight:bold;">#'+dexSelectedDexId+' '+(entry?entry.name:'???')+(entry&&entry.formName?'<span style="color:#a0a0c0;font-size:11px;"> ('+entry.formName+')</span>':'')+(hasLiveShiny(dexSelectedDexId)?'<span class="shiny-badge">✨</span>':'')+'</div><div style="color:#5dade2;font-size:11px;margin-top:1px;">Dex #'+dexSelectedDexId+'</div>'+(entry&&entry.category?'<div style="color:#a0a0c0;font-size:10px;margin-top:2px;">"'+entry.category+'"</div>':'')+'<div style="display:flex;gap:5px;margin-top:6px;">'+typeBadge(entry?entry.type1:null)+typeBadge(entry?entry.type2:null)+'</div><div style="color:#9090b0;font-size:10px;margin-top:5px;">'+(heightDisplay?'📏 '+heightDisplay:'')+(heightDisplay&&weightDisplay?' · ':'')+(weightDisplay?'⚖️ '+weightDisplay:'')+'</div></div></div>'+(entry&&entry.flavorText?'<div style="color:#a0c0a0;font-size:11px;font-style:italic;margin-top:10px;padding-top:10px;border-top:1px solid #1a4a80;line-height:1.6;">'+entry.flavorText+'</div>':'')+'<div style="margin-top:10px;padding-top:10px;border-top:1px solid #1a4a80;"><div style="color:#a0a0c0;font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Base Stats</div>'+(entry?[{label:'HP',val:entry.baseHP,color:'#2ecc71'},{label:'ATK',val:entry.baseAtk,color:'#e74c3c'},{label:'DEF',val:entry.baseDef,color:'#f4d03f'},{label:'SpATK',val:entry.baseSpatk,color:'#9b59b6'},{label:'SpDEF',val:entry.baseSpdef,color:'#5dade2'},{label:'SPD',val:entry.baseSpd,color:'#2ecc71'}].map(s=>'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;"><span style="color:#6080a0;font-size:10px;width:40px;text-align:right;">'+s.label+'</span><span style="color:#fff;font-size:10px;width:28px;text-align:right;">'+(s.val||'?')+'</span><div style="flex:1;background:#0a0a1a;border-radius:2px;height:6px;overflow:hidden;"><div style="width:'+Math.min(100,Math.round(((s.val||0)/255)*100))+'%;height:100%;background:'+s.color+';border-radius:2px;"></div></div></div>').join(''):'<div style="color:#555;font-size:10px;">No stat data available.</div>')+(entry?'<div style="color:#f4d03f;font-size:10px;text-align:right;margin-top:4px;">BST: '+(entry.bst||'?')+'</div>':'')+'</div>'+evoChainHtml+abilityHtml+genderHtml+buildEvoMethodsHtml(dexSelectedDexId)+encounteredAtHtml;
   c.appendChild(header);
   if(totalEver>0&&caughtOfSpecies.length===0){
     const el=document.createElement('div');
@@ -2318,7 +2583,11 @@ const SAVE_KEY='pokeprof_save';
 // fish-super) instead of a single 'fish' method. Any locationMethodPrefs entry referencing the
 // old bare 'fish' method is dropped on load; that location recalculates fresh defaults on next visit.
 // v0.22 stays on SAVE_VERSION 14 — no state schema changes (behavior/rendering fixes only).
-const SAVE_VERSION=14;
+// SAVE_VERSION 15 (v0.23) — equippedMoves[] added to Pokemon objects (up to 4 {type,category,
+// power} slots) for the Trainer Battle System. Migration assigns each existing Pokemon a single
+// default move: type1 slot (random Physical/Special if both exist) → else type2 → else
+// Normal-Physical fallback. Slots 1-3 start empty for all pre-v0.23 saves.
+const SAVE_VERSION=15;
 let saveTimer=0;
 
 function saveGame(){
@@ -2358,9 +2627,9 @@ function loadGame(){
     const data=JSON.parse(raw);
     if(!data) return false;
 
-    // ── SAVE_VERSION 14 MIGRATION ──
-    // Accepts v11/v12/v13 saves and migrates them; rejects anything older.
-    if(data.version!==SAVE_VERSION&&data.version!==13&&data.version!==12&&data.version!==11) return false;
+    // ── SAVE_VERSION 15 MIGRATION ──
+    // Accepts v11/v12/v13/v14 saves and migrates them; rejects anything older.
+    if(data.version!==SAVE_VERSION&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
     const s=data.state;
 
     // Migrate inventory: v11 had a single `bag`; v12 splits to professorBag/trainerBag.
@@ -2415,6 +2684,7 @@ function loadGame(){
       if(p.isShiny===undefined) p.isShiny=false;
       if(p.nickname===undefined) p.nickname=null; // v0.20
       if(p.evolveBlocked===undefined) p.evolveBlocked=false; // v0.20
+      if(p.equippedMoves===undefined) p.equippedMoves=getDefaultEquippedMoves(getPokemonEntry(p.pokedexId)); // v0.23
     });
     // v0.20 migration: researchLog schema changes
     Object.keys(state.researchLog).forEach(dexIdStr=>{

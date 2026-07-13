@@ -668,7 +668,7 @@ Applies **only** to a new trainer/gym battle context. Wild encounters (`fight()`
   - **Upgrade** — +5 power on an equipped move, blocked outright at `powerCap`
   - **Change** — swap an equipped move for a different pool option (new slot starts at power 40)
 - Add/Change picker hides/grays any type+category already equipped elsewhere on that same Pokémon — no duplicate slots.
-- Upgrade/Add/Change buttons are disabled outright (not just blocked on confirm) with a "Need 1 TM" label when `state.trainerBag` has 0 TMs.
+- Upgrade/Add/Change buttons are disabled outright (not just blocked on confirm) with a "Need 1 TM" label when `state.professorBag['tm']` is 0 (TM's `bagType` is Professor).
 - **Items sheet row:** `itemId: tm`, `name: TM`, `itemCategory: tm`, `effect: modify-move`, `bagType: Professor`, `shopTier: basic`, `shopPrice: 25`, `isConsumable: TRUE`, `requiresTarget: TRUE`, `usableInField: TRUE`, `usableInBattle: FALSE`.
 
 ### Move UI

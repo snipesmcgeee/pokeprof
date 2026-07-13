@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PokeProf — MoveFetcher</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #1a1a2e; color: #e0e0e0; font-family: 'Courier New', monospace; font-size: 13px; padding: 20px; min-height: 100vh; }
+
+  h1 { color: #e63946; font-size: 18px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; }
+  .subtitle { color: #6080a0; font-size: 11px; margin-bottom: 24px; }
+
+  .card { background: #16213e; border: 1px solid #0f3460; border-radius: 6px; padding: 16px; margin-bottom: 16px; }
+  .card h2 { color: #5dade2; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; }
+
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+  label { color: #a0a0c0; font-size: 11px; white-space: nowrap; }
+
+  input[type=number], input[type=text] {
+    background: #0f3460; border: 1px solid #1a4a80; color: #e0e0e0;
+    font-family: 'Courier New', monospace; font-size: 12px;
+    padding: 7px 10px; border-radius: 4px; width: 80px;
+  }
+  input[type=text] { width: 200px; }
+
+  button {
+    background: #0f3460; color: #e0e0e0; border: 1px solid #1a4a80;
+    border-radius: 4px; padding: 8px 16px; font-family: 'Courier New', monospace;
+    font-size: 11px; cursor: pointer; letter-spacing: 1px; text-transform: uppercase;
+  }
+  button:hover { background: #1a4a80; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.primary { border-color: #2ecc71; color: #2ecc71; }
+  button.primary:hover { background: #0a3020; }
+  button.danger { border-color: #e63946; color: #e63946; }
+  button.flag-btn { border-color: #f4d03f; color: #f4d03f; padding: 5px 10px; font-size: 10px; text-transform: none; letter-spacing: 0; }
+  button.flag-btn:hover { background: #2a2000; }
+
+  #progress-wrap { display: none; margin-top: 10px; }
+  #progress-bar-bg { background: #0a0a1a; border-radius: 3px; height: 8px; overflow: hidden; margin-bottom: 6px; }
+  #progress-bar { height: 100%; background: #2ecc71; border-radius: 3px; width: 0%; transition: width 0.3s; }
+  #progress-text { font-size: 11px; color: #a0a0c0; }
+
+  #status { font-size: 11px; margin-top: 8px; min-height: 18px; }
+  #status.ok { color: #2ecc71; }
+  #status.err { color: #e63946; }
+  #status.info { color: #5dade2; }
+
+  #results-card { display: none; }
+  #results-card h2 { margin-bottom: 8px; }
+
+  .results-controls { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; align-items: center; }
+  .results-controls span { color: #a0a0c0; font-size: 11px; }
+
+  #results-table-wrap { overflow-x: auto; max-height: 400px; overflow-y: auto; }
+  table { border-collapse: collapse; font-size: 10px; white-space: nowrap; min-width: 100%; }
+  thead th {
+    background: #0f3460; color: #5dade2; padding: 5px 8px;
+    text-align: left; border-bottom: 1px solid #1a4a80;
+    position: sticky; top: 0; z-index: 1;
+  }
+  thead th.ref-col { color: #6080a0; }
+  tbody tr:nth-child(even) { background: #13213a; }
+  tbody tr:hover { background: #1a3a5a; }
+  td { padding: 4px 8px; color: #c0c0d0; border-bottom: 1px solid #0f1a2a; }
+  td.ref { color: #6080a0; }
+  td.null { color: #3a4a5a; font-style: italic; }
+
+  .warning-box { background: #2a2000; border: 1px solid #f4d03f; border-radius: 4px; padding: 10px 14px; font-size: 11px; color: #f4d03f; margin-top: 10px; line-height: 1.7; }
+  .note { color: #6080a0; font-size: 10px; margin-top: 6px; line-height: 1.6; }
+
+  #flags-card { display: none; }
+  .flag-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #0f1a2a; border: 1px solid #1a4a80; border-radius: 4px; padding: 8px 12px; margin-bottom: 6px; font-size: 11px; }
+  .flag-row .flag-label { color: #f4d03f; }
+  .flag-row .flag-sub { color: #6080a0; font-size: 10px; }
+</style>
+</head>
+<body>
+
+<h1>🎓 PokeProf — MoveFetcher</h1>
+<p class="subtitle">Pull cross-game learnsets from PokéAPI and export as 36 move-slot columns for the Pokedex sheet</p>
+
+<div class="card">
+  <h2>Fetch Range</h2>
+  <div class="row">
+    <label>From dexId:</label>
+    <input type="number" id="from-id" value="1" min="1" max="1025">
+    <label>To dexId:</label>
+    <input type="number" id="to-id" value="20" min="1" max="1025">
+    <button class="primary" id="fetch-btn" onclick="startFetch()">⬇ Fetch</button>
+    <button onclick="stopFetch()" id="stop-btn" disabled>⏹ Stop</button>
+  </div>
+  <div class="row">
+    <label>Or single name / slug:</label>
+    <input type="text" id="single-name" placeholder="e.g. raichu or raichu-alola">
+    <button onclick="fetchSingle()">⬇ Fetch One</button>
+  </div>
+  <div id="progress-wrap">
+    <div id="progress-bar-bg"><div id="progress-bar"></div></div>
+    <div id="progress-text">Fetching...</div>
+  </div>
+  <div id="status"></div>
+  <p class="note">⚠ PokeAPI rate limit: ~100 requests/min. Each species can require many move lookups (one per unique move in its full cross-game learnset), so ranges are slower than the Pokedex fetcher — cached globally across this session so repeated moves (Tackle, Thunderbolt, etc.) are only fetched once. Only pull contiguous dexId ranges at a time to keep this manageable, as recommended in DESIGN.md.</p>
+  <p class="note">Form variants (Alolan, Galarian, etc.) are not reachable via the dexId-range pull — PokéAPI indexes them by name-slug. Use the single-name field, or the "fetch this form too" flags below once a base species is pulled.</p>
+</div>
+
+<div class="card" id="flags-card">
+  <h2>⚑ Form Variants Detected</h2>
+  <div id="flags-list"></div>
+</div>
+
+<div class="card" id="results-card">
+  <h2>Results — <span id="result-count">0</span> Pokémon</h2>
+  <div class="results-controls">
+    <button class="primary" onclick="copyForExcel()">📋 Copy for Excel (36 move columns only)</button>
+    <button onclick="downloadCSV()">⬇ Download CSV</button>
+    <button class="danger" onclick="clearResults()">✕ Clear</button>
+    <span id="copy-status"></span>
+  </div>
+  <div class="warning-box">
+    ⚠ <strong>dexId / name columns below are for verification only</strong> — they are NOT included in Copy/Download output. These 36 move columns paste directly into your existing Pokedex sheet's move-slot columns. Sort your sheet and this results table identically by dexId, paste, then spot-check a few rows for alignment.
+  </div>
+  <div id="results-table-wrap">
+    <table id="results-table">
+      <thead id="results-head"></thead>
+      <tbody id="results-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+// 18 types × Physical/Special — must match converter.html's MOVE_TYPES exactly
+const MOVE_TYPES = ['normal','fire','water','electric','grass','ice','fighting','poison',
+  'ground','flying','psychic','bug','rock','ghost','dragon','dark','steel','fairy'];
+const MOVE_COLUMNS = [];
+MOVE_TYPES.forEach(t => { MOVE_COLUMNS.push(t + 'Physical'); MOVE_COLUMNS.push(t + 'Special'); });
+
+// Reference-only columns shown in the table for eyeballing/alignment — never exported
+const REF_COLUMNS = ['dexId', 'name'];
+const DISPLAY_COLUMNS = REF_COLUMNS.concat(MOVE_COLUMNS);
+
+let results = [];
+let fetching = false;
+let stopRequested = false;
+let moveCache = {};       // moveName -> {type, damageClass, power} | null (null = fetch failed/no power)
+let flaggedForms = {};    // dexId -> [{name, slug}] extra varieties not yet fetched
+const capitalize = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : null;
+
+function setStatus(msg, type='info') {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = type;
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// Fetch + cache a single move's type/damage_class/power. Shared across all species
+// in this session so repeated moves (Tackle, Thunderbolt, etc.) are only fetched once.
+async function getMoveData(moveName) {
+  if (moveName in moveCache) return moveCache[moveName];
+  try {
+    const res = await fetch(`https://pokeapi.co/api/v2/move/${moveName}`);
+    if (!res.ok) { moveCache[moveName] = null; return null; }
+    const data = await res.json();
+    const info = {
+      type: capitalize(data.type?.name) || null,
+      damageClass: data.damage_class?.name || null,
+      power: data.power || null
+    };
+    moveCache[moveName] = info;
+    await sleep(120); // be respectful of rate limits — only fires on a cache miss
+    return info;
+  } catch(e) {
+    moveCache[moveName] = null;
+    return null;
+  }
+}
+
+// For a given species/variety slug: pull its full cross-game learnset, resolve each
+// unique move's type+category+power (cached), filter to Physical/Special only, and take
+// the max power per (type, category) group. Returns null on total fetch failure.
+async function fetchMoveSlots(idOrName) {
+  const poke = await fetch(`https://pokeapi.co/api/v2/pokemon/${idOrName}`).then(r => r.ok ? r.json() : null);
+  if (!poke) return null;
+
+  const uniqueMoveNames = [...new Set(poke.moves.map(m => m.move.name))];
+  const slots = {};
+  MOVE_COLUMNS.forEach(c => { slots[c] = null; });
+
+  for (const moveName of uniqueMoveNames) {
+    const info = await getMoveData(moveName);
+    if (!info || !info.type || !info.power) continue;
+    if (info.damageClass !== 'physical' && info.damageClass !== 'special') continue; // drop status moves
+    const col = info.type.toLowerCase() + (info.damageClass === 'physical' ? 'Physical' : 'Special');
+    if (!(col in slots)) continue; // type not in our 18-type list (shouldn't happen)
+    if (slots[col] === null || info.power > slots[col]) slots[col] = info.power;
+  }
+
+  return { dexId: poke.id, name: capitalize(poke.name), slots, pokeData: poke };
+}
+
+// Checks pokemon-species varieties for extra forms beyond the base, surfaces a flag
+// with a validated fetch-ready slug. Does not fetch the extra forms itself.
+async function checkFormVarieties(dexId, speciesNameOrId) {
+  try {
+    const species = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${speciesNameOrId}`).then(r => r.ok ? r.json() : null);
+    if (!species || !species.varieties) return;
+    const extras = species.varieties.filter(v => !v.is_default).map(v => ({
+      name: v.pokemon.name,
+      slug: v.pokemon.name
+    }));
+    if (extras.length) {
+      flaggedForms[dexId] = extras;
+      renderFlags();
+    }
+  } catch(e) { /* form-check failure is non-fatal, just skip flagging */ }
+}
+
+function renderFlags() {
+  const card = document.getElementById('flags-card');
+  const list = document.getElementById('flags-list');
+  const dexIds = Object.keys(flaggedForms);
+  if (!dexIds.length) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  list.innerHTML = '';
+  dexIds.forEach(dexId => {
+    flaggedForms[dexId].forEach((form, i) => {
+      const row = document.createElement('div');
+      row.className = 'flag-row';
+      row.innerHTML = `<div><span class="flag-label">#${dexId}</span> has an extra variety: <span class="flag-label">${form.slug}</span><div class="flag-sub">Not included in the base dexId pull — fetch it separately</div></div>`;
+      const btn = document.createElement('button');
+      btn.className = 'flag-btn';
+      btn.textContent = '⬇ Fetch this form too';
+      btn.onclick = async () => {
+        btn.disabled = true;
+        btn.textContent = 'Fetching...';
+        await fetchAndPushSingle(form.slug);
+        // Remove this specific flag once fetched
+        flaggedForms[dexId].splice(flaggedForms[dexId].indexOf(form), 1);
+        if (!flaggedForms[dexId].length) delete flaggedForms[dexId];
+        renderFlags();
+      };
+      row.appendChild(btn);
+      list.appendChild(row);
+    });
+  });
+}
+
+async function fetchAndPushSingle(idOrName) {
+  const result = await fetchMoveSlots(idOrName);
+  if (result) {
+    results.push(result);
+    renderTable();
+    setStatus('✔ Fetched ' + result.name, 'ok');
+  } else {
+    setStatus('Not found: ' + idOrName, 'err');
+  }
+  return result;
+}
+
+async function startFetch() {
+  const from = parseInt(document.getElementById('from-id').value);
+  const to   = parseInt(document.getElementById('to-id').value);
+  if (isNaN(from) || isNaN(to) || from > to) { setStatus('Invalid range.', 'err'); return; }
+  if (to - from > 100) { setStatus('Max 100 at a time — this tool is slower than the Pokedex fetcher due to per-move lookups.', 'err'); return; }
+
+  fetching = true; stopRequested = false;
+  document.getElementById('fetch-btn').disabled = true;
+  document.getElementById('stop-btn').disabled = false;
+  document.getElementById('progress-wrap').style.display = 'block';
+
+  const total = to - from + 1;
+  let done = 0, errors = 0;
+
+  for (let id = from; id <= to; id++) {
+    if (stopRequested) { setStatus('Stopped at ' + id + '.', 'info'); break; }
+    setStatus(`Fetching #${id} (${done}/${total})... ${Object.keys(moveCache).length} moves cached`, 'info');
+    document.getElementById('progress-text').textContent = `${done}/${total} — ${Math.round(done/total*100)}%`;
+    document.getElementById('progress-bar').style.width = (done/total*100) + '%';
+    try {
+      const result = await fetchMoveSlots(id);
+      if (result) {
+        results.push(result);
+        await checkFormVarieties(id, id);
+      } else {
+        errors++;
+      }
+    } catch(e) { errors++; setStatus('Error on #'+id+': '+e.message, 'err'); }
+    done++;
+    await sleep(150);
+  }
+
+  fetching = false;
+  document.getElementById('fetch-btn').disabled = false;
+  document.getElementById('stop-btn').disabled = true;
+  document.getElementById('progress-bar').style.width = '100%';
+  document.getElementById('progress-text').textContent = `Done — ${results.length} fetched, ${errors} errors`;
+  setStatus(`✔ Fetched ${results.length} Pokémon. ${errors > 0 ? errors + ' failed.' : ''}`, 'ok');
+  renderTable();
+}
+
+async function fetchSingle() {
+  const name = document.getElementById('single-name').value.trim().toLowerCase();
+  if (!name) { setStatus('Enter a name or slug.', 'err'); return; }
+  setStatus('Fetching ' + name + '...', 'info');
+  try {
+    await fetchAndPushSingle(name);
+    // Also check for further varieties in case a base name was entered here
+    const result = results[results.length - 1];
+    if (result) await checkFormVarieties(result.dexId, name);
+  } catch(e) { setStatus('Error: ' + e.message, 'err'); }
+}
+
+function stopFetch() {
+  stopRequested = true;
+  document.getElementById('stop-btn').disabled = true;
+}
+
+function renderTable() {
+  document.getElementById('results-card').style.display = 'block';
+  document.getElementById('result-count').textContent = results.length;
+
+  const thead = document.getElementById('results-head');
+  thead.innerHTML = '<tr>' + DISPLAY_COLUMNS.map(c =>
+    `<th class="${REF_COLUMNS.includes(c) ? 'ref-col' : ''}">${c}</th>`
+  ).join('') + '</tr>';
+
+  const tbody = document.getElementById('results-body');
+  tbody.innerHTML = '';
+  results.forEach(row => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = DISPLAY_COLUMNS.map(col => {
+      if (col === 'dexId') return `<td class="ref">${row.dexId}</td>`;
+      if (col === 'name') return `<td class="ref">${row.name}</td>`;
+      const v = row.slots[col];
+      if (v === null || v === undefined) return `<td class="null"></td>`;
+      return `<td>${v}</td>`;
+    }).join('');
+    tbody.appendChild(tr);
+  });
+}
+
+function copyForExcel() {
+  // Tab-separated, MOVE_COLUMNS only (no dexId/name) — pastes directly into the
+  // existing Pokedex sheet's move-slot columns. No header row.
+  const tsv = results.map(row =>
+    MOVE_COLUMNS.map(col => {
+      const v = row.slots[col];
+      return v === null || v === undefined ? '' : String(v);
+    }).join('\t')
+  ).join('\n');
+
+  navigator.clipboard.writeText(tsv).then(() => {
+    document.getElementById('copy-status').textContent = '✔ Copied! Paste into Excel.';
+    document.getElementById('copy-status').style.color = '#2ecc71';
+    setTimeout(() => { document.getElementById('copy-status').textContent = ''; }, 3000);
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = tsv;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    document.getElementById('copy-status').textContent = '✔ Copied (fallback)';
+  });
+}
+
+function downloadCSV() {
+  // Includes dexId/name for reference in the downloaded file, unlike the Excel copy
+  const header = REF_COLUMNS.concat(MOVE_COLUMNS).join(',');
+  const rows = results.map(row => {
+    const refVals = [row.dexId, row.name];
+    const moveVals = MOVE_COLUMNS.map(col => {
+      const v = row.slots[col];
+      return v === null || v === undefined ? '' : String(v);
+    });
+    return refVals.concat(moveVals).map(s => {
+      const str = String(s);
+      return str.includes(',') || str.includes('"') || str.includes('\n') ? `"${str.replace(/"/g,'""')}"` : str;
+    }).join(',');
+  }).join('\n');
+  const blob = new Blob([header + '\n' + rows], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'pokeprof_moveslots.csv';
+  a.click();
+}
+
+function clearResults() {
+  if (!confirm('Clear all ' + results.length + ' fetched results? (Move cache is kept.)')) return;
+  results = [];
+  document.getElementById('results-card').style.display = 'none';
+  document.getElementById('results-body').innerHTML = '';
+  setStatus('Cleared.', 'info');
+}
+</script>
+</body>
+</html>

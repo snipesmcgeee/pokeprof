@@ -74,6 +74,7 @@ There is no survival element. Aides do not need food, sleep, or anything like th
 - **v0.20 requires SAVE_VERSION 13** due to: `nickname` field on Pokémon objects, `evolveBlocked` field on Pokémon objects, `researchLog[dexId].abilitiesObserved` field, and `researchLog[dexId].confirmedBranches` replacing singular `confirmedMethod`/`confirmedIntoId`. All four migrations run in a single combined pass on load from v12.
 - **v0.21 requires SAVE_VERSION 14** due to: fishing splitting into per-rod-tier sub-methods (`fish-old`/`fish-good`/`fish-super`) instead of a single `fish` method. Migration: any `state.locationMethodPrefs[locId]` entry containing the bare `'fish'` method (in `methods[]` or as a `weights` key) is dropped entirely for that location — it recalculates fresh defaults (all currently-unlocked methods/rod-tiers checked evenly) the next time that location is visited. No other v0.21 change requires a schema change.
 - **v0.22 stays on SAVE_VERSION 14** — no `state` schema changes in this batch (all 11 items are behavior/rendering fixes and additive read-only views).
+- **v0.23 requires SAVE_VERSION 15** due to: `equippedMoves[]` field added to Pokémon objects (up to 4 `{type, category, power}` slots for the new Battle System). Migration assigns each existing Pokémon a single default move on load: type1 slot (random Physical/Special if both exist) → else type2 → else Normal-Physical fallback. Slots 2–4 start empty for all pre-v0.23 saves.
 
 ---
 
@@ -354,6 +355,7 @@ The single `state.bag` is replaced with two separate inventories:
   - **Seen** (`isSpeciesKnown(dexId)` true, not yet captured): the same real sprite with a `brightness(0)` CSS filter (accurate silhouette shape, no identity leak beyond what's already implied by "seen")
   - **Unknown** (neither): `?` placeholder, no sprite fetch
 - Tapping a Captured or Seen cell navigates straight to Species Detail (Layer 3), skipping the Family Card layer. `?` cells are inert — no tap action.
+- **v0.23:** Captured/Seen cells display the species name alongside the dex number on one line (`#27 Sandshrew`), instead of number-only. Unknown (`?`) cells unaffected — no name shown, preserving no-spoiler behavior.
 
 ### All Catches View — Sorting (SETTLED — v0.22)
 - `sort-select` gains a `family` option alongside Catch #/Dex #/Level/HP/BST — sorts by `familyId` (via `getPokemonEntry(p.pokedexId).familyId`), with `dexId` as a secondary tiebreaker so same-family members stay grouped and ordered sensibly.
@@ -432,12 +434,12 @@ After the while loop: `if(levelled) renderDex();`
 
 ### Evolution Research System (SETTLED intent — v0.19 implementation pending)
 
-#### Evolution Method Enum (34 methods — updated v0.20)
-The full set of testable evolution methods (extensible — new methods can be added without rework):
+#### Evolution Method Enum (SETTLED — count is dynamic, do not hardcode)
+The full set of testable evolution methods lives in `EVOLUTION_METHODS[]` — currently 35 entries (see array in code for the full list). **Any UI or logic referencing the total must read `EVOLUTION_METHODS.length` live, never a hardcoded number** — this list is expected to grow (e.g. Black Augurite is planned for a future data update) and everything downstream must self-correct automatically.
 
 `level`, `friendship`, `friendship-day`, `friendship-night`, `use-move`, `Moon Stone`, `Thunder Stone`, `Fire Stone`, `Leaf Stone`, `Water Stone`, `Sun Stone`, `Shiny Stone`, `Dusk Stone`, `Dawn Stone`, `Ice Stone`, `Oval Stone`, `Metal Coat`, `Protector`, `Dragon Scale`, `Electirizer`, `Up Grade`, `Dubious Disc`, `Razor Fang`, `Razor Claw`, `Peat Block`, `Reaper Cloth`, `Deep Sea Tooth`, `Sachet`, `Whipped Dream`, `Tart Apple`, `Cracked Pot`, `Metal Alloy`, `Auspicious Armor`, `Unremarkable Teacup`, `Link Cable`
 
-Total: 34 methods. `friendship-day` and `friendship-night` added in v0.20 for Espeon/Umbreon-style evolutions. `use-move` added as a placeholder for Sylveon-style evolutions — **not functional**, never auto-tested or auto-confirmed, exists only so the method has a name reserved for when a moveset system exists. This list can be extended later without requiring rework of the research system.
+`friendship-day` and `friendship-night` added in v0.20 for Espeon/Umbreon-style evolutions. `use-move` added as a placeholder for Sylveon-style evolutions — **not functional**, never auto-tested or auto-confirmed, exists only so the method has a name reserved for when a moveset system exists. This list can be extended later without requiring rework of the research system.
 
 #### Professor Auto-Test Loop
 - Evolution stones and items live in the **Professor's inventory** (`state.professorBag`)
@@ -465,12 +467,12 @@ Each species tracks:
 - `evolutionConfirmed` — boolean
 - `confirmedBranches[]` — **(v0.20, replaces singular `confirmedMethod`/`confirmedIntoId`)** array of `{method, intoId}` — supports species with more than one simultaneously-confirmed evolution (e.g. Eevee can have Water Stone→Vaporeon, Thunder Stone→Jolteon, and Fire Stone→Flareon all confirmed at once). Single-evolution species simply end up with a one-item list. Migration converts any pre-v13 `confirmedMethod`/`confirmedIntoId` pair into a one-item `confirmedBranches` list.
 - `abilitiesObserved` — **(v0.20)** which ability slots (`ability1`/`ability2`/`hiddenAbility`) have been observed at least once, see Dex Tab Lifetime Stats
-- `nonEvolutionConfirmed` — boolean
+- `nonEvolutionConfirmed` — **(v0.23 correction)** no longer a persisted write-once flag. Never write `true` to this field. Compute live everywhere it's read: `r.testedMethods.length >= EVOLUTION_METHODS.length`. This guarantees correctness even after `EVOLUTION_METHODS` grows (e.g. adding Black Augurite) — a species previously "fully tested" against 35 methods correctly reverts to "not yet ruled out" once a 36th method exists and it hasn't been tested against it. *(Old behavior was dead code — the flag was initialized `false` and never actually set `true` anywhere in v0.22.)*
 - `highestLevelObserved` — for research purposes
 - `knownSince` — timestamp
 
 #### Three-Bucket UI on Species Cards
-Each species card shows a button: **"X/32 Evolution Methods Tested"** where X = confirmed + ruled-out (methods actually attempted).
+Each species card shows a button: **"X/N Evolution Methods Tested"** where X = confirmed + ruled-out (methods actually attempted), N = `EVOLUTION_METHODS.length` (read live, never hardcoded — see Evolution Method Enum above).
 
 Clicking expands a list:
 - Shows only **Confirmed (✓)** and **Unknown (?) methods by name** — ruled-out methods are hidden entirely
@@ -483,13 +485,13 @@ Moon Stone   ?
 30 Ruled Out
 ```
 
-Example — fully researched (1 confirmed, 31 ruled out):
+Example — fully researched (1 confirmed, rest ruled out):
 ```
 Level        ✓
-31 Ruled Out
+N-1 Ruled Out
 ```
 
-A new species with nothing tested shows **"0/32 Evolution Methods Tested"** and all 32 methods listed as `?`.
+A new species with nothing tested shows **"0/N Evolution Methods Tested"** and all N methods listed as `?`.
 
 #### Manual Evolution Trigger
 - **Level-up evolutions remain fully automatic** — `checkEvolution()` fires after every level-up as before, no player action required
@@ -559,7 +561,16 @@ A new species with nothing tested shows **"0/32 Evolution Methods Tested"** and 
 - Each node = `getSpriteUrl()` sprite (~40–48px) + name + dexId, matching existing pixelated sprite styling.
 - Arrows carry **text** method labels (`Lv 16`, `Water Stone`, gender symbol at a Nidoran-style split) — no item-sprite lookup (`items.js` has no sprite-URL helper yet; text labels were chosen over building one).
 - Unconfirmed nodes render as a greyed `???` placeholder box in place of the sprite. **Evaluated independently per row** — one branch can show `???` while a sibling branch (or a different root, for Nidoran) is fully resolved. This replaces the old single shared `???` check for the whole card.
-- On Species Detail specifically, the node matching the currently-viewed species gets a highlight border. `buildEvoMethodsHtml()`'s collapsible "X/34 Evolution Methods Tested" breakdown stays underneath, unchanged — this visual doesn't replace it, it fixes the fact that Species Detail previously showed *no* evolution summary at all (`getEvolutionDisplayText()` was never called there, only on Species Cards).
+- On Species Detail specifically, the node matching the currently-viewed species gets a highlight border. `buildEvoMethodsHtml()`'s collapsible "X/N Evolution Methods Tested" breakdown stays underneath, unchanged — this visual doesn't replace it, it fixes the fact that Species Detail previously showed *no* evolution summary at all (`getEvolutionDisplayText()` was never called there, only on Species Cards).
+- **v0.23 — terminal-node further-evolution indicator:** a node with **zero data-defined outgoing edges** (e.g. Sandslash, which has no further evolution in the data) previously returned silently with no `???`. Now: unless that species is ruled out (`nonEvolutionConfirmed`, computed live — see Research State per Species above), append `? → ???` after it, same visual treatment as an unconfirmed branch. This makes "no further evolution" a claim the player has to earn through exhaustive testing, not something the UI assumes from missing data.
+
+---
+
+## Shiny Symbol on Species (SETTLED — v0.23)
+
+- New helper `hasLiveShiny(dexId)`: `state.dex.some(p => p.pokedexId === dexId && p.isShiny)`. Purely derived from existing state — no new field, no SAVE_VERSION impact.
+- Reflects **currently held** shinies only — the badge disappears automatically if released or evolved past (individual re-evaluated live, not a permanent record).
+- Applied in three places: Pokédex grid cells (`renderDexPokedexGrid()`), Family/Species-Detail evolution chain nodes (`evoNodeHtml()`, shared by both), and the Species Detail header (`renderDexDetail()`).
 
 ---
 
@@ -636,9 +647,75 @@ A new species with nothing tested shows **"0/32 Evolution Methods Tested"** and 
 
 ---
 
+## Trainer Battle System (SETTLED — v0.23)
+
+Applies **only** to a new trainer/gym battle context. Wild encounters (`fight()`, ball-throwing, `resolveEncounterStep()`, `processOfflineTime()`) are completely untouched by this feature.
+
+### Move Mechanic
+- 18 types × 2 categories (Physical/Special) = 36 possible move slots per species. Every Pokémon starts each available slot at power 40.
+- A Pokémon has up to 4 **equipped** move slots at a time, chosen from its species' available pool (defined by 36 new nullable Pokedex columns — `null` = species has no access to that slot, number = `powerCap`).
+- Form-variant rows (Alolan, Galarian, etc.) already exist as separate full rows in the Pokedex sheet keyed by `dexId`+`formName` — this schema handles them natively.
+- Accepted tradeoff: fixed-width schema. Adding a 19th type later requires restructuring every existing row, not just adding new rows.
+
+### Per-Pokémon State
+- `p.equippedMoves[]` — up to 4 entries `{type, category, power}`. Power starts 40, +5 per TM use, capped at that slot's `powerCap`.
+- Swapping a move out of the 4 equipped slots and back in later **resets its power to 40** — investment is not remembered outside the 4 active slots (deliberate save-size tradeoff).
+- **Default move at catch/migration:** type1 slot if the species has one available (random Physical/Special if both exist for that type) → else type2 slot (same logic) → else Normal-Physical fallback (always Physical, no randomness on the fallback path). Only 1 slot is filled by default; slots 2–4 start empty.
+
+### TM Item — Gates All Move Manipulation
+- No free-form equip/swap. One TM item, 3 possible actions, 1 consumed per action:
+  - **Add** — fill an empty slot with a move from the species' available pool
+  - **Upgrade** — +5 power on an equipped move, blocked outright at `powerCap`
+  - **Change** — swap an equipped move for a different pool option (new slot starts at power 40)
+- Add/Change picker hides/grays any type+category already equipped elsewhere on that same Pokémon — no duplicate slots.
+- Upgrade/Add/Change buttons are disabled outright (not just blocked on confirm) with a "Need 1 TM" label when `state.trainerBag` has 0 TMs.
+- **Items sheet row:** `itemId: tm`, `name: TM`, `itemCategory: tm`, `effect: modify-move`, `bagType: Professor`, `shopTier: basic`, `shopPrice: 25`, `isConsumable: TRUE`, `requiresTarget: TRUE`, `usableInField: TRUE`, `usableInBattle: FALSE`.
+
+### Move UI
+- 4 rounded-rectangle slots at the bottom of each party card — 💥 (Physical) or 🌀 (Special) + type icon + power number, read-only on the card itself.
+- Tapping the card opens the existing `showPokemonDetail` modal, extended with tappable move slots → Upgrade/Change options (or "Add Move" if the slot is empty) → confirmation modal before spending the TM.
+
+### Damage Formula (matches the real mainline games)
+```
+Damage = floor(floor(floor(2×Level/5 + 2) × Power × A/D) / 50) + 2
+       × STAB(1.5x if move type matches attacker's type1/type2)
+       × TypeEffectiveness (existing TYPE_CHART/getTypeEffectiveness())
+       × Random(0.85–1.00)
+```
+- `A`/`D` = level-scaled stats via a new reusable `calcStat(base, level)` function — extracted from the inline `st()` helper already used in `calcBST()` (`floor((base×2×level)/100)+5`). Applies to Atk/Def (Physical) or SpAtk/SpDef (Special) on both sides.
+- No crits, no status, no priority, 100% accuracy, unlimited PP.
+
+### Battle Loop
+- Speed-based turn order, reusing the existing effective-speed formula (`floor((baseSpd×2×level)/100)+5`), evaluated every round (not once per battle), random tie-break.
+- Multi-Pokémon gauntlet — fainted Pokémon auto-cycle to the next non-fainted teammate on either side; battle ends when a full team of up to 6 is fainted.
+
+### AI Move Selection
+- Of the 4 equipped moves, compute expected damage against the current target (type effectiveness + STAB) and pick the highest.
+- A move cannot be used a 3rd consecutive turn in a row — if the top pick was just used twice, it's excluded and the next-highest is chosen instead.
+- This "recently used" tracker resets whenever the Pokémon switches out and back in.
+
+### converter.html
+- `convertPokedex()` extended to read and pass through the 36 new columns as plain numeric/null fields (no ID casting needed).
+
+### New Standalone Fetcher Tool (separate build, not part of converter.html)
+- Same dexId-range + single-name UX as the existing Pokedex fetcher.
+- Pulls cross-game learnsets from PokéAPI, filters out status moves, groups by `(type, damage_class)`, takes max real-world `power` per group, outputs one row in the 36-column format.
+- Output is pasted directly into the Pokedex sheet (sorted identically by dexId, no VLOOKUP/XLOOKUP due to doc-weight concerns).
+- Form variants aren't reachable via the dexId-range pull (PokéAPI indexes them by name-slug) — fetched via the single-name field.
+- Inline form-variant flagging via PokéAPI `varieties` — surfaces a one-click "fetch this form too" button when extra varieties exist beyond the base form.
+- Accepted gap: a species never re-fetched won't trigger this flag if a form is added to PokéAPI later — will show as a visibly blank row in the maintained sheet.
+
+### Explicitly Out of Scope for v0.23
+- Battle triggers (how/when a trainer battle starts — no design exists yet)
+- Badge tracking/rewards
+- Opposing trainer AI/team composition
+- Any change to wild encounter resolution
+
+---
+
 ## Things That Are Future Goals (Do Not Implement Yet)
 
-- Gym system (Brock and others as fixed encounters)
+- Gym system (Brock and others as fixed encounters) — **v0.23 built the battle engine/data foundation; still needed: battle triggers, badge tracking, opposing trainer rosters/AI — see "Explicitly Out of Scope" above**
 - Trainer innate abilities / type affinities
 - New trainer recruitment mechanics
 - Breeding system

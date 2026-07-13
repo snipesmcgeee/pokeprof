@@ -256,6 +256,16 @@ function convertPokedex() {
       spriteUrl: val(r[col('spriteURL')] !== undefined ? r[col('spriteURL')] : r[col('spriteUrl')]),
     };
 
+    // v0.23 — Trainer Battle System: 36 move-slot columns (18 types × Physical/Special).
+    // Value is null (species has no access to that slot) or a number (powerCap — the max
+    // power that slot can reach via TM). Plain numeric/null pass-through, no ID casting needed.
+    const MOVE_TYPES = ['normal','fire','water','electric','grass','ice','fighting','poison',
+      'ground','flying','psychic','bug','rock','ghost','dragon','dark','steel','fairy'];
+    MOVE_TYPES.forEach(t => {
+      entry[t + 'Physical'] = numVal(r[col(t + 'Physical')]);
+      entry[t + 'Special'] = numVal(r[col(t + 'Special')]);
+    });
+
     // Derived fields
     entry.hasForms = !entry.formName;
     if (entry.baseHP && entry.baseAtk && entry.baseDef && entry.baseSpatk && entry.baseSpdef && entry.baseSpd) {

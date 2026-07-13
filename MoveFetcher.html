@@ -103,6 +103,7 @@
   <div id="status"></div>
   <p class="note">⚠ PokeAPI rate limit: ~100 requests/min. Each species can require many move lookups (one per unique move in its full cross-game learnset), so ranges are slower than the Pokedex fetcher — cached globally across this session so repeated moves (Tackle, Thunderbolt, etc.) are only fetched once. Only pull contiguous dexId ranges at a time to keep this manageable, as recommended in DESIGN.md.</p>
   <p class="note">Form variants (Alolan, Galarian, etc.) are not reachable via the dexId-range pull — PokéAPI indexes them by name-slug. Use the single-name field, or the "fetch this form too" flags below once a base species is pulled.</p>
+  <p class="note">Evolution inheritance: an evolved form's power cap is automatically raised to match anything its pre-evolution could already reach (evolved forms shouldn't show a lower cap than what they evolved from). This silently walks the chain backward as needed — e.g. fetching only Steelix will quietly pull Onix's data too, purely to source the inheritance, without adding Onix as a visible row or including it in your copied output.</p>
 </div>
 
 <div class="card" id="flags-card">
@@ -145,6 +146,8 @@ let fetching = false;
 let stopRequested = false;
 let moveCache = {};       // moveName -> {type, damageClass, power} | null (null = fetch failed/no power)
 let flaggedForms = {};    // dexId -> [{name, slug}] extra varieties not yet fetched
+let evoSourceCache = {};  // speciesName -> Promise<slots|null> — INVISIBLE pre-evolution lookups,
+                           // used only to source inheritance, never added to results/table/export.
 const capitalize = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : null;
 
 function setStatus(msg, type='info') {
@@ -177,17 +180,13 @@ async function getMoveData(moveName) {
   }
 }
 
-// For a given species/variety slug: pull its full cross-game learnset, resolve each
-// unique move's type+category+power (cached), filter to Physical/Special only, and take
-// the max power per (type, category) group. Returns null on total fetch failure.
-async function fetchMoveSlots(idOrName) {
-  const poke = await fetch(`https://pokeapi.co/api/v2/pokemon/${idOrName}`).then(r => r.ok ? r.json() : null);
-  if (!poke) return null;
-
+// Resolves a pokemon's own move list into the 36-column slot object — no evolution logic here,
+// just this one species' learnset. Shared by both fetchMoveSlots() and the invisible
+// pre-evolution walker so the same move-resolution logic isn't duplicated.
+async function computeSlotsFromMoves(poke) {
   const uniqueMoveNames = [...new Set(poke.moves.map(m => m.move.name))];
   const slots = {};
   MOVE_COLUMNS.forEach(c => { slots[c] = null; });
-
   for (const moveName of uniqueMoveNames) {
     const info = await getMoveData(moveName);
     if (!info || !info.type || !info.power) continue;
@@ -196,25 +195,83 @@ async function fetchMoveSlots(idOrName) {
     if (!(col in slots)) continue; // type not in our 18-type list (shouldn't happen)
     if (slots[col] === null || info.power > slots[col]) slots[col] = info.power;
   }
-
-  return { dexId: poke.id, name: capitalize(poke.name), slots, pokeData: poke };
+  return slots;
 }
 
-// Checks pokemon-species varieties for extra forms beyond the base, surfaces a flag
-// with a validated fetch-ready slug. Does not fetch the extra forms itself.
-async function checkFormVarieties(dexId, speciesNameOrId) {
-  try {
-    const species = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${speciesNameOrId}`).then(r => r.ok ? r.json() : null);
-    if (!species || !species.varieties) return;
+// target[col] = max(target[col], source[col]) per column — null-safe. Used to fold a
+// pre-evolution's move caps into an evolved form's own slots (evolved forms should never
+// show a lower cap than what their pre-evolution could already reach).
+function mergeMaxInto(target, source) {
+  if (!source) return;
+  MOVE_COLUMNS.forEach(col => {
+    const s = source[col];
+    if (s == null) return;
+    if (target[col] == null || s > target[col]) target[col] = s;
+  });
+}
+
+// INVISIBLE recursive pre-evolution walk — fetches a species purely to source inheritance
+// data for something further down its evolution chain (e.g. fetching Steelix silently walks
+// up to Onix even though Onix is nowhere near Steelix in the dex, and does NOT add Onix to
+// results/table/export). Recurses further back (Onix has no pre-evolution, so it stops there;
+// a 3-stage chain like Bulbasaur->Ivysaur->Venusaur recurses two levels). Cached per species
+// name so repeat pulls in the same session don't re-walk the same chain twice.
+async function getInheritedSlots(speciesName) {
+  const key = speciesName.toLowerCase();
+  if (key in evoSourceCache) return evoSourceCache[key];
+  const promise = (async () => {
+    try {
+      const [poke, species] = await Promise.all([
+        fetch(`https://pokeapi.co/api/v2/pokemon/${key}`).then(r => r.ok ? r.json() : null),
+        fetch(`https://pokeapi.co/api/v2/pokemon-species/${key}`).then(r => r.ok ? r.json() : null)
+      ]);
+      if (!poke) return null;
+      await sleep(120);
+      const slots = await computeSlotsFromMoves(poke);
+      const evolvesFromName = species?.evolves_from_species?.name || null;
+      if (evolvesFromName) {
+        const grandparentSlots = await getInheritedSlots(evolvesFromName);
+        mergeMaxInto(slots, grandparentSlots);
+      }
+      return slots;
+    } catch(e) { return null; }
+  })();
+  evoSourceCache[key] = promise;
+  return promise;
+}
+
+// For a given species/variety slug: pull its full cross-game learnset, resolve each unique
+// move's type+category+power (cached), filter to Physical/Special only, take the max power
+// per (type, category) group — then invisibly fold in whatever its pre-evolution chain could
+// already reach (see getInheritedSlots). Also checks form varieties inline (reuses the same
+// species fetch, no duplicate call). Returns null on total fetch failure.
+async function fetchMoveSlots(idOrName) {
+  const [poke, species] = await Promise.all([
+    fetch(`https://pokeapi.co/api/v2/pokemon/${idOrName}`).then(r => r.ok ? r.json() : null),
+    fetch(`https://pokeapi.co/api/v2/pokemon-species/${idOrName}`).then(r => r.ok ? r.json() : null)
+  ]);
+  if (!poke) return null;
+
+  const slots = await computeSlotsFromMoves(poke);
+
+  const evolvesFromName = species?.evolves_from_species?.name || null;
+  if (evolvesFromName) {
+    const inherited = await getInheritedSlots(evolvesFromName);
+    mergeMaxInto(slots, inherited);
+  }
+
+  if (species?.varieties) {
     const extras = species.varieties.filter(v => !v.is_default).map(v => ({
       name: v.pokemon.name,
       slug: v.pokemon.name
     }));
     if (extras.length) {
-      flaggedForms[dexId] = extras;
+      flaggedForms[poke.id] = extras;
       renderFlags();
     }
-  } catch(e) { /* form-check failure is non-fatal, just skip flagging */ }
+  }
+
+  return { dexId: poke.id, name: capitalize(poke.name), slots, pokeData: poke };
 }
 
 function renderFlags() {
@@ -282,7 +339,6 @@ async function startFetch() {
       const result = await fetchMoveSlots(id);
       if (result) {
         results.push(result);
-        await checkFormVarieties(id, id);
       } else {
         errors++;
       }
@@ -306,9 +362,6 @@ async function fetchSingle() {
   setStatus('Fetching ' + name + '...', 'info');
   try {
     await fetchAndPushSingle(name);
-    // Also check for further varieties in case a base name was entered here
-    const result = results[results.length - 1];
-    if (result) await checkFormVarieties(result.dexId, name);
   } catch(e) { setStatus('Error: ' + e.message, 'err'); }
 }
 

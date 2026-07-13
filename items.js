@@ -1,6 +1,6 @@
 // PokeProf — Items Database
-// Auto-generated: 7/12/2026, 11:52:20 AM
-// Entries: 40
+// Auto-generated: 7/12/2026, 11:18:35 PM
+// Entries: 41
 
 const ITEMS_DATA = [
   {
@@ -722,6 +722,24 @@ const ITEMS_DATA = [
     "usableInBattle": false,
     "sprite": "coinCase",
     "bagType": "Trainer"
+  },
+  {
+    "itemId": "tm",
+    "name": "TM",
+    "itemCategory": "tm",
+    "description": "Upgrades, adds, or changes a Pokémon's equipped moves.",
+    "effect": "modify-move",
+    "effectValue": null,
+    "shopPrice": 25,
+    "sellPrice": null,
+    "shopTier": "basic",
+    "isConsumable": true,
+    "catchRateModifier": null,
+    "requiresTarget": true,
+    "usableInField": true,
+    "usableInBattle": false,
+    "sprite": "tm",
+    "bagType": "Professor"
   }
 ];
 

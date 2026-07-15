@@ -1,5 +1,5 @@
 // PokeProf — Connections Database
-// Auto-generated: 7/14/2026, 9:11:39 PM
+// Auto-generated: 7/14/2026, 10:18:24 PM
 // Connections: 222
 
 // Flat array with full data (used for requiresItem checks)

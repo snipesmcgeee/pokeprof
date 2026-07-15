@@ -1,5 +1,5 @@
 // PokeProf — Evolution Tree (branching evolutions)
-// Auto-generated: 7/14/2026, 9:11:39 PM
+// Auto-generated: 7/14/2026, 10:18:24 PM
 // Entries: 27
 
 const EVO_TREE = [
@@ -62,9 +62,9 @@ const EVO_TREE = [
   {
     "fromDexId": 133,
     "toDexId": 700,
-    "evolveMethod": "unknown",
-    "evolveLevel": null,
-    "evolveItem": null,
+    "evolveMethod": "use-move",
+    "evolveLevel": 40,
+    "evolveItem": "fairy-special",
     "toFormName": null
   },
   {

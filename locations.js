@@ -1,5 +1,5 @@
 // PokeProf — Locations Database
-// Auto-generated: 7/5/2026, 10:31:32 PM
+// Auto-generated: 7/14/2026, 9:11:39 PM
 // Entries: 102
 
 const LOCATIONS = [
@@ -8,7 +8,7 @@ const LOCATIONS = [
     "name": "Pallet Town",
     "region": "Kanto",
     "heals": true,
-    "shopTier": "basic",
+    "shopTier": "lab",
     "travelTime": 1,
     "mapCol": 111,
     "mapRow": 97,

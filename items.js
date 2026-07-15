@@ -1,6 +1,6 @@
 // PokeProf — Items Database
-// Auto-generated: 7/12/2026, 11:18:35 PM
-// Entries: 41
+// Auto-generated: 7/14/2026, 9:11:39 PM
+// Entries: 46
 
 const ITEMS_DATA = [
   {
@@ -403,7 +403,7 @@ const ITEMS_DATA = [
     "itemId": "kings-rock",
     "name": "King's Rock",
     "itemCategory": "evolutionItem",
-    "description": "Causes certain Pokémon to evolve when this is used",
+    "description": "Causes certain Pokémon to evolve",
     "effect": "evolve-stone",
     "effectValue": null,
     "shopPrice": 100,
@@ -421,7 +421,7 @@ const ITEMS_DATA = [
     "itemId": "metal-coat",
     "name": "Metal Coat",
     "itemCategory": "evolutionItem",
-    "description": "Causes certain Pokémon to evolve when this is used",
+    "description": "Causes certain Pokémon to evolve",
     "effect": "evolve-stone",
     "effectValue": null,
     "shopPrice": 100,
@@ -439,7 +439,7 @@ const ITEMS_DATA = [
     "itemId": "black-augurite",
     "name": "Black Augurite",
     "itemCategory": "evolutionItem",
-    "description": "Causes certain Pokémon to evolve when this is used",
+    "description": "Causes certain Pokémon to evolve",
     "effect": "evolve-stone",
     "effectValue": null,
     "shopPrice": 100,
@@ -451,6 +451,96 @@ const ITEMS_DATA = [
     "usableInField": true,
     "usableInBattle": false,
     "sprite": "black-augurite",
+    "bagType": "Professor"
+  },
+  {
+    "itemId": "sweetTreat",
+    "name": "Sweet Treat",
+    "itemCategory": "evolutionItem",
+    "description": "Causes certain Pokémon to evolve",
+    "effect": "evolve-stone",
+    "effectValue": null,
+    "shopPrice": 100,
+    "sellPrice": null,
+    "shopTier": null,
+    "isConsumable": true,
+    "catchRateModifier": null,
+    "requiresTarget": false,
+    "usableInField": true,
+    "usableInBattle": false,
+    "sprite": "sweetTreat",
+    "bagType": "Professor"
+  },
+  {
+    "itemId": "leadersCrest",
+    "name": "Leader's Crest",
+    "itemCategory": "evolutionItem",
+    "description": "Causes certain Pokémon to evolve",
+    "effect": "evolve-stone",
+    "effectValue": null,
+    "shopPrice": 100,
+    "sellPrice": null,
+    "shopTier": null,
+    "isConsumable": true,
+    "catchRateModifier": null,
+    "requiresTarget": false,
+    "usableInField": true,
+    "usableInBattle": false,
+    "sprite": "leaders-crest",
+    "bagType": "Professor"
+  },
+  {
+    "itemId": "prismScale",
+    "name": "Prism Scale",
+    "itemCategory": "evolutionItem",
+    "description": "Causes certain Pokémon to evolve",
+    "effect": "evolve-stone",
+    "effectValue": null,
+    "shopPrice": 100,
+    "sellPrice": null,
+    "shopTier": null,
+    "isConsumable": true,
+    "catchRateModifier": null,
+    "requiresTarget": false,
+    "usableInField": true,
+    "usableInBattle": false,
+    "sprite": "prism-scale",
+    "bagType": "Professor"
+  },
+  {
+    "itemId": "scrollOfDarkness",
+    "name": "Scroll of Darkness",
+    "itemCategory": "evolutionItem",
+    "description": "Causes certain Pokémon to evolve",
+    "effect": "evolve-stone",
+    "effectValue": null,
+    "shopPrice": 100,
+    "sellPrice": null,
+    "shopTier": null,
+    "isConsumable": true,
+    "catchRateModifier": null,
+    "requiresTarget": false,
+    "usableInField": true,
+    "usableInBattle": false,
+    "sprite": "scroll-of-darkness",
+    "bagType": "Professor"
+  },
+  {
+    "itemId": "scrollOfWaters",
+    "name": "Scroll of Waters",
+    "itemCategory": "evolutionItem",
+    "description": "Causes certain Pokémon to evolve",
+    "effect": "evolve-stone",
+    "effectValue": null,
+    "shopPrice": 100,
+    "sellPrice": null,
+    "shopTier": null,
+    "isConsumable": true,
+    "catchRateModifier": null,
+    "requiresTarget": false,
+    "usableInField": true,
+    "usableInBattle": false,
+    "sprite": "scroll-of-waters",
     "bagType": "Professor"
   },
   {
@@ -688,6 +778,24 @@ const ITEMS_DATA = [
     "bagType": "Trainer"
   },
   {
+    "itemId": "tm",
+    "name": "TM",
+    "itemCategory": "tm",
+    "description": "Upgrades, adds, or changes a Pokémon's equipped moves.",
+    "effect": "modify-move",
+    "effectValue": null,
+    "shopPrice": 25,
+    "sellPrice": null,
+    "shopTier": "basic",
+    "isConsumable": true,
+    "catchRateModifier": null,
+    "requiresTarget": true,
+    "usableInField": true,
+    "usableInBattle": false,
+    "sprite": "tm",
+    "bagType": "Professor"
+  },
+  {
     "itemId": "bicycle",
     "name": "Bicycle",
     "itemCategory": "tool",
@@ -722,24 +830,6 @@ const ITEMS_DATA = [
     "usableInBattle": false,
     "sprite": "coinCase",
     "bagType": "Trainer"
-  },
-  {
-    "itemId": "tm",
-    "name": "TM",
-    "itemCategory": "tm",
-    "description": "Upgrades, adds, or changes a Pokémon's equipped moves.",
-    "effect": "modify-move",
-    "effectValue": null,
-    "shopPrice": 25,
-    "sellPrice": null,
-    "shopTier": "basic",
-    "isConsumable": true,
-    "catchRateModifier": null,
-    "requiresTarget": true,
-    "usableInField": true,
-    "usableInBattle": false,
-    "sprite": "tm",
-    "bagType": "Professor"
   }
 ];
 

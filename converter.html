@@ -386,8 +386,15 @@ function convertEvoTree() {
     const entry = {};
     headers.forEach((h, idx) => {
       if (!h) return;
-      entry[h] = ['fromDexId','toDexId','evolveLevel','evolveItem'].includes(h) ? numVal(r[idx]) : val(r[idx]);
+      entry[h] = ['fromDexId','toDexId','evolveLevel'].includes(h) ? numVal(r[idx]) : val(r[idx]);
     });
+    // evolveItem's meaning is method-dependent: numeric itemId for 'use-item' (matched against
+    // state.professorBag), but a raw string descriptor for 'use-move' (e.g. "ghost-physical") and
+    // 'in-party' (a dexId, kept as a string and parsed by the caller). Only cast to number for
+    // 'use-item' — casting it unconditionally previously nulled out non-numeric use-move values.
+    if (entry.evolveMethod === 'use-item') {
+      entry.evolveItem = numVal(entry.evolveItem);
+    }
     entries.push(entry);
   }
   outputFiles['evotree.js'] =

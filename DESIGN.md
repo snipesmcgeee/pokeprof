@@ -75,6 +75,7 @@ There is no survival element. Aides do not need food, sleep, or anything like th
 - **v0.21 requires SAVE_VERSION 14** due to: fishing splitting into per-rod-tier sub-methods (`fish-old`/`fish-good`/`fish-super`) instead of a single `fish` method. Migration: any `state.locationMethodPrefs[locId]` entry containing the bare `'fish'` method (in `methods[]` or as a `weights` key) is dropped entirely for that location — it recalculates fresh defaults (all currently-unlocked methods/rod-tiers checked evenly) the next time that location is visited. No other v0.21 change requires a schema change.
 - **v0.22 stays on SAVE_VERSION 14** — no `state` schema changes in this batch (all 11 items are behavior/rendering fixes and additive read-only views).
 - **v0.23 requires SAVE_VERSION 15** due to: `equippedMoves[]` field added to Pokémon objects (up to 4 `{type, category, power}` slots for the new Battle System). Migration assigns each existing Pokémon a single default move on load: type1 slot (random Physical/Special if both exist) → else type2 → else Normal-Physical fallback. Slots 2–4 start empty for all pre-v0.23 saves.
+- **v0.24 requires SAVE_VERSION 16** due to: `state.freeSkipsRemaining` field added (onboarding encounter-skip pool — see "Free Onboarding Encounter Skips"). Migration: new saves initialize to `50`; existing saves migrate in at `0` (onboarding-only, not retroactive).
 
 ---
 
@@ -94,6 +95,13 @@ There is no survival element. Aides do not need food, sleep, or anything like th
 ### Encounter Timing (SETTLED)
 - One encounter cycle = 30 seconds (30 ticks)
 - `ENC_INTERVAL = 30`
+
+### Free Onboarding Encounter Skips (SETTLED — v0.24)
+- **Goal:** reduce early-game friction from the 30-second `ENC_INTERVAL` wait to improve new-player retention/hook.
+- **New field:** `state.freeSkipsRemaining`. New saves start at `50`. Existing saves migrate in at `0` — **onboarding-only, not retroactive.**
+- **Never refills** once exhausted — one-time pool for the life of a save.
+- **UI:** while `missionActive && freeSkipsRemaining > 0`, a button reading **"⏭ Skip to Encounter x[N]"** renders below the location/status line on the Party tab.
+- **Behavior:** each click sets `state.nextEncounterIn = 0`, forcing the next `gameTick()` to resolve an encounter immediately — identical path to normal timer expiry, full normal ball cost and catch odds apply. Consumes exactly 1 skip per click (single encounter, not a batch resolution). Button disappears once `freeSkipsRemaining` hits 0.
 
 ### Income (SETTLED)
 - Base rate: $1.00/min, accumulates fractionally each tick
@@ -356,6 +364,10 @@ The single `state.bag` is replaced with two separate inventories:
   - **Unknown** (neither): `?` placeholder, no sprite fetch
 - Tapping a Captured or Seen cell navigates straight to Species Detail (Layer 3), skipping the Family Card layer. `?` cells are inert — no tap action.
 - **v0.23:** Captured/Seen cells display the species name alongside the dex number on one line (`#27 Sandshrew`), instead of number-only. Unknown (`?`) cells unaffected — no name shown, preserving no-spoiler behavior.
+- **Bug fixed v0.24 — Seen state never populated for non-catches:** `isSpeciesKnown(dexId)` reads `state.researchLog[dexId]`, which was only ever written by `recordSighting()`/`recordNewSpecies()` — and both were only called from inside successful-catch code paths (`catchPokemon()`, shiny auto-catch, offline-catch branches), never at encounter generation. A flee, loss, or missed ball updated the separate per-location `state.locationEncounterLog` counter but never touched `researchLog`, so the grid showed `?` instead of a silhouette for anything only ever seen, not caught.
+  - **Fix:** `recordSighting()`/`recordNewSpecies()` moved to fire at encounter generation — both in `resolveEncounterStep()` (live) and `processOfflineTime()` (offline) — regardless of catch outcome. Fleeing/losing an encounter now counts as "seen."
+  - **New field:** `researchLog[dexId].firstCaught` — fires a new finding, **"🎯 Captured: [name]"**, on first successful catch (distinct from "🆕 New Species", which now fires on first *sighting* instead of first catch).
+  - **Findings report dedupe:** findings are tagged with `dexId`. If a species has both a "seen" and "captured" finding pending in the same `showFindingsReport()` batch, only "🎯 Captured" renders — capture overwrites seen within that batch (covers an encounter caught immediately, or an offline batch that sees-then-catches within the same window).
 
 ### All Catches View — Sorting (SETTLED — v0.22)
 - `sort-select` gains a `family` option alongside Catch #/Dex #/Level/HP/BST — sorts by `familyId` (via `getPokemonEntry(p.pokedexId).familyId`), with `dexId` as a secondary tiebreaker so same-family members stay grouped and ordered sensibly.
@@ -381,8 +393,9 @@ The single `state.bag` is replaced with two separate inventories:
 - **Encounters:** `state.totalSightings` — total wild encounters ever, online + offline
 - **Species:** count of keys in `state.dexHistory` — unique dexIds ever discovered (caught or evolved into)
 - **Dex Pages Completed:** count of species where BOTH are true:
-  - Evolution research complete: `testedMethods.length === 34` (see updated method enum count below)
+  - Evolution research complete: `testedMethods.length >= EVOLUTION_METHODS.length` (read live — see "Evolution Method Enum" above)
   - All ability slots observed: every non-null ability the species has (`ability1`, `ability2`, `hiddenAbility`) has been seen at least once, per `researchLog[dexId].abilitiesObserved`
+- **Bug fixed v0.24:** this check (`isDexPageComplete()`) previously hardcoded the threshold as `testedMethods.length === 34` — a stale magic number, already incorrect pre-v0.24 (should have been 35) and would have drifted further with `in-party`'s addition (36). A separate function, `isFullyTested()`, already read `EVOLUTION_METHODS.length` live and was unaffected. `isDexPageComplete()` is now aligned to the same dynamic pattern.
 - **New field:** `researchLog[dexId].abilitiesObserved` — tracks which ability slots (`ability1`/`ability2`/`hiddenAbility`) have been observed at least once for that species. Written whenever a Pokémon is caught or evolves into that species, checking its `p.ability` value against the species' ability slots. Survives releases and cap overflow — never decremented.
 - **Save migration:** backfills `abilitiesObserved` by scanning all current `state.dex` individuals' `ability` field against their species at load time (best-effort — cannot recover abilities from Pokémon already released before v0.20)
 
@@ -435,11 +448,11 @@ After the while loop: `if(levelled) renderDex();`
 ### Evolution Research System (SETTLED intent — v0.19 implementation pending)
 
 #### Evolution Method Enum (SETTLED — count is dynamic, do not hardcode)
-The full set of testable evolution methods lives in `EVOLUTION_METHODS[]` — currently 35 entries (see array in code for the full list). **Any UI or logic referencing the total must read `EVOLUTION_METHODS.length` live, never a hardcoded number** — this list is expected to grow (e.g. Black Augurite is planned for a future data update) and everything downstream must self-correct automatically.
+The full set of testable evolution methods lives in `EVOLUTION_METHODS[]` — currently 36 entries as of v0.24 (see array in code for the full list). **Any UI or logic referencing the total must read `EVOLUTION_METHODS.length` live, never a hardcoded number** — this list is expected to grow (e.g. Black Augurite is planned for a future data update) and everything downstream must self-correct automatically.
 
-`level`, `friendship`, `friendship-day`, `friendship-night`, `use-move`, `Moon Stone`, `Thunder Stone`, `Fire Stone`, `Leaf Stone`, `Water Stone`, `Sun Stone`, `Shiny Stone`, `Dusk Stone`, `Dawn Stone`, `Ice Stone`, `Oval Stone`, `Metal Coat`, `Protector`, `Dragon Scale`, `Electirizer`, `Up Grade`, `Dubious Disc`, `Razor Fang`, `Razor Claw`, `Peat Block`, `Reaper Cloth`, `Deep Sea Tooth`, `Sachet`, `Whipped Dream`, `Tart Apple`, `Cracked Pot`, `Metal Alloy`, `Auspicious Armor`, `Unremarkable Teacup`, `Link Cable`
+`level`, `friendship`, `friendship-day`, `friendship-night`, `use-move`, `in-party`, `Moon Stone`, `Thunder Stone`, `Fire Stone`, `Leaf Stone`, `Water Stone`, `Sun Stone`, `Shiny Stone`, `Dusk Stone`, `Dawn Stone`, `Ice Stone`, `Oval Stone`, `Metal Coat`, `Protector`, `Dragon Scale`, `Electirizer`, `Up Grade`, `Dubious Disc`, `Razor Fang`, `Razor Claw`, `Peat Block`, `Reaper Cloth`, `Deep Sea Tooth`, `Sachet`, `Whipped Dream`, `Tart Apple`, `Cracked Pot`, `Metal Alloy`, `Auspicious Armor`, `Unremarkable Teacup`, `Link Cable`
 
-`friendship-day` and `friendship-night` added in v0.20 for Espeon/Umbreon-style evolutions. `use-move` added as a placeholder for Sylveon-style evolutions — **not functional**, never auto-tested or auto-confirmed, exists only so the method has a name reserved for when a moveset system exists. This list can be extended later without requiring rework of the research system.
+`friendship-day` and `friendship-night` added in v0.20 for Espeon/Umbreon-style evolutions. **`use-move` added in v0.24 (see "Move-Based Evolution (`use-move`)" below) — now fully functional; was a non-functional placeholder from v0.19 through v0.23.** **`in-party` added in v0.24 (see "Party-Based Evolution (`in-party`)" below), new method, not a prior placeholder.** This list can be extended later without requiring rework of the research system.
 
 #### Professor Auto-Test Loop
 - Evolution stones and items live in the **Professor's inventory** (`state.professorBag`)
@@ -450,6 +463,7 @@ The full set of testable evolution methods lives in `EVOLUTION_METHODS[]` — cu
 - **Failed tests cost nothing** — no item consumed, permanently logged in `testedMethods`
 - **Successful tests consume one unit of the item** from `state.professorBag`
 - `level`, `friendship`, `friendship-day`, and `friendship-night` evolutions are confirmed automatically when observed in the field — they do not require a separate Professor action
+- **v0.24 — `use-move` and `in-party` added to the same auto-confirm treatment as level/friendship:** both are checked on level-up (not via the Professor's item-test loop) and confirmed automatically when observed — see "Move-Based Evolution" and "Party-Based Evolution" below for the condition checks themselves.
 - **v0.20:** `professorAutoTestEvolutions()` is extended to also test EVO_TREE `use-item` branches (branching species only), using the same trigger conditions as the existing single-evolution path (stone acquired / new species caught), matching directly by itemId. Confirmed branches are appended to `confirmedBranches`, not overwritten.
 - **v0.21 — auto-apply on confirm:** a successful test now does more than confirm the research finding — it also **immediately evolves a matching owned individual**, in the same step that consumes the item:
   - Eligible individual = owned in `state.dex`, matching `pokedexId`, **unassigned** (`!p.holder` — in the Professor's possession, not out with an aide), and not `evolveBlocked`
@@ -506,7 +520,8 @@ A new species with nothing tested shows **"0/N Evolution Methods Tested"** and a
 
 ### Findings Report (Post-Mission) (SETTLED)
 - `showFindingsReport()` is called from `endMission()` — always, including in the auto-repeat path
-- Reports new species first encountered, first evolutions observed
+- Reports new species first sighted (v0.24: "🆕 New Species", fires on first *sighting*, not first catch), new species captured (v0.24: "🎯 Captured", fires on first catch — see "Pokédex Grid View" above for the full sighting/capture/dedupe fix), first evolutions observed
+- **v0.24 dedupe:** if a species has both a "seen" and "captured" finding pending in the same report batch, only "🎯 Captured" renders
 - `state.pendingFindings` is cleared after display
 
 ---
@@ -535,18 +550,19 @@ A new species with nothing tested shows **"0/N Evolution Methods Tested"** and a
 
 ### Scope
 - Species in scope for v0.20: **Eevee** — Vaporeon (Water Stone), Jolteon (Thunder Stone), Flareon (Fire Stone), Leafeon (new "Leaf Stone" substitute item), Glaceon (new "Ice Stone" substitute item), Espeon (`friendship-day`), Umbreon (`friendship-night`)
-- **Sylveon deferred** — marked with placeholder `use-move` method in `evotree.js`, non-functional, never auto-tested. Will need a moveset/move-type tracking system before it can work.
+- **Sylveon — deferred v0.20 through v0.23, activated v0.24.** Its placeholder `use-move` row in `evotree.js` (`133→700`) is now functional — see "Move-Based Evolution (`use-move`)" below. Values: `evolveItem: fairy-special`, `evolveLevel: 40`. This is a simplified stand-in for the real game's combined Fairy-move + high-friendship requirement — this game checks move qualification only, no friendship component.
 - **Leafeon/Glaceon rationale:** the real games use location-based triggers (Mossy Rock/Icy Rock); this game has no location-flag mechanic, so these are implemented as item-based substitutes instead, reusing the existing stone system. "Leaf Stone" and "Ice Stone" are new items Jack will add to the Excel `Items` sheet (`bagType: professor`, `effect: evolve-stone`) — not part of the `pokeprof.html` code change.
 - **Espeon/Umbreon day/night:** no in-game time-of-day system exists — day/night is derived from the **client's real-world system clock**: 6am–6pm = day, 6pm–6am = night. No new state field.
 
 ### Data (`evotree.js` / EvoTree sheet)
-- The EvoTree sheet's `evolveItem` column now stores **itemId** (not item name) — this differs from the single-target `pokedex.js` `evolveItem` field, which continues to store the item **name** as a string. The two evolution paths intentionally use two different formats; code must handle both.
-- **Converter fix required:** `convertEvoTree()` in `converter.html` currently only `numVal()`-casts `fromDexId`, `toDexId`, and `evolveLevel` — `evolveItem` must be added to that cast list, or it will be stored as a string instead of a number in the generated `evotree.js`, and fail to match against `state.professorBag`'s itemId keys.
+- The EvoTree sheet's `evolveItem` column stores **itemId** (numeric) for `use-item` branches — this differs from the single-target `pokedex.js` `evolveItem` field, which continues to store the item **name** as a string for `use-item`. The two evolution paths intentionally use two different formats for that method; code must handle both.
+- **Converter fix history:** `convertEvoTree()` originally only `numVal()`-cast `fromDexId`/`toDexId`/`evolveLevel`; a later fix added `evolveItem` to that cast list so it would correctly match `state.professorBag`'s numeric itemId keys. **That blanket cast became a bug once `use-move` branches existed (v0.24)** — `evolveItem` for `use-move` is a string descriptor (e.g. `"fairy-special"`), and `numVal()` silently nulls any non-numeric value. **v0.24 fix:** casting is now conditional — `evolveItem` is only passed through `numVal()` when `evolveMethod === 'use-item'`; all other methods pass it through raw via `val()`.
 
 ### `checkEvolution()` — EVO_TREE (Path 2) expansion
 - `level` branches: unchanged, existing behavior
 - **`friendship-day` / `friendship-night` (new):** auto-fires on the same level-up check as `level`/`friendship`, gated on `p.friendship>=FRIENDSHIP_THRESHOLD` AND the client system clock matching day (6am–6pm) or night (6pm–6am) respectively
 - **`use-item` branches:** NOT auto-applied in `checkEvolution()` — confirmed via `professorAutoTestEvolutions()` (see below), then manually triggered per-branch via poke-modal buttons
+- **`use-move` / `in-party` branches (v0.24):** auto-fire on the same level-up check as `level`/`friendship` — fully automatic, no Professor/manual step. See "Move-Based Evolution (`use-move`)" and "Party-Based Evolution (`in-party`)" below.
 
 ### Research & Display
 - `researchLog[dexId].confirmedBranches` (see Research State per Species above) allows multiple simultaneously-confirmed evolutions per species
@@ -554,7 +570,44 @@ A new species with nothing tested shows **"0/N Evolution Methods Tested"** and a
 
 ---
 
-## Evolution Chain Visual (SETTLED — v0.22)
+## Move-Based Evolution — `use-move` (SETTLED — v0.24)
+
+- `use-move` existed as a reserved-but-inert value in `EVOLUTION_METHODS` from v0.19 through v0.23 — no logic anywhere checked for it. v0.24 makes it fully functional.
+- **Condition:** checked on level-up, same hook as `level`/`friendship` (`checkEvolution()`, `applyEvolutionSilent()`, and the EVO_TREE branch filter) — does the Pokémon have a qualifying move in `p.equippedMoves`?
+- **Field reuse — no new columns added:**
+  - `evolveItem` — descriptor string, one of two shapes: `type` alone (e.g. `"fairy"`), or `type-category` (e.g. `"ghost-physical"`). Category is `physical` or `special` only.
+  - `evolveLevel` — optional power threshold. Blank/null = no power requirement, just needs the type (and category, if specified) present among equipped moves.
+- Works identically on both the single-target (`pokedex.js`) and branching (`EVO_TREE`) evolution paths.
+- **Confirmed use cases:**
+  - **Primeape** (single-target): `evolveMethod: use-move`, `evolveItem: ghost-physical`, `evolveLevel: 50`. Homebrew stand-in for the real game's Rage Fist/×20-uses mechanic — no Rage Fist move exists in this game's dataset, so the condition is generalized to "any Ghost-type Physical move reaching 50 power."
+  - **Sylveon** (branching, `EVO_TREE`, `133→700`): `evolveMethod: use-move`, `evolveItem: fairy-special`, `evolveLevel: 40`. Simplified from the real game's Fairy-move + high-friendship combo — no friendship component here.
+- **Auto-confirm:** same treatment as level/friendship — no Professor/manual step, confirms the instant the condition is met on level-up.
+
+---
+
+## Party-Based Evolution — `in-party` (SETTLED — v0.24, new method)
+
+- New addition to `EVOLUTION_METHODS` — not a prior placeholder, built from scratch in v0.24.
+- **Condition:** checked on level-up, same hook as `level`/`friendship`/`use-move` — does `state.party` contain any Pokémon with `pokedexId === parseInt(evolveItem)`?
+- **Field reuse:** `evolveItem` holds the required party-mate's dexId, stored as a string (matches the existing single-target `evolveItem` string-field convention).
+- **Confirmed use case: Mantyke** — `evolveMethod: in-party`, `evolveItem: 223` (Remoraid's dexId). Evolves into Mantine when leveled up with a Remoraid in the active party — accurate to the real mechanic.
+- **Auto-confirm:** same treatment as level/friendship/use-move.
+
+---
+
+## Evolution Research Tracking — `use-move`/`in-party` Gaps (SETTLED — v0.24)
+
+Two structural gaps existed once `use-move`/`in-party` became real, functional methods, beyond just making them evolve correctly:
+
+- **Gap 1 — success not tracked:** `recordEvolution()` (the function that marks a method "tested" the instant a Pokémon successfully evolves) only included `level`/`friendship`/`friendship-day`/`friendship-night` in its tracking list. **Fix:** `use-move` and `in-party` added to that list — a successful Primeape/Sylveon/Mantyke evolution now correctly marks the method tested.
+- **Gap 2 — no rule-out path for species that structurally can't use these methods:** unlike `level`/`friendship` (scalar values with a real ceiling — `LEVEL_RULEOUT_THRESHOLD`/`FRIENDSHIP_THRESHOLD`) or `use-item` (universal ownership sweep via `professorAutoTestEvolutions()`, which tests every owned item against every known species regardless of match), `use-move`/`in-party` had no equivalent sweep. Without one, almost every species in the dex — anything that doesn't specifically evolve via one of these two methods, e.g. Sandslash — could never reach 100% tested, since neither method could ever be marked ruled-out for it.
+  - **Fix:** on first research of a species (research-log entry creation), check whether it has *any* `use-move` or `in-party` branch defined — single-target (`pokedex.js`, `evolveMethod==='use-move'`/`'in-party'`) or branching (`EVO_TREE`). If none exists, immediately mark that method tested/ruled-out for that species — a structural, data-driven fact, knowable instantly with no gameplay required.
+  - Species that *do* have a `use-move`/`in-party` branch skip this immediate rule-out and stay untested until a successful evolution (same as how a species with a real stone-evolution stays untested until the player actually owns and tries that stone).
+  - **No rule-out-on-failure path exists for species that do have a qualifying branch** — `use-move`/`in-party` aren't scalar/threshold-based, so there's no valid "proven impossible past this point" condition (a player can swap moves or party members at any time). These two methods only clear via the structural check above or a successful evolution.
+
+---
+
+
 
 - `renderEvolutionChainVisual(famId, highlightDexId)` is a **shared component** used on both Family Cards (Layer 1) and Species Detail (Layer 3), replacing the old flat `chainParts.join(' → ')` text line on the Family Card.
 - Built on a **root-based walk of `EVO_TREE`**: a "root" is any dexId in the family with no incoming edge from another family member. Each root gets its own display row — Nidoran ♀/♂ (two independent roots, no shared egg/breeding stage) renders as two rows; Eevee (one root, many branches) renders as one row that fans out with `/` between simultaneous confirmed branches (e.g. `#133 Eevee → Vaporeon / Jolteon / Flareon`).
@@ -674,6 +727,7 @@ Applies **only** to a new trainer/gym battle context. Wild encounters (`fight()`
 ### Move UI
 - 4 rounded-rectangle slots at the bottom of each party card — 💥 (Physical) or 🌀 (Special) + type icon + power number, read-only on the card itself.
 - Tapping the card opens the existing `showPokemonDetail` modal, extended with tappable move slots → Upgrade/Change options (or "Add Move" if the slot is empty) → confirmation modal before spending the TM.
+- **v0.24 — Species Detail modal move display overhaul:** the 4 equipped moves in the Pokémon detail modal changed from a single row of plain power numbers to a **2×2 grid of individually boxed moves**. Each box's background/accent is colored using the existing type-color palette (same as Pokédex/type badges) — color-only, no text type label, consistent with the rest of the game's visual language. Category icon (💥/🌀) and power number are retained inside each box.
 
 ### Damage Formula (matches the real mainline games)
 ```

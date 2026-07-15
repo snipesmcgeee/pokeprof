@@ -2736,6 +2736,10 @@ const SAVE_KEY='pokeprof_save';
 // Normal-Physical fallback. Slots 1-3 start empty for all pre-v0.23 saves.
 // SAVE_VERSION 16 (v0.24) — state.freeSkipsRemaining added (onboarding encounter-skip pool).
 // New saves initialize to 50; existing saves migrate in at 0 (onboarding-only, not retroactive).
+// Also backfills researchLog[dexId].firstSeen/firstCaught (new v0.24 fields) on load for any
+// pre-existing entry — without this, every old save's next catch of an already-known species
+// would incorrectly fire a fresh "🎯 Captured" finding, since those fields are undefined for
+// anything researched before v0.24.
 const SAVE_VERSION=16;
 let saveTimer=0;
 
@@ -2850,6 +2854,15 @@ function loadGame(){
       // abilitiesObserved — best-effort backfill from currently-held individuals only;
       // cannot recover abilities from Pokemon already released before v0.20.
       if(!r.abilitiesObserved) r.abilitiesObserved={};
+      // v0.24 migration: firstSeen/firstCaught are new fields. Without backfilling them, every
+      // pre-existing save's next catch of ANY already-known species (even ones caught hundreds
+      // of times before) would incorrectly fire a fresh "🎯 Captured" finding, since !r.firstCaught
+      // is true for every entry that predates this field. If a researchLog entry exists at all,
+      // the species has definitely already been seen; if it's also in dexHistory, it's definitely
+      // already been caught — backfill both flags true so old saves don't get a false "first
+      // capture" burst as they naturally re-encounter species they already have.
+      if(r.firstSeen===undefined) r.firstSeen=true;
+      if(r.firstCaught===undefined) r.firstCaught=!!(s.dexHistory&&s.dexHistory[dexIdStr]);
     });
     state.dex.forEach(p=>{ if(p.pokedexId&&p.ability) recordAbilityObserved(p.pokedexId,p.ability); });
     // v0.21 migration: fishing split into fish-old/fish-good/fish-super sub-methods.

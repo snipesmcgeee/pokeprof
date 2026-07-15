@@ -386,15 +386,17 @@ function convertEvoTree() {
     const entry = {};
     headers.forEach((h, idx) => {
       if (!h) return;
+      // evolveItem is ALWAYS a raw string, regardless of evolveMethod — 'use-item' branches are
+      // matched against state.professorBag's keys, which are always string slugs (e.g.
+      // "fire-stone"), never numeric IDs. 'use-move' uses a type/category descriptor string
+      // (e.g. "ghost-physical"), and 'in-party' uses a dexId kept as a string and parsed by the
+      // caller. Only fromDexId/toDexId/evolveLevel are legitimately numeric — do not add
+      // evolveItem back to this cast list; a previous version did, and it silently nulled out
+      // every use-item stone slug (Number("fire-stone") === NaN → null), permanently breaking
+      // Eevee's stone evolutions since professorAutoTestEvolutions() only ever tests each
+      // species×item pair once and marks a failed match as ruled-out forever.
       entry[h] = ['fromDexId','toDexId','evolveLevel'].includes(h) ? numVal(r[idx]) : val(r[idx]);
     });
-    // evolveItem's meaning is method-dependent: numeric itemId for 'use-item' (matched against
-    // state.professorBag), but a raw string descriptor for 'use-move' (e.g. "ghost-physical") and
-    // 'in-party' (a dexId, kept as a string and parsed by the caller). Only cast to number for
-    // 'use-item' — casting it unconditionally previously nulled out non-numeric use-move values.
-    if (entry.evolveMethod === 'use-item') {
-      entry.evolveItem = numVal(entry.evolveItem);
-    }
     entries.push(entry);
   }
   outputFiles['evotree.js'] =

@@ -1,5 +1,5 @@
 // PokeProf — Evolution Tree (branching evolutions)
-// Auto-generated: 7/14/2026, 10:18:24 PM
+// Auto-generated: 7/14/2026, 11:09:12 PM
 // Entries: 27
 
 const EVO_TREE = [
@@ -8,7 +8,7 @@ const EVO_TREE = [
     "toDexId": 134,
     "evolveMethod": "use-item",
     "evolveLevel": null,
-    "evolveItem": null,
+    "evolveItem": "water-stone",
     "toFormName": null
   },
   {
@@ -16,7 +16,7 @@ const EVO_TREE = [
     "toDexId": 135,
     "evolveMethod": "use-item",
     "evolveLevel": null,
-    "evolveItem": null,
+    "evolveItem": "thunder-stone",
     "toFormName": null
   },
   {
@@ -24,7 +24,7 @@ const EVO_TREE = [
     "toDexId": 136,
     "evolveMethod": "use-item",
     "evolveLevel": null,
-    "evolveItem": null,
+    "evolveItem": "fire-stone",
     "toFormName": null
   },
   {
@@ -48,7 +48,7 @@ const EVO_TREE = [
     "toDexId": 470,
     "evolveMethod": "use-item",
     "evolveLevel": null,
-    "evolveItem": null,
+    "evolveItem": "leaf-stone",
     "toFormName": null
   },
   {
@@ -56,7 +56,7 @@ const EVO_TREE = [
     "toDexId": 471,
     "evolveMethod": "use-item",
     "evolveLevel": null,
-    "evolveItem": null,
+    "evolveItem": "ice-stone",
     "toFormName": null
   },
   {
@@ -72,7 +72,7 @@ const EVO_TREE = [
     "toDexId": 45,
     "evolveMethod": "use-item",
     "evolveLevel": null,
-    "evolveItem": null,
+    "evolveItem": "leaf-stone",
     "toFormName": null
   },
   {
@@ -80,7 +80,7 @@ const EVO_TREE = [
     "toDexId": 182,
     "evolveMethod": "use-item",
     "evolveLevel": null,
-    "evolveItem": null,
+    "evolveItem": "sun-stone",
     "toFormName": null
   },
   {
@@ -88,7 +88,7 @@ const EVO_TREE = [
     "toDexId": 62,
     "evolveMethod": "use-item",
     "evolveLevel": null,
-    "evolveItem": null,
+    "evolveItem": "water-stone",
     "toFormName": null
   },
   {
@@ -96,7 +96,7 @@ const EVO_TREE = [
     "toDexId": 186,
     "evolveMethod": "use-item",
     "evolveLevel": null,
-    "evolveItem": null,
+    "evolveItem": "kings-rock",
     "toFormName": null
   },
   {
@@ -112,7 +112,7 @@ const EVO_TREE = [
     "toDexId": 199,
     "evolveMethod": "use-item",
     "evolveLevel": null,
-    "evolveItem": null,
+    "evolveItem": "kings-rock",
     "toFormName": null
   },
   {
@@ -120,7 +120,7 @@ const EVO_TREE = [
     "toDexId": 212,
     "evolveMethod": "use-item",
     "evolveLevel": null,
-    "evolveItem": null,
+    "evolveItem": "metal-coat",
     "toFormName": null
   },
   {
@@ -128,7 +128,7 @@ const EVO_TREE = [
     "toDexId": 900,
     "evolveMethod": "use-item",
     "evolveLevel": null,
-    "evolveItem": null,
+    "evolveItem": "black-augurite",
     "toFormName": null
   },
   {
@@ -160,7 +160,7 @@ const EVO_TREE = [
     "toDexId": 26,
     "evolveMethod": "use-item",
     "evolveLevel": null,
-    "evolveItem": null,
+    "evolveItem": "thunder-stone",
     "toFormName": null
   },
   {
@@ -176,7 +176,7 @@ const EVO_TREE = [
     "toDexId": 103,
     "evolveMethod": "use-item",
     "evolveLevel": null,
-    "evolveItem": null,
+    "evolveItem": "leaf-stone",
     "toFormName": null
   },
   {

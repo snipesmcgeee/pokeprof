@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.23</title>
+<title>PokeProf v0.24</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -105,7 +105,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span style="font-size:11px;color:#6080a0;">v0.23</span></h1>
+  <h1>PokeProf <span style="font-size:11px;color:#6080a0;">v0.24</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">5.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -135,6 +135,7 @@
     <div id="aide-info">
       <div class="aide-name">🧑‍🔬 Carl Oak</div>
       <div class="aide-location" id="aide-location">📍 Pallet Town — Idle</div>
+      <button id="skip-encounter-btn" onclick="skipToNextEncounter()" style="display:none;margin-top:6px;font-size:10px;padding:5px 10px;border-color:#5dade2;color:#5dade2;">⏭ Skip to Encounter x50</button>
       <div id="aide-bag-display" style="font-size:10px;color:#6080a0;margin-top:2px;"></div>
       <div id="bag-display" style="display:none;"></div>
       <div id="aide-bag-items" style="font-size:10px;color:#a0a0c0;margin-top:2px;"></div>
@@ -240,7 +241,7 @@ const TYPE_COLORS={'Normal':'#a8a878','Fire':'#f08030','Water':'#6890f0','Grass'
 
 // ── ENCOUNTER METHODS ──
 const EVOLUTION_METHODS = [
-  'level','friendship','friendship-day','friendship-night','use-move',
+  'level','friendship','friendship-day','friendship-night','use-move','in-party',
   'Moon Stone','Thunder Stone','Fire Stone','Leaf Stone','Water Stone',
   'Sun Stone','Shiny Stone','Dusk Stone','Dawn Stone','Ice Stone',
   'Oval Stone','Metal Coat','Protector','Dragon Scale','Electirizer',
@@ -384,7 +385,8 @@ let state={
   locationEncounterLog:{},
   locationMethodPrefs:{},
   lastHealLocation:'palletTown',
-  dexHistory:{}
+  dexHistory:{},
+  freeSkipsRemaining:50
 };
 
 // ── MAKE POKEMON ──
@@ -748,14 +750,63 @@ function runTrainerBattle(playerTeam,enemyTeam){
 }
 
 // ── RESEARCH ──
+// v0.24 — use-move / in-party evolution condition helpers.
+// parseUseMoveDescriptor: evolveItem is "type" or "type-category" (category physical/special only).
+// e.g. "ghost-physical" -> {type:'Ghost',category:'Physical'}; "fairy" -> {type:'Fairy',category:null}
+function parseUseMoveDescriptor(desc){
+  if(!desc) return null;
+  const parts=String(desc).split('-');
+  const last=parts[parts.length-1].toLowerCase();
+  if(parts.length>1&&(last==='physical'||last==='special')){
+    const category=last==='physical'?'Physical':'Special';
+    return {type:capitalizeType(parts.slice(0,-1).join('-')),category};
+  }
+  return {type:capitalizeType(desc),category:null};
+}
+// Does this Pokemon currently have an equipped move matching the use-move condition?
+// evolveLevel is an optional power threshold (null/blank = no power requirement).
+function hasQualifyingMove(p,evolveItem,evolveLevel){
+  const desc=parseUseMoveDescriptor(evolveItem);
+  if(!desc) return false;
+  const threshold=(evolveLevel!=null)?evolveLevel:0;
+  return (p.equippedMoves||[]).some(m=>m&&m.type===desc.type&&(!desc.category||m.category===desc.category)&&m.power>=threshold);
+}
+// Does the active party contain a Pokemon with the required dexId (in-party condition)?
+function hasPartyMate(requiredDexId){
+  const id=parseInt(requiredDexId);
+  if(!id) return false;
+  return state.party.some(pm=>pm.pokedexId===id);
+}
+// Does this species have ANY use-move/in-party branch defined at all — single-target
+// (pokedex.js) or branching (EVO_TREE)? Used for the structural rule-out check in getResearch().
+function speciesHasEvolveMethod(dexId,method){
+  const s=getPokemonEntry(dexId);
+  if(s&&s.evolveMethod===method&&s.evolvesIntoId) return true;
+  if(typeof EVO_TREE!=='undefined'){
+    return getEvolutions(dexId).some(b=>b.evolveMethod===method&&b.toDexId);
+  }
+  return false;
+}
+
+// ── RESEARCH ──
 function getResearch(dexId){
-  if(!state.researchLog[dexId]) state.researchLog[dexId]={
-    evolutionConfirmed:false,
-    confirmedBranches:[], // v0.20 — [{method,intoId}], replaces confirmedMethod/confirmedIntoId
-    testedMethods:[], highestLevelObserved:0,
-    abilitiesObserved:{}, // v0.20 — {ability1:true, ability2:true, hiddenAbility:true}
-    knownSince:Date.now()
-  };
+  if(!state.researchLog[dexId]){
+    state.researchLog[dexId]={
+      evolutionConfirmed:false,
+      confirmedBranches:[], // v0.20 — [{method,intoId}], replaces confirmedMethod/confirmedIntoId
+      testedMethods:[], highestLevelObserved:0,
+      abilitiesObserved:{}, // v0.20 — {ability1:true, ability2:true, hiddenAbility:true}
+      knownSince:Date.now()
+    };
+    // v0.24 — use-move/in-party can't be ruled out by a scalar threshold like level/friendship
+    // (whether a Pokemon knows a qualifying move or has the right party-mate can change at any
+    // time). Instead, rule them out immediately and structurally if this species simply has no
+    // such branch defined anywhere in the data — otherwise most of the dex could never reach
+    // 100% tested once these methods exist.
+    const r=state.researchLog[dexId];
+    if(!speciesHasEvolveMethod(dexId,'use-move')) r.testedMethods.push('use-move');
+    if(!speciesHasEvolveMethod(dexId,'in-party')) r.testedMethods.push('in-party');
+  }
   return state.researchLog[dexId];
 }
 // v0.23 — computed live, never persisted. Guarantees correctness even after EVOLUTION_METHODS
@@ -792,7 +843,7 @@ function recordEvolution(fromDexId,toDexId,method,level){
   if(!already){
     r.evolutionConfirmed=true;
     r.confirmedBranches.push({method,intoId:toDexId});
-    if((method==='level'||method==='friendship'||method==='friendship-day'||method==='friendship-night')&&!r.testedMethods.includes(method)){
+    if((method==='level'||method==='friendship'||method==='friendship-day'||method==='friendship-night'||method==='use-move'||method==='in-party')&&!r.testedMethods.includes(method)){
       r.testedMethods.push(method);
     }
     const fromEntry=getPokemonEntry(fromDexId);
@@ -817,7 +868,7 @@ function isDexPageComplete(dexId){
   if(!entry) return false;
   const r=state.researchLog[dexId];
   if(!r) return false;
-  if((r.testedMethods.length||0)<34) return false;
+  if((r.testedMethods.length||0)<EVOLUTION_METHODS.length) return false;
   const obs=r.abilitiesObserved||{};
   if(entry.ability1&&!obs.ability1) return false;
   if(entry.ability2&&!obs.ability2) return false;
@@ -826,7 +877,14 @@ function isDexPageComplete(dexId){
 }
 function recordNewSpecies(dexId,name){
   const r=getResearch(dexId);
-  if(!r.firstSeen){ r.firstSeen=true; addFinding('species',name); }
+  if(!r.firstSeen){ r.firstSeen=true; addFinding('species',name,dexId); }
+}
+// v0.24 — fires "🎯 Captured" on first successful catch of a species (distinct from
+// recordNewSpecies' "🆕 New Species", which now fires on first sighting instead of first catch).
+// Tagged with dexId so showFindingsReport() can dedupe a same-report seen+captured pair.
+function recordCapture(dexId,name){
+  const r=getResearch(dexId);
+  if(!r.firstCaught){ r.firstCaught=true; addFinding('captured',name,dexId); }
 }
 function addFinding(type,...args){ state.pendingFindings.push({type,args,time:Date.now()}); }
 function isSpeciesKnown(dexId){ return !!state.researchLog[dexId]; }
@@ -934,7 +992,7 @@ function applyItemEvolution(catchId,intoId){
   if(p.evolveBlocked){ addLog('Evolution is blocked for this Pokémon.','fail'); return; }
   const r=state.researchLog[p.pokedexId];
   if(!r||!r.confirmedBranches||!r.confirmedBranches.length) return;
-  const nonManual=['level','friendship','friendship-day','friendship-night','use-move'];
+  const nonManual=['level','friendship','friendship-day','friendship-night','use-move','in-party'];
   const branch=r.confirmedBranches.find(b=>b.intoId===intoId&&!nonManual.includes(b.method));
   if(!branch){ addLog('That evolution is not available.','fail'); return; }
   const methodName=branch.method;
@@ -1008,6 +1066,30 @@ function checkEvolution(p){
       return;
     }
   }
+  // v0.24 — use-move evolution (single-target): does the Pokemon have a qualifying equipped move?
+  if(s&&s.evolveMethod==='use-move'&&s.evolvesIntoId&&hasQualifyingMove(p,s.evolveItem,s.evolveLevel)){
+    const newEntry=getPokemonEntry(s.evolvesIntoId);
+    if(newEntry){
+      const old=getDisplayName(p); const prevDexId=p.pokedexId;
+      applySpeciesSwap(p,newEntry);
+      recordEvolution(prevDexId,newEntry.dexId,'use-move',p.level);
+      addLog(old+' #'+p.id+' evolved into '+getDisplayName(p)+'!','evolve');
+      document.getElementById('enc-body').textContent=old+' evolved into '+getDisplayName(p)+'!';
+      return;
+    }
+  }
+  // v0.24 — in-party evolution (single-target): is the required party-mate species active?
+  if(s&&s.evolveMethod==='in-party'&&s.evolvesIntoId&&hasPartyMate(s.evolveItem)){
+    const newEntry=getPokemonEntry(s.evolvesIntoId);
+    if(newEntry){
+      const old=getDisplayName(p); const prevDexId=p.pokedexId;
+      applySpeciesSwap(p,newEntry);
+      recordEvolution(prevDexId,newEntry.dexId,'in-party',p.level);
+      addLog(old+' #'+p.id+' evolved into '+getDisplayName(p)+'!','evolve');
+      document.getElementById('enc-body').textContent=old+' evolved into '+getDisplayName(p)+'!';
+      return;
+    }
+  }
   // Path 2 (v0.20): EVO_TREE lookup — branching evolutions (e.g. Eevee).
   // Handles level, friendship-day, and friendship-night branches automatically.
   // use-item branches are NOT auto-applied here — see professorAutoTestEvolutions()/applyItemEvolution().
@@ -1019,6 +1101,8 @@ function checkEvolution(p){
       if(b.evolveMethod==='level') return p.level>=b.evolveLevel;
       if(b.evolveMethod==='friendship-day') return isDay&&p.friendship>=FRIENDSHIP_THRESHOLD;
       if(b.evolveMethod==='friendship-night') return !isDay&&p.friendship>=FRIENDSHIP_THRESHOLD;
+      if(b.evolveMethod==='use-move') return hasQualifyingMove(p,b.evolveItem,b.evolveLevel);
+      if(b.evolveMethod==='in-party') return hasPartyMate(b.evolveItem);
       return false;
     });
     if(branches.length>0){
@@ -1098,6 +1182,13 @@ function applyEvolutionSilent(p){
   if(s&&s.evolveMethod==='friendship'&&s.evolvesIntoId&&p.friendship>=FRIENDSHIP_THRESHOLD){
     if(tryApply(s.evolvesIntoId,'friendship')) return;
   }
+  // v0.24 — use-move / in-party (single-target), silent-path equivalents of checkEvolution()
+  if(s&&s.evolveMethod==='use-move'&&s.evolvesIntoId&&hasQualifyingMove(p,s.evolveItem,s.evolveLevel)){
+    if(tryApply(s.evolvesIntoId,'use-move')) return;
+  }
+  if(s&&s.evolveMethod==='in-party'&&s.evolvesIntoId&&hasPartyMate(s.evolveItem)){
+    if(tryApply(s.evolvesIntoId,'in-party')) return;
+  }
   if(typeof EVO_TREE!=='undefined'){
     const hour=new Date().getHours();
     const isDay=hour>=6&&hour<18;
@@ -1106,6 +1197,8 @@ function applyEvolutionSilent(p){
       if(b.evolveMethod==='level') return p.level>=b.evolveLevel;
       if(b.evolveMethod==='friendship-day') return isDay&&p.friendship>=FRIENDSHIP_THRESHOLD;
       if(b.evolveMethod==='friendship-night') return !isDay&&p.friendship>=FRIENDSHIP_THRESHOLD;
+      if(b.evolveMethod==='use-move') return hasQualifyingMove(p,b.evolveItem,b.evolveLevel);
+      if(b.evolveMethod==='in-party') return hasPartyMate(b.evolveItem);
       return false;
     });
     if(branches.length>0){
@@ -1170,6 +1263,10 @@ function processOfflineTime(secsAway){
       if(encDexKey){
         if(!state.locationEncounterLog[encLocKey][encDexKey]) state.locationEncounterLog[encLocKey][encDexKey]={seen:0,caught:0};
         state.locationEncounterLog[encLocKey][encDexKey].seen++;
+        // v0.24 — fires here, at encounter generation, regardless of catch outcome (offline
+        // equivalent of the same live-path fix in gameTick()).
+        recordSighting(encDexKey,enc.level);
+        recordNewSpecies(encDexKey,enc.species);
       }
 
       const ballId=selectBallId();
@@ -1186,9 +1283,7 @@ function processOfflineTime(secsAway){
         const s_=getPokemonEntry(enc.pokedexId);
         const exp=Math.floor(((s_?s_.baseExpYield:51)||51)*enc.level/7);
         giveExpSilent(lead,exp);
-        recordSighting(enc.pokedexId||caught.pokedexId,enc.level);
-        if(!isSpeciesKnown(caught.pokedexId)||!state.researchLog[caught.pokedexId].firstSeen)
-          recordNewSpecies(caught.pokedexId,enc.species);
+        recordCapture(caught.pokedexId,enc.species);
         if(encDexKey) state.locationEncounterLog[encLocKey][encDexKey].caught++;
         checkSpeciesCap(caught);
       } else if(ballId){
@@ -1205,9 +1300,7 @@ function processOfflineTime(secsAway){
           summary.catches++;
           state.dexHistory[caught.pokedexId]=(state.dexHistory[caught.pokedexId]||0)+1;
           recordAbilityObserved(caught.pokedexId,caught.ability);
-          if(!isSpeciesKnown(caught.pokedexId)||!state.researchLog[caught.pokedexId].firstSeen)
-            recordNewSpecies(caught.pokedexId,enc.species);
-          recordSighting(enc.pokedexId||caught.pokedexId,enc.level);
+          recordCapture(caught.pokedexId,enc.species);
           // Write caught to encounter log
           if(encDexKey) state.locationEncounterLog[encLocKey][encDexKey].caught++;
           // Per-species cap check
@@ -1350,9 +1443,7 @@ function resolveEncounterStep(){
     const s_=SPECIES[enc.species];
     const exp=Math.floor(((s_?s_.baseExpYield||s_.baseExp:51)*enc.level)/7);
     giveExp(lead,exp);
-    recordSighting(enc.pokedexId||caught.pokedexId,enc.level);
-    if(!isSpeciesKnown(caught.pokedexId)||!state.researchLog[caught.pokedexId].firstSeen)
-      recordNewSpecies(caught.pokedexId,enc.species);
+    recordCapture(caught.pokedexId,enc.species);
     addLog('✨ SHINY '+getDisplayName(caught)+' caught automatically! ✨','evolve');
     document.getElementById('total-catches').textContent=state.totalCatches;
     document.getElementById('total-sightings').textContent=state.totalSightings;
@@ -1439,6 +1530,11 @@ function throwBall(lead,enc){
 function catchPokemon(lead,enc,isShiny){
   const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId);
   caught.isShiny=isShiny;
+  // v0.24 — captured before dexHistory increments, so this reflects "first time this species
+  // has ever been caught" for professorAutoTestEvolutions()'s trigger, independent of the
+  // firstSeen/firstCaught research-log flags (sighting now happens earlier, at encounter
+  // generation in gameTick() — see recordSighting/recordNewSpecies there).
+  const newToDexHistory=!state.dexHistory[caught.pokedexId];
   state.dex.push(caught); state.totalCatches++; state.totalSightings++;
   state.dexHistory[caught.pokedexId]=(state.dexHistory[caught.pokedexId]||0)+1;
   recordAbilityObserved(caught.pokedexId,caught.ability);
@@ -1446,9 +1542,7 @@ function catchPokemon(lead,enc,isShiny){
   const s_=SPECIES[enc.species];
   const exp=Math.floor(((s_?s_.baseExpYield||s_.baseExp:51)*enc.level)/7);
   giveExp(lead,exp);
-  recordSighting(enc.pokedexId||caught.pokedexId,enc.level);
-  const isNew=!isSpeciesKnown(caught.pokedexId)||!state.researchLog[caught.pokedexId].firstSeen;
-  if(isNew) recordNewSpecies(caught.pokedexId,enc.species);
+  recordCapture(caught.pokedexId,enc.species);
   addLog('Caught '+getDisplayName(caught)+' #'+caught.id+' (Lv'+enc.level+' '+enc.gender+(isShiny?' ✨':'')+')! +'+exp+' EXP','catch');
   document.getElementById('total-catches').textContent=state.totalCatches;
   document.getElementById('total-sightings').textContent=state.totalSightings;
@@ -1462,7 +1556,7 @@ function catchPokemon(lead,enc,isShiny){
   // Per-species cap: catch-then-release overflow non-shinies
   checkSpeciesCap(caught);
   // Professor auto-tests evolution items against new species
-  if(isNew) professorAutoTestEvolutions();
+  if(newToDexHistory) professorAutoTestEvolutions();
   state.currentEncounter=null;
   advanceTravelPath();
   document.getElementById('enc-body').textContent='Caught '+enc.species+' Lv'+enc.level+(isShiny?' ✨ SHINY!':'!');
@@ -1534,6 +1628,11 @@ function gameTick(){
     if(encDexKey){
       if(!state.locationEncounterLog[state.currentLocation][encDexKey]) state.locationEncounterLog[state.currentLocation][encDexKey]={seen:0,caught:0};
       state.locationEncounterLog[state.currentLocation][encDexKey].seen++;
+      // v0.24 — fires here, at encounter generation, regardless of catch outcome (fixes the bug
+      // where fleeing/losing an encounter never populated researchLog, so the Pokédex grid never
+      // showed a silhouette for anything only ever seen, not caught).
+      recordSighting(encDexKey,enc.level);
+      recordNewSpecies(encDexKey,enc.species);
     }
     addLog('Wild '+enc.species+' appeared! Lv'+enc.level+' '+enc.gender,'info');
     document.getElementById('enc-body').textContent='Wild '+enc.species+' Lv'+enc.level+' ('+enc.gender+') appeared!';
@@ -1844,6 +1943,27 @@ function updateLocation(){
     const idleLoc=typeof LOCATIONS!=='undefined'?getLocation(state.currentLocation||'palletTown'):null;
     el.textContent='📍 '+(idleLoc?idleLoc.name:'Pallet Town')+' — Idle';
   }
+  // v0.24 — onboarding free-skip button: visible only while a mission is active and skips remain.
+  const skipBtn=document.getElementById('skip-encounter-btn');
+  if(skipBtn){
+    if(state.missionActive&&(state.freeSkipsRemaining||0)>0){
+      skipBtn.style.display='inline-block';
+      skipBtn.textContent='⏭ Skip to Encounter x'+state.freeSkipsRemaining;
+    } else {
+      skipBtn.style.display='none';
+    }
+  }
+}
+
+// v0.24 — onboarding free-skip: bypasses the 30s ENC_INTERVAL wait for a single encounter.
+// Ball cost and catch odds are unaffected — only the wait is skipped. Consumes exactly 1 skip
+// from a one-time, never-refilling pool (state.freeSkipsRemaining), set to 50 on new saves only.
+function skipToNextEncounter(){
+  if(!state.missionActive||(state.freeSkipsRemaining||0)<=0) return;
+  state.freeSkipsRemaining--;
+  state.nextEncounterIn=0;
+  updateLocation();
+  saveGame();
 }
 
 // ── SHOP ──
@@ -1927,7 +2047,7 @@ function showPokemonDetail(catchId){
   // Build one evolve button per confirmed item-based branch (v0.20 — branching evolutions
   // like Eevee can have several simultaneously confirmed). Hidden entirely if evolveBlocked.
   const r=state.researchLog[p.pokedexId];
-  const nonManualMethods=['level','friendship','friendship-day','friendship-night','use-move'];
+  const nonManualMethods=['level','friendship','friendship-day','friendship-night','use-move','in-party'];
   let evolveBtnHtml='';
   if(r&&r.confirmedBranches&&r.confirmedBranches.length&&!p.evolveBlocked){
     evolveBtnHtml=r.confirmedBranches.filter(b=>!nonManualMethods.includes(b.method)).map(b=>{
@@ -1976,19 +2096,32 @@ function getTMCount(){
   return (state.professorBag&&state.professorBag['tm'])||0;
 }
 
-// 4 rounded-rect slots — type-colored background, 💥/🌀 category emoji + power number.
-// compact=true (party card): read-only. compact=false (poke-modal): tappable → openMoveSlot().
+// 4 slots, type-colored background, 💥/🌀 category emoji + power number.
+// compact=true (party card): single row, read-only. compact=false (poke-modal, v0.24): 2x2 grid,
+// tappable → openMoveSlot(). Built with a single style attribute per box — an earlier version
+// emitted two `style` attributes on the tappable (non-compact) box, and per HTML parsing rules
+// only the first is honored, silently dropping the background/padding/color styling and leaving
+// only "cursor:pointer" in effect. That's why type colors never actually rendered in the modal.
 function getMoveSlotsHtml(p,compact){
   const slots=p.equippedMoves||[null,null,null,null];
-  return '<div style="display:flex;gap:4px;margin-top:'+(compact?'8px':'0')+';">'+slots.map((m,i)=>{
-    const tapAttr=compact?'':' onclick="event.stopPropagation();openMoveSlot('+p.id+','+i+')" style="cursor:pointer;"';
+  const wrapStyle=compact?'display:flex;gap:4px;margin-top:8px;':'display:grid;grid-template-columns:1fr 1fr;gap:6px;';
+  const boxes=slots.map((m,i)=>{
+    const onclickAttr=compact?'':' onclick="event.stopPropagation();openMoveSlot('+p.id+','+i+')"';
+    const cursorStyle=compact?'':'cursor:pointer;';
     if(!m){
-      return '<div'+tapAttr+' style="flex:1;background:#0f1a2a;border:1px dashed #3a4a5a;border-radius:6px;padding:6px 2px;text-align:center;font-size:9px;color:#5a6a7a;'+(compact?'':'cursor:pointer;')+'">+ Add Move</div>';
+      const emptyStyle=compact
+        ?'flex:1;background:#0f1a2a;border:1px dashed #3a4a5a;border-radius:6px;padding:6px 2px;text-align:center;font-size:9px;color:#5a6a7a;'+cursorStyle
+        :'background:#0f1a2a;border:1px dashed #3a4a5a;border-radius:8px;padding:14px 4px;text-align:center;font-size:11px;color:#5a6a7a;'+cursorStyle;
+      return '<div'+onclickAttr+' style="'+emptyStyle+'">+ Add Move</div>';
     }
     const color=TYPE_COLORS[m.type]||'#444';
     const emoji=m.category==='Physical'?'💥':'🌀';
-    return '<div'+tapAttr+' style="flex:1;background:'+color+';border-radius:6px;padding:6px 2px;text-align:center;font-size:10px;color:#fff;font-weight:bold;'+(compact?'':'cursor:pointer;')+'">'+emoji+' '+m.power+'</div>';
-  }).join('')+'</div>';
+    const filledStyle=compact
+      ?'flex:1;background:'+color+';border-radius:6px;padding:6px 2px;text-align:center;font-size:10px;color:#fff;font-weight:bold;'+cursorStyle
+      :'background:'+color+';border-radius:8px;padding:14px 4px;text-align:center;font-size:15px;color:#fff;font-weight:bold;'+cursorStyle;
+    return '<div'+onclickAttr+' style="'+filledStyle+'">'+emoji+' '+m.power+'</div>';
+  }).join('');
+  return '<div style="'+wrapStyle+'">'+boxes+'</div>';
 }
 
 // Opens the per-slot action modal: Upgrade/Change for a filled slot, or the Add picker for an
@@ -2201,7 +2334,15 @@ function evoMethodLabel(e){
     if(typeof e.item==='number'){ const it=getItem(e.item); return it?it.name:'Item'; }
     return e.item||'Item';
   }
-  if(e.method==='use-move') return 'Special Move';
+  if(e.method==='use-move'){
+    const desc=parseUseMoveDescriptor(e.item);
+    return desc?(desc.type+(desc.category?' '+desc.category:'')+' Move'):'Special Move';
+  }
+  if(e.method==='in-party'){
+    const mateId=parseInt(e.item);
+    const mate=mateId?getPokemonEntry(mateId):null;
+    return mate?('With '+mate.name+' in Party'):'In Party';
+  }
   return e.method||'?';
 }
 function evoNodeHtml(entry,isHighlight){
@@ -2543,8 +2684,14 @@ function showFindingsReport(){
   const modal=document.createElement('div');
   modal.id='findings-modal';
   modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
-  const lines=state.pendingFindings.map(f=>{
+  // v0.24 — dedupe: if a species has both a "seen" and "captured" finding pending in this same
+  // report, only "🎯 Captured" renders. Capture overwrites seen within one batch (e.g. an
+  // encounter caught immediately, or an offline batch that sees-then-catches in the same window).
+  const capturedDexIds=new Set(state.pendingFindings.filter(f=>f.type==='captured').map(f=>f.args[1]));
+  const filteredFindings=state.pendingFindings.filter(f=>!(f.type==='species'&&capturedDexIds.has(f.args[1])));
+  const lines=filteredFindings.map(f=>{
     if(f.type==='species') return '🆕 New Species: <span style="color:#2ecc71">'+f.args[0]+'</span>';
+    if(f.type==='captured') return '🎯 Captured: <span style="color:#2ecc71">'+f.args[0]+'</span>';
     if(f.type==='evolution') return '🔄 Evolution: <span style="color:#f4d03f">'+f.args[0]+' → '+f.args[1]+'</span>';
     return '📋 '+f.args.join(' ');
   }).join('<br>');
@@ -2587,7 +2734,9 @@ const SAVE_KEY='pokeprof_save';
 // power} slots) for the Trainer Battle System. Migration assigns each existing Pokemon a single
 // default move: type1 slot (random Physical/Special if both exist) → else type2 → else
 // Normal-Physical fallback. Slots 1-3 start empty for all pre-v0.23 saves.
-const SAVE_VERSION=15;
+// SAVE_VERSION 16 (v0.24) — state.freeSkipsRemaining added (onboarding encounter-skip pool).
+// New saves initialize to 50; existing saves migrate in at 0 (onboarding-only, not retroactive).
+const SAVE_VERSION=16;
 let saveTimer=0;
 
 function saveGame(){
@@ -2613,7 +2762,8 @@ function saveGame(){
         locationEncounterLog:state.locationEncounterLog||{},
         locationMethodPrefs:state.locationMethodPrefs||{},
         lastHealLocation:state.lastHealLocation||'palletTown',
-        dexHistory:state.dexHistory||{}
+        dexHistory:state.dexHistory||{},
+        freeSkipsRemaining:state.freeSkipsRemaining||0
       }
     }));
     setSaveIndicator('✔ Saved','saving');
@@ -2627,9 +2777,9 @@ function loadGame(){
     const data=JSON.parse(raw);
     if(!data) return false;
 
-    // ── SAVE_VERSION 15 MIGRATION ──
-    // Accepts v11/v12/v13/v14 saves and migrates them; rejects anything older.
-    if(data.version!==SAVE_VERSION&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
+    // ── SAVE_VERSION 16 MIGRATION ──
+    // Accepts v11/v12/v13/v14/v15 saves and migrates them; rejects anything older.
+    if(data.version!==SAVE_VERSION&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
     const s=data.state;
 
     // Migrate inventory: v11 had a single `bag`; v12 splits to professorBag/trainerBag.
@@ -2675,7 +2825,8 @@ function loadGame(){
       locationEncounterLog:migratedLog,
       locationMethodPrefs:s.locationMethodPrefs??{},
       lastHealLocation:s.lastHealLocation??'palletTown',
-      dexHistory:s.dexHistory??{}
+      dexHistory:s.dexHistory??{},
+      freeSkipsRemaining:s.freeSkipsRemaining??0
     });
     // Backfill missing fields on loaded pokemon
     state.dex.forEach(p=>{
@@ -2797,7 +2948,8 @@ if(!hasSave){
     locationEncounterLog:{},
     locationMethodPrefs:{},
     lastHealLocation:'palletTown',
-    dexHistory:{}
+    dexHistory:{},
+    freeSkipsRemaining:50 // v0.24 — onboarding-only, brand new saves get 50 free encounter skips
   };
   init();
   setSaveIndicator('⬤ New game','');

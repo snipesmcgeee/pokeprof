@@ -77,6 +77,7 @@ There is no survival element. Aides do not need food, sleep, or anything like th
 - **v0.23 requires SAVE_VERSION 15** due to: `equippedMoves[]` field added to Pokémon objects (up to 4 `{type, category, power}` slots for the new Battle System). Migration assigns each existing Pokémon a single default move on load: type1 slot (random Physical/Special if both exist) → else type2 → else Normal-Physical fallback. Slots 2–4 start empty for all pre-v0.23 saves.
 - **v0.24 requires SAVE_VERSION 16** due to: `state.freeSkipsRemaining` field added (onboarding encounter-skip pool — see "Free Onboarding Encounter Skips"). Migration: new saves initialize to `50`; existing saves migrate in at `0` (onboarding-only, not retroactive).
 - **Bug fixed post-release (v0.24):** the same SAVE_VERSION 16 migration also backfills `researchLog[dexId].firstSeen`/`firstCaught` (new v0.24 fields — see "Pokédex Grid View" seen-but-not-caught fix) for every pre-existing research-log entry. Without this, any save from before v0.24 would see a false "🎯 Captured" finding fire on the *next* catch of every already-known species (even ones caught hundreds of times), since those two fields were simply `undefined` on anything researched pre-v0.24 and `!r.firstCaught` reads as true. Backfill logic: if a `researchLog` entry exists at all, `firstSeen` is set `true` (it's definitely been seen); `firstCaught` is set `true` only if that dexId is also present in `dexHistory` (definitely already caught).
+- **v0.25 requires SAVE_VERSION 17** due to: badge entries added to `aide.bag` (new `itemCategory: badge` items) and a new per-gym highest-tier-reached tracker on aide objects (likely `aide.gymProgress[gymId] = highestTier`) — see "Gym / Trainer Battle System — Triggers, Badges, Level Cap". Migration: existing saves initialize both to empty on load (no badges held, no gym progress recorded).
 
 ---
 
@@ -698,6 +699,7 @@ Two structural gaps existed once `use-move`/`in-party` became real, functional m
 - Never hand-edit the generated JS files directly
 - `bagType` column (`"professor"` / `"trainer"`) is required on all items in `items.js`
 - `defaultEncounterMethod` column is required on all locations in `locations.js` (v0.19)
+- **`Trainers` tab (v0.25)** — required for the Gym Battle System; see "Data Model — `trainers.js`" under Gym / Trainer Battle System for the full column schema. Converter bumped to **v7** (v6 added `convertTrainers()`; v7 revised the move columns to combined type+category strings).
 
 ---
 
@@ -768,9 +770,68 @@ Damage = floor(floor(floor(2×Level/5 + 2) × Power × A/D) / 50) + 2
 
 ---
 
+## Gym / Trainer Battle System — Triggers, Badges, Level Cap (SETTLED — v0.25)
+
+Builds on the v0.23 battle engine (above) with 8 regular Gyms + Indigo Plateau (Elite Four + Champion), badges, aide-specific level caps, and a forced-tier progression model. Trainer battles are triggered as a weighted encounter method within the existing mission modal — no new battle UI, no manual/interactive battle mode (explicitly deferred, see Future Goals).
+
+### Data Model — `trainers.js` (new)
+- New Excel `Trainers` tab, generated via `converter.html` (**bumped to v7** for this) following the same converter pattern as `encounters.js`/`locations.js`.
+- **One row per team-slot.** `(trainerId, tier[, gauntletOrder])` groups rows into a single battle roster — same denormalized-flat-row approach as `encounters.js` (one row per species per location per method).
+- **Trainers tab columns:** `trainerId, trainerName, locationId, tier, isGauntlet, gauntletOrder, badgeItemId, slotIndex, dexId, formName, level, move1, move1Power, move2, move2Power, move3, move3Power, move4, move4Power`
+  - **`moveN` is a combined type+category string (v0.25 revision)** — matches the Pokedex sheet's own column-naming convention exactly: lowercase type + capitalized category, no separator (e.g. `rockSpecial`, `fairyPhysical`). Originally spec'd as three separate columns (`moveNType`/`moveNCategory`/`moveNPower`); combined per Jack's request to cut 4 columns and match a format he's already using elsewhere. `converter.html` (bumped to **v7**) parses this back into separate `moveNType`/`moveNCategory` fields internally, so `trainers.js` output and `buildEnemyTeam()` in `pokeprof.html` are unaffected — only the Excel-facing column count changed.
+  - Blank `moveN` = that slot is empty (same rule as before).
+  - `isGauntlet` — `TRUE` only for the 5 Indigo Plateau tier-9 rows-groups; `gauntletOrder` (1–5) is populated only on those rows and marks which of the 5 legs that slot belongs to
+  - `badgeItemId` — repeated identically on every row for a given `trainerId`; blank/null only for `isGauntlet` rows (the 5 individual Elite Four/Champion legs don't each grant a badge — see Badges below)
+  - `slotIndex` — position (1–6) within that specific battle's team
+- `trainers.js` exposes `getTrainerRoster(trainerId, tier, gauntletOrder)`, `getTrainerBadge(trainerId)`, and `getAllTrainerIds()` helpers, generated by the converter.
+- **8 regular gyms**: each bound to one city location, with hand-authored rosters for tiers 1–8 (species/level/equipped moves per team slot).
+- **Indigo Plateau**: a 9th location, inaccessible until the aide holds all 8 regular gym badges.
+  - **Tier 9**: Elite Four + Champion gauntlet — 5 hand-authored battles resolved as a single unit. Exclusive to Indigo Plateau; regular gyms never have a tier 9.
+  - **Tier 10**: post-game superboss content, unlocked at **all 9 locations** (8 gyms + Indigo) once the Champion badge is earned.
+- Schema should leave room for future gauntlet-style sub-trainers within regular gyms (mainline-game precedent) — **not implemented in v0.25**, see Future Goals.
+
+### Badges
+- New item type in `items.js`: `itemCategory: badge`, `bagType: trainer`, `isConsumable: FALSE`.
+- 9 badges total: 8 regular gym badges + 1 Champion badge (earned by clearing the tier-9 gauntlet).
+- **Earned on first win against a given gym, at whatever tier is currently forced at the time of that win** — there is no requirement to reach tier 8 first. Re-battling a gym after its badge is already earned has no further badge effect (tracking/grinding only).
+- Badges live in the earning aide's per-aide inventory (`aide.bag`), routed and isolated identically to HMs/Rods/Safari Pass — never shared between aides.
+
+### Level Cap
+- `cap = beatChampion ? 100 : 10 + (aide's badge count × 10)` — range 10–100.
+- Evaluated **live**, per-aide, per-Pokémon-currently-in-that-aide's-active-party. Not baked in at catch or assignment time.
+- The professor cannot assign a Pokémon above the holding aide's current cap to that aide's party. A capped Pokémon does not gain XP/levels above the cap while held by that aide.
+- Box'd/unassigned Pokémon are never capped. Moving a Pokémon to a different aide re-evaluates the cap live against that aide's current badge count.
+
+### Forced Tier Logic
+- Tier = `(aide's current badge count) + 1`. **Never player-selectable** — no tier dropdown or override anywhere in the mission modal.
+- **Clamp rule:** once an aide holds all 8 regular gym badges but has not yet beaten the Champion, the formula would output tier 9 for a regular gym rematch — but tier 9 doesn't exist for regular gyms (Indigo-exclusive). In this window, regular gym rematches **clamp at tier 8**.
+- Once the Champion badge is earned: forced tier becomes **10 everywhere** (all 8 gyms + Indigo Plateau) — tier 9 is skipped entirely for gyms, remaining a one-time-only Indigo Plateau gauntlet.
+
+### Trigger — Mission Modal Integration
+- "Gym Battle" is a weighted encounter method, selectable alongside existing methods (Surf, Fish, etc.) per location that has an associated gym.
+- Reuses `buildRouteTable()` and existing method-weighting logic — no new trigger paradigm.
+
+### Loss / Retry Behavior
+- Regular gym battles: no penalty, auto-retry — identical to wild encounter loss handling.
+- Tier-9 gauntlet: **no heal between the 5 battles.** A loss at any point resets the entire attempt back to battle 1 (first Elite Four member).
+
+### Inter-Battle Healing
+- Reuses existing `getWeakestEffectivePotion()` auto-heal logic unchanged (smallest potion that heals without waste, no HP threshold), pulling from `state.professorBag`.
+- Fires **only before each battle instance starts** (including before each of the 5 gauntlet legs) if not at full HP. Never mid-battle — individual battles remain single-tick resolutions with no interruption point, consistent with existing wild-encounter behavior.
+
+### Progress Tracking
+- Per-gym "highest tier reached" tracked as a **display/achievement stat only** — no gameplay effect, purely informational (trophy-style).
+
+### SAVE_VERSION Bump
+- Required. New state: badge entries in `aide.bag`; per-gym highest-tier-reached tracker (shape TBD at implementation time, likely `aide.gymProgress[gymId] = highestTier`).
+- Migration pass needed for existing saves — new fields default to empty/0 on load.
+
+---
+
 ## Things That Are Future Goals (Do Not Implement Yet)
 
-- Gym system (Brock and others as fixed encounters) — **v0.23 built the battle engine/data foundation; still needed: battle triggers, badge tracking, opposing trainer rosters/AI — see "Explicitly Out of Scope" above**
+- Manual/interactive trainer battle mode — either true player-controlled move selection or Pokelike-style turn-by-turn playback of the existing AI-driven resolution. Deferred from v0.25; own future changelog session.
+- Gauntlet-style sub-trainers within regular gyms (mainline-game precedent) — deferred from v0.25.
 - Trainer innate abilities / type affinities
 - New trainer recruitment mechanics
 - Breeding system

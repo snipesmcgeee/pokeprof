@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.24</title>
+<title>PokeProf v0.25</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -12,6 +12,7 @@
 <script src="evotree.js"></script>
 <script src="formtriggers.js"></script>
 <script src="items.js"></script>
+<script src="trainers.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body { background:#1a1a2e; color:#e0e0e0; font-family:'Courier New',monospace; font-size:13px; height:100dvh; display:flex; flex-direction:column; overflow:hidden; }
@@ -105,7 +106,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span style="font-size:11px;color:#6080a0;">v0.24</span></h1>
+  <h1>PokeProf <span style="font-size:11px;color:#6080a0;">v0.25</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">5.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -137,6 +138,7 @@
       <div class="aide-location" id="aide-location">📍 Pallet Town — Idle</div>
       <button id="skip-encounter-btn" onclick="skipToNextEncounter()" style="display:none;margin-top:6px;font-size:10px;padding:5px 10px;border-color:#5dade2;color:#5dade2;">⏭ Skip to Encounter x50</button>
       <div id="aide-bag-display" style="font-size:10px;color:#6080a0;margin-top:2px;"></div>
+      <div id="badge-cap-display" style="font-size:10px;color:#f4d03f;margin-top:2px;"></div>
       <div id="bag-display" style="display:none;"></div>
       <div id="aide-bag-items" style="font-size:10px;color:#a0a0c0;margin-top:2px;"></div>
     </div>
@@ -380,6 +382,7 @@ let state={
   travelPath:[], travelPathIndex:0, travelCyclesRemaining:0,
   professorBag:{},
   trainerBag:{},
+  gymProgress:{},
   researchLog:{}, pendingFindings:[],
   discoveredLocations:new Set(['palletTown']),
   locationEncounterLog:{},
@@ -747,6 +750,176 @@ function runTrainerBattle(playerTeam,enemyTeam){
     if(enemyActive.currentHP<=0){ delete history[enemyActive.id]; enemyActive=enemyTeam.find(p=>p.currentHP>0); }
   }
   return {winner:playerTeam.some(p=>p.currentHP>0)?'player':'enemy',log};
+}
+
+// ── GYM / TRAINER BATTLE SYSTEM — Triggers, Badges, Level Cap (v0.25) ──
+// Wires the v0.23 battle engine above to an actual trigger: 8 regular gyms (tiers 1-8) +
+// Indigo Plateau (tier 9 = Elite Four/Champion 5-battle gauntlet, tier 10 = post-game superboss).
+// All trainer data comes from trainers.js (TRAINERS_DATA/getTrainerRoster) — absent until Jack
+// builds the Excel Trainers tab and runs converter.html v6. Every function below no-ops safely
+// if TRAINERS_DATA is undefined or empty, same defensive pattern used for other optional data.
+
+// The Champion badge is identified structurally — the badgeItemId shared by every isGauntlet
+// row — rather than a hardcoded itemId string, so this stays independent of Excel naming.
+function getChampionBadgeId(){
+  if(typeof TRAINERS_DATA==='undefined') return null;
+  const row=TRAINERS_DATA.find(t=>t.isGauntlet&&t.badgeItemId);
+  return row?row.badgeItemId:null;
+}
+function hasChampionBadge(){
+  const id=getChampionBadgeId();
+  return !!(id&&state.trainerBag[id]>0);
+}
+// Counts distinct regular-gym badges held (excludes the Champion badge even if somehow present).
+function countRegularBadges(){
+  if(typeof TRAINERS_DATA==='undefined') return 0;
+  const champId=getChampionBadgeId();
+  const regularBadgeIds=[...new Set(TRAINERS_DATA.filter(t=>!t.isGauntlet&&t.badgeItemId).map(t=>t.badgeItemId))];
+  return regularBadgeIds.filter(id=>id!==champId&&state.trainerBag[id]>0).length;
+}
+// cap = 100 once Champion is beaten, else 10 + (regular badges × 10). Range 10-100.
+function getLevelCap(){
+  return hasChampionBadge()?100:10+countRegularBadges()*10;
+}
+function isIndigoTrainer(trainerId){
+  return typeof TRAINERS_DATA!=='undefined'&&TRAINERS_DATA.some(t=>t.trainerId===trainerId&&t.isGauntlet);
+}
+// Forced tier — never player-selectable. Regular gyms clamp at 8 until Champion is beaten,
+// then jump to 10 everywhere (tier 9 is Indigo-exclusive, never appears on a regular gym).
+// Returns null if the trainer isn't accessible yet (Indigo Plateau, <8 regular badges).
+function getForcedTier(trainerId){
+  if(hasChampionBadge()) return 10;
+  if(isIndigoTrainer(trainerId)) return countRegularBadges()>=8?9:null;
+  return Math.min(countRegularBadges()+1,8);
+}
+function isGymAccessible(trainerId){
+  if(isIndigoTrainer(trainerId)) return countRegularBadges()>=8;
+  return true;
+}
+// All distinct trainerIds with at least one Trainers row at this location.
+function getGymTrainerIdsAtLocation(locId){
+  if(typeof TRAINERS_DATA==='undefined') return [];
+  return [...new Set(TRAINERS_DATA.filter(t=>t.locationId===locId).map(t=>t.trainerId))];
+}
+
+// Builds battle-ready enemy Pokemon from a Trainers-tab roster (mirrors makePokemon's shape:
+// pokedexId/level/currentHP/maxHP/equippedMoves — everything runTrainerBattle/calcBattleDamage
+// needs). gauntletOrder is only passed for the Indigo tier-9 gauntlet (1-5, one leg's roster).
+function buildEnemyTeam(trainerId,tier,gauntletOrder){
+  if(typeof getTrainerRoster!=='function') return [];
+  const roster=getTrainerRoster(trainerId,tier,gauntletOrder);
+  return roster.map(slot=>{
+    const maxHP=calcMaxHP(null,slot.level,slot.dexId);
+    const moves=[1,2,3,4].map(n=>{
+      const type=slot['move'+n+'Type'],cat=slot['move'+n+'Category'],pow=slot['move'+n+'Power'];
+      return (type&&cat&&pow)?{type,category:cat,power:pow}:null;
+    });
+    return {id:'enemy-'+trainerId+'-'+tier+'-'+(gauntletOrder||0)+'-'+slot.slotIndex,
+      pokedexId:slot.dexId,level:slot.level,currentHP:maxHP,maxHP,equippedMoves:moves};
+  });
+}
+
+// Grants a trainer's badge on first win only; regular gyms also grant 1 TM on first win
+// (Indigo Plateau grants no TM). Updates gymProgress (cosmetic tracking) on every win regardless
+// of whether the badge was already held.
+function awardGymWin(trainerId,tier){
+  if(!state.gymProgress) state.gymProgress={};
+  state.gymProgress[trainerId]=Math.max(state.gymProgress[trainerId]||0,tier);
+  if(typeof TRAINERS_DATA==='undefined') return;
+  const row=TRAINERS_DATA.find(t=>t.trainerId===trainerId&&t.badgeItemId);
+  if(!row) return;
+  const badgeId=row.badgeItemId;
+  if((state.trainerBag[badgeId]||0)>0) return; // already earned — no further effect
+  state.trainerBag[badgeId]=(state.trainerBag[badgeId]||0)+1;
+  const badgeItem=getItem(badgeId);
+  addLog('🎖 Badge earned: '+(badgeItem?badgeItem.name:badgeId)+'!','evolve');
+  if(!row.isGauntlet){
+    state.professorBag['tm']=(state.professorBag['tm']||0)+1;
+    addLog('Received 1 TM for defeating the gym!','catch');
+  }
+  renderBagDisplay();
+}
+
+// Auto-heal check fired before each battle INSTANCE (never mid-battle) — reuses the existing
+// no-waste/no-threshold potion logic, applied across the whole party since trainer battles are
+// multi-mon, pulling from professorBag exactly like every other auto-heal in the game.
+function healPartyBeforeGymBattle(){
+  state.party.forEach(p=>{
+    const potionId=getWeakestEffectivePotion(p);
+    if(potionId) useItemFromBag(potionId,p);
+  });
+}
+
+// One battle instance: full player team vs. one enemy roster, single runTrainerBattle() call —
+// no mid-battle healing even if the enemy cycles through multiple Pokemon. Applies EXP to every
+// player Pokemon still conscious at the end, summed per enemy Pokemon KO'd (baseExpYield×level/7,
+// same formula as wild encounters).
+function runOneGymBattle(enemyTeam){
+  const playerTeam=state.party.filter(p=>p.currentHP>0).map(p=>({id:p.id,pokedexId:p.pokedexId,level:p.level,currentHP:p.currentHP,maxHP:p.maxHP,equippedMoves:p.equippedMoves||[]}));
+  if(!playerTeam.length||!enemyTeam.length) return {winner:'enemy',log:[]};
+  const result=runTrainerBattle(playerTeam,enemyTeam);
+  // Write HP back to the real party objects — runTrainerBattle operates on copies.
+  playerTeam.forEach(pt=>{
+    const real=state.party.find(p=>p.id===pt.id);
+    if(real) real.currentHP=pt.currentHP;
+  });
+  if(result.winner==='player'){
+    const totalExp=enemyTeam.reduce((sum,e)=>{
+      const entry=getPokemonEntry(e.pokedexId);
+      return sum+Math.floor(((entry&&entry.baseExpYield?entry.baseExpYield:51)*e.level)/7);
+    },0);
+    state.party.filter(p=>p.currentHP>0).forEach(p=>giveExp(p,totalExp));
+  }
+  return result;
+}
+
+// Orchestrates a full gym encounter: single battle for regular tiers/tier-10, a 5-leg gauntlet
+// for Indigo tier 9 (heal-before-each-leg, no heal mid-battle, and a loss at ANY leg resets the
+// whole attempt back to leg 1 — no partial credit, matches the real Elite Four's no-heal rule).
+function runGymEncounter(trainerId,tier){
+  const isGauntlet=isIndigoTrainer(trainerId)&&tier===9;
+  const locData=typeof LOCATIONS!=='undefined'?getLocation(state.currentLocation):null;
+  const gymName=locData?locData.name:trainerId;
+
+  if(!isGauntlet){
+    healPartyBeforeGymBattle();
+    const enemyTeam=buildEnemyTeam(trainerId,tier);
+    const result=runOneGymBattle(enemyTeam);
+    if(result.winner==='player'){
+      addLog('⚔ Defeated '+gymName+' (Tier '+tier+')!','win');
+      awardGymWin(trainerId,tier);
+      document.getElementById('enc-body').textContent='Won gym battle at '+gymName+' (Tier '+tier+')!';
+    } else {
+      addLog('⚔ Lost to '+gymName+' (Tier '+tier+'). No penalty — try again.','fail');
+      document.getElementById('enc-body').textContent='Lost gym battle at '+gymName+'.';
+    }
+    state.currentEncounter=null;
+    advanceTravelPath();
+    saveGame();
+    return;
+  }
+
+  // Tier-9 Elite Four + Champion gauntlet — 5 legs as one unit.
+  for(let leg=1;leg<=5;leg++){
+    healPartyBeforeGymBattle();
+    const enemyTeam=buildEnemyTeam(trainerId,9,leg);
+    const result=runOneGymBattle(enemyTeam);
+    if(result.winner!=='player'){
+      addLog('⚔ Lost the Elite Four/Champion gauntlet at leg '+leg+'/5 — attempt reset.','fail');
+      document.getElementById('enc-body').textContent='Lost the gauntlet at leg '+leg+'/5. Try again.';
+      state.currentEncounter=null;
+      advanceTravelPath();
+      saveGame();
+      return;
+    }
+    addLog('⚔ Gauntlet leg '+leg+'/5 defeated!','win');
+  }
+  addLog('🏆 Elite Four and Champion defeated!','evolve');
+  awardGymWin(trainerId,9);
+  document.getElementById('enc-body').textContent='🏆 Champion defeated at '+gymName+'!';
+  state.currentEncounter=null;
+  advanceTravelPath();
+  saveGame();
 }
 
 // ── RESEARCH ──
@@ -1136,7 +1309,7 @@ function giveExp(pokemon,amount){
     const s=getPokemonEntry(pokemon.pokedexId)||SPECIES[pokemon.species];
     const gr=pokemon.growthRate||(s?s.growthRate:null)||'mediumFast';
     const need=expToLevel(pokemon.level+1,gr);
-    if(pokemon.exp>=need&&pokemon.level<100){
+    if(pokemon.exp>=need&&pokemon.level<getLevelCap()){
       pokemon.level++; levelled=true;
       const om=pokemon.maxHP; pokemon.maxHP=calcMaxHP(pokemon.species,pokemon.level,pokemon.pokedexId);
       pokemon.currentHP=Math.min(pokemon.maxHP,pokemon.currentHP+(pokemon.maxHP-om));
@@ -1153,7 +1326,7 @@ function giveExpSilent(p,amount){
   while(true){
     const s=getPokemonEntry(p.pokedexId)||SPECIES[p.species];
     const gr=p.growthRate||(s?s.growthRate:null)||'mediumFast';
-    if(p.exp>=expToLevel(p.level+1,gr)&&p.level<100){
+    if(p.exp>=expToLevel(p.level+1,gr)&&p.level<getLevelCap()){
       p.level++;
       const om=p.maxHP; p.maxHP=calcMaxHP(p.species,p.level,p.pokedexId);
       p.currentHP=Math.min(p.maxHP,p.currentHP+(p.maxHP-om));
@@ -1255,6 +1428,12 @@ function processOfflineTime(secsAway){
       }
       break;
     }
+    // v0.25 — Gym Battle encounters are NOT simulated offline (deliberately deferred, not an
+    // oversight): the shiny/catch code below assumes enc.species/enc.pokedexId, which gym
+    // encounters don't have. Without this guard it would build a corrupt dex entry from
+    // undefined fields. This encounter cycle is simply consumed with no effect while away —
+    // gym battles only resolve live, in resolveEncounterStep().
+    if(enc&&enc.type==='gym'){ advanceTravelPath(); continue; }
     if(enc){
       // Write seen to encounter log
       const encLocKey=state.currentLocation;
@@ -1344,15 +1523,24 @@ function showOfflineBanner(secsAway,summary){
 function rollEncounter(){
   const locId=state.currentLocation;
   const table=buildRouteTable(locId);
-  if(!table.length) return null;
-
   const atDest=locId===state.missionDestination;
+  const gymTrainerIds=atDest?getGymTrainerIdsAtLocation(locId).filter(isGymAccessible):[];
+
+  if(!table.length&&!gymTrainerIds.length) return null;
+
   let method;
   if(atDest){
-    method=pickMethodForLocation(locId,table);
+    method=pickMethodForLocation(locId,table,gymTrainerIds);
   } else {
     const locData=typeof LOCATIONS!=='undefined'?getLocation(locId):null;
     method=(locData&&locData.defaultEncounterMethod)||'grass';
+  }
+
+  if(method==='gym'){
+    const trainerId=gymTrainerIds[0]; // v0.25 — one gym per location; first match wins if ever >1
+    const tier=trainerId?getForcedTier(trainerId):null;
+    if(!trainerId||tier==null) return null;
+    return {type:'gym',trainerId,tier};
   }
 
   const methodTable=table.filter(e=>e.method===method);
@@ -1360,8 +1548,10 @@ function rollEncounter(){
   return rollFromTable(rollTable);
 }
 
-function pickMethodForLocation(locId,table){
+function pickMethodForLocation(locId,table,gymTrainerIds){
+  gymTrainerIds=gymTrainerIds||[];
   const availableMethods=[...new Set(table.map(e=>e.method))];
+  if(gymTrainerIds.length) availableMethods.push('gym');
   const prefs=state.locationMethodPrefs[locId];
   if(!prefs||!prefs.methods||!prefs.methods.length){
     // Default: even split — pick randomly from available
@@ -1431,6 +1621,10 @@ function checkLocationHeal(){
 // ── COMBAT ──
 function resolveEncounterStep(){
   const enc=state.currentEncounter; if(!enc) return;
+
+  // v0.25 — Gym Battle encounters resolve through the trainer battle engine, not the wild
+  // catch/fight flow below. Fully separate branch, everything after this is untouched.
+  if(enc.type==='gym'){ runGymEncounter(enc.trainerId,enc.tier); return; }
 
   // Step 1: Shiny check — fires before anything else. Auto-catch, no ball needed.
   if(Math.random()<(1/4096)){
@@ -1622,6 +1816,16 @@ function gameTick(){
       state.nextEncounterIn=ENC_INTERVAL; updateLocation(); return;
     }
     const enc=state.currentEncounter;
+    if(enc.type==='gym'){
+      // v0.25 — Gym Battle encounters skip the wild species-sighting log entirely (no dexId
+      // to record against); just announce the battle. resolveEncounterStep() handles it next tick.
+      const locData=typeof LOCATIONS!=='undefined'?getLocation(state.currentLocation):null;
+      const gymName=locData?locData.name:enc.trainerId;
+      addLog('⚔ Gym Battle triggered at '+gymName+' (Tier '+enc.tier+')!','info');
+      document.getElementById('enc-body').textContent='⚔ Gym Battle at '+gymName+' (Tier '+enc.tier+')!';
+      render();
+      return;
+    }
     // Write seen to encounter log — always use parseInt for numeric key
     if(!state.locationEncounterLog[state.currentLocation]) state.locationEncounterLog[state.currentLocation]={};
     const encDexKey=parseInt(enc.pokedexId)||0;
@@ -1782,7 +1986,10 @@ function renderMethodPrefs(locId){
   const el=document.getElementById('method-prefs'); if(!el) return;
   // All encounters at this location
   const allEncs=typeof ENCOUNTERS!=='undefined'?ENCOUNTERS.filter(e=>e.locationId===locId):[];
-  if(!allEncs.length){ el.innerHTML=''; return; }
+  // v0.25 — Gym Battle is a synthetic method, not sourced from ENCOUNTERS.js; only appears
+  // when this location has an accessible gym in trainers.js.
+  const gymTrainerIds=getGymTrainerIdsAtLocation(locId).filter(isGymAccessible);
+  if(!allEncs.length&&!gymTrainerIds.length){ el.innerHTML=''; return; }
 
   // Methods present at this location (fishing split into per-rod-tier sub-methods — v0.21 scoped fix)
   const allMethods=[...new Set(allEncs.map(e=>getEncounterSubMethod(e.encounterMethod||'grass',e.requiresItem)))];
@@ -1794,6 +2001,7 @@ function renderMethodPrefs(locId){
   });
   // Available (non-locked) methods
   const availMethods=allMethods.filter(m=>!lockedMethods.has(m));
+  if(gymTrainerIds.length){ allMethods.push('gym'); availMethods.push('gym'); }
 
   // Load or default prefs
   const prefs=state.locationMethodPrefs[locId];
@@ -1806,7 +2014,12 @@ function renderMethodPrefs(locId){
     const locked=lockedMethods.has(method);
     const checked=locked?false:(prefs?prefs.methods.includes(method):defaultChecked.includes(method));
     const weight=prefs&&prefs.weights?(prefs.weights[method]||1):1;
-    const label=FISH_ROD_LABELS[method]||method;
+    let label=FISH_ROD_LABELS[method]||method;
+    if(method==='gym'){
+      // Tier is forced/computed live, never player-selectable — shown for information only.
+      const tier=getForcedTier(gymTrainerIds[0]);
+      label='⚔ Gym Battle — Tier '+(tier!=null?tier:'?');
+    }
     html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;opacity:'+(locked?'0.4':'1')+'">';
     html+='<input type="checkbox" id="meth-'+method+'" '+(checked?'checked':'')+' '+(locked?'disabled':'')+' onchange="updateMethodPrefs(\''+locId+'\')" style="width:14px;height:14px;cursor:'+(locked?'not-allowed':'pointer')+'">';
     html+='<label for="meth-'+method+'" style="color:#e0e0e0;font-size:11px;flex:1;cursor:'+(locked?'not-allowed':'pointer')+'">'+label+(locked?' 🔒':'')+' </label>';
@@ -1823,7 +2036,9 @@ function renderMethodPrefs(locId){
 
 function updateMethodPrefs(locId){
   const allEncs=typeof ENCOUNTERS!=='undefined'?ENCOUNTERS.filter(e=>e.locationId===locId):[];
+  const gymTrainerIds=getGymTrainerIdsAtLocation(locId).filter(isGymAccessible);
   const allMethods=[...new Set(allEncs.map(e=>getEncounterSubMethod(e.encounterMethod||'grass',e.requiresItem)))];
+  if(gymTrainerIds.length) allMethods.push('gym');
   const methods=[]; const weights={};
   allMethods.forEach(method=>{
     const cb=document.getElementById('meth-'+method);
@@ -2009,6 +2224,7 @@ function assignToAide(catchId){
   const p=state.dex.find(x=>x.id===catchId); if(!p) return;
   if(state.missionActive){ addLog('Cannot change party during a mission!','fail'); return; }
   if(state.party.length>=6){ addLog('Party is full (6 max)!','fail'); return; }
+  if(p.level>getLevelCap()){ addLog(getDisplayName(p)+' #'+p.id+' is above the level cap (Lv'+getLevelCap()+') — cannot assign until more badges are earned.','fail'); return; }
   p.holder='Carl Oak';
   state.party.push(p);
   addLog(getDisplayName(p)+' #'+p.id+' assigned to Carl Oak.','info');
@@ -2224,6 +2440,16 @@ function renderBagDisplay(){
       if(qty>0&&!(getItem(id)&&getItem(id).itemCategory==='ball')){ const item=getItem(id); profParts.push((item?item.name:id)+' ×'+qty); }
     });
     bagEl.textContent='🏐 '+getBallCount()+' balls'+(profParts.length?' | Prof: '+profParts.join(', '):'');
+  }
+  // v0.25 — badge count / level cap readout, only shown once trainers.js is loaded
+  const capEl=document.getElementById('badge-cap-display');
+  if(capEl){
+    if(typeof TRAINERS_DATA!=='undefined'&&TRAINERS_DATA.length){
+      const champ=hasChampionBadge();
+      capEl.textContent='🎖 Badges: '+countRegularBadges()+'/8'+(champ?' + 🏆 Champion':'')+' · Level Cap: '+getLevelCap();
+    } else {
+      capEl.textContent='';
+    }
   }
 }
 
@@ -2740,7 +2966,10 @@ const SAVE_KEY='pokeprof_save';
 // pre-existing entry — without this, every old save's next catch of an already-known species
 // would incorrectly fire a fresh "🎯 Captured" finding, since those fields are undefined for
 // anything researched before v0.24.
-const SAVE_VERSION=16;
+// v0.25 — SAVE_VERSION 17: badges now live in trainerBag (existing container, no schema
+// change needed there); new state.gymProgress={} tracks highest tier reached per trainerId
+// (cosmetic only). Migration below backfills gymProgress:{} for any pre-v0.25 save.
+const SAVE_VERSION=17;
 let saveTimer=0;
 
 function saveGame(){
@@ -2760,6 +2989,7 @@ function saveGame(){
         autoRepeat:state.autoRepeat||false,
         professorBag:state.professorBag||{},
         trainerBag:state.trainerBag||{},
+        gymProgress:state.gymProgress||{},
         travelPath:state.travelPath||[], travelPathIndex:state.travelPathIndex||0,
         travelCyclesRemaining:state.travelCyclesRemaining||0,
         discoveredLocations:[...state.discoveredLocations],
@@ -2781,9 +3011,9 @@ function loadGame(){
     const data=JSON.parse(raw);
     if(!data) return false;
 
-    // ── SAVE_VERSION 16 MIGRATION ──
-    // Accepts v11/v12/v13/v14/v15 saves and migrates them; rejects anything older.
-    if(data.version!==SAVE_VERSION&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
+    // ── SAVE_VERSION 17 MIGRATION ──
+    // Accepts v11-v16 saves and migrates them; rejects anything older.
+    if(data.version!==SAVE_VERSION&&data.version!==16&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
     const s=data.state;
 
     // Migrate inventory: v11 had a single `bag`; v12 splits to professorBag/trainerBag.
@@ -2823,6 +3053,7 @@ function loadGame(){
       missionOrigin:s.missionOrigin??'palletTown', currentLocation:s.currentLocation??'palletTown',
       autoRepeat:s.autoRepeat??false,
       professorBag, trainerBag,
+      gymProgress:s.gymProgress??{},
       travelPath:s.travelPath??[], travelPathIndex:s.travelPathIndex??0,
       travelCyclesRemaining:s.travelCyclesRemaining??0,
       discoveredLocations:new Set(s.discoveredLocations??['palletTown','route1']),
@@ -2956,6 +3187,7 @@ if(!hasSave){
     missionOrigin:'palletTown', currentLocation:'palletTown', autoRepeat:false,
     travelPath:[], travelPathIndex:0, travelCyclesRemaining:0,
     professorBag:{}, trainerBag:{},
+    gymProgress:{},
     researchLog:{}, pendingFindings:[],
     discoveredLocations:initDiscovered,
     locationEncounterLog:{},

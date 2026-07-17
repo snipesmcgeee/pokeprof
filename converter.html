@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PokeProf — Database Converter v5</title>
+<title>PokeProf — Database Converter v7</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #1a1a2e; color: #e0e0e0; font-family: 'Courier New', monospace; font-size: 13px; padding: 20px; }
@@ -41,7 +41,7 @@
 </head>
 <body>
 
-<h1>🎓 PokeProf — Database Converter v5</h1>
+<h1>🎓 PokeProf — Database Converter v7</h1>
 <p class="subtitle">Upload your Excel file to generate the game database JS files</p>
 
 <div class="card">
@@ -156,6 +156,7 @@ function convertAll() {
     convertEvoTree();
     convertFormTriggers();
     convertItems();
+    convertTrainers();
     convertGeneric('Moves', 'moves.js', 'MOVES_DATA', ['movePower','accuracy','pp','priority'].map(f=>f), 'function getMove(name){ return MOVES_DATA.find(m=>m.name===name)||null; }');
     convertGeneric('Abilities', 'abilities.js', 'ABILITIES_DATA', [], 'function getAbility(name){ return ABILITIES_DATA.find(a=>a.name===name)||null; }');
 
@@ -449,6 +450,94 @@ function convertItems() {
   const missingBagType = entries.filter(e => !e.bagType).map(e => e.itemId || e.name);
   if (missingBagType.length > 0) {
     warnings.push(`Items missing bagType (should be "Professor" or "Trainer"): ${missingBagType.join(', ')}`);
+  }
+}
+
+// v0.25 — Gym / Trainer Battle System.
+// Trainers sheet is one row per team-slot: (trainerId, tier[, gauntletOrder]) groups rows
+// into a single battle roster. Regular gyms use tier 1-8, no gauntletOrder. Indigo Plateau's
+// Elite Four + Champion gauntlet uses tier 9 with gauntletOrder 1-5 (one battle roster per
+// leg); tier 10 (post-game) has no gauntletOrder, same as regular gyms.
+// Expected columns: trainerId, trainerName, locationId, tier, isGauntlet, gauntletOrder,
+// badgeItemId, slotIndex, dexId, formName, level,
+// move1, move1Power, move2, move2Power, move3, move3Power, move4, move4Power
+// moveN is a combined type+category string matching the Pokedex sheet's own column-naming
+// convention (lowercase type + capitalized category, e.g. "rockSpecial", "fairyPhysical") —
+// parsed here into separate moveNType/moveNCategory fields so trainers.js output stays in the
+// same shape pokeprof.html's buildEnemyTeam() already expects. Blank moveN = empty slot.
+const TRAINER_MOVE_TYPES = ['normal','fire','water','electric','grass','ice','fighting','poison',
+  'ground','flying','psychic','bug','rock','ghost','dragon','dark','steel','fairy'];
+function parseTrainerMoveSlot(raw) {
+  const s = val(raw);
+  if (!s) return { type: null, category: null };
+  const str = String(s).trim();
+  let category = null, typeRaw = null;
+  if (str.endsWith('Physical')) { category = 'Physical'; typeRaw = str.slice(0, -8); }
+  else if (str.endsWith('Special')) { category = 'Special'; typeRaw = str.slice(0, -7); }
+  else return { type: null, category: null };
+  const lowerType = typeRaw.toLowerCase();
+  if (!TRAINER_MOVE_TYPES.includes(lowerType)) return { type: null, category: null };
+  const type = lowerType.charAt(0).toUpperCase() + lowerType.slice(1);
+  return { type, category };
+}
+
+function convertTrainers() {
+  const rows = getSheet('Trainers');
+  if (!rows || rows.length < 2) { warnings.push('Trainers sheet is empty or missing'); return; }
+  const headers = rows[0].map(h => String(h).trim());
+  const col = (name) => headers.findIndex(h => h.toLowerCase() === name.toLowerCase());
+  const numCols = ['tier','gauntletOrder','slotIndex','dexId','level',
+    'move1Power','move2Power','move3Power','move4Power'];
+  const boolCols = ['isGauntlet'];
+  const moveCols = ['move1','move2','move3','move4'];
+  const entries = [];
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r[0]) continue;
+    const entry = {};
+    headers.forEach((h, idx) => {
+      if (!h) return;
+      if (moveCols.includes(h)) return; // handled separately below — expanded, not pass-through
+      if (numCols.includes(h)) entry[h] = numVal(r[idx]);
+      else if (boolCols.includes(h)) entry[h] = boolVal(r[idx]);
+      else entry[h] = val(r[idx]);
+    });
+    // Expand move1-4 combined type+category columns into moveNType/moveNCategory
+    [1,2,3,4].forEach(n => {
+      const idx = col('move' + n);
+      const parsed = idx >= 0 ? parseTrainerMoveSlot(r[idx]) : { type: null, category: null };
+      entry['move' + n + 'Type'] = parsed.type;
+      entry['move' + n + 'Category'] = parsed.category;
+    });
+    entries.push(entry);
+  }
+  outputFiles['trainers.js'] =
+    `// PokeProf — Trainers Database (Gym Battle System, v0.25)\n// Auto-generated: ${new Date().toLocaleString()}\n// Entries: ${entries.length}\n// One row per team-slot: (trainerId, tier[, gauntletOrder]) groups into one battle roster.\n\nconst TRAINERS_DATA = ${JSON.stringify(entries, null, 2)};\n\n// Returns the roster (array of slot entries) for a trainer at a given tier.\n// Pass gauntletOrder (1-5) to get one leg of the Indigo Plateau tier-9 gauntlet.\nfunction getTrainerRoster(trainerId, tier, gauntletOrder) {\n  return TRAINERS_DATA.filter(t => t.trainerId === trainerId && t.tier === tier &&\n    (gauntletOrder === undefined ? true : t.gauntletOrder === gauntletOrder));\n}\n\n// Returns the badge itemId granted by a trainer (same value on every row for that trainerId).\nfunction getTrainerBadge(trainerId) {\n  const row = TRAINERS_DATA.find(t => t.trainerId === trainerId && t.badgeItemId);\n  return row ? row.badgeItemId : null;\n}\n\n// Returns all distinct trainerIds present in the data (for building the gym list).\nfunction getAllTrainerIds() {\n  return [...new Set(TRAINERS_DATA.map(t => t.trainerId))];\n}\n`;
+
+  // Validate required fields
+  const missingTier = entries.filter(e => e.tier === null || e.tier === undefined).map(e => e.trainerId || '(unknown)');
+  if (missingTier.length > 0) {
+    warnings.push(`Trainers rows missing tier: ${missingTier.join(', ')}`);
+  }
+  const missingDex = entries.filter(e => !e.dexId).map(e => e.trainerId || '(unknown)');
+  if (missingDex.length > 0) {
+    warnings.push(`Trainers rows missing dexId: ${missingDex.join(', ')}`);
+  }
+  const missingBadge = [...new Set(entries.filter(e => !e.isGauntlet && !e.badgeItemId).map(e => e.trainerId))];
+  if (missingBadge.length > 0) {
+    warnings.push(`Trainers missing badgeItemId (non-gauntlet trainers should grant a badge): ${missingBadge.join(', ')}`);
+  }
+  // Flag any non-blank moveN cell that failed to parse (typo/format mismatch)
+  const badMoves = [];
+  entries.forEach((e, i) => {
+    [1,2,3,4].forEach(n => {
+      const rawIdx = col('move' + n);
+      const raw = rawIdx >= 0 ? val(rows[i+1][rawIdx]) : null;
+      if (raw && !e['move' + n + 'Type']) badMoves.push(`row ${i+2} move${n}="${raw}"`);
+    });
+  });
+  if (badMoves.length > 0) {
+    warnings.push(`Trainers rows with unparseable move column (expected format like "rockSpecial"): ${badMoves.join(', ')}`);
   }
 }
 

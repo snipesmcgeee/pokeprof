@@ -106,7 +106,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span style="font-size:11px;color:#6080a0;">v0.26</span></h1>
+  <h1>PokeProf <span style="font-size:11px;color:#6080a0;">v0.25</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">5.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -1516,15 +1516,21 @@ function processOfflineTime(secsAway){
     }
     const enc=rollEncounter(); const lead=getLeadPokemon();
     if(!lead){
-      // v0.26 — idle removed: relocate-heal-resume is now the only behavior (previously gated
-      // behind state.autoRepeat, now mandatory). Resumes research immediately AT the heal
-      // location itself (destination = heal location) rather than continuing to travel back
-      // toward the old missionDestination — matches live endMission()'s v0.26 behavior.
+      // v0.26 — mandatory auto-repeat (previously gated behind state.autoRepeat, now always-on),
+      // matches live endMission()'s faint path: heal at lastHealLocation, then rebuild the travel
+      // path back to whatever missionDestination was in progress and resume — it does NOT just
+      // park research at the heal location, since that would silently abandon the mission.
       const returnLocId=state.lastHealLocation||state.missionOrigin||'palletTown';
       state.party.forEach(p=>{ p.currentHP=p.maxHP; });
       state.currentLocation=returnLocId;
-      state.missionDestination=returnLocId;
-      state.travelPath=[]; state.travelPathIndex=0; state.travelCyclesRemaining=0;
+      if(returnLocId===state.missionDestination){
+        state.travelPath=[]; state.travelPathIndex=0; state.travelCyclesRemaining=0;
+      } else {
+        state.travelPath=buildTravelPath(returnLocId,state.missionDestination);
+        state.travelPathIndex=0;
+        if(state.travelPath.length>0){ arriveAtLocation(state.travelPath[0]); }
+        else { state.missionDestination=returnLocId; } // unreachable — fall back to researching here
+      }
       continue;
     }
     // v0.26 — offline gym battle simulation. Previously deliberately deferred (deferred, not an
@@ -2258,28 +2264,43 @@ function recallMission(){
   endMission('recall');
 }
 
-// Unified mission end — handles both recall and faint. Always returns to lastHealLocation
-// (last location with heals:true visited), heals, and resumes research immediately AT the heal
-// location (v0.26 — idle removed, so there's no longer a stopped state to fall into; the old
-// state.autoRepeat-gated "walk back to the original destination" path is retired — see
-// "Remove Idle State"). Always calls showFindingsReport().
+// Unified mission end — handles both recall and faint. Always relocates to lastHealLocation
+// (last location with heals:true visited) and heals. What happens next differs by reason:
+// - faint: v0.26 mandatory auto-repeat — automatically resumes traveling back toward whatever
+//   missionDestination was in progress, exactly like the old opt-in auto-repeat did, just
+//   always-on now instead of gated behind state.autoRepeat (retired).
+// - recall: a deliberate stop — research resumes right at the heal location instead of
+//   auto-continuing toward the old destination, so the player can freely redirect from there
+//   (e.g. to prep a team for a gym battle at the location they just recalled to).
+// Always calls showFindingsReport().
 function endMission(reason='faint'){
   state.currentEncounter=null;
   const returnLocId=state.lastHealLocation||state.missionOrigin||'palletTown';
-  state.currentLocation=returnLocId;
-  state.missionDestination=returnLocId;
-  state.travelPath=[]; state.travelPathIndex=0; state.travelCyclesRemaining=0;
   const originLoc=typeof LOCATIONS!=='undefined'?getLocation(returnLocId):null;
   const originName=originLoc?originLoc.name:returnLocId;
   const msg=reason==='recall'?'Carl Oak recalled to '+originName+'.':'All fainted — Carl Oak returned to '+originName+'.';
   document.getElementById('enc-body').textContent=msg;
   addLog(msg,reason==='recall'?'info':'faint');
+  state.currentLocation=returnLocId;
   if(isHealLocation(returnLocId)){
     const needsHeal=state.party.some(p=>p.currentHP<p.maxHP||p.currentHP<=0);
     if(needsHeal){
       state.party.forEach(p=>{ p.currentHP=p.maxHP; });
       addLog('🏥 Party fully healed at '+originName+'!','info');
     }
+  }
+  if(reason==='faint'){
+    if(returnLocId===state.missionDestination){
+      state.travelPath=[]; state.travelPathIndex=0; state.travelCyclesRemaining=0;
+    } else {
+      state.travelPath=buildTravelPath(returnLocId,state.missionDestination);
+      state.travelPathIndex=0;
+      if(state.travelPath.length>0){ arriveAtLocation(state.travelPath[0]); }
+      else { state.missionDestination=returnLocId; } // unreachable — fall back to researching here
+    }
+  } else {
+    state.missionDestination=returnLocId;
+    state.travelPath=[]; state.travelPathIndex=0; state.travelCyclesRemaining=0;
   }
   state.nextEncounterIn=ENC_INTERVAL_OPEN;
   showFindingsReport();

@@ -1,6 +1,6 @@
 // PokeProf — Locations Database
-// Auto-generated: 7/19/2026, 10:54:38 AM
-// Entries: 102
+// Auto-generated: 7/31/2026, 12:04:21 PM
+// Entries: 103
 
 const LOCATIONS = [
   {
@@ -1123,7 +1123,18 @@ const LOCATIONS = [
     "travelTime": 1,
     "mapCol": 121,
     "mapRow": 96,
-    "defaultEncounterMethod": "grass"
+    "defaultEncounterMethod": "cave"
+  },
+  {
+    "locationId": "pokemonDaycare",
+    "name": "Pokemon Daycare",
+    "region": "Kanto",
+    "heals": true,
+    "shopTier": null,
+    "travelTime": 1,
+    "mapCol": 121,
+    "mapRow": 94,
+    "defaultEncounterMethod": null
   }
 ];
 

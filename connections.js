@@ -1,6 +1,6 @@
 // PokeProf — Connections Database
-// Auto-generated: 7/19/2026, 10:54:38 AM
-// Connections: 222
+// Auto-generated: 7/31/2026, 12:07:30 PM
+// Connections: 224
 
 // Flat array with full data (used for requiresItem checks)
 const CONNECTIONS_DATA = [
@@ -1335,6 +1335,18 @@ const CONNECTIONS_DATA = [
     "toLocationId": "fightingDojo",
     "requiresItem": null,
     "travelTime": null
+  },
+  {
+    "fromLocationId": "pokemonDaycare",
+    "toLocationId": "route5",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "route5",
+    "toLocationId": "pokemonDaycare",
+    "requiresItem": null,
+    "travelTime": null
   }
 ];
 
@@ -1440,7 +1452,8 @@ const CONNECTIONS = {
   "route5": [
     "ceruleanCity",
     "saffronCity",
-    "undergroundPath5"
+    "undergroundPath5",
+    "pokemonDaycare"
   ],
   "route10N": [
     "route9",
@@ -1765,6 +1778,9 @@ const CONNECTIONS = {
   ],
   "fightingDojo": [
     "saffronCity"
+  ],
+  "pokemonDaycare": [
+    "route5"
   ]
 };
 

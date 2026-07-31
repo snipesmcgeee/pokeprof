@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.26</title>
+<title>PokeProf v0.27</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -93,8 +93,12 @@
   .dex-details { font-size:10px; color:#a0a0c0; }
   .dex-holder { font-size:10px; color:#5dade2; margin-top:2px; }
   .shiny-badge { color:#f4d03f; font-size:10px; margin-left:4px; }
-  .aide-party-sprites { display:inline-flex; gap:4px; vertical-align:middle; margin-left:6px; }
+  .aide-party-sprites { display:inline-flex; gap:4px; vertical-align:middle; margin-left:0; margin-top:4px; }
   .aide-sprite-mini { width:28px; height:28px; }
+  .aide-badge-sprites { display:inline-flex; gap:3px; vertical-align:middle; margin-left:8px; }
+  .aide-badge-sprite { width:18px; height:18px; image-rendering:pixelated; }
+  .aide-badge-emoji { font-size:15px; line-height:18px; }
+  #info-btn { position:fixed; bottom:16px; right:16px; z-index:500; border-radius:50%; width:48px; height:48px; padding:0; background:#0f3460; border:2px solid #5dade2; color:#5dade2; font-size:18px; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(0,0,0,0.5); }
   .party-sprite { width:112px; height:112px; image-rendering:pixelated; }
 
   #panel-map { display:none; flex-direction:column; height:100%; overflow:hidden; }
@@ -106,7 +110,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span style="font-size:11px;color:#6080a0;">v0.25</span></h1>
+  <h1>PokeProf <span style="font-size:11px;color:#6080a0;">v0.27</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">5.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -135,6 +139,7 @@
   <div class="panel active" id="panel-party">
     <div id="aide-info">
       <div class="aide-name">🧑‍🔬 Carl Oak</div>
+      <div id="aide-party-sprites-row"></div>
       <div class="aide-location" id="aide-location">📍 Pallet Town — Researching</div>
       <button id="skip-encounter-btn" onclick="skipToNextEncounter()" style="display:none;margin-top:6px;font-size:10px;padding:5px 10px;border-color:#5dade2;color:#5dade2;">⏭ Skip to Encounter x50</button>
       <div id="aide-bag-display" style="font-size:10px;color:#6080a0;margin-top:2px;"></div>
@@ -152,6 +157,7 @@
       </div>
       <button class="reset" onclick="resetGame()">↺ Reset</button>
     </div>
+    <button id="info-btn" onclick="showInfoMenu()" title="Info">ℹ️</button>
   </div>
 
   <!-- LOG TAB -->
@@ -247,6 +253,34 @@ function getPokemonEntry(dexId){
 // v0.23 — promoted from a local redeclaration inside renderDexDetail() so the Trainer Battle
 // System's move-slot rectangles can share the same type colors.
 const TYPE_COLORS={'Normal':'#a8a878','Fire':'#f08030','Water':'#6890f0','Grass':'#78c850','Electric':'#f8d030','Ice':'#98d8d8','Fighting':'#c03028','Poison':'#a040a0','Ground':'#e0c068','Flying':'#a890f0','Psychic':'#f85888','Bug':'#a8b820','Rock':'#b8a038','Ghost':'#705898','Dragon':'#7038f8','Dark':'#705848','Steel':'#b8b8d0','Fairy':'#ee99ac'};
+
+// v0.27 — Badge sprite display. Hardcoded (not the Items sheet's unused `sprite` column — see
+// DESIGN.md "Aide Panel — Badge Sprite Display"). Source: PokeAPI/sprites badges folder, numbered
+// 1-8, verified visually against Bulbapedia's official Kanto badge images. Champion Badge has no
+// real-game sprite (PokeProf-original item) — renders as a 🏆 emoji fallback instead.
+const BADGE_SPRITE_BASE='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/badges/';
+const BADGE_SPRITE_MAP={
+  'boulder-badge':BADGE_SPRITE_BASE+'1.png',
+  'cascade-badge':BADGE_SPRITE_BASE+'2.png',
+  'thunder-badge':BADGE_SPRITE_BASE+'3.png',
+  'rainbow-badge':BADGE_SPRITE_BASE+'4.png',
+  'soul-badge':BADGE_SPRITE_BASE+'5.png',
+  'marsh-badge':BADGE_SPRITE_BASE+'6.png',
+  'volcano-badge':BADGE_SPRITE_BASE+'7.png',
+  'earth-badge':BADGE_SPRITE_BASE+'8.png'
+};
+// Builds the inline badge sprite/emoji HTML for every badge currently held in trainerBag.
+function buildBadgeSpritesHtml(){
+  if(typeof ITEMS_DATA==='undefined') return '';
+  const held=Object.entries(state.trainerBag||{}).filter(([id,qty])=>qty>0).map(([id])=>id)
+    .filter(id=>{ const it=getItem(id); return it&&it.itemCategory==='badge'; });
+  if(!held.length) return '';
+  const icons=held.map(id=>{
+    if(BADGE_SPRITE_MAP[id]) return '<img src="'+BADGE_SPRITE_MAP[id]+'" class="aide-badge-sprite" title="'+(getItem(id)?getItem(id).name:id)+'" onerror="this.style.display=\'none\'">';
+    return '<span class="aide-badge-emoji" title="'+(getItem(id)?getItem(id).name:id)+'">🏆</span>'; // Champion Badge fallback
+  }).join('');
+  return '<span class="aide-badge-sprites">'+icons+'</span>';
+}
 
 // ── ENCOUNTER METHODS ──
 const EVOLUTION_METHODS = [
@@ -2023,6 +2057,13 @@ function startMission(){
 // Transient UI-only state — not persisted to `state`, resets every time the modal opens.
 let missionSortField=null; // null|'distance'|'alpha'|'encounters'
 let missionSortDir='asc';
+// v0.27 — Shop Condensing. Only applied when the location's shopTier is 'full' (currently
+// Celadon City, 58 purchasable items) — basic/lab tier shops stay flat lists (see DESIGN.md
+// "Shop UI"). null = showing category tiles; a key below = showing that category's item list.
+let missionShopCategory=null;
+const SHOP_CATEGORY_MAP={evolutionItem:'evoItems',keyItem:'keyItems',hm:'keyItems',rod:'keyItems',tool:'keyItems',ball:'consumables',consumable:'consumables',tm:'consumables'};
+const SHOP_CATEGORY_LABELS={evoItems:'🧪 Evolution Items',keyItems:'🔑 Key Items',consumables:'🎒 Consumables'};
+const SHOP_CATEGORY_ORDER=['evoItems','keyItems','consumables'];
 
 // Distance = encounter-cycles to REACH a destination: sum of travelTime for every waypoint
 // strictly before the destination itself (excludes the destination's own travelTime, per the
@@ -2107,41 +2148,181 @@ function showMissionModal(){
   const modal=document.createElement('div');
   modal.id='mission-modal';
   modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
-  const shopItems=typeof getShopItems==='function'?getShopItems(currentLoc):[];
+  missionShopCategory=null; // v0.27 — reset shop category drill-down each time the modal opens
   const sortButtonsHtml='<div id="dest-sort-buttons" style="display:flex;gap:4px;margin-bottom:8px;">'+destSortButtonHtml('distance','Distance')+destSortButtonHtml('alpha','Alphabetical')+destSortButtonHtml('encounters','Encounters')+'</div>';
-  const shopHtml=shopItems.length
-    ?'<div style="margin-top:10px;border-top:1px solid #0f3460;padding-top:10px;">'
-      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
-      +'<div style="color:#f4d03f;font-size:10px;letter-spacing:1px;">🛒 LOCAL SHOP</div>'
-      +'<div style="color:#f4d03f;font-size:11px;font-weight:bold;">$<span id="shop-funds-display">'+state.funds.toFixed(2)+'</span></div>'
-      +'</div>'
-      +shopItems.map(item=>{
-        const itemDef=getItem(item.itemId);
-        const isTrainer=itemDef&&itemDef.bagType&&itemDef.bagType.toLowerCase()==='trainer';
-        const bagQty=(isTrainer?state.trainerBag:state.professorBag)[item.itemId]||0;
-        return '<div style="margin-bottom:8px;background:#0f1a2a;border-radius:4px;padding:8px;">'
-          +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">'
-          +'<span style="color:#e0e0e0;font-size:11px;">'+item.name+'</span>'
-          +'<span style="color:#a0a0c0;font-size:10px;">$'+item.shopPrice+' ea &nbsp; Bag: <span id="bag-'+item.itemId+'">'+bagQty+'</span></span>'
-          +'</div>'
-          +'<div style="display:flex;gap:4px;">'
-          +'<button onclick="buyItem(\''+item.itemId+'\',1)" style="flex:1;padding:5px 2px;font-size:10px;border-color:#f4d03f;color:#f4d03f;">×1</button>'
-          +'<button onclick="buyItem(\''+item.itemId+'\',10)" style="flex:1;padding:5px 2px;font-size:10px;border-color:#f4d03f;color:#f4d03f;">×10</button>'
-          +'<button onclick="buyItem(\''+item.itemId+'\',100)" style="flex:1;padding:5px 2px;font-size:10px;border-color:#f4d03f;color:#f4d03f;">×100</button>'
-          +'</div></div>';
-      }).join('')+'</div>'
-    :'';
-  modal.innerHTML='<div style="background:#16213e;border:1px solid #5dade2;border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;"><div style="color:#5dade2;font-size:13px;font-weight:bold;margin-bottom:12px;">🗺 Choose Destination</div><div style="font-size:10px;color:#6080a0;margin-bottom:8px;">From: '+currentLoc+'</div>'+sortButtonsHtml+'<div id="dest-list-container" style="max-height:220px;overflow-y:auto;"></div><div id="mission-summary" style="color:#a0a0c0;font-size:11px;margin:10px 0;min-height:18px;"></div><div id="method-prefs"></div>'+shopHtml+'<div style="display:flex;gap:8px;"><button onclick="document.getElementById(\'mission-modal\').remove()" style="flex:1;">✕ Cancel</button><button id="confirm-mission" onclick="confirmMission()" class="primary" style="flex:1;" disabled>▶ Dispatch</button></div></div>';
+  modal.innerHTML='<div style="background:#16213e;border:1px solid #5dade2;border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;"><div style="color:#5dade2;font-size:13px;font-weight:bold;margin-bottom:12px;">🗺 Choose Destination</div><div style="font-size:10px;color:#6080a0;margin-bottom:8px;">From: '+currentLoc+'</div>'+sortButtonsHtml+'<div id="dest-list-container" style="max-height:220px;overflow-y:auto;"></div><div id="mission-summary" style="color:#a0a0c0;font-size:11px;margin:10px 0;min-height:18px;"></div><div id="method-prefs"></div><div id="shop-section-container"></div><div style="display:flex;gap:8px;"><button onclick="document.getElementById(\'mission-modal\').remove()" style="flex:1;">✕ Cancel</button><button id="confirm-mission" onclick="confirmMission()" class="primary" style="flex:1;" disabled>▶ Dispatch</button></div></div>';
   document.body.appendChild(modal);
   renderDestList();
+  renderShopSection(currentLoc);
   state._missionDest=null;
+}
+
+// ── SHOP SECTION (v0.27 — category condensing for full-tier shops) ──
+// Builds one item row: name, price, bag qty, ×1/×100/×1000 buy buttons. Shared by both the flat
+// list (basic/lab tier) and the category item-list view (full tier).
+function buildShopItemRowHtml(item){
+  const itemDef=getItem(item.itemId);
+  const isTrainer=itemDef&&itemDef.bagType&&itemDef.bagType.toLowerCase()==='trainer';
+  const bagQty=(isTrainer?state.trainerBag:state.professorBag)[item.itemId]||0;
+  return '<div style="margin-bottom:8px;background:#0f1a2a;border-radius:4px;padding:8px;">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">'
+    +'<span style="color:#e0e0e0;font-size:11px;">'+item.name+'</span>'
+    +'<span style="color:#a0a0c0;font-size:10px;">$'+item.shopPrice+' ea &nbsp; Bag: <span id="bag-'+item.itemId+'">'+bagQty+'</span></span>'
+    +'</div>'
+    +'<div style="display:flex;gap:4px;">'
+    +'<button onclick="buyItem(\''+item.itemId+'\',1)" style="flex:1;padding:5px 2px;font-size:10px;border-color:#f4d03f;color:#f4d03f;">×1</button>'
+    +'<button onclick="buyItem(\''+item.itemId+'\',100)" style="flex:1;padding:5px 2px;font-size:10px;border-color:#f4d03f;color:#f4d03f;">×100</button>'
+    +'<button onclick="buyItem(\''+item.itemId+'\',1000)" style="flex:1;padding:5px 2px;font-size:10px;border-color:#f4d03f;color:#f4d03f;">×1000</button>'
+    +'</div></div>';
+}
+function shopHeaderHtml(){
+  return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
+    +'<div style="color:#f4d03f;font-size:10px;letter-spacing:1px;">🛒 LOCAL SHOP</div>'
+    +'<div style="color:#f4d03f;font-size:11px;font-weight:bold;">$<span id="shop-funds-display">'+state.funds.toFixed(2)+'</span></div>'
+    +'</div>';
+}
+function selectShopCategory(catKey){ missionShopCategory=catKey; renderShopSection(state.currentLocation); }
+function shopCategoryBack(){ missionShopCategory=null; renderShopSection(state.currentLocation); }
+// Re-renders the shop area in place — called on modal open and every category tile/back click.
+function renderShopSection(locId){
+  const container=document.getElementById('shop-section-container'); if(!container) return;
+  const shopItems=typeof getShopItems==='function'?getShopItems(locId):[];
+  if(!shopItems.length){ container.innerHTML=''; return; }
+  const locData=typeof LOCATIONS!=='undefined'?getLocation(locId):null;
+  const isFullTier=locData&&locData.shopTier==='full';
+  let body;
+  if(!isFullTier){
+    // basic/lab tier — flat list, unchanged structure aside from the ×1/×100/×1000 buttons above.
+    body=shopItems.map(buildShopItemRowHtml).join('');
+  } else if(missionShopCategory===null){
+    // Level 1 — category tiles with item counts.
+    const counts={};
+    shopItems.forEach(item=>{
+      const cat=SHOP_CATEGORY_MAP[getItem(item.itemId)?getItem(item.itemId).itemCategory:null];
+      if(cat) counts[cat]=(counts[cat]||0)+1;
+    });
+    body=SHOP_CATEGORY_ORDER.filter(cat=>counts[cat]).map(cat=>
+      '<button onclick="selectShopCategory(\''+cat+'\')" style="display:block;width:100%;margin-bottom:6px;padding:10px;text-align:left;border-color:#f4d03f;color:#f4d03f;">'+SHOP_CATEGORY_LABELS[cat]+' ('+counts[cat]+')</button>'
+    ).join('');
+  } else {
+    // Level 2 — items within the selected category.
+    const catItems=shopItems.filter(item=>{
+      const it=getItem(item.itemId);
+      return it&&SHOP_CATEGORY_MAP[it.itemCategory]===missionShopCategory;
+    });
+    body='<button onclick="shopCategoryBack()" style="margin-bottom:8px;padding:6px 10px;font-size:10px;border-color:#5dade2;color:#5dade2;">◀ Back to Categories</button>'
+      +catItems.map(buildShopItemRowHtml).join('');
+  }
+  container.innerHTML='<div style="margin-top:10px;border-top:1px solid #0f3460;padding-top:10px;">'+shopHeaderHtml()+body+'</div>';
+}
+
+// ── NEW PLAYER PREAMBLE MODAL (v0.27) ──
+// Triggers exactly once, only on brand-new save creation (gated by boot's !hasSave — see BOOT
+// section). No state flag, no SAVE_VERSION impact. Dismissed by clicking through.
+function showPreambleModal(){
+  const existing=document.getElementById('preamble-modal'); if(existing) existing.remove();
+  const modal=document.createElement('div');
+  modal.id='preamble-modal';
+  modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:1300;display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML='<div style="background:#16213e;border:1px solid #e63946;border-radius:8px;padding:18px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;">'
+    +'<div style="color:#e63946;font-size:14px;font-weight:bold;margin-bottom:12px;">Welcome, Professor!</div>'
+    +'<div style="color:#e0e0e0;font-size:12px;line-height:1.7;margin-bottom:16px;">'
+    +'Welcome to PokeProf where you are a budding professor, looking to research Pokemon and compile your findings into your very own Pokedex.<br><br>'
+    +'You are in full control of your aides\' movements, though they will research for you around the clock whether you have the game open or not. They will keep researching the same area until you direct them to move to a new location.<br><br>'
+    +'If you would like to learn more about any aspects of the game, press the "Info" button in the bottom right of the screen.'
+    +'</div>'
+    +'<button onclick="document.getElementById(\'preamble-modal\').remove()" class="primary" style="width:100%;padding:10px;">✔ Let\'s Go</button>'
+    +'</div>';
+  document.body.appendChild(modal);
+}
+
+// ── INFO MENU (v0.27) ──
+// 9 topics, 2-level flow (topic list → scrollable text page). Sub-items render as in-page bold
+// headers within a topic's page, never as additional tiles (see DESIGN.md "Info Menu"). Copy
+// verified against live game constants (shiny rate, income formula, level cap formula, tick
+// intervals) before being locked in.
+const INFO_TOPICS=[
+  {id:'objectives',title:'Objectives',sections:[
+    {header:'Complete the Pokedex',text:'Find every Pokemon through catching them in the wild, evolution, and breeding.'},
+    {header:'Pokemon League',text:'Defeat all 8 Gym Leaders in any order you choose, then take on the Elite Four to become the Champion!'},
+    {header:'Shiny Hunting',text:'There is a 1:4096 chance that you will encounter a "shiny" Pokemon, which you will catch with 100% success regardless of how many Pokeballs you own. Collect them all!'}
+  ]},
+  {id:'characters',title:'Playable Characters',sections:[
+    {header:'Professor and Aides',text:'You are the Professor, your Aides work for you, but in practice it feels as though you are the Aides.'},
+    {header:'Pokemon Ownership',text:'All Pokemon are owned by the Professor, but you will have full control to un/assign them to any Aide you wish.'},
+    {header:'Item Ownership',text:'All items that help you progress physically through the game like HMs and Badges are owned by each individual Aide.<br><br>All consumable items like Potions and TMs are owned by the Professor.'}
+  ]},
+  {id:'dexCompletion',title:'Dex Completion',sections:[
+    {header:null,text:'Aides will automatically report all findings once they return from their missions, which will update the Pokedex.'},
+    {header:null,text:'In order to complete a Species\' Dex Page, you will need to rule out all evolution methods. The Lab will automatically test evolution items upon purchase, and only consume them if they work. (First time per species only)'},
+    {header:'Evolution',text:'Level (per species) and Friendship (225) will execute automatically once the threshold is achieved.<br><br>Items (once discovered) can be manually triggered if you hold the item in your inventory.'}
+  ]},
+  {id:'cash',title:'Cash Generation',sections:[
+    {header:null,text:'You will earn $1.00 per minute at default. That amount will go up by $0.01 for every 100 Pokemon you catch.'}
+  ]},
+  {id:'levelCaps',title:'Level Caps',sections:[
+    {header:null,text:'Each Aide will begin with a Level Cap of 10, which raises by 10 for each badge earned. Once that Aide defeats the Champion, their level cap will be 100.'}
+  ]},
+  {id:'time',title:'Time',sections:[
+    {header:null,text:'When you have the game open, actions will occur every 10 seconds; that number raises to 30 seconds while the game is closed.'},
+    {header:null,text:'Breeding cycles last roughly 5-10 minutes, no need to check in on these until you want to pick up your hatched Pokemon.'}
+  ]},
+  {id:'battles',title:'Battles',sections:[
+    {header:null,text:'Wild encounters are simplified and solely based on level, no moves or type advantages.'},
+    {header:null,text:'Trainer fights simulate a battle engine taking type matchups and moves into effect.'},
+    {header:'Moves',text:'Each Pokemon can learn a unique set of moves that have been simplified to Type | Physical/Special | Power.<br><br>TMs allow you to either add, upgrade, or change moves.'}
+  ]},
+  {id:'map',title:'Map',sections:[
+    {header:null,text:'You start in Pallet Town and are only able to see the adjacent routes.'},
+    {header:null,text:'Every time you enter a new location, your map will expand to show all adjacent locations.'},
+    {header:null,text:'The Map will dynamically expand to everything you have discovered.'},
+    {header:null,text:'Certain locations are only accessible if you have the requisite items to traverse them, such as: Cut, Surf, Silph Scope, etc.'}
+  ]},
+  {id:'wildEncounters',title:'Wild Encounters',sections:[
+    {header:null,text:'Each location shows you the types of encounters you can have: grass, surf, fish, cave, rock-smash.'},
+    {header:null,text:'You are able to dynamically choose the rate at which you would like to do each type of encounter.'},
+    {header:null,text:'Certain encounters such as fishing are blocked until you have the item necessary to get to them.'}
+  ]}
+];
+function showInfoMenu(){
+  const existing=document.getElementById('info-modal'); if(existing) existing.remove();
+  const modal=document.createElement('div');
+  modal.id='info-modal';
+  modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:1200;display:flex;align-items:center;justify-content:center;padding:16px;';
+  document.body.appendChild(modal);
+  renderInfoTopicList();
+}
+function renderInfoTopicList(){
+  const modal=document.getElementById('info-modal'); if(!modal) return;
+  const tiles=INFO_TOPICS.map(t=>'<button onclick="renderInfoTopicPage(\''+t.id+'\')" style="display:block;width:100%;margin-bottom:6px;padding:10px;text-align:left;border-color:#5dade2;color:#5dade2;">'+t.title+'</button>').join('');
+  modal.innerHTML='<div style="background:#16213e;border:1px solid #5dade2;border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:#5dade2;font-size:13px;font-weight:bold;">ℹ️ Info</div><button onclick="document.getElementById(\'info-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'
+    +tiles
+    +'</div>';
+  modal.onclick=(e)=>{ if(e.target===modal) modal.remove(); };
+}
+function renderInfoTopicPage(topicId){
+  const modal=document.getElementById('info-modal'); if(!modal) return;
+  const topic=INFO_TOPICS.find(t=>t.id===topicId); if(!topic) return;
+  const body=topic.sections.map(s=>
+    (s.header?'<div style="color:#f4d03f;font-size:12px;font-weight:bold;margin:10px 0 4px;">'+s.header+'</div>':'')
+    +'<div style="color:#e0e0e0;font-size:11px;line-height:1.6;">'+s.text+'</div>'
+  ).join('');
+  modal.innerHTML='<div style="background:#16213e;border:1px solid #5dade2;border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><button onclick="renderInfoTopicList()" style="padding:5px 10px;font-size:10px;border-color:#5dade2;color:#5dade2;">◀ Back</button><button onclick="document.getElementById(\'info-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'
+    +'<div style="color:#5dade2;font-size:13px;font-weight:bold;margin-bottom:8px;">'+topic.title+'</div>'
+    +body
+    +'</div>';
+  modal.onclick=(e)=>{ if(e.target===modal) modal.remove(); };
 }
 
 function selectMissionDest(locId){
   state._missionDest=locId;
   const locData=typeof LOCATIONS!=='undefined'?getLocation(locId):null;
   const name=locData?locData.name:locId;
-  document.getElementById('mission-summary').textContent='Carl Oak → '+name+' (research on arrival)';
+  // v0.27 — Daycare has nothing to research; clarify that breeding is managed via the Map tab.
+  const arrivalNote=(locId===DAYCARE_LOCATION_ID)?'manage breeding on arrival':'research on arrival';
+  document.getElementById('mission-summary').textContent='Carl Oak → '+name+' ('+arrivalNote+')';
   document.getElementById('confirm-mission').disabled=false;
   renderMethodPrefs(locId);
 }
@@ -2255,7 +2436,9 @@ function confirmMission(){
   }
   state.nextEncounterIn=ENC_INTERVAL_OPEN;
   const locData=typeof LOCATIONS!=='undefined'?getLocation(state.missionDestination):null;
-  addLog('Carl Oak dispatched to '+(locData?locData.name:state.missionDestination)+' (research on arrival).','info');
+  // v0.27 — Daycare gets a distinct dispatch message (see selectMissionDest for the modal-preview equivalent).
+  const arrivalNote=(state.missionDestination===DAYCARE_LOCATION_ID)?'manage breeding on arrival':'research on arrival';
+  addLog('Carl Oak dispatched to '+(locData?locData.name:state.missionDestination)+' ('+arrivalNote+').','info');
   state.pendingFindings=[];
   updateLocation(); render();
 }
@@ -2389,8 +2572,11 @@ function buyItem(itemId, qty){
   saveGame();
 }
 
-// ── DAY CARE / BREEDING (v0.26) ──
-const DAYCARE_LOCATION_ID='route5';
+// ── DAY CARE / BREEDING (v0.26, location moved v0.27) ──
+// v0.27 — Day Care is now its own standalone map location (locationId: pokemonDaycare, connected
+// only to Route 5) instead of living inside Route 5's generic panel. Pure discoverability fix —
+// no change to any of the breeding logic below, only to which location this constant points at.
+const DAYCARE_LOCATION_ID='pokemonDaycare';
 const DAYCARE_SLOT_PRICE=100;
 const DAYCARE_MAX_SLOTS=3;
 
@@ -2486,7 +2672,7 @@ function purchaseDaycareSlot(){
   document.getElementById('funds-display').textContent=state.funds.toFixed(2);
   saveGame(); showMapDetail(DAYCARE_LOCATION_ID);
 }
-// Drop-off/collect both require the Aide to physically be at Route 5 — incubation itself runs
+// Drop-off/collect both require the Aide to physically be at the Day Care — incubation itself runs
 // indefinitely in the background regardless of where the Aide is sent afterward.
 function assignDaycarePair(slotIndex,idA,idB){
   if(state.currentLocation!==DAYCARE_LOCATION_ID){ addLog('The Aide must be at the Day Care to drop off a pair.','fail'); return; }
@@ -2538,7 +2724,7 @@ function releaseDaycarePair(slotIndex){
   state.daycareSlots.slots[slotIndex]=null;
   saveGame(); render(); showMapDetail(DAYCARE_LOCATION_ID);
 }
-// Builds the Day Care section HTML for showMapDetail() — Route 5 only.
+// Builds the Day Care section HTML for showMapDetail() — Pokemon Daycare location only (v0.27).
 function buildDaycareHtml(){
   ensureDaycareSlots();
   const isCurrent=state.currentLocation===DAYCARE_LOCATION_ID;
@@ -2863,9 +3049,14 @@ function renderBagDisplay(){
   const el=document.getElementById('aide-bag-items'); if(!el) return;
   const trainerParts=[];
   Object.entries(state.trainerBag||{}).forEach(([id,qty])=>{
-    if(qty>0){ const item=getItem(id); trainerParts.push((item?item.name:id)+' ×'+qty); }
+    // v0.27 — badges excluded here; they render as sprites on the aide name line instead (see buildBadgeSpritesHtml).
+    if(qty>0){ const item=getItem(id); if(item&&item.itemCategory==='badge') return; trainerParts.push((item?item.name:id)+' ×'+qty); }
   });
   el.textContent=trainerParts.length?'Aide bag: '+trainerParts.join(', '):'';
+  // v0.27 — keep badge sprites on the name line in sync even when only renderBagDisplay() runs
+  // (e.g. right after a gym win), not just on a full renderParty() pass.
+  const nameEl2=document.querySelector('#aide-info .aide-name');
+  if(nameEl2) nameEl2.innerHTML='🧑‍🔬 Carl Oak'+buildBadgeSpritesHtml();
   // Ball count display
   const bagEl=document.getElementById('aide-bag-display');
   if(bagEl){
@@ -2916,7 +3107,9 @@ function renderParty(){
   });
   spritesHtml+='</div>';
   const nameEl=document.querySelector('#aide-info .aide-name');
-  if(nameEl) nameEl.innerHTML='🧑‍🔬 Carl Oak'+spritesHtml;
+  if(nameEl) nameEl.innerHTML='🧑‍🔬 Carl Oak'+buildBadgeSpritesHtml();
+  const spritesRow=document.getElementById('aide-party-sprites-row');
+  if(spritesRow) spritesRow.innerHTML=spritesHtml;
   const bagEl=document.getElementById('aide-bag-display');
   if(bagEl) bagEl.textContent='🏐 '+getBallCount()+' balls in bag';
   renderBagDisplay();
@@ -3446,6 +3639,9 @@ const SAVE_KEY='pokeprof_save';
 // false rule-outs from the pre-v0.26 trade/item-evolution matching bug). state.missionActive and
 // state.autoRepeat are retired (idle removed — research is now always active; see "Remove Idle
 // State"); both are simply dropped, no migration needed since removing a field needs no backfill.
+// v0.27 stays on SAVE_VERSION 18 — no schema changes. Preamble modal, Info menu, shop condensing,
+// purchase quantity buttons, and badge sprite display are all UI/rendering-only; the Day Care
+// location move only repoints the existing DAYCARE_LOCATION_ID constant.
 const SAVE_VERSION=18;
 let saveTimer=0;
 
@@ -3707,6 +3903,7 @@ if(!hasSave){
   };
   init();
   setSaveIndicator('⬤ New game','');
+  showPreambleModal(); // v0.27 — new-save only, no state flag (gated on !hasSave itself)
 } else {
   render();
 }

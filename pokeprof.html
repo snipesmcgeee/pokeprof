@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.27</title>
+<title>PokeProf v0.28</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -110,9 +110,9 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span style="font-size:11px;color:#6080a0;">v0.27</span></h1>
+  <h1>PokeProf <span style="font-size:11px;color:#6080a0;">v0.28</span></h1>
   <div>
-    <div class="funds">$<span id="funds-display">5.00</span></div>
+    <div class="funds">$<span id="funds-display">100.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
   </div>
   <div>
@@ -424,7 +424,7 @@ function useItemFromBag(itemId, pokemon){
 
 // ── STATE ──
 let state={
-  funds:5.00, totalCatches:0, totalSightings:0,
+  funds:100.00, totalCatches:0, totalSightings:0,
   missionElapsed:0, nextEncounterIn:ENC_INTERVAL_OPEN,
   incomeAccumulator:0,
   party:[], dex:[], dexIdCounter:1, currentEncounter:null, log:[],
@@ -579,6 +579,13 @@ function getReachableDiscoveredLocations(fromId){
     const cur=queue.shift();
     const available=(CONNECTIONS_DATA||[]).filter(c=>{
       if(c.fromLocationId!==cur) return false;
+      // v0.28 fix — this discovery gate was missing here (though buildTravelPath() already had
+      // it), so this BFS could walk THROUGH undiscovered intermediate waypoints to reach a
+      // discovered node beyond them, reporting it "reachable" even though buildTravelPath()
+      // would then correctly refuse to route through those same undiscovered waypoints — a
+      // destination could show up as pickable in the mission modal that the aide could never
+      // actually be dispatched to. Matching buildTravelPath()'s gate exactly fixes the mismatch.
+      if(!state.discoveredLocations.has(c.toLocationId)) return false;
       if(!c.requiresItem) return true;
       return (state.trainerBag&&state.trainerBag[c.requiresItem]&&state.trainerBag[c.requiresItem]>0)||
              (state.trainerUnlocks&&state.trainerUnlocks[c.requiresItem]);
@@ -877,7 +884,8 @@ function getGymTrainerIdsAtLocation(locId){
 
 // Builds battle-ready enemy Pokemon from a Trainers-tab roster (mirrors makePokemon's shape:
 // pokedexId/level/currentHP/maxHP/equippedMoves — everything runTrainerBattle/calcBattleDamage
-// needs). gauntletOrder is only passed for the Indigo tier-9 gauntlet (1-5, one leg's roster).
+// needs). gauntletOrder is only passed for the Indigo gauntlet at tier 9 or 10 (1-5, one leg's
+// roster) — see runGymEncounter().
 function buildEnemyTeam(trainerId,tier,gauntletOrder){
   if(typeof getTrainerRoster!=='function') return [];
   const roster=getTrainerRoster(trainerId,tier,gauntletOrder);
@@ -946,11 +954,13 @@ function runOneGymBattle(enemyTeam){
   return result;
 }
 
-// Orchestrates a full gym encounter: single battle for regular tiers/tier-10, a 5-leg gauntlet
-// for Indigo tier 9 (heal-before-each-leg, no heal mid-battle, and a loss at ANY leg resets the
-// whole attempt back to leg 1 — no partial credit, matches the real Elite Four's no-heal rule).
+// Orchestrates a full gym encounter: single battle for regular gyms at any tier, a 5-leg
+// gauntlet for Indigo Plateau at BOTH tier 9 (first clear) and tier 10 (postgame rematch, as of
+// v0.28 — see "Elite Four/Champion Gauntlet Bug Fix" in DESIGN.md) — heal-before-each-leg, no
+// heal mid-battle, and a loss at ANY leg resets the whole attempt back to leg 1, no partial
+// credit, matches the real Elite Four's no-heal rule.
 function runGymEncounter(trainerId,tier){
-  const isGauntlet=isIndigoTrainer(trainerId)&&tier===9;
+  const isGauntlet=isIndigoTrainer(trainerId)&&(tier===9||tier===10);
   const locData=typeof LOCATIONS!=='undefined'?getLocation(state.currentLocation):null;
   const gymName=locData?locData.name:trainerId;
 
@@ -972,10 +982,11 @@ function runGymEncounter(trainerId,tier){
     return;
   }
 
-  // Tier-9 Elite Four + Champion gauntlet — 5 legs as one unit.
+  // Elite Four + Champion gauntlet — 5 legs as one unit. tier is 9 (first clear) or 10
+  // (postgame rematch, v0.28) — both use the identical 5-leg structure, just different rosters.
   for(let leg=1;leg<=5;leg++){
     healPartyBeforeGymBattle();
-    const enemyTeam=buildEnemyTeam(trainerId,9,leg);
+    const enemyTeam=buildEnemyTeam(trainerId,tier,leg);
     const result=runOneGymBattle(enemyTeam);
     if(result.winner!=='player'){
       addLog('⚔ Lost the Elite Four/Champion gauntlet at leg '+leg+'/5 — attempt reset.','fail');
@@ -988,7 +999,7 @@ function runGymEncounter(trainerId,tier){
     addLog('⚔ Gauntlet leg '+leg+'/5 defeated!','win');
   }
   addLog('🏆 Elite Four and Champion defeated!','evolve');
-  awardGymWin(trainerId,9);
+  awardGymWin(trainerId,tier);
   document.getElementById('enc-body').textContent='🏆 Champion defeated at '+gymName+'!';
   state.currentEncounter=null;
   advanceTravelPath();
@@ -1035,7 +1046,7 @@ function awardGymWinSilent(trainerId,tier,summary){
 // v0.26 — offline gym battle simulation. Mirrors runGymEncounter()'s logic exactly (same
 // healPartyBeforeGymBattle/buildEnemyTeam/win-loss rules/gauntlet structure) but silent.
 function runGymEncounterSilent(trainerId,tier,summary){
-  const isGauntlet=isIndigoTrainer(trainerId)&&tier===9;
+  const isGauntlet=isIndigoTrainer(trainerId)&&(tier===9||tier===10);
   if(!isGauntlet){
     healPartyBeforeGymBattle();
     const result=runOneGymBattleSilent(buildEnemyTeam(trainerId,tier));
@@ -1045,11 +1056,11 @@ function runGymEncounterSilent(trainerId,tier,summary){
   }
   for(let leg=1;leg<=5;leg++){
     healPartyBeforeGymBattle();
-    const result=runOneGymBattleSilent(buildEnemyTeam(trainerId,9,leg));
+    const result=runOneGymBattleSilent(buildEnemyTeam(trainerId,tier,leg));
     if(result.winner!=='player'){ summary.gymLosses++; return; }
   }
   summary.gymWins++;
-  awardGymWinSilent(trainerId,9,summary);
+  awardGymWinSilent(trainerId,tier,summary);
 }
 
 // ── RESEARCH ──
@@ -2108,6 +2119,13 @@ function setMissionSort(field){
 function renderDestList(){
   const currentLoc=state.currentLocation||'palletTown';
   let reachable=getReachableDiscoveredLocations(currentLoc);
+  // v0.28 — while sorted by Encounters specifically, hide locations with zero wild encounter
+  // table rows (buildRouteTable().length===0) — these can never contribute a nonzero encounter
+  // count and only cluttered that sort (Day Care, pure shop towns, Indigo pre-8-badges, etc.).
+  // Distance/Alphabetical sorts are unaffected — full reachable list still shown there.
+  if(missionSortField==='encounters'){
+    reachable=reachable.filter(loc=>buildRouteTable(loc).length>0);
+  }
   if(missionSortField){
     reachable=[...reachable].sort((a,b)=>{
       let av,bv;
@@ -2490,6 +2508,21 @@ function endMission(reason='faint'){
   updateLocation(); render(); saveGame();
 }
 
+// v0.28 — total encounter-cycles remaining until reaching the final destination, not just the
+// current waypoint: current waypoint's remaining cycles + the full travelTime of every waypoint
+// still ahead in travelPath, excluding the destination's own travelTime (consistent with the
+// settled travelTime rule — a destination's own travel time never delays arrival there).
+function computeTotalEncLeftToDestination(){
+  let total=state.travelCyclesRemaining||0;
+  if(state.travelPath&&state.travelPath.length){
+    for(let i=state.travelPathIndex+1;i<state.travelPath.length-1;i++){
+      const locData=typeof LOCATIONS!=='undefined'?getLocation(state.travelPath[i]):null;
+      total+=Math.max(1,locData&&locData.travelTime?parseInt(locData.travelTime):1);
+    }
+  }
+  return total;
+}
+
 function updateLocation(){
   const el=document.getElementById('aide-location');
   // v0.26 — idle removed: always the "active" branch below, no more Idle text state.
@@ -2502,7 +2535,7 @@ function updateLocation(){
   if(atDest){
     el.textContent='📍 '+curLocName+' — Researching · Next: '+m+':'+s.toString().padStart(2,'0');
   } else {
-    el.textContent='📍 '+curLocName+' (→ '+destLocName+', '+(state.travelCyclesRemaining||0)+' enc left) · Next: '+m+':'+s.toString().padStart(2,'0');
+    el.textContent='📍 '+curLocName+' (→ '+destLocName+', '+computeTotalEncLeftToDestination()+' enc left) · Next: '+m+':'+s.toString().padStart(2,'0');
   }
   // v0.24 — onboarding free-skip button: now visible any time skips remain (research is
   // continuous as of v0.26, so there's no missionActive check left to gate on).
@@ -2689,36 +2722,62 @@ function assignDaycarePair(slotIndex,idA,idB){
     if(p.holder){ p.holder=null; state.party=state.party.filter(x=>x.id!==p.id); }
     p.breeding=true;
   });
-  state.daycareSlots.slots[slotIndex]={parentAId:idA,parentBId:idB,resultDexId,readyAt:Date.now()+hatchMinutes*60000};
+  state.daycareSlots.slots[slotIndex]={parentAId:idA,parentBId:idB,resultDexId,nextReadyAt:Date.now()+hatchMinutes*60000,eggsQueued:0};
   addLog(getDisplayName(pA)+' and '+getDisplayName(pB)+' dropped off at the Day Care.','info');
   const modal=document.getElementById('daycare-modal'); if(modal) modal.remove();
   saveGame(); render(); showMapDetail(DAYCARE_LOCATION_ID);
 }
+// v0.28 — advances a slot's egg queue in a remainder-preserving loop (same pattern as
+// processOfflineTime()'s mission catch-up), so partial progress toward the next egg is never
+// lost. Called on render (buildDaycareHtml) and at the top of collectDaycareSlot() — correct
+// whether the app was open or closed the whole time.
+function updateDaycareQueue(slotIndex){
+  ensureDaycareSlots();
+  const rec=state.daycareSlots.slots[slotIndex];
+  if(!rec) return;
+  const intervalMs=getHatchMinutes(rec.resultDexId)*60000;
+  while(Date.now()>=rec.nextReadyAt){
+    rec.eggsQueued=(rec.eggsQueued||0)+1;
+    rec.nextReadyAt+=intervalMs;
+  }
+}
+// v0.28 — collects ALL queued eggs in one batch, each individually through the normal catch
+// pipeline (per-species cap release still applies per-egg). The slot is NOT cleared — the pair
+// stays assigned and keeps breeding automatically until manually pulled via releaseDaycarePair().
 function collectDaycareSlot(slotIndex){
   if(state.currentLocation!==DAYCARE_LOCATION_ID){ addLog('The Aide must be at the Day Care to collect.','fail'); return; }
   ensureDaycareSlots();
   const rec=state.daycareSlots.slots[slotIndex];
   if(!rec){ return; }
-  if(Date.now()<rec.readyAt){ addLog('Not ready yet.','fail'); return; }
-  const pA=state.dex.find(p=>p.id===rec.parentAId), pB=state.dex.find(p=>p.id===rec.parentBId);
-  [pA,pB].forEach(p=>{ if(p) p.breeding=false; });
-  const resultEntry=getPokemonEntry(rec.resultDexId);
-  const gender=(resultEntry&&resultEntry.genderMalePct!=null)?(Math.random()*100<resultEntry.genderMalePct?'M':'F'):null;
-  const baby=makePokemon(resultEntry?resultEntry.name:'Egg',1,gender,null,rec.resultDexId);
-  state.dex.push(baby);
-  state.dexHistory[baby.pokedexId]=(state.dexHistory[baby.pokedexId]||0)+1;
-  recordAbilityObserved(baby.pokedexId,baby.ability);
-  recordCapture(baby.pokedexId,baby.species);
-  checkSpeciesCap(baby);
-  addLog('Hatched '+getDisplayName(baby)+' #'+baby.id+' at the Day Care!','catch');
-  state.daycareSlots.slots[slotIndex]=null;
+  updateDaycareQueue(slotIndex);
+  const count=rec.eggsQueued||0;
+  if(!count){ addLog('Not ready yet.','fail'); return; }
+  let kept=0, released=0;
+  for(let n=0;n<count;n++){
+    const resultEntry=getPokemonEntry(rec.resultDexId);
+    const gender=(resultEntry&&resultEntry.genderMalePct!=null)?(Math.random()*100<resultEntry.genderMalePct?'M':'F'):null;
+    const baby=makePokemon(resultEntry?resultEntry.name:'Egg',1,gender,null,rec.resultDexId);
+    state.dex.push(baby);
+    state.dexHistory[baby.pokedexId]=(state.dexHistory[baby.pokedexId]||0)+1;
+    recordAbilityObserved(baby.pokedexId,baby.ability);
+    recordCapture(baby.pokedexId,baby.species);
+    checkSpeciesCap(baby);
+    // checkSpeciesCap() may release this individual (or an older one at cap) right back out —
+    // check whether THIS baby survived it to tally an accurate kept-vs-released split.
+    if(state.dex.find(p=>p.id===baby.id)) kept++; else released++;
+  }
+  rec.eggsQueued=0;
+  addLog('Collected '+count+' egg'+(count>1?'s':'')+' at the Day Care!'+(released>0?' ('+kept+' kept, '+released+' released — species cap)':''),'catch');
   saveGame(); render(); showMapDetail(DAYCARE_LOCATION_ID);
 }
 function releaseDaycarePair(slotIndex){
   ensureDaycareSlots();
   const rec=state.daycareSlots.slots[slotIndex];
   if(!rec) return;
-  if(!confirm('Pull this pair from the Day Care without hatching? They\'ll be returned to your box.')) return;
+  updateDaycareQueue(slotIndex);
+  const queued=rec.eggsQueued||0;
+  const warn=queued>0?' You will forfeit '+queued+' uncollected egg'+(queued>1?'s':'')+'.':'';
+  if(!confirm('Pull this pair from the Day Care without hatching?'+warn+' They\'ll be returned to your box.')) return;
   const pA=state.dex.find(p=>p.id===rec.parentAId), pB=state.dex.find(p=>p.id===rec.parentBId);
   [pA,pB].forEach(p=>{ if(p) p.breeding=false; });
   state.daycareSlots.slots[slotIndex]=null;
@@ -2739,16 +2798,19 @@ function buildDaycareHtml(){
       html+='<div style="color:#6080a0;font-size:11px;margin-bottom:6px;">Slot '+(i+1)+' — empty</div>'+
         '<button '+(isCurrent?'':'disabled')+' onclick="openDaycareAssignModal('+i+')" style="width:100%;font-size:10px;">+ Drop Off Pair</button>';
     } else {
-      const ready=Date.now()>=rec.readyAt;
+      // v0.28 — continuous batch hatching: refresh the queue on every render so the live
+      // count/timer stays accurate whether the app was open the whole time or not.
+      updateDaycareQueue(i);
       const resultEntry=getPokemonEntry(rec.resultDexId);
       const known=seenDexIds.has(rec.resultDexId);
       const resultLabel=known?(resultEntry?resultEntry.name:'?'):'?';
-      const remainingMs=Math.max(0,rec.readyAt-Date.now());
-      const remainingMin=Math.ceil(remainingMs/60000);
+      const remainingMs=Math.max(0,rec.nextReadyAt-Date.now());
+      const remainingMin=Math.floor(remainingMs/60000), remainingSec=Math.floor((remainingMs%60000)/1000);
+      const queued=rec.eggsQueued||0;
       html+='<div style="color:#e0e0e0;font-size:11px;margin-bottom:4px;">Slot '+(i+1)+' — → '+resultLabel+'</div>'+
-        '<div style="color:'+(ready?'#2ecc71':'#a0a0c0')+';font-size:10px;margin-bottom:6px;">'+(ready?'Ready to collect!':remainingMin+' min remaining')+'</div>'+
+        '<div style="color:'+(queued>0?'#2ecc71':'#a0a0c0')+';font-size:10px;margin-bottom:6px;">'+(queued>0?queued+' egg'+(queued>1?'s':'')+' ready · ':'')+'next in '+remainingMin+':'+remainingSec.toString().padStart(2,'0')+'</div>'+
         '<div style="display:flex;gap:6px;">'+
-          '<button '+(isCurrent&&ready?'':'disabled')+' onclick="collectDaycareSlot('+i+')" style="flex:1;font-size:10px;border-color:#2ecc71;color:#2ecc71;">Collect</button>'+
+          '<button '+(isCurrent&&queued>0?'':'disabled')+' onclick="collectDaycareSlot('+i+')" style="flex:1;font-size:10px;border-color:#2ecc71;color:#2ecc71;">Collect'+(queued>0?' ('+queued+')':'')+'</button>'+
           '<button onclick="releaseDaycarePair('+i+')" style="flex:1;font-size:10px;border-color:#e63946;color:#e63946;">Pull Out</button>'+
         '</div>';
     }
@@ -2766,42 +2828,69 @@ function buildDaycareHtml(){
 function getDaycareEligiblePokemon(){
   return state.dex.filter(p=>!p.breeding);
 }
+// ── DAY CARE PAIR PICKER (v0.28) — two-step sprite-row picker, replaces the old <select> dropdowns.
+// Step 1: pick Parent A from every eligible Pokémon (sprite-row list, same style as All Catches).
+// Step 2: pick Parent B from only the candidates canBreedPair() accepts against Parent A —
+// incompatible candidates are hidden entirely, not just grayed out.
+let daycareModalSlot=null;
+let daycareParentA=null;
+let daycareParentB=null;
+
+function daycarePickerRowHtml(p,onclickJs){
+  const entry=getPokemonEntry(p.pokedexId);
+  const genderLabel=p.gender?p.gender:(entry&&entry.genderMalePct==null?'—':'?');
+  const sprite=getSpriteUrl(p.pokedexId,p.species,p.isShiny||false);
+  return '<div onclick="'+onclickJs+'" style="display:flex;align-items:center;gap:8px;background:#0f1a2a;border-radius:4px;padding:6px 8px;margin-bottom:5px;cursor:pointer;">'+
+    '<img src="'+sprite+'" style="width:32px;height:32px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'">'+
+    '<div style="flex:1;"><div style="color:#fff;font-size:11px;">'+getDisplayName(p)+' #'+p.id+(p.isShiny?' ✨':'')+'</div>'+
+    '<div style="color:#a0a0c0;font-size:9px;">Lv'+p.level+' · '+genderLabel+' · '+(p.holder?'👤 held':'📦 box')+'</div></div></div>';
+}
+
 function openDaycareAssignModal(slotIndex){
+  daycareModalSlot=slotIndex; daycareParentA=null; daycareParentB=null;
   const existing=document.getElementById('daycare-modal'); if(existing) existing.remove();
   const modal=document.createElement('div');
   modal.id='daycare-modal';
   modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:1150;display:flex;align-items:center;justify-content:center;padding:16px;';
-  const options=getDaycareEligiblePokemon();
-  const rows=options.map(p=>{
-    const entry=getPokemonEntry(p.pokedexId);
-    const genderLabel=p.gender?p.gender:(entry&&entry.genderMalePct==null?'—':'?');
-    return '<option value="'+p.id+'">'+getDisplayName(p)+' #'+p.id+' ('+genderLabel+')'+(p.isShiny?' ✨':'')+'</option>';
-  }).join('');
-  modal.innerHTML='<div style="background:#16213e;border:1px solid #5dade2;border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;">'+
-    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:#5dade2;font-size:13px;font-weight:bold;">Day Care — Slot '+(slotIndex+1)+'</div><button onclick="document.getElementById(\'daycare-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'+
-    '<div style="color:#a0a0c0;font-size:10px;margin-bottom:4px;">Parent A</div>'+
-    '<select id="daycare-parent-a" onchange="updateDaycarePreview()" style="width:100%;background:#0f3460;border:1px solid #1a4a80;color:#e0e0e0;padding:6px;border-radius:4px;font-family:\'Courier New\',monospace;margin-bottom:8px;"><option value="">— choose —</option>'+rows+'</select>'+
-    '<div style="color:#a0a0c0;font-size:10px;margin-bottom:4px;">Parent B</div>'+
-    '<select id="daycare-parent-b" onchange="updateDaycarePreview()" style="width:100%;background:#0f3460;border:1px solid #1a4a80;color:#e0e0e0;padding:6px;border-radius:4px;font-family:\'Courier New\',monospace;margin-bottom:8px;"><option value="">— choose —</option>'+rows+'</select>'+
-    '<div id="daycare-preview" style="color:#a0a0c0;font-size:11px;min-height:32px;margin-bottom:10px;"></div>'+
-    '<button id="daycare-confirm-btn" onclick="confirmDaycareAssignFromModal('+slotIndex+')" class="primary" style="width:100%;" disabled>Drop Off Pair</button>'+
-    '</div>';
   document.body.appendChild(modal);
   modal.onclick=(e)=>{ if(e.target===modal) modal.remove(); };
+  renderDaycareModalStep1();
 }
-function updateDaycarePreview(){
-  const idA=parseInt(document.getElementById('daycare-parent-a').value);
-  const idB=parseInt(document.getElementById('daycare-parent-b').value);
-  const preview=document.getElementById('daycare-preview');
-  const confirmBtn=document.getElementById('daycare-confirm-btn');
-  if(!idA||!idB){ preview.textContent=''; confirmBtn.disabled=true; return; }
-  const pA=state.dex.find(p=>p.id===idA), pB=state.dex.find(p=>p.id===idB);
-  const check=canBreedPair(pA,pB);
-  if(!check.ok){
-    preview.innerHTML='<span style="color:#e63946;">'+check.reason+'</span>';
-    confirmBtn.disabled=true;
-    return;
-  }
+function renderDaycareModalStep1(){
+  const modal=document.getElementById('daycare-modal'); if(!modal) return;
+  const options=getDaycareEligiblePokemon();
+  const rows=options.length
+    ?options.map(p=>daycarePickerRowHtml(p,'selectDaycareParentA('+p.id+')')).join('')
+    :'<div style="color:#555;font-size:11px;">No eligible Pokémon.</div>';
+  modal.innerHTML='<div style="background:#16213e;border:1px solid #5dade2;border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;max-height:85vh;overflow-y:auto;">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:#5dade2;font-size:13px;font-weight:bold;">Day Care — Slot '+(daycareModalSlot+1)+' · Parent A</div><button onclick="document.getElementById(\'daycare-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'+
+    rows+
+    '</div>';
+}
+function selectDaycareParentA(id){
+  daycareParentA=id; daycareParentB=null;
+  renderDaycareModalStep2();
+}
+function renderDaycareModalStep2(){
+  const modal=document.getElementById('daycare-modal'); if(!modal) return;
+  const pA=state.dex.find(p=>p.id===daycareParentA);
+  if(!pA){ renderDaycareModalStep1(); return; }
+  const candidates=getDaycareEligiblePokemon().filter(p=>p.id!==pA.id&&canBreedPair(pA,p).ok);
+  const rows=candidates.length
+    ?candidates.map(p=>daycarePickerRowHtml(p,'selectDaycareParentB('+p.id+')')).join('')
+    :'<div style="color:#555;font-size:11px;">No compatible partners.</div>';
+  const pB=daycareParentB?state.dex.find(p=>p.id===daycareParentB):null;
+  const previewHtml=pB?buildDaycarePreviewHtml(pA,pB):'';
+  modal.innerHTML='<div style="background:#16213e;border:1px solid #5dade2;border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;max-height:85vh;overflow-y:auto;">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><div style="color:#5dade2;font-size:13px;font-weight:bold;">Day Care — Slot '+(daycareModalSlot+1)+' · Parent B</div><button onclick="document.getElementById(\'daycare-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'+
+    '<div style="color:#a0a0c0;font-size:10px;margin-bottom:8px;">Parent A: '+getDisplayName(pA)+' #'+pA.id+' ('+(pA.gender||'—')+')</div>'+
+    '<button onclick="renderDaycareModalStep1()" style="margin-bottom:8px;padding:5px 10px;font-size:10px;border-color:#5dade2;color:#5dade2;">◀ Back</button>'+
+    rows+
+    '<div id="daycare-preview" style="color:#a0a0c0;font-size:11px;min-height:32px;margin:8px 0;">'+previewHtml+'</div>'+
+    '<button id="daycare-confirm-btn" '+(pB?'':'disabled')+' onclick="confirmDaycareAssignFromModal()" class="primary" style="width:100%;">Drop Off Pair</button>'+
+    '</div>';
+}
+function buildDaycarePreviewHtml(pA,pB){
   const resultDexId=getBreedResultDexId(pA,pB);
   const resultEntry=getPokemonEntry(resultDexId);
   const seenDexIds=new Set();
@@ -2810,14 +2899,15 @@ function updateDaycarePreview(){
   const known=seenDexIds.has(resultDexId);
   const label=known?(resultEntry?resultEntry.name:'?'):'?';
   const hatchMinutes=getHatchMinutes(resultDexId);
-  preview.innerHTML='<span style="color:#2ecc71;">Will produce: '+label+'</span><br>Hatch time: ~'+hatchMinutes+' min';
-  confirmBtn.disabled=false;
+  return '<span style="color:#2ecc71;">Will produce: '+label+'</span><br>Hatch time: ~'+hatchMinutes+' min (repeats automatically until pulled)';
 }
-function confirmDaycareAssignFromModal(slotIndex){
-  const idA=parseInt(document.getElementById('daycare-parent-a').value);
-  const idB=parseInt(document.getElementById('daycare-parent-b').value);
-  if(!idA||!idB) return;
-  assignDaycarePair(slotIndex,idA,idB);
+function selectDaycareParentB(id){
+  daycareParentB=id;
+  renderDaycareModalStep2();
+}
+function confirmDaycareAssignFromModal(){
+  if(!daycareParentA||!daycareParentB) return;
+  assignDaycarePair(daycareModalSlot,daycareParentA,daycareParentB);
 }
 
 // ── POKEMON MANAGEMENT ──
@@ -3205,9 +3295,27 @@ function evoNodeHtml(entry,isHighlight){
   const sprite=getSpriteUrl(entry.dexId,entry.name,false);
   const border=isHighlight?'border:2px solid #f4d03f;':'border:1px solid #1a4a80;';
   const shinyBadge=hasLiveShiny(entry.dexId)?'<span class="shiny-badge">✨</span>':'';
-  return '<div style="display:inline-flex;flex-direction:column;align-items:center;'+border+'border-radius:6px;padding:4px;background:#0f3460;min-width:52px;">'+
+  // v0.28 — data-dexid enables familyChainNodeClick() to jump straight to this species' detail
+  // page when tapped, from either the Family Card or Species Detail context.
+  return '<div data-dexid="'+entry.dexId+'" style="display:inline-flex;flex-direction:column;align-items:center;'+border+'border-radius:6px;padding:4px;background:#0f3460;min-width:52px;cursor:pointer;">'+
     '<img src="'+sprite+'" style="width:40px;height:40px;image-rendering:pixelated;" onerror="this.style.display=\'none\'">'+
     '<div style="font-size:8px;color:#a0a0c0;margin-top:2px;text-align:center;white-space:nowrap;">#'+entry.dexId+' '+entry.name+shinyBadge+'</div></div>';
+}
+// v0.28 — shared delegated click handler for the evolution chain visual (Family Card and
+// Species Detail contexts). Walks up from the click target to the nearest [data-dexid] node —
+// evoNodeHtml() tags real/seen species nodes with it; evoPlaceholderHtml() (unseen/unconfirmed)
+// has no data-dexid, so those stay inert, same as before.
+function familyChainNodeClick(event){
+  let el=event.target;
+  while(el&&el!==event.currentTarget){
+    if(el.dataset&&el.dataset.dexid){
+      dexSelectedDexId=parseInt(el.dataset.dexid);
+      dexView='detail';
+      renderDex();
+      return;
+    }
+    el=el.parentElement;
+  }
 }
 function evoPlaceholderHtml(){
   return '<div style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid #333;border-radius:6px;padding:4px;background:#0a0a1a;min-width:52px;min-height:48px;">'+
@@ -3370,7 +3478,7 @@ function renderDexFamilies(){
     const baseSprite=getSpriteUrl(baseMember.dexId,baseMember.name,false);
     const d=document.createElement('div');
     d.className='dex-entry'; d.style.cursor='pointer';
-    d.innerHTML='<div style="display:flex;align-items:center;gap:10px;"><img src="'+baseSprite+'" style="width:48px;height:48px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div class="dex-header"><span class="dex-name">Family #'+famId+' — '+baseMember.name+' Line</span><span class="dex-id">▶</span></div><div class="dex-details">'+speciesDisplay+' species · '+totalEverCaught+' total caught</div></div></div><div onclick="event.stopPropagation()">'+renderEvolutionChainVisual(famId,null)+'</div>';
+    d.innerHTML='<div style="display:flex;align-items:center;gap:10px;"><img src="'+baseSprite+'" style="width:48px;height:48px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div class="dex-header"><span class="dex-name">Family #'+famId+' — '+baseMember.name+' Line</span><span class="dex-id">▶</span></div><div class="dex-details">'+speciesDisplay+' species · '+totalEverCaught+' total caught</div></div></div><div onclick="event.stopPropagation();familyChainNodeClick(event)">'+renderEvolutionChainVisual(famId,null)+'</div>';
     d.onclick=()=>{ dexSelectedFamily=famId; dexView='species'; renderDex(); };
     c.appendChild(d);
   });
@@ -3500,7 +3608,7 @@ function renderDexDetail(){
   const historyCount=state.dexHistory[dexSelectedDexId]||0;
   const totalEver=Math.max(historyCount,caughtOfSpecies.length);
   const evoChainInner=entry&&entry.familyId?renderEvolutionChainVisual(entry.familyId,dexSelectedDexId):'';
-  const evoChainHtml=evoChainInner?'<div style="margin-top:10px;padding-top:10px;border-top:1px solid #1a4a80;"><div style="color:#a0a0c0;font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Evolution Chain</div>'+evoChainInner+'</div>':'';
+  const evoChainHtml=evoChainInner?'<div onclick="familyChainNodeClick(event)" style="margin-top:10px;padding-top:10px;border-top:1px solid #1a4a80;"><div style="color:#a0a0c0;font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Evolution Chain</div>'+evoChainInner+'</div>':'';
   const encounteredAtHtml=buildEncounteredAtHtml(dexSelectedDexId);
   const header=document.createElement('div');
   header.className='dex-entry';
@@ -3642,7 +3750,10 @@ const SAVE_KEY='pokeprof_save';
 // v0.27 stays on SAVE_VERSION 18 — no schema changes. Preamble modal, Info menu, shop condensing,
 // purchase quantity buttons, and badge sprite display are all UI/rendering-only; the Day Care
 // location move only repoints the existing DAYCARE_LOCATION_ID constant.
-const SAVE_VERSION=18;
+// v0.28 — SAVE_VERSION 19: Day Care slot record reshaped for continuous batch hatching —
+// `eggsQueued` (int) + `nextReadyAt` (ongoing anchor) replace the single-use `readyAt` field.
+// Migration below converts any legacy `readyAt` slot to the new shape on load.
+const SAVE_VERSION=19;
 let saveTimer=0;
 
 function saveGame(){
@@ -3685,9 +3796,9 @@ function loadGame(){
     const data=JSON.parse(raw);
     if(!data) return false;
 
-    // ── SAVE_VERSION 18 MIGRATION ──
-    // Accepts v11-v17 saves and migrates them; rejects anything older.
-    if(data.version!==SAVE_VERSION&&data.version!==17&&data.version!==16&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
+    // ── SAVE_VERSION 19 MIGRATION ──
+    // Accepts v11-v18 saves and migrates them; rejects anything older.
+    if(data.version!==SAVE_VERSION&&data.version!==18&&data.version!==17&&data.version!==16&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
     const s=data.state;
 
     // Migrate inventory: v11 had a single `bag`; v12 splits to professorBag/trainerBag.
@@ -3821,6 +3932,18 @@ function loadGame(){
         r.testedMethods=r.testedMethods.filter(m=>m!==entry.evolveItem);
       }
     });
+    // v0.28 migration — Day Care slots: legacy single-use `readyAt` becomes `nextReadyAt` +
+    // `eggsQueued:0`, so a pre-v0.28 slot picks up continuous batch hatching seamlessly (the
+    // egg already in progress just becomes the first entry in its new queue).
+    if(state.daycareSlots&&state.daycareSlots.slots){
+      state.daycareSlots.slots.forEach(rec=>{
+        if(rec&&rec.readyAt!==undefined&&rec.nextReadyAt===undefined){
+          rec.nextReadyAt=rec.readyAt;
+          rec.eggsQueued=0;
+          delete rec.readyAt;
+        }
+      });
+    }
     const secsAway=Math.floor((Date.now()-data.savedAt)/1000);
     let offSum=null;
     if(secsAway>10) offSum=processOfflineTime(secsAway); // v0.26 — research is always active, no missionWasActive gate needed
@@ -3882,7 +4005,7 @@ if(!hasSave){
     initDiscovered.add('route1');
   }
   state={
-    funds:5.00, totalCatches:0, totalSightings:0,
+    funds:100.00, totalCatches:0, totalSightings:0,
     missionElapsed:0, nextEncounterIn:ENC_INTERVAL_OPEN,
     incomeAccumulator:0,
     party:[], dex:[], dexIdCounter:1, currentEncounter:null, log:[],

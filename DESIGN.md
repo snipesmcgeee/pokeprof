@@ -80,6 +80,7 @@ There is no survival element. Aides do not need food, sleep, or anything like th
 - **v0.25 requires SAVE_VERSION 17** due to: badge entries added to `aide.bag` (new `itemCategory: badge` items) and a new per-gym highest-tier-reached tracker on aide objects (likely `aide.gymProgress[gymId] = highestTier`) — see "Gym / Trainer Battle System — Triggers, Badges, Level Cap". Migration: existing saves initialize both to empty on load (no badges held, no gym progress recorded).
 - **v0.26 requires SAVE_VERSION 18** due to: `state.daycareSlots` (new — see "Day Care / Breeding System"), `state.speciesCap` (new — see "Editable Per-Species Cap"), and a one-time `testedMethods` cleanup pass (see "Trade/Item-Evolution Matching Fix"). All three migrations run in a single combined pass on load from v17. `state.autoRepeat` is retired (no longer read anywhere — see "Idle State Removal") but requires no migration, since removing a field needs no backfill.
 - **v0.27 stays on SAVE_VERSION 18** — no `state` schema changes in this batch (onboarding modal, Info menu, shop condensing, purchase quantity buttons, and badge sprite display are all UI/rendering-only; the Day Care location move repoints an existing constant, it doesn't touch `state` shape).
+- **v0.28 requires SAVE_VERSION 19** due to: Day Care slot record reshaped for continuous batch hatching (`eggsQueued` count + `nextReadyAt` anchor replacing single-use `readyAt`) — see "Day Care / Breeding System" below. Migration: any existing slot with the legacy `readyAt` field converts to `nextReadyAt: readyAt, eggsQueued: 0` on load.
 
 ---
 
@@ -151,10 +152,12 @@ There is no survival element. Aides do not need food, sleep, or anything like th
 - First click on any of the three buttons sorts **ascending** (Distance: nearest first; Alphabetical: A–Z; Encounters: fewest first). A second click on the **same** button reverses to descending. Clicking a **different** button resets to ascending for the new criterion.
 - Sort state is transient UI-only — not persisted to `state`, not saved. The list has no default sort order when the modal opens; it resets each time.
 - No SAVE_VERSION bump (no schema change).
+- **v0.28:** while sorted by **Encounters** specifically, locations with zero wild encounter table rows (`buildRouteTable(locId).length===0`) are filtered from the list entirely — these can never contribute a nonzero encounter count and were only cluttering that sort (Day Care, pure shop towns, Indigo Plateau pre-8-badges, etc.). Gym-trainer presence is not considered by this filter — only wild-table rows. Distance and Alphabetical sorts show the full reachable list, unchanged.
 
-### Pathfinding Bug (PENDING FIX — v0.19)
-- `buildTravelPath()` currently does its own BFS over all `CONNECTIONS_DATA` **without** filtering to `state.discoveredLocations`. This allows paths to route through undiscovered locations as waypoints (e.g. routing Pewter→Cerulean through Diglett's Cave South before that cave has been discovered).
-- Fix: `buildTravelPath()` must restrict its BFS traversal to nodes in `state.discoveredLocations`, consistent with how `getReachableDiscoveredLocations()` already works. Since `showMissionModal()` already filters destinations to `getReachableDiscoveredLocations()`, the fix in `buildTravelPath()` is a defensive guard — but it is required to prevent undiscovered waypoints.
+### Travel HUD — Total Encounters to Destination (SETTLED — v0.28)
+- The mid-travel HUD text (`'📍 X (→ Dest, N enc left) · Next: ...'`) previously showed only `state.travelCyclesRemaining` — the cycles left in the *current* waypoint only, not the full trip.
+- **v0.28 fix:** N now = current waypoint's remaining cycles **+** the full `travelTime` of every waypoint still ahead, **excluding** the destination's own `travelTime` (consistent with the settled `travelTime` rule — a destination's own travel time never delays arrival there). Label wording unchanged.
+- Display-only — no `state` schema change.
 
 ### Wipe & Return (SETTLED)
 - If all party Pokémon faint, the aide returns to **`state.lastHealLocation`** — the most recent location with `heals: true` they passed through
@@ -182,9 +185,11 @@ There is no survival element. Aides do not need food, sleep, or anything like th
 - Party order: Pokémon with the **lowest level leads**; fainted Pokémon go to the back; ties broken by inertia
 - Party re-sort happens at `getLeadPokemon()` call and at the start of every new mission via `confirmMission()`
 
-### Pathfinding & Reachability (SETTLED — v0.19 fix, v0.26 revision)
-- `buildTravelPath()` restricts its BFS traversal to nodes in `state.discoveredLocations`, consistent with `getReachableDiscoveredLocations()`.
+### Pathfinding & Reachability (SETTLED — v0.19 fix, v0.26 revision, v0.28 fix)
+- `buildTravelPath()` restricts its BFS traversal to nodes in `state.discoveredLocations` — this part was already correct.
 - **v0.26:** `getReachableDiscoveredLocations()`'s BFS no longer pre-seeds `visited` with the current location — see "Current location is now a valid destination" above.
+- **Bug (found v0.28) — picker/pathfinding mismatch:** despite the note above, `getReachableDiscoveredLocations()` only gated *whether to display* a node on `state.discoveredLocations` — it did **not** gate BFS traversal *through* undiscovered intermediate nodes the way `buildTravelPath()` does. This let the destination picker report a location as reachable via a path that actually ran through undiscovered waypoints, which `buildTravelPath()` then correctly refused to walk — so the destination showed up as selectable, but confirming the mission produced an empty path and the aide never moved. Surfaced via a real report: Diglett's Cave North (Cut-gated entrance) got marked "discovered" via the scouting-preview rule the moment its Route 2 neighbor was visited, and the picker found it "reachable" by routing through the undiscovered South/B1F entrance — a path `buildTravelPath()` would never actually take.
+- **Fix (v0.28):** `getReachableDiscoveredLocations()`'s BFS filter gets the identical discovery-gate `buildTravelPath()` already has: `if(!state.discoveredLocations.has(c.toLocationId)) return false;` alongside the existing `requiresItem` check. The two functions now agree exactly — the picker only ever shows destinations `buildTravelPath()` can actually walk to.
 
 ### Offline Wipe & Auto-Repeat (SETTLED — v0.20 fix, mandatory as of v0.26)
 - **Bug (pre-v0.20):** `processOfflineTime()`'s catch-up loop unconditionally `break`s the moment `getLeadPokemon()` returns `null` (full party wipe), regardless of the repeat setting. This silently abandons the rest of the away period.
@@ -337,7 +342,7 @@ The single `state.bag` is replaced with two separate inventories:
 
 ---
 
-## Day Care / Breeding System (SETTLED — v0.26, revised v0.27)
+## Day Care / Breeding System (SETTLED — v0.26, revised v0.27, v0.28)
 
 ### Location & Slots (revised v0.27)
 - **v0.27:** Day Care is now its own standalone map location — `locationId: pokemonDaycare` ("Pokemon Daycare"), connected only to Route 5 (`travelTime: 1`, `heals: true`, `mapCol: 121`, `mapRow: 94`, no `defaultEncounterMethod`). The `DAYCARE_LOCATION_ID` constant points at `pokemonDaycare` instead of `route5`. This was a discoverability fix — the feature existed correctly in v0.26 but was buried inside Route 5's generic location panel with no indication it was there.
@@ -352,7 +357,14 @@ The single `state.bag` is replaced with two separate inventories:
 ### Assigning a Pair
 - Any 2 owned Pokémon — party or box — can be assigned to an open slot.
 - Once assigned, both are reserved/unavailable for Aide missions until collected — same restriction as being actively assigned to the Aide.
-- The Aide must physically travel to the Day Care to drop off a pair and again to collect a completed pair — the normal travel-time mechanic, same as visiting any other location. Once dropped off, incubation runs indefinitely in the background — it does **not** block the Aide from being dispatched elsewhere in the meantime; only the drop-off/collect actions themselves require the Aide's physical presence at the Day Care.
+- The Aide must physically travel to the Day Care to drop off a pair and again to collect completed eggs — the normal travel-time mechanic, same as visiting any other location. Once dropped off, incubation runs indefinitely in the background — it does **not** block the Aide from being dispatched elsewhere in the meantime; only the drop-off/collect actions themselves require the Aide's physical presence at the Day Care.
+
+### Pair Selection UI (SETTLED — v0.28)
+- The old two-`<select>` dropdown pair-picker is replaced with a **two-step sprite-row picker**, same row style as the All Catches list (sprite + name + level + gender + held/box icon).
+- **Step 1:** lists Parent A candidates (`getDaycareEligiblePokemon()` — everyone not already `breeding`) as tappable rows.
+- **Step 2:** header shows the chosen Parent A; list re-renders showing only Parent B candidates passing `canBreedPair(parentA, candidate).ok` — incompatible candidates (wrong egg group, same gender, already breeding, etc.) are **hidden entirely**, not grayed out. A "← Back" control returns to step 1.
+- Tapping a Parent B row shows the existing result preview and a "Drop Off Pair" confirm button, same as before — only the selection mechanism changed, not the confirm/preview logic.
+- Display/interaction-only — no `state` schema change.
 
 ### Compatibility — Full Egg-Group Rules
 - Undiscovered egg group (legendary/mythical species) → not breedable at all.
@@ -371,9 +383,19 @@ The single `state.bag` is replaced with two separate inventories:
 - Shows `?` if the predicted species hasn't been seen yet, resolving automatically once it's collected (same seen-based reveal pattern used throughout the Families Tab — see "Evolution Chain Visual").
 
 ### Storage & Timing
-- Hatched babies are subject to the existing per-species cap (see "Per-Species Catch Cap" above, now player-editable).
+- Hatched babies are subject to the existing per-species cap (see "Per-Species Catch Cap" above, now player-editable) — applied individually per egg, same as any other catch.
 - **Hatch time formula:** `minutes = max(1, round(eggCycles × 0.176))`, derived from each species' existing `eggCycles` field (already present in the data — no new column needed). Calibrated so a ~20-cycle species lands at ~5 minutes; range across the actual data (5–120 cycles) works out to roughly 1–21 minutes.
 - Processed like a mission — live countdown while the app is open, offline catch-up on return.
+
+### Continuous Batch Hatching (SETTLED — v0.28)
+- **Bug (pre-v0.28):** a slot produced exactly one baby, then went empty and required manually re-selecting and re-dropping-off the same pair to continue breeding — no repeat/offline-accumulation loop existed, unlike missions.
+- **Fix:** slot record fields change from a single-use `readyAt` to `eggsQueued` (int, starts 0) + `nextReadyAt` (an ongoing anchor that keeps advancing, doesn't reset until pulled).
+- New helper `updateDaycareQueue(slotIndex)`: while `Date.now() >= rec.nextReadyAt`, increments `eggsQueued` and advances `rec.nextReadyAt += hatchMinutes*60000` — a remainder-preserving loop, same pattern as `processOfflineTime()`'s mission catch-up (no partial progress toward the next egg is ever lost). Called on `buildDaycareHtml()` render and at the top of `collectDaycareSlot()`, so it's correct whether the app was open or closed.
+- **Collection:** `collectDaycareSlot()` runs the queue update, then hatches **all** queued babies in one go, each individually through the existing `makePokemon` → `dexHistory` → `recordAbilityObserved` → `recordCapture` → `checkSpeciesCap` pipeline (per-species cap release still applies per-egg). The slot is **not** cleared — `eggsQueued` resets to 0, the pair stays assigned, and `nextReadyAt` keeps counting from where it left off. Log line becomes a batch summary (e.g. "Collected 20 eggs at the Day Care! (18 kept, 2 released — species cap)").
+- **Uncapped** — however many intervals fit in the elapsed time, same philosophy as mission offline catch-up (also uncapped).
+- `releaseDaycarePair()` ("Pull Out") is unchanged — still ends the loop and returns parents to the box, forfeiting any uncollected `eggsQueued`. Confirm dialog gets a one-line addition warning about this if `eggsQueued > 0` at the time.
+- `buildDaycareHtml()` slot display replaces the old "Ready to collect! / N min remaining" with a live queue count (e.g. "3 eggs ready · next in 1:24") — Collect button enabled whenever `eggsQueued > 0`.
+- **SAVE_VERSION 19 migration:** any slot with the legacy `readyAt` field converts to `nextReadyAt: readyAt, eggsQueued: 0` on load.
 
 ### Interaction with the Families Tab Root-Placeholder Fix
 - Day Care is the primary intended path for filling in a family's previously-unseen root (e.g. Pichu) — see "Evolution Chain Visual" for the display-side fix this feeds into. No special-cased interaction is needed: once a bred Pokémon is collected, it's logged into `seenDexIds` exactly like any other catch, which is what resolves the root placeholder.
@@ -697,6 +719,13 @@ Two structural gaps existed once `use-move`/`in-party` became real, functional m
 - When an edge's method is `"use-item"`, the comparison uses the edge's item name instead of its generic method string: `const matchKey = e.method==='use-item' ? e.item : e.method`.
 - **Additionally:** a branch now renders its real species node if the target has been **seen by any means** (`seenDexIds`), not only if the specific evolution method was formally confirmed via `recordEvolution()` — covers species obtained via Day Care, or any other path that doesn't route through the normal evolution-checking flow. The connecting arrow shows the real method label if formally confirmed, or a generic `?` if the species is known but the method itself hasn't been tested.
 
+### Clickable Sprite Nodes (SETTLED — v0.28)
+- Sprite nodes in the chain visual — in **both** the Family Card (Layer 1) and Species Detail (Layer 3) contexts — are now clickable, jumping directly to that species' own detail page. Previously, Family Card chain sprites were dead clicks (wrapped only in `event.stopPropagation()`, blocking the card's own navigate-to-species-list action with no replacement), and Species Detail chain sprites had no click handling at all.
+- `evoNodeHtml()` gains a `data-dexid` attribute + `cursor:pointer`; a new shared delegated handler `familyChainNodeClick(event)` walks up from the click target to the nearest `[data-dexid]` ancestor and navigates (`dexSelectedDexId` updates, `dexView='detail'`, `renderDex()`). Reused identically at both call sites.
+- Placeholder/unseen nodes (`evoPlaceholderHtml()`) remain non-interactive — no detail page exists for a species not yet seen.
+- On the Family Card, clicking elsewhere on the card (name, background, the ▶ arrow) keeps its existing behavior — navigates to that family's species list. This is purely an added shortcut on the sprite icons themselves.
+- Display/interaction-only — no `state` schema change.
+
 ---
 
 ## Shiny Symbol on Species (SETTLED — v0.23)
@@ -761,6 +790,7 @@ Two structural gaps existed once `use-move`/`in-party` became real, functional m
 - Universal resource, no other survival resources exist
 - Base income: $1.00/min passive, scales with catches
 - Current funds always visible in the game header
+- Starting funds: **$100.00** (raised from $5.00 in v0.28)
 
 ---
 
@@ -876,8 +906,8 @@ Builds on the v0.23 battle engine (above) with 8 regular Gyms + Indigo Plateau (
 - **Trainers tab columns:** `trainerId, trainerName, locationId, tier, isGauntlet, gauntletOrder, badgeItemId, slotIndex, dexId, formName, level, move1, move1Power, move2, move2Power, move3, move3Power, move4, move4Power`
   - **`moveN` is a combined type+category string (v0.25 revision)** — matches the Pokedex sheet's own column-naming convention exactly: lowercase type + capitalized category, no separator (e.g. `rockSpecial`, `fairyPhysical`). Originally spec'd as three separate columns (`moveNType`/`moveNCategory`/`moveNPower`); combined per Jack's request to cut 4 columns and match a format he's already using elsewhere. `converter.html` (bumped to **v7**) parses this back into separate `moveNType`/`moveNCategory` fields internally, so `trainers.js` output and `buildEnemyTeam()` in `pokeprof.html` are unaffected — only the Excel-facing column count changed.
   - Blank `moveN` = that slot is empty (same rule as before).
-  - `isGauntlet` — `TRUE` only for the 5 Indigo Plateau tier-9 rows-groups; `gauntletOrder` (1–5) is populated only on those rows and marks which of the 5 legs that slot belongs to
-  - `badgeItemId` — repeated identically on every row for a given `trainerId`; blank/null only for `isGauntlet` rows (the 5 individual Elite Four/Champion legs don't each grant a badge — see Badges below)
+  - `isGauntlet` — `TRUE` on **every** Indigo Plateau row, at **both** tier 9 and tier 10 (identifies "this trainer belongs to the Indigo roster," read by `isIndigoTrainer()` at any tier — it is not, by itself, what triggers 5-leg battle behavior; that's a separate runtime check, see "Elite Four/Champion Gauntlet Bug Fix" below). `gauntletOrder` (1–5) is populated on Indigo rows at both tiers and marks which of the 5 legs that slot belongs to.
+  - `badgeItemId` — repeated identically on every row for a given `trainerId`, **including** `isGauntlet` rows (corrects earlier doc text claiming this was blank/null on gauntlet rows — it isn't; `awardGymWin()` relies on it being present to look up the Champion badge)
   - `slotIndex` — position (1–6) within that specific battle's team
 - `trainers.js` exposes `getTrainerRoster(trainerId, tier, gauntletOrder)`, `getTrainerBadge(trainerId)`, and `getAllTrainerIds()` helpers, generated by the converter.
 - **8 regular gyms**: each bound to one city location, with hand-authored rosters for tiers 1–8 (species/level/equipped moves per team slot).
@@ -921,6 +951,12 @@ Builds on the v0.23 battle engine (above) with 8 regular Gyms + Indigo Plateau (
 ### SAVE_VERSION Bump
 - Required. New state: badge entries in `aide.bag`; per-gym highest-tier-reached tracker (shape TBD at implementation time, likely `aide.gymProgress[gymId] = highestTier`).
 - Migration pass needed for existing saves — new fields default to empty/0 on load.
+
+### Elite Four/Champion Gauntlet Bug Fix (SETTLED — v0.28)
+- **Bug:** the live data had 5 separate real `trainerId`s (`agatha`, `blue`, `bruno`, `lance`, `lorelei`) instead of one shared id as the schema intends, and `gauntletOrder` — despite already being supported by `getTrainerRoster()` and `converter.html` — was never actually populated on any row. Two compounding failures: (1) `getTrainerRoster(trainerId, tier, leg)` filtered on `t.gauntletOrder === leg`, which is always `undefined === leg` → always false → every leg resolved an empty roster → instant loss at leg 1, every attempt; (2) `rollEncounter()`/`runGymEncounter()` only ever targeted `gymTrainerIds[0]` (`agatha`), so even independent of bug (1), the other four members' rosters were never reachable at all — including their tier-10 rows, which existed in the data but were equally orphaned.
+- **Fix (data, Jack's side):** all five members' rows consolidated to `trainerId: eliteFourChampion`, at **both** tier 9 and tier 10, with `gauntletOrder` 1–5 populated identically at both tiers (1=Lorelei, 2=Bruno, 3=Agatha, 4=Lance, 5=Blue). `isGauntlet: TRUE` unchanged on all these rows.
+- **Fix (code):** `runGymEncounter()` and `runGymEncounterSilent()` both change `isGauntlet=isIndigoTrainer(trainerId)&&tier===9` → `isGauntlet=isIndigoTrainer(trainerId)&&(tier===9||tier===10)`. This makes the postgame Indigo Plateau rematch a full 5-leg gauntlet at tier-10 rosters, same heal-before-leg/no-partial-credit rules as the first clear — previously the intended design (per the original comment above this code) was a single tier-10 battle, revised in v0.28 once it became clear the tier-10 data for all five members already existed and was simply unused.
+- No further badge/TM re-grant risk — `awardGymWin()`/`awardGymWinSilent()`'s existing "already earned" guards already prevent double-granting on repeated wins.
 
 ### Offline Gym Battle Simulation (SETTLED — v0.26)
 - **v0.25 gap (deliberate, not an oversight):** `processOfflineTime()` discarded gym encounters outright — `if(enc.type==='gym'){ advanceTravelPath(); continue; }` — because gym battles are full team-vs-team fights using the live turn-based engine (speed-order turns, `calcBattleDamage`, possible 5-leg gauntlet chains), and the wild-encounter offline path's simplified one-hit formula doesn't apply to them.
@@ -996,6 +1032,6 @@ Builds on the v0.23 battle engine (above) with 8 regular Gyms + Indigo Plateau (
 
 ## Outstanding Data Tasks (Jack's side — spreadsheet, not code)
 
-- **18 evolution items referenced in the Pokédex sheet don't exist in the Items sheet:** Protector, Dragon Scale, Electirizer, Magmarizer, Up Grade, Razor Fang, Razor Claw, Peat Block, Dubious Disc, Reaper Cloth, Deep Sea Tooth, Sachet, Whipped Dream, Tart Apple, Cracked Pot, Metal Alloy, Auspicious Armor, Unremarkable Teacup. Until added, any species requiring one of these can never evolve via item — the item can never be owned, so `professorAutoTestEvolutions()` never has it to test. Row template already provided to Jack (`evolutionItem` category, `effect: evolve-stone`, kebab-case `itemId`).
+- **~~18 evolution items missing from Items sheet~~ — resolved, verified v0.28.** All 18 (Protector, Dragon Scale, Electirizer, Magmarizer, Up Grade, Razor Fang, Razor Claw, Peat Block, Dubious Disc, Reaper Cloth, Deep Sea Tooth, Sachet, Whipped Dream, Tart Apple, Cracked Pot, Metal Alloy, Auspicious Armor, Unremarkable Teacup) confirmed present in `items.js` with correct slugs, `evolutionItem` category, and correctly wired via the existing name-matching convention (`entry.evolveItem===itemName`, same pattern as Water Stone/Fire Stone).
 - **2 blank-`evolveItem` `use-item` rows** in the single-target Pokédex columns, identified as Kubfu and Dipplin. Confirmed harmless via code trace — Path 1 failing silently falls through to Path 2 (EVO_TREE), so this only matters if their EVO_TREE rows are *also* incomplete. Worth a quick check on Jack's end, not urgent.
 - **4 orphaned items** in the Items sheet not referenced by any species: King's Rock, Black Augurite, Scroll of Darkness, Scroll of Waters. Purchasable but currently non-functional — harmless, just unused data.

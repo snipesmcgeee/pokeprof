@@ -1,5 +1,5 @@
 // PokeProf — Locations Database
-// Auto-generated: 7/31/2026, 12:04:21 PM
+// Auto-generated: 7/31/2026, 10:48:28 PM
 // Entries: 103
 
 const LOCATIONS = [
@@ -1134,7 +1134,7 @@ const LOCATIONS = [
     "travelTime": 1,
     "mapCol": 121,
     "mapRow": 94,
-    "defaultEncounterMethod": null
+    "defaultEncounterMethod": "cave"
   }
 ];
 

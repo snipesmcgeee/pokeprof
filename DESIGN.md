@@ -342,7 +342,7 @@ The single `state.bag` is replaced with two separate inventories:
 
 ---
 
-## Day Care / Breeding System (SETTLED — v0.26, revised v0.27, v0.28)
+## Day Care / Breeding System (SETTLED — v0.26, revised v0.27, v0.28, v0.29)
 
 ### Location & Slots (revised v0.27)
 - **v0.27:** Day Care is now its own standalone map location — `locationId: pokemonDaycare` ("Pokemon Daycare"), connected only to Route 5 (`travelTime: 1`, `heals: true`, `mapCol: 121`, `mapRow: 94`, no `defaultEncounterMethod`). The `DAYCARE_LOCATION_ID` constant points at `pokemonDaycare` instead of `route5`. This was a discoverability fix — the feature existed correctly in v0.26 but was buried inside Route 5's generic location panel with no indication it was there.
@@ -359,12 +359,19 @@ The single `state.bag` is replaced with two separate inventories:
 - Once assigned, both are reserved/unavailable for Aide missions until collected — same restriction as being actively assigned to the Aide.
 - The Aide must physically travel to the Day Care to drop off a pair and again to collect completed eggs — the normal travel-time mechanic, same as visiting any other location. Once dropped off, incubation runs indefinitely in the background — it does **not** block the Aide from being dispatched elsewhere in the meantime; only the drop-off/collect actions themselves require the Aide's physical presence at the Day Care.
 
-### Pair Selection UI (SETTLED — v0.28)
+### Pair Selection UI (SETTLED — v0.28, revised v0.29)
 - The old two-`<select>` dropdown pair-picker is replaced with a **two-step sprite-row picker**, same row style as the All Catches list (sprite + name + level + gender + held/box icon).
 - **Step 1:** lists Parent A candidates (`getDaycareEligiblePokemon()` — everyone not already `breeding`) as tappable rows.
 - **Step 2:** header shows the chosen Parent A; list re-renders showing only Parent B candidates passing `canBreedPair(parentA, candidate).ok` — incompatible candidates (wrong egg group, same gender, already breeding, etc.) are **hidden entirely**, not grayed out. A "← Back" control returns to step 1.
 - Tapping a Parent B row shows the existing result preview and a "Drop Off Pair" confirm button, same as before — only the selection mechanism changed, not the confirm/preview logic.
+- **v0.29: both steps now sort by family number → evolution order → dex number**, instead of catch order — reuses the same family-grouping logic as `getFamilyMembers()` (Families tab), for readability only. No visual dividers between families, just sort order.
 - Display/interaction-only — no `state` schema change.
+
+### Breeding Sprite Preview — F + M = C (SETTLED — v0.29, NEW)
+- **Result Preview (step 2, pre-drop-off):** the existing text prediction gains a sprite row — Parent A sprite + Parent B sprite = predicted Child sprite, using the same `?` placeholder as before if the result species hasn't been seen yet (no new silhouette asset).
+- **Active slot display:** while a slot is breeding, a persistent sprite row — Female/A sprite + Male/B sprite = Child sprite (or `?`) — renders **above** the existing "🥚 N eggs ready · next in M:SS" queue line. Both coexist; the queue text is not replaced.
+- **Ditto positioning:** in both the preview and the persistent slot row, Ditto always renders in the **second** position, regardless of whether it was actually selected as Parent A or Parent B.
+- Display-only — no `state` schema change, no new fields on the daycare slot record.
 
 ### Compatibility — Full Egg-Group Rules
 - Undiscovered egg group (legendary/mythical species) → not breedable at all.
@@ -782,6 +789,7 @@ Two structural gaps existed once `use-move`/`in-party` became real, functional m
   - `champion-badge` has no real-game sprite (it's a PokeProf-original item) — renders as a 🏆 emoji fallback instead of an image.
 - The `#aide-bag-items` "Aide bag: ..." text row is unchanged and still lists other trainer-bag items (HMs, Rods, etc.) — badges are simply excluded from that text list now that they render as sprites above.
 - The `🎖 Badges: X/8 · Level Cap: X` summary line is unchanged, unaffected by this display change.
+- **v0.29 addition:** a new `TRAINER_SPRITE_MAP` (trainerName → portrait image URL) follows the exact same hardcoded-map pattern as `BADGE_SPRITE_MAP` above. All 13 entries (8 gym leaders + 4 Elite Four + Champion) sourced from Bulbagarden Archives' **FRLG** trainer sprite set — chosen for a single consistent era across all 13, since Agatha and Lorelei have no HGSS sprites at all (HGSS's Kanto post-game rematch reuses Johto's own Elite Four — Will/Koga/Bruno/Karen — not a Lorelei/Agatha reunion). Falls back to a 🧑 emoji if a URL ever breaks, same pattern as the Champion badge's 🏆 fallback. Used by the new Watched Gym Battle screen (see "Gym / Trainer Battle System") to show the opposing trainer's name + portrait briefly before battle. No Excel/converter change — code-side only, same as badges.
 
 ---
 
@@ -896,9 +904,9 @@ Damage = floor(floor(floor(2×Level/5 + 2) × Power × A/D) / 50) + 2
 
 ---
 
-## Gym / Trainer Battle System — Triggers, Badges, Level Cap (SETTLED — v0.25)
+## Gym / Trainer Battle System — Triggers, Badges, Level Cap (SETTLED — v0.25, revised v0.29)
 
-Builds on the v0.23 battle engine (above) with 8 regular Gyms + Indigo Plateau (Elite Four + Champion), badges, aide-specific level caps, and a forced-tier progression model. Trainer battles are triggered as a weighted encounter method within the existing mission modal — no new battle UI, no manual/interactive battle mode (explicitly deferred, see Future Goals).
+Builds on the v0.23 battle engine (above) with 8 regular Gyms + Indigo Plateau (Elite Four + Champion), badges, aide-specific level caps, and a forced-tier progression model. **As of v0.29**, there are two distinct battle triggers depending on badge status — see "Watched Gym Battle — Aide Card Trigger" and the revised "Trigger — Mission Modal Integration" below.
 
 ### Data Model — `trainers.js` (new)
 - New Excel `Trainers` tab, generated via `converter.html` (**bumped to v7** for this) following the same converter pattern as `encounters.js`/`locations.js`.
@@ -933,9 +941,22 @@ Builds on the v0.23 battle engine (above) with 8 regular Gyms + Indigo Plateau (
 - **Clamp rule:** once an aide holds all 8 regular gym badges but has not yet beaten the Champion, the formula would output tier 9 for a regular gym rematch — but tier 9 doesn't exist for regular gyms (Indigo-exclusive). In this window, regular gym rematches **clamp at tier 8**.
 - Once the Champion badge is earned: forced tier becomes **10 everywhere** (all 8 gyms + Indigo Plateau) — tier 9 is skipped entirely for gyms, remaining a one-time-only Indigo Plateau gauntlet.
 
-### Trigger — Mission Modal Integration
-- "Gym Battle" is a weighted encounter method, selectable alongside existing methods (Surf, Fish, etc.) per location that has an associated gym.
-- Reuses `buildRouteTable()` and existing method-weighting logic — no new trigger paradigm.
+### Trigger — Mission Modal Integration (revised v0.29)
+- "Gym Battle" is selectable in the mission modal for: any regular gym (1–8) whose badge is already earned, at any tier; and **Indigo Plateau, but only at tier 10**, once the Champion badge is earned.
+- **Indigo Plateau tier 9 never appears in the mission modal**, badge status irrelevant — it's always watched-only (see below).
+- Unbadged regular gyms do not appear in the mission modal at all — the only way to earn a badge is the watched trigger below.
+- Once eligible, reuses `buildRouteTable()` and existing method-weighting logic unchanged — no new trigger paradigm for this path.
+- **This path never grants a badge**, even against a gym it can technically reach (impossible in practice, since unbadged gyms are excluded) — farm-only, by design.
+
+### Watched Gym Battle — Aide Card Trigger (SETTLED — v0.29, NEW)
+- A "Battle Gym" button is always visible on the aide card whenever the aide's current location is a gym (any of the 8 regular gyms, or Indigo Plateau once accessible) — no readiness/level gating, always tappable.
+- Tapping it opens a **team-order prompt**: a draggable list of the player's current party sprites/icons, letting them set active lineup before the battle begins.
+- The battle then plays back **turn-by-turn at ~0.5 seconds per move, mandatory, no skip option.**
+- **This is the only path that can earn a badge on first win.**
+- **Battle screen layout (mainline-style):** opponent's active Pokémon sprite + name + level + HP bar at the top, player's active Pokémon sprite + name + level + HP bar at the bottom, sprites swap immediately on faint as the next non-fainted teammate cycles in. A compact move/damage text line appears each turn (e.g. "Weedle used Bug Physical — 12 dmg!"), advancing at the playback pace. The opposing trainer's name + portrait (via new `TRAINER_SPRITE_MAP`, see "Aide Panel — Badge Sprite Display") is shown **briefly at the start only**, then gives way to the Pokémon sprites for the rest of the fight.
+- **Blocking flow:** once triggered, the player stays on-screen through team order → playback → result. No leaving mid-battle, for single fights and each gauntlet leg alike.
+- **Indigo Plateau gauntlet (tier 9 and tier 10) specifics:** between each of the 5 legs, team order can be reshuffled and healing items may be used (existing `getWeakestEffectivePotion()` inter-battle auto-heal logic, unchanged). No-heal-*within*-a-leg and full-reset-on-loss-resets-to-leg-1 rules are unchanged — this only opens a management window *between* legs.
+- **Indigo Plateau tier 9** (the original Elite Four/Champion clear) is always watched via this button — never offline, regardless of badge status. **Indigo Plateau tier 10** (postgame rebattle) can also be watched via this button, but isn't required to be — see the mission-modal grind path above for the offline alternative.
 
 ### Loss / Retry Behavior
 - Regular gym battles: no penalty, auto-retry — identical to wild encounter loss handling.
@@ -958,13 +979,17 @@ Builds on the v0.23 battle engine (above) with 8 regular Gyms + Indigo Plateau (
 - **Fix (code):** `runGymEncounter()` and `runGymEncounterSilent()` both change `isGauntlet=isIndigoTrainer(trainerId)&&tier===9` → `isGauntlet=isIndigoTrainer(trainerId)&&(tier===9||tier===10)`. This makes the postgame Indigo Plateau rematch a full 5-leg gauntlet at tier-10 rosters, same heal-before-leg/no-partial-credit rules as the first clear — previously the intended design (per the original comment above this code) was a single tier-10 battle, revised in v0.28 once it became clear the tier-10 data for all five members already existed and was simply unused.
 - No further badge/TM re-grant risk — `awardGymWin()`/`awardGymWinSilent()`'s existing "already earned" guards already prevent double-granting on repeated wins.
 
-### Offline Gym Battle Simulation (SETTLED — v0.26)
+### Offline Gym Battle Simulation (SETTLED — v0.26, re-scoped v0.29)
 - **v0.25 gap (deliberate, not an oversight):** `processOfflineTime()` discarded gym encounters outright — `if(enc.type==='gym'){ advanceTravelPath(); continue; }` — because gym battles are full team-vs-team fights using the live turn-based engine (speed-order turns, `calcBattleDamage`, possible 5-leg gauntlet chains), and the wild-encounter offline path's simplified one-hit formula doesn't apply to them.
 - **v0.26 fix:** offline catch-up now runs gym encounters through the exact same real functions the live path uses — `healPartyBeforeGymBattle()` → `buildEnemyTeam()` → `runOneGymBattle()` (or the 5-leg gauntlet loop for Indigo tier 9) → `awardGymWin()` on a win — silently, with no per-instance DOM/log calls, consistent with offline processing's existing batched-summary design.
-- New offline summary fields: `gymWins`, `gymLosses`, `badgesEarned` — surfaced in the existing offline-return summary banner alongside encounters/catches/wins/income/heals/shinies.
+- **v0.29 scope change:** this offline path now applies only to (a) regular gyms 1–8 whose badge is already earned, any tier, and (b) **Indigo Plateau tier 10**, once the Champion badge is earned — matching the mission-modal gating above. It does **not** apply to unbadged regular gyms (never offered as a method) or to **Indigo Plateau tier 9** under any circumstance — tier 9 is always watched-only, no exceptions, regardless of badge status. The engine call itself is unchanged from v0.26/v0.28; only eligibility to reach it changed.
+- New offline summary fields: `gymWins`, `gymLosses`, `badgesEarned` — surfaced in the existing offline-return summary banner alongside encounters/catches/wins/income/heals/shinies. **As of v0.29, `badgesEarned` from this path is always 0** — since this path is only reachable post-badge (and tier 9 is excluded entirely), `awardGymWin()`'s "already earned" guard means it never grants a new badge, only TM/reward grants and tier-progression tracking.
 - **Repeat-win tier progression requires no new logic** — `awardGymWin()` already gates badge/TM grants to first-win-only and only advances `gymProgress` when `getForcedTier()` rises (which only happens via a genuinely new badge), so repeated offline wins at an already-cleared gym behave identically to live: no further badge, no further TM, no tier change.
 - A loss during offline catch-up has no penalty (matches live) and the loop continues to the next cycle.
 - If an offline gym result leaves the party fully wiped, it flows into the existing offline wipe/heal-relocate handling (see "Offline Wipe & Auto-Repeat") with no separate wipe-handling logic needed.
+
+### SAVE_VERSION — v0.29
+- **No bump required.** Badges and `aide.gymProgress` already exist as of v0.25/SAVE_VERSION 17. The v0.29 team-order prompt and battle playback are transient UI state only — nothing new persists across app close, since a watched battle is atomic once triggered (blocking flow, no leave-mid-battle).
 
 ---
 
@@ -1017,7 +1042,7 @@ Builds on the v0.23 battle engine (above) with 8 regular Gyms + Indigo Plateau (
 
 ## Things That Are Future Goals (Do Not Implement Yet)
 
-- Manual/interactive trainer battle mode — either true player-controlled move selection or Pokelike-style turn-by-turn playback of the existing AI-driven resolution. Deferred from v0.25; own future changelog session.
+- ~~Manual/interactive trainer battle mode~~ — **resolved v0.29** (playback variant chosen — see "Watched Gym Battle — Aide Card Trigger"; true player-controlled move selection remains undone/not implemented).
 - Gauntlet-style sub-trainers within regular gyms (mainline-game precedent) — deferred from v0.25.
 - Trainer innate abilities / type affinities
 - New trainer recruitment mechanics

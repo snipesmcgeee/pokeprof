@@ -1,5 +1,5 @@
 // PokeProf — Connections Database
-// Auto-generated: 7/31/2026, 10:48:28 PM
+// Auto-generated: 8/2/2026, 10:09:05 AM
 // Connections: 224
 
 // Flat array with full data (used for requiresItem checks)
@@ -235,13 +235,13 @@ const CONNECTIONS_DATA = [
   {
     "fromLocationId": "route24",
     "toLocationId": "ceruleanCave",
-    "requiresItem": null,
+    "requiresItem": "hm-surf",
     "travelTime": null
   },
   {
     "fromLocationId": "ceruleanCave",
     "toLocationId": "route24",
-    "requiresItem": null,
+    "requiresItem": "hm-surf",
     "travelTime": null
   },
   {

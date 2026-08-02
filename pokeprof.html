@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.28</title>
+<title>PokeProf v0.29</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -110,7 +110,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span style="font-size:11px;color:#6080a0;">v0.28</span></h1>
+  <h1>PokeProf <span style="font-size:11px;color:#6080a0;">v0.29</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">100.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -142,6 +142,7 @@
       <div id="aide-party-sprites-row"></div>
       <div class="aide-location" id="aide-location">📍 Pallet Town — Researching</div>
       <button id="skip-encounter-btn" onclick="skipToNextEncounter()" style="display:none;margin-top:6px;font-size:10px;padding:5px 10px;border-color:#5dade2;color:#5dade2;">⏭ Skip to Encounter x50</button>
+      <button id="battle-gym-btn" style="display:none;margin-top:6px;font-size:10px;padding:5px 10px;border-color:#e63946;color:#e63946;">⚔ Battle Gym</button>
       <div id="aide-bag-display" style="font-size:10px;color:#6080a0;margin-top:2px;"></div>
       <div id="badge-cap-display" style="font-size:10px;color:#f4d03f;margin-top:2px;"></div>
       <div id="bag-display" style="display:none;"></div>
@@ -876,6 +877,19 @@ function isGymAccessible(trainerId){
   if(isIndigoTrainer(trainerId)) return countRegularBadges()>=8;
   return true;
 }
+// v0.29 — eligibility for the mission-modal/offline weighted "Gym Battle" method specifically
+// (the grind path). Regular gyms: only once that gym's badge is already earned. Indigo Plateau:
+// only once the Champion badge is earned — which also means getForcedTier() resolves to 10, so
+// tier 9 is never reachable through this path at all, regardless of badge status; tier 9 is
+// always watched-only via the aide-card "Battle Gym" button. Does NOT gate the watched button
+// itself — that's always available whenever isGymAccessible() is true, no badge required.
+function isGymGrindEligible(trainerId){
+  if(isIndigoTrainer(trainerId)) return hasChampionBadge();
+  if(typeof TRAINERS_DATA==='undefined') return false;
+  const row=TRAINERS_DATA.find(t=>t.trainerId===trainerId&&t.badgeItemId);
+  if(!row) return false;
+  return (state.trainerBag[row.badgeItemId]||0)>0;
+}
 // All distinct trainerIds with at least one Trainers row at this location.
 function getGymTrainerIdsAtLocation(locId){
   if(typeof TRAINERS_DATA==='undefined') return [];
@@ -1061,6 +1075,290 @@ function runGymEncounterSilent(trainerId,tier,summary){
   }
   summary.gymWins++;
   awardGymWinSilent(trainerId,tier,summary);
+}
+
+// ── WATCHED GYM BATTLE — Aide Card Trigger (v0.29) ──
+// Playback-only: the underlying battle is resolved with the EXACT same engine/functions as the
+// grind path (runOneGymBattle -> runTrainerBattle -> awardGymWin) — this layer only adds a
+// team-order prompt beforehand and an animated turn-by-turn playback of the already-resolved
+// log afterward. No changes to battle logic, RNG, EXP, or win/loss outcome.
+
+// trainerName -> portrait image URL. All 13 verified against Bulbagarden Archives (FRLG set —
+// chosen for a consistent single era across all 13, since Agatha/Lorelei have no HGSS sprites
+// at all: HGSS's Kanto rematch reuses Johto's own Elite Four, not a Lorelei/Agatha reunion).
+// Falls back to a 🧑 emoji (same pattern as champion-badge's 🏆 fallback) if a URL ever breaks.
+const TRAINER_SPRITE_MAP={
+  'Brock':'https://archives.bulbagarden.net/media/upload/7/7c/Spr_FRLG_Brock.png',
+  'Misty':'https://archives.bulbagarden.net/media/upload/2/2c/Spr_FRLG_Misty.png',
+  'Lt. Surge':'https://archives.bulbagarden.net/media/upload/5/5c/Spr_FRLG_Lt_Surge.png',
+  'Erika':'https://archives.bulbagarden.net/media/upload/c/c9/Spr_FRLG_Erika.png',
+  'Koga':'https://archives.bulbagarden.net/media/upload/0/02/Spr_FRLG_Koga.png',
+  'Sabrina':'https://archives.bulbagarden.net/media/upload/d/dd/Spr_FRLG_Sabrina.png',
+  'Blaine':'https://archives.bulbagarden.net/media/upload/6/6d/Spr_FRLG_Blaine.png',
+  'Giovanni':'https://archives.bulbagarden.net/media/upload/4/41/Spr_FRLG_Giovanni.png',
+  'Lorelei':'https://archives.bulbagarden.net/media/upload/d/db/Spr_FRLG_Lorelei.png',
+  'Bruno':'https://archives.bulbagarden.net/media/upload/f/f7/Spr_FRLG_Bruno.png',
+  'Agatha':'https://archives.bulbagarden.net/media/upload/5/56/Spr_FRLG_Agatha.png',
+  'Lance':'https://archives.bulbagarden.net/media/upload/f/fb/Spr_FRLG_Lance.png',
+  'Blue':'https://archives.bulbagarden.net/media/upload/1/10/Spr_FRLG_Blue_3.png'
+};
+function getTrainerPortraitHtml(trainerName){
+  const url=TRAINER_SPRITE_MAP[trainerName];
+  return url
+    ?'<img src="'+url+'" style="width:56px;height:56px;image-rendering:pixelated;border-radius:6px;" onerror="this.outerHTML=\'<span style=&quot;font-size:40px;&quot;>🧑</span>\'">'
+    :'<span style="font-size:40px;">🧑</span>';
+}
+
+// Transient in-flight battle state — never persisted meaningfully (battle is atomic/blocking,
+// nothing survives an app close mid-battle, no SAVE_VERSION impact).
+let watchedBattle=null; // {trainerId,tier,isGauntlet,leg}
+
+// Called from updateLocation() every tick — shows/hides the aide-card button based on whether
+// the aide is AT (not just passing through) a gym location right now. No badge/readiness gate —
+// always available per the settled design, unlike the mission-modal grind path above.
+function updateBattleGymButton(){
+  const btn=document.getElementById('battle-gym-btn');
+  if(!btn) return;
+  const atDest=state.currentLocation===state.missionDestination;
+  const trainerIds=atDest?getGymTrainerIdsAtLocation(state.currentLocation).filter(isGymAccessible):[];
+  if(trainerIds.length&&!watchedBattle){
+    btn.style.display='inline-block';
+    btn.onclick=()=>startWatchedGymBattle(trainerIds[0]);
+  } else {
+    btn.style.display='none';
+  }
+}
+
+function startWatchedGymBattle(trainerId){
+  if(watchedBattle) return; // already mid-flow
+  const tier=getForcedTier(trainerId);
+  if(tier==null) return;
+  const isGauntlet=isIndigoTrainer(trainerId)&&(tier===9||tier===10);
+  watchedBattle={trainerId,tier,isGauntlet,leg:1};
+  showTeamOrderModal();
+}
+
+// ── Team Order Prompt (draggable, shown before every watched battle — and again before each
+// of the 5 gauntlet legs, per the settled design) ──
+function showTeamOrderModal(){
+  const existing=document.getElementById('teamorder-modal'); if(existing) existing.remove();
+  const modal=document.createElement('div');
+  modal.id='teamorder-modal';
+  modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:1200;display:flex;align-items:center;justify-content:center;padding:16px;';
+  document.body.appendChild(modal);
+  renderTeamOrderModal();
+}
+function renderTeamOrderModal(){
+  const modal=document.getElementById('teamorder-modal'); if(!modal||!watchedBattle) return;
+  const legNote=watchedBattle.isGauntlet?(' · Leg '+watchedBattle.leg+'/5'):'';
+  const rows=state.party.map(p=>{
+    const sprite=getSpriteUrl(p.pokedexId,p.species,p.isShiny||false);
+    const fainted=p.currentHP<=0;
+    return '<div class="teamorder-row" data-id="'+p.id+'" style="display:flex;align-items:center;gap:8px;background:#0f1a2a;border-radius:4px;padding:6px 8px;margin-bottom:5px;opacity:'+(fainted?'0.5':'1')+';touch-action:none;user-select:none;">'+
+      '<span style="color:#6080a0;font-size:14px;cursor:grab;">☰</span>'+
+      '<img src="'+sprite+'" style="width:32px;height:32px;image-rendering:pixelated;flex-shrink:0;pointer-events:none;" onerror="this.style.display=\'none\'">'+
+      '<div style="flex:1;pointer-events:none;"><div style="color:#fff;font-size:11px;">'+getDisplayName(p)+'</div>'+
+      '<div style="color:#a0a0c0;font-size:9px;">Lv'+p.level+' · '+p.currentHP+'/'+p.maxHP+' HP'+(fainted?' (fainted)':'')+'</div></div></div>';
+  }).join('');
+  modal.innerHTML='<div style="background:#16213e;border:1px solid #5dade2;border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;max-height:85vh;overflow-y:auto;">'+
+    '<div style="color:#5dade2;font-size:13px;font-weight:bold;margin-bottom:4px;">⚔ Set Team Order'+legNote+'</div>'+
+    '<div style="color:#6080a0;font-size:10px;margin-bottom:10px;">Drag to reorder — lead Pokémon battles first.</div>'+
+    '<div id="teamorder-list">'+rows+'</div>'+
+    '<button onclick="confirmTeamOrder()" class="primary" style="width:100%;margin-top:8px;">▶ Begin Battle</button>'+
+    '</div>';
+  enableDragReorder(document.getElementById('teamorder-list'));
+}
+
+// Minimal pointer-based drag reorder (Pointer Events cover mouse + touch uniformly, unlike
+// native HTML5 drag-and-drop which doesn't work reliably on mobile). Swaps DOM rows as the
+// dragged row's midpoint crosses a neighbor's midpoint; final order is read back from the DOM
+// on confirm. No external library.
+function enableDragReorder(container){
+  if(!container) return;
+  let dragEl=null, startY=0;
+  container.querySelectorAll('.teamorder-row').forEach(row=>{
+    row.addEventListener('pointerdown',e=>{
+      dragEl=row; startY=e.clientY;
+      row.style.position='relative'; row.style.zIndex='10'; row.style.background='#1a3a5a';
+      row.setPointerCapture(e.pointerId);
+    });
+    row.addEventListener('pointermove',e=>{
+      if(dragEl!==row) return;
+      const offsetY=e.clientY-startY;
+      row.style.transform='translateY('+offsetY+'px)';
+      const rows=[...container.querySelectorAll('.teamorder-row')];
+      const idx=rows.indexOf(row);
+      const rect=row.getBoundingClientRect();
+      const midY=rect.top+rect.height/2;
+      if(idx>0){
+        const prev=rows[idx-1], prevRect=prev.getBoundingClientRect();
+        if(midY<prevRect.top+prevRect.height/2){ container.insertBefore(row,prev); startY=e.clientY; row.style.transform='translateY(0)'; return; }
+      }
+      if(idx<rows.length-1){
+        const next=rows[idx+1], nextRect=next.getBoundingClientRect();
+        if(midY>nextRect.top+nextRect.height/2){ container.insertBefore(next,row); startY=e.clientY; row.style.transform='translateY(0)'; return; }
+      }
+    });
+    const end=()=>{
+      if(dragEl!==row) return;
+      row.style.transform=''; row.style.position=''; row.style.zIndex=''; row.style.background='#0f1a2a';
+      dragEl=null;
+    };
+    row.addEventListener('pointerup',end);
+    row.addEventListener('pointercancel',end);
+  });
+}
+
+function confirmTeamOrder(){
+  const list=document.getElementById('teamorder-list'); if(!list) return;
+  const ids=[...list.querySelectorAll('.teamorder-row')].map(r=>parseInt(r.getAttribute('data-id')));
+  const byId={}; state.party.forEach(p=>byId[p.id]=p);
+  const reordered=ids.map(id=>byId[id]).filter(Boolean);
+  state.party.length=0; reordered.forEach(p=>state.party.push(p));
+  const modal=document.getElementById('teamorder-modal'); if(modal) modal.remove();
+  runWatchedBattleLeg();
+}
+
+// ── Battle Resolution + Playback ──
+// Resolves via the EXACT same runOneGymBattle() the grind/offline path uses (heal, build enemy
+// team, run engine, write HP back, grant EXP, return {winner,log}) — this function only decides
+// WHEN to call it and hands the already-fully-determined result+log to the animator.
+function runWatchedBattleLeg(){
+  if(!watchedBattle) return;
+  healPartyBeforeGymBattle();
+  const enemyTeam=buildEnemyTeam(watchedBattle.trainerId,watchedBattle.tier,watchedBattle.isGauntlet?watchedBattle.leg:undefined);
+  // Snapshot BEFORE the battle mutates currentHP — used only to drive the playback's starting
+  // HP bars; the actual outcome is untouched by anything here.
+  const playerSnapshot=state.party.filter(p=>p.currentHP>0).map(p=>({id:p.id,pokedexId:p.pokedexId,level:p.level,maxHP:p.maxHP,startHP:p.currentHP}));
+  if(!playerSnapshot.length||!enemyTeam.length){ finishWatchedBattle({winner:'enemy',log:[]}); return; }
+  const result=runOneGymBattle(enemyTeam);
+  showBattleScreen(playerSnapshot,enemyTeam,result);
+}
+
+function getTrainerDisplayName(trainerId,leg){
+  if(typeof getTrainerRoster!=='function') return trainerId;
+  const roster=getTrainerRoster(trainerId,watchedBattle.tier,leg);
+  return (roster&&roster[0]&&roster[0].trainerName)||trainerId;
+}
+
+function showBattleScreen(playerTeamSnapshot,enemyTeam,result){
+  const existing=document.getElementById('battle-modal'); if(existing) existing.remove();
+  const modal=document.createElement('div');
+  modal.id='battle-modal';
+  modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:#0a0a1a;z-index:1300;display:flex;align-items:center;justify-content:center;padding:16px;';
+  document.body.appendChild(modal);
+
+  const trainerName=getTrainerDisplayName(watchedBattle.trainerId,watchedBattle.isGauntlet?watchedBattle.leg:undefined);
+
+  const playerHP={}; playerTeamSnapshot.forEach(p=>playerHP[p.id]=p.startHP);
+  const enemyHP={}; enemyTeam.forEach(e=>enemyHP[e.id]=e.maxHP);
+  let curPlayerIdx=0, curEnemyIdx=0;
+
+  function renderBattleFrame(showTrainerIntro){
+    const p=playerTeamSnapshot[curPlayerIdx], en=enemyTeam[curEnemyIdx];
+    const pEntry=p?getPokemonEntry(p.pokedexId):null, enEntry=en?getPokemonEntry(en.pokedexId):null;
+    const pHP=p?Math.max(0,playerHP[p.id]):0, enHP=en?Math.max(0,enemyHP[en.id]):0;
+    const pPct=p?Math.max(0,Math.min(100,(pHP/p.maxHP)*100)):0;
+    const enPct=en?Math.max(0,Math.min(100,(enHP/en.maxHP)*100)):0;
+    const barColor=pct=>pct>50?'#2ecc71':pct>20?'#f4d03f':'#e63946';
+    modal.innerHTML='<div style="background:#16213e;border:1px solid #5dade2;border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;">'+
+      (showTrainerIntro?
+        '<div style="text-align:center;padding:20px 0;">'+getTrainerPortraitHtml(trainerName)+'<div style="color:#5dade2;font-size:13px;font-weight:bold;margin-top:8px;">'+trainerName+'</div></div>'
+        :
+        '<div style="margin-bottom:10px;">'+
+          '<div style="color:#e0e0e0;font-size:11px;">'+(enEntry?enEntry.name:'???')+' Lv'+(en?en.level:'?')+'</div>'+
+          '<div style="background:#0a0a1a;border-radius:3px;height:8px;margin:3px 0;overflow:hidden;"><div style="height:100%;width:'+enPct+'%;background:'+barColor(enPct)+';transition:width 0.3s;"></div></div>'+
+          '<img src="'+(en?getSpriteUrl(en.pokedexId,'',false):'')+'" style="width:80px;height:80px;image-rendering:pixelated;display:block;margin:4px auto;" onerror="this.style.display=\'none\'">'+
+        '</div>'+
+        '<div id="battle-log-line" style="color:#f4d03f;font-size:11px;min-height:16px;text-align:center;margin:6px 0;"></div>'+
+        '<div style="margin-top:10px;">'+
+          '<img src="'+(p?getSpriteUrl(p.pokedexId,'',false):'')+'" style="width:80px;height:80px;image-rendering:pixelated;display:block;margin:4px auto;transform:scaleX(-1);" onerror="this.style.display=\'none\'">'+
+          '<div style="background:#0a0a1a;border-radius:3px;height:8px;margin:3px 0;overflow:hidden;"><div style="height:100%;width:'+pPct+'%;background:'+barColor(pPct)+';transition:width 0.3s;"></div></div>'+
+          '<div style="color:#e0e0e0;font-size:11px;">'+(pEntry?pEntry.name:'???')+' Lv'+(p?p.level:'?')+'</div>'+
+        '</div>'
+      )+
+      '<div id="battle-result-area" style="margin-top:12px;"></div>'+
+    '</div>';
+  }
+
+  renderBattleFrame(true);
+  setTimeout(()=>{
+    renderBattleFrame(false);
+    playBattleLog(result.log,0,playerTeamSnapshot,enemyTeam,playerHP,enemyHP,
+      idx=>{curPlayerIdx=idx;}, idx=>{curEnemyIdx=idx;}, renderBattleFrame,
+      ()=>finishWatchedBattle(result));
+  },1400); // "shown briefly" — trainer portrait intro, then battle sprites take over
+}
+
+// Animates result.log (already fully resolved by runOneGymBattle) at ~0.5s/entry. Entries are
+// {attacker,defender,damage,move} or {faint:id}. Purely visual — never re-derives HP/winner,
+// only depletes the local playback HP trackers to match what the engine already decided.
+function playBattleLog(log,i,playerTeam,enemyTeam,playerHP,enemyHP,setPIdx,setEIdx,renderFrame,onDone){
+  if(i>=log.length){ onDone(); return; }
+  const entry=log[i];
+  let lineText='';
+  if(entry.faint!==undefined){
+    const pIdx=playerTeam.findIndex(p=>p.id===entry.faint);
+    if(pIdx>=0){
+      const nextIdx=playerTeam.findIndex((p,ix)=>ix>pIdx&&playerHP[p.id]>0);
+      if(nextIdx>=0) setPIdx(nextIdx);
+    }
+    const eIdx=enemyTeam.findIndex(e=>e.id===entry.faint);
+    if(eIdx>=0){
+      const nextIdx=enemyTeam.findIndex((e,ix)=>ix>eIdx&&enemyHP[e.id]>0);
+      if(nextIdx>=0) setEIdx(nextIdx);
+    }
+    lineText='💥 Fainted!';
+  } else if(entry.move){
+    const isPlayerAttacker=playerTeam.some(p=>p.id===entry.attacker);
+    const atkEntry=isPlayerAttacker?getPokemonEntry(playerTeam.find(p=>p.id===entry.attacker).pokedexId):getPokemonEntry(enemyTeam.find(e=>e.id===entry.attacker).pokedexId);
+    const isPlayerDefender=playerTeam.some(p=>p.id===entry.defender);
+    if(isPlayerDefender) playerHP[entry.defender]=Math.max(0,playerHP[entry.defender]-entry.damage);
+    else enemyHP[entry.defender]=Math.max(0,enemyHP[entry.defender]-entry.damage);
+    lineText=(atkEntry?atkEntry.name:'???')+' used '+entry.move.type+' '+entry.move.category+' — '+entry.damage+' dmg!';
+  }
+  renderFrame(false);
+  const lineEl=document.getElementById('battle-log-line');
+  if(lineEl) lineEl.textContent=lineText;
+  setTimeout(()=>playBattleLog(log,i+1,playerTeam,enemyTeam,playerHP,enemyHP,setPIdx,setEIdx,renderFrame,onDone),500);
+}
+
+function finishWatchedBattle(result){
+  const resultArea=document.getElementById('battle-result-area');
+  const won=result.winner==='player';
+  if(!won){
+    if(watchedBattle.isGauntlet){
+      addLog('⚔ Lost the Elite Four/Champion gauntlet at leg '+watchedBattle.leg+'/5 — attempt reset.','fail');
+      if(resultArea) resultArea.innerHTML='<div style="color:#e63946;font-size:12px;text-align:center;">Lost at leg '+watchedBattle.leg+'/5. Attempt reset.</div><button onclick="closeWatchedBattle()" style="width:100%;margin-top:8px;">Close</button>';
+    } else {
+      addLog('⚔ Lost a gym battle. No penalty — try again.','fail');
+      if(resultArea) resultArea.innerHTML='<div style="color:#e63946;font-size:12px;text-align:center;">Defeated. No penalty — try again.</div><button onclick="closeWatchedBattle()" style="width:100%;margin-top:8px;">Close</button>';
+    }
+    saveGame();
+    return;
+  }
+  if(watchedBattle.isGauntlet&&watchedBattle.leg<5){
+    addLog('⚔ Gauntlet leg '+watchedBattle.leg+'/5 defeated!','win');
+    watchedBattle.leg++;
+    const modal=document.getElementById('battle-modal'); if(modal) modal.remove();
+    showTeamOrderModal(); // reorder + auto-heal before the next leg
+    return;
+  }
+  const locData=typeof LOCATIONS!=='undefined'?getLocation(state.currentLocation):null;
+  const gymName=locData?locData.name:watchedBattle.trainerId;
+  if(watchedBattle.isGauntlet){
+    addLog('🏆 Elite Four and Champion defeated!','evolve');
+  } else {
+    addLog('⚔ Defeated '+gymName+' (Tier '+watchedBattle.tier+')!','win');
+  }
+  awardGymWin(watchedBattle.trainerId,watchedBattle.tier);
+  if(resultArea) resultArea.innerHTML='<div style="color:#2ecc71;font-size:12px;text-align:center;">🏆 Victory!</div><button onclick="closeWatchedBattle()" class="primary" style="width:100%;margin-top:8px;">Continue</button>';
+  saveGame();
+}
+function closeWatchedBattle(){
+  const modal=document.getElementById('battle-modal'); if(modal) modal.remove();
+  watchedBattle=null;
+  render();
 }
 
 // ── RESEARCH ──
@@ -1676,7 +1974,9 @@ function rollEncounter(){
   const locId=state.currentLocation;
   const table=buildRouteTable(locId);
   const atDest=locId===state.missionDestination;
-  const gymTrainerIds=atDest?getGymTrainerIdsAtLocation(locId).filter(isGymAccessible):[];
+  // v0.29 — this is the weighted/offline grind path; only reachable once a gym's badge is
+  // already earned (or, for Indigo, once the Champion badge is earned — tier 9 excluded).
+  const gymTrainerIds=atDest?getGymTrainerIdsAtLocation(locId).filter(t=>isGymAccessible(t)&&isGymGrindEligible(t)):[];
 
   if(!table.length&&!gymTrainerIds.length) return null;
 
@@ -2353,8 +2653,10 @@ function renderMethodPrefs(locId){
   // All encounters at this location
   const allEncs=typeof ENCOUNTERS!=='undefined'?ENCOUNTERS.filter(e=>e.locationId===locId):[];
   // v0.25 — Gym Battle is a synthetic method, not sourced from ENCOUNTERS.js; only appears
-  // when this location has an accessible gym in trainers.js.
-  const gymTrainerIds=getGymTrainerIdsAtLocation(locId).filter(isGymAccessible);
+  // when this location has an accessible gym in trainers.js. v0.29 — and only once that gym's
+  // badge is already earned (this is the grind path only — earning a badge requires the
+  // watched "Battle Gym" aide-card button instead).
+  const gymTrainerIds=getGymTrainerIdsAtLocation(locId).filter(t=>isGymAccessible(t)&&isGymGrindEligible(t));
   if(!allEncs.length&&!gymTrainerIds.length){ el.innerHTML=''; return; }
 
   // Methods present at this location (fishing split into per-rod-tier sub-methods — v0.21 scoped fix)
@@ -2402,7 +2704,7 @@ function renderMethodPrefs(locId){
 
 function updateMethodPrefs(locId){
   const allEncs=typeof ENCOUNTERS!=='undefined'?ENCOUNTERS.filter(e=>e.locationId===locId):[];
-  const gymTrainerIds=getGymTrainerIdsAtLocation(locId).filter(isGymAccessible);
+  const gymTrainerIds=getGymTrainerIdsAtLocation(locId).filter(t=>isGymAccessible(t)&&isGymGrindEligible(t));
   const allMethods=[...new Set(allEncs.map(e=>getEncounterSubMethod(e.encounterMethod||'grass',e.requiresItem)))];
   if(gymTrainerIds.length) allMethods.push('gym');
   const methods=[]; const weights={};
@@ -2554,6 +2856,7 @@ function updateLocation(){
   if(startBtn) startBtn.disabled=!isHealLocation(state.currentLocation);
   const recallBtn=document.getElementById('btn-recall');
   if(recallBtn) recallBtn.disabled=false;
+  updateBattleGymButton(); // v0.29 — shows/hides the watched-battle trigger for the current location
 }
 
 // v0.24 — onboarding free-skip: bypasses the ENC_INTERVAL_OPEN wait for a single encounter.
@@ -2807,7 +3110,10 @@ function buildDaycareHtml(){
       const remainingMs=Math.max(0,rec.nextReadyAt-Date.now());
       const remainingMin=Math.floor(remainingMs/60000), remainingSec=Math.floor((remainingMs%60000)/1000);
       const queued=rec.eggsQueued||0;
+      const slotPA=state.dex.find(p=>p.id===rec.parentAId), slotPB=state.dex.find(p=>p.id===rec.parentBId);
+      const slotSpriteRow=(slotPA&&slotPB)?daycareSpriteRowHtml(slotPA,slotPB,rec.resultDexId,known):'';
       html+='<div style="color:#e0e0e0;font-size:11px;margin-bottom:4px;">Slot '+(i+1)+' — → '+resultLabel+'</div>'+
+        slotSpriteRow+
         '<div style="color:'+(queued>0?'#2ecc71':'#a0a0c0')+';font-size:10px;margin-bottom:6px;">'+(queued>0?queued+' egg'+(queued>1?'s':'')+' ready · ':'')+'next in '+remainingMin+':'+remainingSec.toString().padStart(2,'0')+'</div>'+
         '<div style="display:flex;gap:6px;">'+
           '<button '+(isCurrent&&queued>0?'':'disabled')+' onclick="collectDaycareSlot('+i+')" style="flex:1;font-size:10px;border-color:#2ecc71;color:#2ecc71;">Collect'+(queued>0?' ('+queued+')':'')+'</button>'+
@@ -2836,6 +3142,42 @@ let daycareModalSlot=null;
 let daycareParentA=null;
 let daycareParentB=null;
 
+// v0.29 — sorts by family number -> evolution order within family -> dex number, for
+// readability only (no dividers). "Evolution order" is approximated by each member's position
+// in getFamilyMembers()'s dexId-sorted output, since there's no dedicated stage field.
+function daycareFamilySortKey(p){
+  const entry=getPokemonEntry(p.pokedexId);
+  const familyId=(entry&&entry.familyId)||0;
+  const members=(entry&&entry.familyId&&typeof getFamilyMembers==='function')?getFamilyMembers(entry.familyId):[];
+  const evoOrder=members.findIndex(m=>m.dexId===p.pokedexId);
+  return [familyId,evoOrder<0?9999:evoOrder,p.pokedexId||0];
+}
+function sortDaycareList(list){
+  return list.slice().sort((a,b)=>{
+    const ka=daycareFamilySortKey(a), kb=daycareFamilySortKey(b);
+    for(let i=0;i<ka.length;i++){ if(ka[i]!==kb[i]) return ka[i]-kb[i]; }
+    return 0;
+  });
+}
+// v0.29 — Ditto always renders second regardless of which parent slot (A/B) it was picked into.
+function daycareOrderedParents(pA,pB){
+  if(isDitto(pA.pokedexId)&&!isDitto(pB.pokedexId)) return [pB,pA];
+  return [pA,pB];
+}
+// v0.29 — F + M = C sprite row, used both in the pre-drop-off preview and the persistent
+// active-slot display. `known` gates the result sprite exactly like the existing text `?`.
+function daycareSpriteRowHtml(pA,pB,resultDexId,known){
+  const [first,second]=daycareOrderedParents(pA,pB);
+  const s1=getSpriteUrl(first.pokedexId,first.species,first.isShiny||false);
+  const s2=getSpriteUrl(second.pokedexId,second.species,second.isShiny||false);
+  const resultEntry=getPokemonEntry(resultDexId);
+  const sR=known?getSpriteUrl(resultDexId,resultEntry?resultEntry.name:'',false):'';
+  const imgTag=src=>src?('<img src="'+src+'" style="width:28px;height:28px;image-rendering:pixelated;" onerror="this.outerHTML=\'<span style=&quot;font-size:18px;&quot;>❓</span>\'">'):'<span style="font-size:18px;">❓</span>';
+  return '<div style="display:flex;align-items:center;gap:4px;margin-bottom:4px;">'+
+    imgTag(s1)+'<span style="color:#6080a0;">+</span>'+imgTag(s2)+'<span style="color:#6080a0;">=</span>'+imgTag(sR)+
+    '</div>';
+}
+
 function daycarePickerRowHtml(p,onclickJs){
   const entry=getPokemonEntry(p.pokedexId);
   const genderLabel=p.gender?p.gender:(entry&&entry.genderMalePct==null?'—':'?');
@@ -2858,7 +3200,7 @@ function openDaycareAssignModal(slotIndex){
 }
 function renderDaycareModalStep1(){
   const modal=document.getElementById('daycare-modal'); if(!modal) return;
-  const options=getDaycareEligiblePokemon();
+  const options=sortDaycareList(getDaycareEligiblePokemon());
   const rows=options.length
     ?options.map(p=>daycarePickerRowHtml(p,'selectDaycareParentA('+p.id+')')).join('')
     :'<div style="color:#555;font-size:11px;">No eligible Pokémon.</div>';
@@ -2875,7 +3217,7 @@ function renderDaycareModalStep2(){
   const modal=document.getElementById('daycare-modal'); if(!modal) return;
   const pA=state.dex.find(p=>p.id===daycareParentA);
   if(!pA){ renderDaycareModalStep1(); return; }
-  const candidates=getDaycareEligiblePokemon().filter(p=>p.id!==pA.id&&canBreedPair(pA,p).ok);
+  const candidates=sortDaycareList(getDaycareEligiblePokemon().filter(p=>p.id!==pA.id&&canBreedPair(pA,p).ok));
   const rows=candidates.length
     ?candidates.map(p=>daycarePickerRowHtml(p,'selectDaycareParentB('+p.id+')')).join('')
     :'<div style="color:#555;font-size:11px;">No compatible partners.</div>';
@@ -2899,7 +3241,8 @@ function buildDaycarePreviewHtml(pA,pB){
   const known=seenDexIds.has(resultDexId);
   const label=known?(resultEntry?resultEntry.name:'?'):'?';
   const hatchMinutes=getHatchMinutes(resultDexId);
-  return '<span style="color:#2ecc71;">Will produce: '+label+'</span><br>Hatch time: ~'+hatchMinutes+' min (repeats automatically until pulled)';
+  return daycareSpriteRowHtml(pA,pB,resultDexId,known)+
+    '<span style="color:#2ecc71;">Will produce: '+label+'</span><br>Hatch time: ~'+hatchMinutes+' min (repeats automatically until pulled)';
 }
 function selectDaycareParentB(id){
   daycareParentB=id;

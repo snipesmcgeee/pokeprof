@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.29</title>
+<title>PokeProf v0.30</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -110,7 +110,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span style="font-size:11px;color:#6080a0;">v0.29</span></h1>
+  <h1>PokeProf <span style="font-size:11px;color:#6080a0;">v0.30</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">100.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -137,16 +137,18 @@
 <div id="panels">
   <!-- PARTY TAB -->
   <div class="panel active" id="panel-party">
+    <div id="prof-bag-summary" style="background:#0f3460;border-bottom:1px solid #1a4a80;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-shrink:0;">
+      <span id="prof-bag-summary-text" style="color:#a0a0c0;font-size:10px;letter-spacing:0.5px;"></span>
+      <button onclick="showBagModal()" style="flex-shrink:0;padding:5px 12px;font-size:10px;border-color:#f4d03f;color:#f4d03f;">🎒 Bag</button>
+    </div>
     <div id="aide-info">
       <div class="aide-name">🧑‍🔬 Carl Oak</div>
       <div id="aide-party-sprites-row"></div>
       <div class="aide-location" id="aide-location">📍 Pallet Town — Researching</div>
       <button id="skip-encounter-btn" onclick="skipToNextEncounter()" style="display:none;margin-top:6px;font-size:10px;padding:5px 10px;border-color:#5dade2;color:#5dade2;">⏭ Skip to Encounter x50</button>
       <button id="battle-gym-btn" style="display:none;margin-top:6px;font-size:10px;padding:5px 10px;border-color:#e63946;color:#e63946;">⚔ Battle Gym</button>
-      <div id="aide-bag-display" style="font-size:10px;color:#6080a0;margin-top:2px;"></div>
       <div id="badge-cap-display" style="font-size:10px;color:#f4d03f;margin-top:2px;"></div>
       <div id="bag-display" style="display:none;"></div>
-      <div id="aide-bag-items" style="font-size:10px;color:#a0a0c0;margin-top:2px;"></div>
     </div>
     <div id="party-list"></div>
     <div id="controls">
@@ -774,6 +776,15 @@ function calcBattleDamage(attacker,defender,move){
   return Math.max(1,Math.floor(base*stab*eff*rand));
 }
 
+// v0.30 — modern crit mechanic: flat 1/24 chance, ×1.5 damage, uniform across every attacker
+// (gym trainer AI, lead, and wild alike — all route through this). Deliberately applied only at
+// the point damage is actually dealt, never during AI move-selection scoring in selectAIMove —
+// move choice comparisons stay crit-independent, only the resulting hit itself can crit.
+function applyCrit(baseDamage){
+  const isCrit=Math.random()<(1/24);
+  return {damage:isCrit?Math.floor(baseDamage*1.5):baseDamage,isCrit};
+}
+
 // Turn order — reuses the same effective-speed formula as calcStat (identical to the existing
 // wild-encounter speed calc), evaluated every round rather than once per battle.
 function getBattleSpeed(p){
@@ -800,13 +811,14 @@ function selectAIMove(attacker,defender,history){
 // Executes one attacker's turn, applies damage, and updates the recently-used-move tracker.
 function runBattleTurn(attacker,defender,history){
   const move=selectAIMove(attacker,defender,history);
-  if(!move) return {damage:0,move:null};
-  const dmg=calcBattleDamage(attacker,defender,move);
+  if(!move) return {damage:0,move:null,isCrit:false};
+  const baseDmg=calcBattleDamage(attacker,defender,move);
+  const {damage:dmg,isCrit}=applyCrit(baseDmg);
   defender.currentHP=Math.max(0,defender.currentHP-dmg);
   if(!history[attacker.id]) history[attacker.id]=[];
   history[attacker.id].push(move.type+'|'+move.category);
   if(history[attacker.id].length>2) history[attacker.id].shift();
-  return {damage:dmg,move};
+  return {damage:dmg,move,isCrit};
 }
 
 // Multi-Pokemon gauntlet: speed-based turn order (random tie-break), auto-cycles to the next
@@ -824,7 +836,7 @@ function runTrainerBattle(playerTeam,enemyTeam){
     for(const [atk,def] of order){
       if(atk.currentHP<=0||def.currentHP<=0) continue;
       const result=runBattleTurn(atk,def,history);
-      log.push({attacker:atk.id,defender:def.id,damage:result.damage,move:result.move});
+      log.push({attacker:atk.id,defender:def.id,damage:result.damage,move:result.move,isCrit:result.isCrit});
       if(def.currentHP<=0) log.push({faint:def.id});
     }
     if(playerActive.currentHP<=0){ delete history[playerActive.id]; playerActive=playerTeam.find(p=>p.currentHP>0); }
@@ -987,7 +999,7 @@ function runGymEncounter(trainerId,tier){
       awardGymWin(trainerId,tier);
       document.getElementById('enc-body').textContent='Won gym battle at '+gymName+' (Tier '+tier+')!';
     } else {
-      addLog('⚔ Lost to '+gymName+' (Tier '+tier+'). No penalty — try again.','fail');
+      addLog('⚔ Lost to '+gymName+' (Tier '+tier+'). Try again.','fail');
       document.getElementById('enc-body').textContent='Lost gym battle at '+gymName+'.';
     }
     state.currentEncounter=null;
@@ -1315,7 +1327,7 @@ function playBattleLog(log,i,playerTeam,enemyTeam,playerHP,enemyHP,setPIdx,setEI
     const isPlayerDefender=playerTeam.some(p=>p.id===entry.defender);
     if(isPlayerDefender) playerHP[entry.defender]=Math.max(0,playerHP[entry.defender]-entry.damage);
     else enemyHP[entry.defender]=Math.max(0,enemyHP[entry.defender]-entry.damage);
-    lineText=(atkEntry?atkEntry.name:'???')+' used '+entry.move.type+' '+entry.move.category+' — '+entry.damage+' dmg!';
+    lineText=(entry.isCrit?'A critical hit! ':'')+(atkEntry?atkEntry.name:'???')+' used '+entry.move.type+' '+entry.move.category+' — '+entry.damage+' dmg!';
   }
   renderFrame(false);
   const lineEl=document.getElementById('battle-log-line');
@@ -1331,8 +1343,8 @@ function finishWatchedBattle(result){
       addLog('⚔ Lost the Elite Four/Champion gauntlet at leg '+watchedBattle.leg+'/5 — attempt reset.','fail');
       if(resultArea) resultArea.innerHTML='<div style="color:#e63946;font-size:12px;text-align:center;">Lost at leg '+watchedBattle.leg+'/5. Attempt reset.</div><button onclick="closeWatchedBattle()" style="width:100%;margin-top:8px;">Close</button>';
     } else {
-      addLog('⚔ Lost a gym battle. No penalty — try again.','fail');
-      if(resultArea) resultArea.innerHTML='<div style="color:#e63946;font-size:12px;text-align:center;">Defeated. No penalty — try again.</div><button onclick="closeWatchedBattle()" style="width:100%;margin-top:8px;">Close</button>';
+      addLog('⚔ Lost a gym battle. Try again.','fail');
+      if(resultArea) resultArea.innerHTML='<div style="color:#e63946;font-size:12px;text-align:center;">Defeated. Try again.</div><button onclick="closeWatchedBattle()" style="width:100%;margin-top:8px;">Close</button>';
     }
     saveGame();
     return;
@@ -1895,10 +1907,9 @@ function processOfflineTime(secsAway){
         recordNewSpecies(encDexKey,enc.species);
       }
 
-      const ballId=selectBallId();
-      // v0.22 fix: shiny roll never existed offline — catchPokemon(lead,enc,false) was
-      // hardcoded false, making offline shinies impossible regardless of away-time length.
-      // Mirrors live resolveEncounterStep() Step 1: fires before ball logic, no ball consumed.
+      // Step 1 equivalent — shiny check fires before anything else, same as live. Auto-catch,
+      // no ball consumed. (Unchanged by v0.30 — this logic already existed pre-v0.30; preserved
+      // here exactly, just relocated above the new revive/potion parity block below.)
       if(Math.random()<(1/4096)){
         const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId);
         caught.isShiny=true;
@@ -1912,43 +1923,112 @@ function processOfflineTime(secsAway){
         recordCapture(caught.pokedexId,enc.species);
         if(encDexKey) state.locationEncounterLog[encLocKey][encDexKey].caught++;
         checkSpeciesCap(caught);
-      } else if(ballId){
-        const s_=getPokemonEntry(enc.pokedexId);
-        const exp=Math.floor(((s_?s_.baseExpYield:51)||51)*enc.level/7);
-        giveExpSilent(lead,exp);
-        useItemFromBag(ballId,null);
-        const ball=getItem(ballId);
-        const modifier=ball&&ball.catchRateModifier?parseFloat(ball.catchRateModifier):1;
-        const catchRate=modifier>=255?1:Math.min(0.99,0.75*modifier);
-        if(Math.random()<catchRate){
-          const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId);
-          state.dex.push(caught); state.totalCatches++; state.totalSightings++;
-          summary.catches++;
-          state.dexHistory[caught.pokedexId]=(state.dexHistory[caught.pokedexId]||0)+1;
-          recordAbilityObserved(caught.pokedexId,caught.ability);
-          recordCapture(caught.pokedexId,enc.species);
-          // Write caught to encounter log
-          if(encDexKey) state.locationEncounterLog[encLocKey][encDexKey].caught++;
-          // Per-species cap check
-          checkSpeciesCap(caught);
-        } else {
-          const dmg=Math.max(1,Math.floor((enc.level/lead.level)*0.5*0.25*lead.maxHP));
-          lead.currentHP=Math.max(0,lead.currentHP-dmg);
-        }
-      } else {
-        const dmg=Math.max(1,Math.floor((enc.level/lead.level)*0.5*lead.maxHP));
-        lead.currentHP=Math.max(0,lead.currentHP-dmg);
-        if(lead.currentHP>0){
-          const s_=getPokemonEntry(enc.pokedexId);
-          const exp=Math.floor(((s_?s_.baseExpYield:51)||51)*enc.level/7);
-          giveExpSilent(lead,exp); summary.wins++;
+        advanceTravelPath();
+        continue;
+      }
+
+      // v0.30 — parity fix: offline never had potion/revive healing at all (only the
+      // heal-location full-heal check above). Now matches live step order exactly: opportunistic
+      // revive first, then uncapped potion healing, before ball/attack resolution.
+      {
+        const fainted=state.party.filter(p=>p.currentHP<=0).sort((a,b)=>a.level-b.level);
+        for(const fp of fainted){
+          if((state.professorBag['revive']||0)>0){ useItemFromBag('revive',fp); break; }
+          if((state.professorBag['max-revive']||0)>0){ useItemFromBag('max-revive',fp); break; }
         }
       }
+      while(true){
+        const potionId=getWeakestEffectivePotion(lead);
+        if(!potionId) break;
+        useItemFromBag(potionId,lead);
+      }
+
+      // v0.30 — routes through the same real turn-based engine as live, entirely silently
+      // (no per-round log/DOM writes, tallied into summary instead) — see DESIGN.md
+      // "Wild Encounter Turn Loop".
+      runWildEncounterLoopSilent(lead,enc,summary,encLocKey,encDexKey);
     }
     advanceTravelPath();
   }
   state.nextEncounterIn=Math.max(1,nextIn-remaining);
   return summary;
+}
+
+// Silent equivalent of runWildEncounterLoop() — identical rules (real catch formula, ball-first
+// ordering, full-damage retaliation on a miss, speed-ordered attack exchange, HP floor while
+// balls remain), but no addLog/DOM writes; tallies into the offline summary instead, and writes
+// caught/EXP through the existing silent helpers (giveExpSilent, checkSpeciesCap).
+function runWildEncounterLoopSilent(lead,enc,summary,encLocKey,encDexKey){
+  const wild=makeWildBattler(enc);
+  const history={};
+  const MAX_ROUNDS=1000;
+
+  for(let round=0;round<MAX_ROUNDS;round++){
+    lead=getLeadPokemon();
+    if(!lead) return; // caller's outer loop already handles the full-wipe case before calling in
+    const hasBalls=getBallCount()>0;
+    const throwDecision=hasBalls?decideWildBallThrow(wild.currentHP,wild.maxHP,wild.catchRate):null;
+
+    if(throwDecision){
+      useItemFromBag(throwDecision.ballId,null);
+      if(Math.random()<throwDecision.prob){
+        const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId);
+        state.dex.push(caught); state.totalCatches++; state.totalSightings++;
+        summary.catches++;
+        state.dexHistory[caught.pokedexId]=(state.dexHistory[caught.pokedexId]||0)+1;
+        recordAbilityObserved(caught.pokedexId,caught.ability);
+        const exp=Math.floor(((wild.baseExpYield||51)*enc.level)/7);
+        giveExpSilent(lead,exp);
+        recordCapture(caught.pokedexId,enc.species);
+        if(encDexKey) state.locationEncounterLog[encLocKey][encDexKey].caught++;
+        checkSpeciesCap(caught);
+        return;
+      }
+      const move=wild.equippedMoves[0];
+      const hit=move?applyCrit(calcBattleDamage(wild,lead,move)):{damage:1,isCrit:false};
+      lead.currentHP=Math.max(0,lead.currentHP-hit.damage);
+      if(lead.currentHP<=0){
+        const next=getLeadPokemon();
+        if(!next) return; // full wipe — caller's outer loop handles relocation on its next cycle
+      }
+      continue;
+    }
+
+    const leadFaster=getBattleSpeed(lead)>=getBattleSpeed(wild);
+    const order=leadFaster?['lead','wild']:['wild','lead'];
+    let leadFainted=false, wildDefeated=false;
+    for(const side of order){
+      if(side==='lead'){
+        if(wild.currentHP<=0) continue;
+        const move=selectAIMove(lead,wild,history);
+        if(!move) continue;
+        const hit=applyCrit(calcBattleDamage(lead,wild,move));
+        wild.currentHP=Math.max(hasBalls?1:0,wild.currentHP-hit.damage);
+        if(!history[lead.id]) history[lead.id]=[];
+        history[lead.id].push(move.type+'|'+move.category);
+        if(history[lead.id].length>2) history[lead.id].shift();
+        if(wild.currentHP<=0){ wildDefeated=true; break; }
+      } else {
+        if(lead.currentHP<=0) continue;
+        const move=wild.equippedMoves[0];
+        if(!move) continue;
+        const hit=applyCrit(calcBattleDamage(wild,lead,move));
+        lead.currentHP=Math.max(0,lead.currentHP-hit.damage);
+        if(lead.currentHP<=0){ leadFainted=true; break; }
+      }
+    }
+
+    if(wildDefeated){
+      const exp=Math.floor(((wild.baseExpYield||51)*enc.level)/7);
+      giveExpSilent(lead,exp);
+      summary.wins++;
+      return;
+    }
+    if(leadFainted){
+      const next=getLeadPokemon();
+      if(!next) return; // full wipe — caller's outer loop handles relocation on its next cycle
+    }
+  }
 }
 
 function showOfflineBanner(secsAway,summary){
@@ -2158,77 +2238,166 @@ function resolveEncounterStep(){
     }
   }
 
-  // Step 3: Try potion on lead (no waste rule, no threshold)
-  const potionId=getWeakestEffectivePotion(lead);
-  if(potionId) useItemFromBag(potionId,lead);
+  // Step 3 (v0.30 — uncapped): repeat the smallest-effective-potion rule until the lead is at
+  // full HP or no usable potion remains — was a single application pre-v0.30. Still strictly
+  // between encounters, never mid-fight (the new turn loop below has no healing interruption).
+  while(true){
+    const potionId=getWeakestEffectivePotion(lead);
+    if(!potionId) break;
+    useItemFromBag(potionId,lead);
+  }
 
-  // Step 4: Speed check
-  const leadEntry=getPokemonEntry(lead.pokedexId);
-  const leadSpd=leadEntry?Math.floor(((leadEntry.baseSpd||50)*2*lead.level)/100)+5:lead.level;
-  const encSpd=enc.baseSpd?Math.floor((enc.baseSpd*2*enc.level)/100)+5:enc.level;
-  const leadFaster=leadSpd>=encSpd;
+  // Step 4 (v0.30): the real turn-based wild encounter loop — replaces the old speed-check +
+  // single ball-throw-or-fight model. See DESIGN.md "Wild Encounter Turn Loop".
+  runWildEncounterLoop(lead,enc);
+}
 
-  const hasBalls=getBallCount()>0;
+// ── WILD ENCOUNTER CATCH FORMULA (v0.30) ──
+// Real Gen III+ mainline formula, using the target's actual max/current HP and the species' own
+// catchRate (previously unused entirely) instead of a flat ball-only percentage.
+function calcCatchProbability(wildHP,wildMaxHP,speciesCatchRate,ballModifier){
+  const rate=speciesCatchRate||255; // fallback for any species missing catchRate data
+  const a=((3*wildMaxHP-2*wildHP)*rate*ballModifier)/(3*wildMaxHP);
+  if(a>=255) return 1;
+  const b=65536/Math.pow(255/a,0.25);
+  return Math.pow(b/65536,4);
+}
 
-  // Step 5: Act
-  if(hasBalls){
-    if(leadFaster){
-      throwBall(lead,enc);
-    } else {
-      // Enemy acts first at 25% of normal damage (level ratio × 0.5 × 0.25 × maxHP)
-      const dmg=Math.max(1,Math.floor((enc.level/lead.level)*0.5*0.25*lead.maxHP));
-      lead.currentHP=Math.max(0,lead.currentHP-dmg);
-      addLog(enc.species+' Lv'+enc.level+' strikes first! '+getDisplayName(lead)+' takes '+dmg+' dmg. ('+lead.currentHP+'/'+lead.maxHP+' HP)','damage');
-      document.getElementById('enc-body').textContent=enc.species+' moves first! '+getDisplayName(lead)+' at '+lead.currentHP+'/'+lead.maxHP+' HP';
+// Owned balls, weakest to strongest — the opposite of the old selectBallId()'s priority order,
+// needed for the v0.30 catch loop's "lowest-tier owned ball" rule.
+function getOwnedBallsAscending(){
+  const ballOrder=['poke-ball','great-ball','ultra-ball','master-ball'];
+  return ballOrder.filter(id=>(state.professorBag[id]||0)>0);
+}
+
+// Master Ball bypasses the formula entirely via its own catch-guaranteed effect flag.
+function catchProbabilityForBall(ballId,wildHP,wildMaxHP,speciesCatchRate){
+  const item=getItem(ballId);
+  if(item&&item.effect==='catch-guaranteed') return 1;
+  const modifier=item&&item.catchRateModifier?parseFloat(item.catchRateModifier):1;
+  return calcCatchProbability(wildHP,wildMaxHP,speciesCatchRate,modifier);
+}
+
+// Decides which ball (if any) to throw this round, per the settled v0.30 catch-loop rules:
+// - wildHP>1: lowest-tier owned ball reaching >=90%, else null (attack instead).
+// - wildHP==1: overrides rule above entirely — lowest-tier owned ball reaching >70%,
+//   or the highest-tier owned ball if none clear 70%.
+function decideWildBallThrow(wildHP,wildMaxHP,speciesCatchRate){
+  const owned=getOwnedBallsAscending();
+  if(!owned.length) return null;
+  if(wildHP<=1){
+    for(const id of owned){
+      const prob=catchProbabilityForBall(id,wildHP,wildMaxHP,speciesCatchRate);
+      if(prob>0.70) return {ballId:id,prob};
+    }
+    const highest=owned[owned.length-1];
+    return {ballId:highest,prob:catchProbabilityForBall(highest,wildHP,wildMaxHP,speciesCatchRate)};
+  }
+  for(const id of owned){
+    const prob=catchProbabilityForBall(id,wildHP,wildMaxHP,speciesCatchRate);
+    if(prob>=0.90) return {ballId:id,prob};
+  }
+  return null;
+}
+
+// Builds an ephemeral battle-ready wild Pokemon — never stored, exists only for one encounter's
+// turn loop. Move assignment is literally pickDefaultMove(), same as a freshly-caught Pokemon
+// (one move, power 40) — see DESIGN.md "Wild Pokemon Move Assignment".
+function makeWildBattler(enc){
+  const entry=getPokemonEntry(enc.pokedexId);
+  const maxHP=calcMaxHP(enc.species,enc.level,enc.pokedexId);
+  return {
+    pokedexId:enc.pokedexId,level:enc.level,currentHP:maxHP,maxHP,
+    equippedMoves:[pickDefaultMove(entry)],
+    catchRate:entry?entry.catchRate:null,
+    baseExpYield:entry?entry.baseExpYield:51
+  };
+}
+
+// v0.30 — replaces the old flat Fight Formula + one-ball-throw-per-tick model. The entire
+// multi-round encounter now resolves silently/instantly within this single call (live) — no
+// watched playback, no per-tick pacing — using the real battle engine (calcBattleDamage/
+// getBattleSpeed/selectAIMove, shared with the Trainer Battle System) and the real catch formula
+// above. Loop is provably bounded: attack rounds are capped by wild maxHP, ball rounds are capped
+// by ball inventory (each throw consumes one regardless of outcome) — MAX_ROUNDS is just a safety
+// backstop, never expected to bind in practice. See DESIGN.md "Wild Encounter Turn Loop".
+function runWildEncounterLoop(lead,enc){
+  const wild=makeWildBattler(enc);
+  const history={};
+  const MAX_ROUNDS=1000;
+
+  for(let round=0;round<MAX_ROUNDS;round++){
+    lead=getLeadPokemon();
+    if(!lead){ endMission(); return; }
+    const hasBalls=getBallCount()>0;
+    const throwDecision=hasBalls?decideWildBallThrow(wild.currentHP,wild.maxHP,wild.catchRate):null;
+
+    if(throwDecision){
+      // Ball throw always resolves before any speed check.
+      useItemFromBag(throwDecision.ballId,null);
+      renderBagDisplay();
+      if(Math.random()<throwDecision.prob){
+        catchPokemon(lead,enc,false);
+        return;
+      }
+      // Miss — wild retaliates at FULL calcBattleDamage (no more flat 25%-of-normal miss penalty).
+      const move=wild.equippedMoves[0];
+      const hit=move?applyCrit(calcBattleDamage(wild,lead,move)):{damage:1,isCrit:false};
+      lead.currentHP=Math.max(0,lead.currentHP-hit.damage);
+      addLog((hit.isCrit?'A critical hit! ':'')+'Ball missed! '+enc.species+' Lv'+enc.level+' deals '+hit.damage+' dmg. ('+getDisplayName(lead)+': '+lead.currentHP+'/'+lead.maxHP+' HP)','fail');
+      document.getElementById('enc-body').textContent='Ball missed! '+getDisplayName(lead)+' at '+lead.currentHP+'/'+lead.maxHP+' HP';
       if(lead.currentHP<=0){
         addLog(getDisplayName(lead)+' #'+lead.id+' fainted!','faint');
-        // v0.26 — faint-switch fix: continue the SAME encounter with the next available
-        // Pokemon instead of fleeing. Only a full wipe (no next Pokemon) ends the encounter.
         const next=getLeadPokemon();
         if(!next){ addLog(enc.species+' fled.','info'); state.currentEncounter=null; endMission(); return; }
         addLog(getDisplayName(next)+' #'+next.id+' was sent out!','info');
-        document.getElementById('enc-body').textContent=getDisplayName(next)+' was sent out!';
-        return;
       }
-      throwBall(lead,enc);
+      continue;
     }
-  } else {
-    fight(lead,enc);
-  }
-}
 
-// Selects the highest-priority ball available in professorBag, falling back to any ball.
-// Shared by throwBall() (online) and processOfflineTime() (offline) so catch behavior matches.
-function selectBallId(){
-  const ballPriority=['master-ball','ultra-ball','great-ball','poke-ball'];
-  for(const b of ballPriority){ if((state.professorBag[b]||0)>0) return b; }
-  const found=Object.entries(state.professorBag||{}).find(([id,qty])=>{ const item=getItem(id); return item&&item.itemCategory==='ball'&&qty>0; });
-  return found?found[0]:null;
-}
+    // Attack round — speed-ordered exchange, both sides use the real damage formula.
+    const leadFaster=getBattleSpeed(lead)>=getBattleSpeed(wild);
+    const order=leadFaster?['lead','wild']:['wild','lead'];
+    let leadFainted=false, wildDefeated=false;
+    for(const side of order){
+      if(side==='lead'){
+        if(wild.currentHP<=0) continue;
+        const move=selectAIMove(lead,wild,history);
+        if(!move) continue;
+        const hit=applyCrit(calcBattleDamage(lead,wild,move));
+        // HP floor: wild cannot faint while any ball remains in inventory this round.
+        wild.currentHP=Math.max(hasBalls?1:0,wild.currentHP-hit.damage);
+        if(!history[lead.id]) history[lead.id]=[];
+        history[lead.id].push(move.type+'|'+move.category);
+        if(history[lead.id].length>2) history[lead.id].shift();
+        addLog((hit.isCrit?'A critical hit! ':'')+getDisplayName(lead)+' attacks '+enc.species+' — '+hit.damage+' dmg! ('+wild.currentHP+'/'+wild.maxHP+' HP)','damage');
+        if(wild.currentHP<=0){ wildDefeated=true; break; }
+      } else {
+        if(lead.currentHP<=0) continue;
+        const move=wild.equippedMoves[0];
+        if(!move) continue;
+        const hit=applyCrit(calcBattleDamage(wild,lead,move));
+        lead.currentHP=Math.max(0,lead.currentHP-hit.damage);
+        addLog((hit.isCrit?'A critical hit! ':'')+enc.species+' Lv'+enc.level+' attacks '+getDisplayName(lead)+' — '+hit.damage+' dmg! ('+lead.currentHP+'/'+lead.maxHP+' HP)','damage');
+        if(lead.currentHP<=0){ leadFainted=true; break; }
+      }
+    }
 
-function throwBall(lead,enc){
-  const ballId=selectBallId();
-  if(!ballId){ fight(lead,enc); return; }
-  useItemFromBag(ballId,null);
-  const ball=getItem(ballId);
-  const modifier=ball&&ball.catchRateModifier?parseFloat(ball.catchRateModifier):1;
-  const catchRate=modifier>=255?1:Math.min(0.99,0.75*modifier);
-  if(Math.random()<catchRate){
-    catchPokemon(lead,enc,false);
-  } else {
-    // Missed throw: enemy counter-attacks at 25% of normal damage (level ratio × 0.5 × 0.25 × maxHP)
-    const dmg=Math.max(1,Math.floor((enc.level/lead.level)*0.5*0.25*lead.maxHP));
-    lead.currentHP=Math.max(0,lead.currentHP-dmg);
-    addLog('Ball missed! '+enc.species+' Lv'+enc.level+' deals '+dmg+' HP. ('+getDisplayName(lead)+': '+lead.currentHP+'/'+lead.maxHP+' HP)','fail');
-    document.getElementById('enc-body').textContent='Ball missed! '+getDisplayName(lead)+' at '+lead.currentHP+'/'+lead.maxHP+' HP';
-    if(lead.currentHP<=0){
+    if(wildDefeated){
+      // No-balls win — EXP only, no catch (matches the old Fight Formula's win outcome).
+      const exp=Math.floor(((wild.baseExpYield||51)*enc.level)/7);
+      giveExp(lead,exp);
+      addLog('Won vs '+enc.species+' Lv'+enc.level+'! +'+exp+' EXP','win');
+      state.currentEncounter=null; advanceTravelPath();
+      document.getElementById('enc-body').textContent='Won vs '+enc.species+' Lv'+enc.level+'.';
+      saveGame();
+      return;
+    }
+    if(leadFainted){
       addLog(getDisplayName(lead)+' #'+lead.id+' fainted!','faint');
-      // v0.26 — faint-switch fix: this path already correctly left the encounter open for the
-      // next Pokemon on the next tick (no flee) — just adding the switch-announcement log here
-      // to match the other two faint paths for consistency.
       const next=getLeadPokemon();
-      if(!next){ addLog(enc.species+' fled.','info'); state.currentEncounter=null; endMission(); }
-      else { addLog(getDisplayName(next)+' #'+next.id+' was sent out!','info'); }
+      if(!next){ addLog(enc.species+' fled.','info'); state.currentEncounter=null; endMission(); return; }
+      addLog(getDisplayName(next)+' #'+next.id+' was sent out!','info');
     }
   }
 }
@@ -2267,30 +2436,6 @@ function catchPokemon(lead,enc,isShiny){
   advanceTravelPath();
   document.getElementById('enc-body').textContent='Caught '+enc.species+' Lv'+enc.level+(isShiny?' ✨ SHINY!':'!');
   saveGame();
-}
-
-// Fight: one-tick resolution. Formula simulates the entire battle.
-// lead takes (enc.level/lead.level) × 0.5 × maxHP damage.
-// If lead survives, gains EXP and encounter ends.
-function fight(lead,enc){
-  const dmg=Math.max(1,Math.floor((enc.level/lead.level)*0.5*lead.maxHP));
-  lead.currentHP=Math.max(0,lead.currentHP-dmg);
-  addLog(getDisplayName(lead)+' vs '+enc.species+' Lv'+enc.level+': took '+dmg+' dmg. ('+lead.currentHP+'/'+lead.maxHP+' HP)','damage');
-  if(lead.currentHP<=0){
-    addLog(getDisplayName(lead)+' #'+lead.id+' fainted!','faint');
-    const next=getLeadPokemon(); if(!next){ endMission(); return; }
-    addLog(enc.species+' fled.','info'); state.currentEncounter=null;
-    advanceTravelPath();
-    document.getElementById('enc-body').textContent=getDisplayName(lead)+' fainted. '+enc.species+' fled.';
-  } else {
-    const s_=SPECIES[enc.species];
-    const exp=Math.floor(((s_?s_.baseExpYield||s_.baseExp:51)*enc.level)/7);
-    giveExp(lead,exp);
-    addLog('Won vs '+enc.species+' Lv'+enc.level+'! +'+exp+' EXP','win');
-    state.currentEncounter=null;
-    advanceTravelPath();
-    document.getElementById('enc-body').textContent='Won vs '+enc.species+' Lv'+enc.level+'.';
-  }
 }
 
 // ── INCOME ──
@@ -2586,7 +2731,7 @@ const INFO_TOPICS=[
     {header:null,text:'Breeding cycles last roughly 5-10 minutes, no need to check in on these until you want to pick up your hatched Pokemon.'}
   ]},
   {id:'battles',title:'Battles',sections:[
-    {header:null,text:'Wild encounters are simplified and solely based on level, no moves or type advantages.'},
+    {header:null,text:'Wild encounters now use the same battle engine as trainer fights — type matchups, moves, and catch odds based on the wild Pokemon\'s remaining HP all come into play.'},
     {header:null,text:'Trainer fights simulate a battle engine taking type matchups and moves into effect.'},
     {header:'Moves',text:'Each Pokemon can learn a unique set of moves that have been simplified to Type | Physical/Special | Power.<br><br>TMs allow you to either add, upgrade, or change moves.'}
   ]},
@@ -3060,6 +3205,11 @@ function collectDaycareSlot(slotIndex){
     const resultEntry=getPokemonEntry(rec.resultDexId);
     const gender=(resultEntry&&resultEntry.genderMalePct!=null)?(Math.random()*100<resultEntry.genderMalePct?'M':'F'):null;
     const baby=makePokemon(resultEntry?resultEntry.name:'Egg',1,gender,null,rec.resultDexId);
+    // v0.30 — Day Care eggs now roll for shiny, same odds as wild encounters. Rolled here, at
+    // pickup, not at incubation — eggsQueued is a plain counter with no per-egg record, so no
+    // Pokemon object (and thus no shiny flag) exists until this makePokemon() call. A batch
+    // collection rolls independently per egg, all at the moment of collection.
+    if(Math.random()<(1/4096)) baby.isShiny=true;
     state.dex.push(baby);
     state.dexHistory[baby.pokedexId]=(state.dexHistory[baby.pokedexId]||0)+1;
     recordAbilityObserved(baby.pokedexId,baby.ability);
@@ -3318,7 +3468,7 @@ function showPokemonDetail(catchId){
   // v0.23 — Trainer Battle System: tappable move slots (Upgrade/Change/Add, gated by TM)
   const movesHtml='<div style="margin-bottom:10px;"><div style="color:#a0a0c0;font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Moves</div>'+getMoveSlotsHtml(p,false)+'</div>';
 
-  modal.innerHTML='<div style="background:#16213e;border:1px solid #e63946;border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:#e63946;font-size:14px;font-weight:bold;">#'+(p.pokedexId||'?')+' '+getDisplayName(p)+(p.nickname?' <span style="color:#6080a0;font-size:11px;">('+p.species+')</span>':'')+(p.formName?' ('+p.formName+')':'')+' (catch #'+p.id+')</div><button onclick="document.getElementById(\'poke-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div><div style="color:#a0a0c0;font-size:11px;line-height:2;border-bottom:1px solid #0f3460;margin-bottom:10px;padding-bottom:10px;"><div>Level: <span style="color:#fff">'+p.level+'</span> &nbsp;·&nbsp; Gender: <span style="color:#fff">'+p.gender+'</span></div><div>Type: <span style="color:#fff">'+(entry?entry.type1+(entry.type2?' / '+entry.type2:''):'?')+'</span></div><div>HP: <span style="color:#fff">'+p.currentHP+'/'+p.maxHP+'</span></div><div>Ability: <span style="color:#fff">'+(p.ability||'Unknown')+'</span></div><div>Friendship: <span style="color:#fff">'+(p.friendship||0)+'</span></div>'+(entry&&entry.heightM?'<div>Height: <span style="color:#fff">'+(metersToFeetStr(entry.heightM)||entry.heightM+'m')+'</span></div>':'')+(entry&&entry.weightKg?'<div>Weight: <span style="color:#fff">'+(kgToLbsStr(entry.weightKg)||entry.weightKg+'kg')+'</span></div>':'')+'<div>Holder: <span style="color:#2ecc71">'+(p.holder||'Unassigned')+'</span></div>'+(p.isShiny?'<div style="color:#f4d03f;">✨ SHINY</div>':'')+'</div>'+nicknameHtml+evolveBlockHtml+movesHtml+'<div style="display:flex;gap:8px;flex-wrap:wrap;">'+((!p.holder)?'<button onclick="assignToAide('+p.id+')" class="primary" style="flex:1;">+ Party</button>':'')+(p.holder?'<button onclick="unassignPokemon('+p.id+')" style="flex:1;">− Remove</button>':'')+(p.currentHP<=0?'<button onclick="revivePokemon('+p.id+')" style="flex:1;border-color:#f4d03f;color:#f4d03f;">💊 Revive ($20)</button>':'')+evolveBtnHtml+'<button onclick="document.getElementById(\'poke-modal\').remove()" style="flex:1;">Close</button></div></div>';
+  modal.innerHTML='<div style="background:#16213e;border:1px solid #e63946;border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:#e63946;font-size:14px;font-weight:bold;">#'+(p.pokedexId||'?')+' '+getDisplayName(p)+(p.nickname?' <span style="color:#6080a0;font-size:11px;">('+p.species+')</span>':'')+(p.formName?' ('+p.formName+')':'')+' (catch #'+p.id+')</div><button onclick="document.getElementById(\'poke-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div><div style="color:#a0a0c0;font-size:11px;line-height:2;border-bottom:1px solid #0f3460;margin-bottom:10px;padding-bottom:10px;"><div>Level: <span style="color:#fff">'+p.level+'</span> &nbsp;·&nbsp; Gender: <span style="color:#fff">'+p.gender+'</span></div><div>Type: <span style="color:#fff">'+(entry?entry.type1+(entry.type2?' / '+entry.type2:''):'?')+'</span></div><div>HP: <span style="color:#fff">'+p.currentHP+'/'+p.maxHP+'</span></div><div>Ability: <span style="color:#fff">'+(p.ability||'Unknown')+'</span></div><div>Friendship: <span style="color:#fff">'+(p.friendship||0)+'</span></div>'+(entry&&entry.heightM?'<div>Height: <span style="color:#fff">'+(metersToFeetStr(entry.heightM)||entry.heightM+'m')+'</span></div>':'')+(entry&&entry.weightKg?'<div>Weight: <span style="color:#fff">'+(kgToLbsStr(entry.weightKg)||entry.weightKg+'kg')+'</span></div>':'')+'<div>Holder: <span style="color:#2ecc71">'+(p.breeding?'🥚 At Day Care':(p.holder||'Unassigned'))+'</span></div>'+(p.isShiny?'<div style="color:#f4d03f;">✨ SHINY</div>':'')+'</div>'+nicknameHtml+evolveBlockHtml+movesHtml+'<div style="display:flex;gap:8px;flex-wrap:wrap;">'+((!p.holder)?'<button onclick="assignToAide('+p.id+')" class="primary" style="flex:1;">+ Party</button>':'')+(p.holder?'<button onclick="unassignPokemon('+p.id+')" style="flex:1;">− Remove</button>':'')+(p.currentHP<=0?'<button onclick="revivePokemon('+p.id+')" style="flex:1;border-color:#f4d03f;color:#f4d03f;">💊 Revive ($20)</button>':'')+evolveBtnHtml+'<button onclick="document.getElementById(\'poke-modal\').remove()" style="flex:1;">Close</button></div></div>';
   modal.onclick=(e)=>{ if(e.target===modal) modal.remove(); };
   document.body.appendChild(modal);
 }
@@ -3477,28 +3627,33 @@ function confirmMoveAction(catchId,slotIndex,mode,type,category,qty){
 }
 
 // ── BAG DISPLAY ──
-function renderBagDisplay(){
-  // Trainer bag shown below aide name
-  const el=document.getElementById('aide-bag-items'); if(!el) return;
-  const trainerParts=[];
-  Object.entries(state.trainerBag||{}).forEach(([id,qty])=>{
-    // v0.27 — badges excluded here; they render as sprites on the aide name line instead (see buildBadgeSpritesHtml).
-    if(qty>0){ const item=getItem(id); if(item&&item.itemCategory==='badge') return; trainerParts.push((item?item.name:id)+' ×'+qty); }
+// v0.30 — sums professorBag quantities by item effect, used for the Potions/Revives summary
+// counts (Potion+Super Potion+Hyper Potion+Max Potion all count as "Potions", Revive+Max Revive
+// as "Revives").
+function getProfessorItemCountByEffect(effects){
+  let total=0;
+  Object.entries(state.professorBag||{}).forEach(([id,qty])=>{
+    if(qty<=0) return;
+    const item=getItem(id);
+    if(item&&effects.includes(item.effect)) total+=qty;
   });
-  el.textContent=trainerParts.length?'Aide bag: '+trainerParts.join(', '):'';
+  return total;
+}
+function renderBagDisplay(){
+  // v0.30 — replaces the old #aide-bag-display/#aide-bag-items pair with a single Party-tab-only
+  // summary line ("Professor: Balls | TMs | Potions | Revives") + a Bag button opening the full
+  // multi-owner inventory modal (see showBagModal()).
+  const summaryEl=document.getElementById('prof-bag-summary-text');
+  if(summaryEl){
+    const tms=state.professorBag['tm']||0;
+    const potions=getProfessorItemCountByEffect(['heal-hp','heal-hp-full']);
+    const revives=getProfessorItemCountByEffect(['revive-half','revive-full']);
+    summaryEl.textContent='Professor: '+getBallCount()+' Balls | '+tms+' TMs | '+potions+' Potions | '+revives+' Revives';
+  }
   // v0.27 — keep badge sprites on the name line in sync even when only renderBagDisplay() runs
   // (e.g. right after a gym win), not just on a full renderParty() pass.
   const nameEl2=document.querySelector('#aide-info .aide-name');
   if(nameEl2) nameEl2.innerHTML='🧑‍🔬 Carl Oak'+buildBadgeSpritesHtml();
-  // Ball count display
-  const bagEl=document.getElementById('aide-bag-display');
-  if(bagEl){
-    const profParts=[];
-    Object.entries(state.professorBag||{}).forEach(([id,qty])=>{
-      if(qty>0&&!(getItem(id)&&getItem(id).itemCategory==='ball')){ const item=getItem(id); profParts.push((item?item.name:id)+' ×'+qty); }
-    });
-    bagEl.textContent='🏐 '+getBallCount()+' balls'+(profParts.length?' | Prof: '+profParts.join(', '):'');
-  }
   // v0.25 — badge count / level cap readout, only shown once trainers.js is loaded
   const capEl=document.getElementById('badge-cap-display');
   if(capEl){
@@ -3509,6 +3664,34 @@ function renderBagDisplay(){
       capEl.textContent='';
     }
   }
+}
+
+// ── BAG MODAL (v0.30, NEW) — full inventory for everyone, Professor section + one section per
+// aide (future-proofed for multi-aide even though only Carl exists today). ──
+function buildBagSectionHtml(title,bagObj,excludeCategories){
+  const rows=Object.entries(bagObj||{}).filter(([id,qty])=>qty>0).map(([id,qty])=>{
+    const item=getItem(id);
+    if(item&&excludeCategories&&excludeCategories.includes(item.itemCategory)) return null;
+    return '<div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0;"><span style="color:#e0e0e0;">'+(item?item.name:id)+'</span><span style="color:#5dade2;">×'+qty+'</span></div>';
+  }).filter(Boolean);
+  return '<div style="margin-bottom:14px;"><div style="color:#f4d03f;font-size:11px;font-weight:bold;margin-bottom:4px;border-bottom:1px solid #1a4a80;padding-bottom:4px;">'+title+'</div>'+
+    (rows.length?rows.join(''):'<div style="color:#555;font-size:10px;padding-top:4px;">Empty</div>')+'</div>';
+}
+function showBagModal(){
+  const existing=document.getElementById('bag-modal'); if(existing) existing.remove();
+  const modal=document.createElement('div');
+  modal.id='bag-modal';
+  modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
+  // Badges are excluded from the aide section — they render as sprites on the aide name line
+  // instead (see buildBadgeSpritesHtml), same convention the old #aide-bag-items list used.
+  const profSection=buildBagSectionHtml('🔬 Professor',state.professorBag,null);
+  const aideSection=buildBagSectionHtml('🧑\u200d🔬 Carl Oak',state.trainerBag,['badge']);
+  modal.innerHTML='<div style="background:#16213e;border:1px solid #f4d03f;border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:85vh;overflow-y:auto;">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:#f4d03f;font-size:13px;font-weight:bold;">🎒 Bag</div><button onclick="document.getElementById(\'bag-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'+
+    profSection+aideSection+
+    '</div>';
+  modal.onclick=(e)=>{ if(e.target===modal) modal.remove(); };
+  document.body.appendChild(modal);
 }
 
 // ── RENDER ──
@@ -3543,8 +3726,6 @@ function renderParty(){
   if(nameEl) nameEl.innerHTML='🧑‍🔬 Carl Oak'+buildBadgeSpritesHtml();
   const spritesRow=document.getElementById('aide-party-sprites-row');
   if(spritesRow) spritesRow.innerHTML=spritesHtml;
-  const bagEl=document.getElementById('aide-bag-display');
-  if(bagEl) bagEl.textContent='🏐 '+getBallCount()+' balls in bag';
   renderBagDisplay();
 }
 
@@ -3977,11 +4158,13 @@ function renderDexDetail(){
   c.appendChild(listHeader);
   caughtOfSpecies.sort((a,b)=>a.id-b.id).forEach(p=>{
     const d=document.createElement('div');
-    d.className='dex-entry'+(p.holder?'':' unassigned'); d.style.cursor='pointer';
+    // v0.30 — breeding takes priority over the held/unassigned dimming, since it isn't idle.
+    d.className='dex-entry'+((p.holder||p.breeding)?'':' unassigned'); d.style.cursor='pointer';
     const hpPct=Math.max(0,(p.currentHP/p.maxHP)*100);
     const hpColor=hpPct>50?'#2ecc71':hpPct>20?'#f4d03f':'#e74c3c';
     const catchSprite=getSpriteUrl(p.pokedexId,p.species,p.isShiny||false);
-    d.innerHTML='<div style="display:flex;align-items:center;gap:8px;"><img src="'+catchSprite+'" style="width:40px;height:40px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div class="dex-header"><span class="dex-name">'+getDisplayName(p)+' #'+p.id+(p.isShiny?'<span class="shiny-badge">✨</span>':'')+'</span><span class="dex-id">'+(p.holder?'👤 '+p.holder:'📦')+'</span></div><div class="dex-details">Lv'+p.level+' · '+p.gender+(p.ability?' · '+p.ability:'')+' · Friendship:'+(p.friendship||0)+'</div><div style="background:#0a0a1a;border-radius:2px;height:4px;margin-top:3px;overflow:hidden;"><div style="width:'+hpPct+'%;height:100%;background:'+hpColor+';border-radius:2px;"></div></div></div></div>';
+    const statusText=p.breeding?'🥚 At Day Care':(p.holder?'👤 '+p.holder:'📦');
+    d.innerHTML='<div style="display:flex;align-items:center;gap:8px;"><img src="'+catchSprite+'" style="width:40px;height:40px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div class="dex-header"><span class="dex-name">'+getDisplayName(p)+' #'+p.id+(p.isShiny?'<span class="shiny-badge">✨</span>':'')+'</span><span class="dex-id">'+statusText+'</span></div><div class="dex-details">Lv'+p.level+' · '+p.gender+(p.ability?' · '+p.ability:'')+' · Friendship:'+(p.friendship||0)+'</div><div style="background:#0a0a1a;border-radius:2px;height:4px;margin-top:3px;overflow:hidden;"><div style="width:'+hpPct+'%;height:100%;background:'+hpColor+';border-radius:2px;"></div></div></div></div>';
     d.onclick=()=>showPokemonDetail(p.id);
     c.appendChild(d);
   });
@@ -4009,9 +4192,12 @@ function renderDexViewAll(){
   if(!entries.length){ c.innerHTML='<div style="color:#555;padding:12px;font-size:11px;">No entries.</div>'; return; }
   entries.forEach(p=>{
     const d=document.createElement('div');
-    d.className='dex-entry'+(p.holder?'':' unassigned'); d.style.cursor='pointer';
+    // v0.30 — breeding takes priority over the held/unassigned dimming, since it isn't idle.
+    d.className='dex-entry'+((p.holder||p.breeding)?'':' unassigned'); d.style.cursor='pointer';
     const sprite=getSpriteUrl(p.pokedexId,p.species,p.isShiny||false);
-    d.innerHTML='<div style="display:flex;align-items:center;gap:8px;"><img src="'+sprite+'" style="width:36px;height:36px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div class="dex-header"><span class="dex-name">#'+(p.pokedexId||'?')+' '+getDisplayName(p)+(p.isShiny?'<span class="shiny-badge">✨</span>':'')+' (catch #'+p.id+')</span><span class="dex-id">'+(p.holder?'👤':'📦')+'</span></div><div class="dex-details">Lv'+p.level+' · '+p.gender+' · HP '+p.currentHP+'/'+p.maxHP+' · BST '+calcBST(p.species,p.level)+'</div><div class="dex-holder">'+(p.holder?'Held by: '+p.holder:'Unassigned')+'</div></div></div>';
+    const statusIcon=p.breeding?'🥚':(p.holder?'👤':'📦');
+    const statusText=p.breeding?'At Day Care':(p.holder?'Held by: '+p.holder:'Unassigned');
+    d.innerHTML='<div style="display:flex;align-items:center;gap:8px;"><img src="'+sprite+'" style="width:36px;height:36px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div class="dex-header"><span class="dex-name">#'+(p.pokedexId||'?')+' '+getDisplayName(p)+(p.isShiny?'<span class="shiny-badge">✨</span>':'')+' (catch #'+p.id+')</span><span class="dex-id">'+statusIcon+'</span></div><div class="dex-details">Lv'+p.level+' · '+p.gender+' · HP '+p.currentHP+'/'+p.maxHP+' · BST '+calcBST(p.species,p.level)+'</div><div class="dex-holder">'+statusText+'</div></div></div>';
     d.onclick=()=>showPokemonDetail(p.id);
     c.appendChild(d);
   });

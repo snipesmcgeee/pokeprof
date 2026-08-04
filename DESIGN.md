@@ -78,6 +78,7 @@ There is no survival element. Aides do not need food, sleep, or anything like th
 - **v0.24 requires SAVE_VERSION 16** due to: `state.freeSkipsRemaining` field added (onboarding encounter-skip pool — see "Free Onboarding Encounter Skips"). Migration: new saves initialize to `50`; existing saves migrate in at `0` (onboarding-only, not retroactive).
 - **Bug fixed post-release (v0.24):** the same SAVE_VERSION 16 migration also backfills `researchLog[dexId].firstSeen`/`firstCaught` (new v0.24 fields — see "Pokédex Grid View" seen-but-not-caught fix) for every pre-existing research-log entry. Without this, any save from before v0.24 would see a false "🎯 Captured" finding fire on the *next* catch of every already-known species (even ones caught hundreds of times), since those two fields were simply `undefined` on anything researched pre-v0.24 and `!r.firstCaught` reads as true. Backfill logic: if a `researchLog` entry exists at all, `firstSeen` is set `true` (it's definitely been seen); `firstCaught` is set `true` only if that dexId is also present in `dexHistory` (definitely already caught).
 - **v0.25 requires SAVE_VERSION 17** due to: badge entries added to `aide.bag` (new `itemCategory: badge` items) and a new per-gym highest-tier-reached tracker on aide objects (likely `aide.gymProgress[gymId] = highestTier`) — see "Gym / Trainer Battle System — Triggers, Badges, Level Cap". Migration: existing saves initialize both to empty on load (no badges held, no gym progress recorded).
+- **v0.30 stays on SAVE_VERSION 19** — no `state` schema changes. Every change this version either reads existing fields (`catchRate`, `breeding`, `professorBag` contents) in new ways, or is UI/behavior-only.
 - **v0.26 requires SAVE_VERSION 18** due to: `state.daycareSlots` (new — see "Day Care / Breeding System"), `state.speciesCap` (new — see "Editable Per-Species Cap"), and a one-time `testedMethods` cleanup pass (see "Trade/Item-Evolution Matching Fix"). All three migrations run in a single combined pass on load from v17. `state.autoRepeat` is retired (no longer read anywhere — see "Idle State Removal") but requires no migration, since removing a field needs no backfill.
 - **v0.27 stays on SAVE_VERSION 18** — no `state` schema changes in this batch (onboarding modal, Info menu, shop condensing, purchase quantity buttons, and badge sprite display are all UI/rendering-only; the Day Care location move repoints an existing constant, it doesn't touch `state` shape).
 - **v0.28 requires SAVE_VERSION 19** due to: Day Care slot record reshaped for continuous batch hatching (`eggsQueued` count + `nextReadyAt` anchor replacing single-use `readyAt`) — see "Day Care / Breeding System" below. Migration: any existing slot with the legacy `readyAt` field converts to `nextReadyAt: readyAt, eggsQueued: 0` on load.
@@ -249,28 +250,77 @@ The full set of valid `encounterMethod` values in `encounters.js`:
 
 ---
 
-## Combat System (SETTLED)
+## Combat System (SETTLED — revised v0.30)
 
-### Speed Check
-- Lead's effective speed: `Math.floor((baseSpd * 2 * level) / 100) + 5`
-- If lead is faster or tied, lead acts first; otherwise enemy acts first
-- Enemy acting first deals 25% of normal damage before the throw
+Wild encounters now share the same real battle engine as Trainer/Gym battles (see
+"Trainer Battle System" for the damage formula, crit mechanic, and speed check) —
+resolved silently and instantly, never as a watched playback.
 
-### Ball Logic
-- `selectBallId()` — shared by online (`throwBall`) and offline (`processOfflineTime`) — priority order: Master Ball → Ultra Ball → Great Ball → Poké Ball → any ball
-- `useItemFromBag(ballId, null)` consumes the ball — pass `null` as the Pokémon argument for ball use
-- `throwBall()` calls `catchPokemon()` on success; on miss, enemy counter-attacks at 25% damage
-- `catchRate = modifier >= 255 ? 1 : Math.min(0.99, 0.75 * modifier)`
+### Real Catch Formula (SETTLED — v0.30, replaces old ball-only formula)
+- Mainline Gen III+ formula:
+  ```
+  a = ((3×MaxHP − 2×CurrentHP) × SpeciesCatchRate × BallBonus) / (3×MaxHP)
+  if a ≥ 255 → guaranteed catch
+  else:
+    b = 65536 / (255/a)^0.25
+    P(catch) = (b / 65536)^4
+  ```
+- `SpeciesCatchRate` = the Pokédex's existing `catchRate` field (previously unused).
+- `BallBonus` = the ball's existing `catchRateModifier` field (Poké Ball 1, Great Ball
+  1.5, Ultra Ball 2 — unchanged, already mainline-accurate).
+- Master Ball bypasses the formula entirely via its existing `effect: "catch-guaranteed"`
+  flag — not the old `modifier >= 255` sentinel.
+- No status-condition bonus term — this game has no status-effect system to hang it on;
+  deliberate omission, not an oversight.
+- Replaces the old `catchRate = modifier >= 255 ? 1 : Math.min(0.99, 0.75 * modifier)`
+  everywhere it was used: `throwBall()` (live) and both catch-attempt sites inside
+  `processOfflineTime()`.
 
-### Fight Formula
-- Lead takes `Math.max(1, Math.floor((enc.level / lead.level) * 0.5 * lead.maxHP))` damage
-- If lead survives, gains EXP and encounter ends
+### Wild Pokémon Move Assignment (SETTLED — v0.30)
+- Identical to a freshly-caught Pokémon: `pickDefaultMove()`, one move, power 40, no TM
+  investment.
+- **Exception:** the existing "can't use a move a 3rd consecutive turn" AI restriction
+  does **not** apply to wild Pokémon — they may use their single move every turn,
+  unrestricted. (Moot in practice since they only ever have one move, but stated
+  explicitly since this diverges from the Trainer Battle System's AI rule.)
 
-### Faint-Switch Behavior (SETTLED — v0.26)
-- **Bug (pre-v0.26):** three separate code paths could cause a lead to faint mid-encounter — the enemy-strikes-first pre-emptive hit (when the wild Pokémon is faster), a missed ball throw's counter-attack, and `fight()`'s no-balls-available path — and they didn't agree with each other. The missed-ball-throw path already did the right thing (left the encounter open, letting the next Pokémon pick it up automatically on the next tick); the other two instead had the wild Pokémon flee and ended the encounter immediately whenever the lead fainted, even if more Pokémon were available.
-- **Fix:** all three paths now behave like the missed-ball-throw path already did. On lead faint: if `getLeadPokemon()` returns another Pokémon, log **"X fainted! Y was sent out!"** and leave the encounter open — the same encounter continues against the new lead on the next tick, no flee, no end. Only when `getLeadPokemon()` returns nothing (the whole party is down) does the wild Pokémon flee and the mission end via `endMission()`.
+### Wild Encounter Turn Loop (SETTLED — v0.30, replaces old Fight Formula)
+Each round, while the encounter is still active:
+1. **If wild HP > 1:** compute catch probability (see formula above) using the
+   lowest-tier owned ball. If ≥90%, throw it. Otherwise, attack instead.
+2. **If wild HP == 1:** this overrides rule 1 entirely — throw the lowest-tier owned
+   ball with catch probability >70%, or the highest-tier owned ball if none clear 70%.
+3. **Ball throw resolution:** always resolves before any speed check (bypasses turn
+   order entirely). Success → `catchPokemon()`, battle ends immediately, no
+   retaliation. Failure → wild retaliates at **full** `calcBattleDamage()` — the old
+   flat 25%-of-normal miss penalty no longer applies.
+4. **Attack turn** (no ball thrown): speed-ordered exchange (existing effective-speed
+   formula), both sides using the real `calcBattleDamage()` — lead via the Trainer
+   Battle System's `selectAIMove()` across its real equipped moves, wild always using
+   its single default move.
+5. **HP floor:** while any ball remains in the Professor's inventory, wild HP is
+   clamped at a minimum of 1 — it cannot faint. Once balls are exhausted, the floor
+   lifts and a normal KO becomes possible (a "win" — EXP only, no catch, matching the
+   old Fight Formula's win condition).
+6. Loop ends on: capture (success), wild faints (no-balls win), or the lead's whole
+   party faints (existing Faint-Switch Behavior / flee rule, unchanged).
+- **Fully silent/instant** — the entire multi-round encounter resolves within a single
+  function call, live or offline, with no watched playback (unlike Gym battles). This
+  is a structural change to `resolveEncounterStep()`/`processOfflineTime()`'s loop
+  shape: previously one ball-throw-or-fight-attempt per tick, now the whole encounter
+  resolves the moment it's triggered.
+- **Ball consumption unchanged:** one ball consumed per throw attempt regardless of
+  outcome — this was a deliberate, confirmed tradeoff, not a side effect to fix.
+- Old `fight()` function (flat `(enc.level/lead.level) × 0.5 × maxHP` formula) is
+  removed entirely, replaced by the above.
 
-### Shiny Auto-Catch (SETTLED)
+### Faint-Switch Behavior (SETTLED — v0.26, unchanged by v0.30)
+- On lead faint mid-encounter: if `getLeadPokemon()` returns another Pokémon, log
+  "X fainted! Y was sent out!" and continue the same encounter against the new lead.
+  Only when the whole party is down does the wild Pokémon flee and the mission end via
+  `endMission()`.
+
+### Shiny Auto-Catch (SETTLED — unchanged by v0.30)
 - Shiny check fires **before** anything else in `resolveEncounterStep()` — before lead fetch, before ball selection
 - Chance: 1/4096
 - Auto-caught with no ball consumed
@@ -279,17 +329,30 @@ The full set of valid `encounterMethod` values in `encounters.js`:
 - **Fix (v0.22):** `processOfflineTime()` now rolls the same `Math.random()<1/4096` check before the ball-catch-rate check on each simulated encounter, auto-catching as shiny with no ball consumed — mirrors live Step 1 exactly.
 - **No per-encounter log spam offline** — tallied silently as `summary.shinies`, shown in the offline-return summary banner.
 
-### Potion Logic
-- `getWeakestEffectivePotion()` — smallest potion that heals without waste (heal amount ≤ missing HP), except Max Potion which only fires when missing > 120 HP
-- No HP threshold — use whenever not at full HP and a valid potion exists
+### Pre-Encounter Healing (SETTLED — revised v0.30)
+- **v0.30 change:** `getWeakestEffectivePotion()` now applies **repeatedly** — as many
+  potions as needed until the lead is at full HP or no usable potion remains in
+  `state.professorBag` — instead of firing once. Still strictly **between**
+  encounters, never mid-fight (consistent with the new turn loop above having no
+  mid-combat healing interruption point).
+- **Correction (discovered mid-build, v0.30):** an earlier draft of this note claimed
+  this step "applies identically live and offline, since both already share this
+  step" — that was **wrong**. `processOfflineTime()` never called
+  `getWeakestEffectivePotion()` at all; offline wild encounters have only ever had the
+  heal-*location* full-heal check (arriving at a `heals:true` location), no potion
+  healing and no revive logic. **Decision: extend both to offline as part of v0.30**,
+  for parity — offline wild encounters now get the same uncapped potion-heal loop and
+  the same opportunistic-revive check as live, applied once per encounter cycle before
+  ball/attack resolution, matching live step order exactly.
 - `useItemFromBag()` is the canonical item use function — all item use must route through it, never inline
 
-### Revive Logic
+### Revive Logic (SETTLED — revised v0.30)
 - **Bug (pre-v0.22):** the auto-revive check in `resolveEncounterStep()` gated on `lead.currentHP<=0` — but `lead` comes from `getLeadPokemon()`, which by definition only ever returns a **conscious** party member. The condition could never be true; Revives and Max Revives were never actually consumed by this path. There was no other way to use a Revive in the game.
 - **Fix:** the impossible gate is removed. Auto-revive is now **opportunistic** — it fires any time a party member is fainted and a Revive/Max Revive is available, regardless of the current lead's state.
 - Cheapest revive used first (Revive before Max Revive), applied to the lowest-level fainted Pokémon first.
+- **v0.30:** this opportunistic-revive check is now also applied offline, once per encounter cycle in `processOfflineTime()`, matching live — see "Pre-Encounter Healing" correction above. Previously offline had no revive logic at all.
 
-### EXP Formula
+### EXP Formula (SETTLED — unchanged by v0.30)
 - `Math.floor((baseExpYield * enc.level) / 7)`
 
 ---
@@ -403,6 +466,35 @@ The single `state.bag` is replaced with two separate inventories:
 - `releaseDaycarePair()` ("Pull Out") is unchanged — still ends the loop and returns parents to the box, forfeiting any uncollected `eggsQueued`. Confirm dialog gets a one-line addition warning about this if `eggsQueued > 0` at the time.
 - `buildDaycareHtml()` slot display replaces the old "Ready to collect! / N min remaining" with a live queue count (e.g. "3 eggs ready · next in 1:24") — Collect button enabled whenever `eggsQueued > 0`.
 - **SAVE_VERSION 19 migration:** any slot with the legacy `readyAt` field converts to `nextReadyAt: readyAt, eggsQueued: 0` on load.
+
+### Shiny Rolls at Hatching (SETTLED — v0.30, NEW)
+- Day Care eggs now roll for shiny — previously `collectDaycareSlot()` never checked
+  at all, so every hatched egg was guaranteed non-shiny.
+- Same odds/mechanic as wild encounters: `Math.random() < 1/4096` per egg, no ball
+  consumed (not applicable here regardless).
+- **Rolled at pickup, not at incubation** — `eggsQueued` is a plain counter with no
+  per-egg record, so no Pokémon object (and thus no shiny flag) exists until
+  `collectDaycareSlot()` calls `makePokemon()` for each egg. Collecting a large batch
+  at once rolls shiny independently for each egg in that same batch, all at the moment
+  of collection — not spread out chronologically as each egg finished incubating.
+
+### Dex Display — Breeding Status (SETTLED — v0.30, NEW)
+- **Bug (pre-v0.30):** the Dex's Held/Boxed status display checked only `p.holder` — a
+  Pokémon actively breeding at the Day Care (`p.breeding === true`, `p.holder === null`)
+  displayed identically to one genuinely idle in the box: "📦 Unassigned."
+- **Exactly three display sites, confirmed by function name (not four — an earlier draft
+  of this note miscounted):**
+  1. `renderDexViewAll()` — the "All Catches" tab
+  2. `renderDexDetail()` — the "Your Catches" list on a single species' detail page
+  3. `showPokemonDetail()` — the individual Pokémon detail modal's "Holder:" line
+  - The other Dex views (`renderDexPokedexGrid()`, `renderDexFamilies()`,
+    `renderDexSpecies()`) don't show per-individual Held/Boxed status at all — nothing
+    to fix there.
+- **Fix:** all three sites now check `p.breeding` first, ahead of the
+  `holder`/unassigned fallback. When true, shows **"🥚 At Day Care"** in place of
+  "📦 Unassigned" / "Held by: —". Does **not** receive the dimmed `.unassigned` CSS
+  styling, since it isn't idle. Reads the existing `p.breeding` field — no schema
+  change, no SAVE_VERSION impact.
 
 ### Interaction with the Families Tab Root-Placeholder Fix
 - Day Care is the primary intended path for filling in a family's previously-unseen root (e.g. Pichu) — see "Evolution Chain Visual" for the display-side fix this feeds into. No special-cased interaction is needed: once a bred Pokémon is collected, it's logged into `seenDexIds` exactly like any other catch, which is what resolves the root placeholder.
@@ -787,9 +879,28 @@ Two structural gaps existed once `use-move`/`in-party` became real, functional m
 - Badge sprites are resolved via a hardcoded `BADGE_SPRITE_MAP` in `pokeprof.html` (itemId → image URL), **not** the Items sheet's `sprite` column — that column is currently unused dead data (a slug intended for a future general item-sprite pipeline against a different base path) and doesn't fit the Kanto badge sprites' numbered (not slug-named) filenames in the source repo anyway.
   - Source: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/badges/` — `1.png`–`8.png` map to Boulder/Cascade/Thunder/Rainbow/Soul/Marsh/Volcano/Earth respectively (verified visually against Bulbapedia's official badge images).
   - `champion-badge` has no real-game sprite (it's a PokeProf-original item) — renders as a 🏆 emoji fallback instead of an image.
-- The `#aide-bag-items` "Aide bag: ..." text row is unchanged and still lists other trainer-bag items (HMs, Rods, etc.) — badges are simply excluded from that text list now that they render as sprites above.
+- The `#aide-bag-items` "Aide bag: ..." text row is **removed as of v0.30** — see "Party Tab — Bag Summary & Full Inventory Modal" below.
 - The `🎖 Badges: X/8 · Level Cap: X` summary line is unchanged, unaffected by this display change.
 - **v0.29 addition:** a new `TRAINER_SPRITE_MAP` (trainerName → portrait image URL) follows the exact same hardcoded-map pattern as `BADGE_SPRITE_MAP` above. All 13 entries (8 gym leaders + 4 Elite Four + Champion) sourced from Bulbagarden Archives' **FRLG** trainer sprite set — chosen for a single consistent era across all 13, since Agatha and Lorelei have no HGSS sprites at all (HGSS's Kanto post-game rematch reuses Johto's own Elite Four — Will/Koga/Bruno/Karen — not a Lorelei/Agatha reunion). Falls back to a 🧑 emoji if a URL ever breaks, same pattern as the Champion badge's 🏆 fallback. Used by the new Watched Gym Battle screen (see "Gym / Trainer Battle System") to show the opposing trainer's name + portrait briefly before battle. No Excel/converter change — code-side only, same as badges.
+
+### Party Tab — Bag Summary & Full Inventory Modal (SETTLED — v0.30, NEW)
+- **Scope:** Party tab only — not a persistent/global row across other tabs.
+- Removes both existing inventory displays from the Party screen: `#aide-bag-display`
+  (ball count + non-ball professor items) and `#aide-bag-items` (aide/trainer bag text
+  list) are deleted entirely.
+- Replaced with a single line: **"Professor: Balls | TMs | Potions | Revives"**, plus
+  a **Bag** button.
+  - Balls = existing `getBallCount()` helper.
+  - TMs = `state.professorBag['tm']`.
+  - Potions = sum of every `state.professorBag` item whose `effect` is `heal-hp` or
+    `heal-hp-full`.
+  - Revives = sum of every `state.professorBag` item whose `effect` is `revive-half`
+    or `revive-full`.
+- **Bag button** opens a modal showing full inventory for everyone, structured as a
+  Professor section followed by one section per aide (future-proofed for multi-aide,
+  even though only Carl exists today) — each listing item name + quantity.
+- **Unaffected:** aide name, badge sprites, party Pokémon mini-sprites, location text,
+  and the "🎖 Badges: X/8 · Level Cap: X" line all stay exactly as they are.
 
 ---
 
@@ -827,9 +938,13 @@ Two structural gaps existed once `use-move`/`in-party` became real, functional m
 
 ---
 
-## Trainer Battle System (SETTLED — v0.23)
+## Trainer Battle System (SETTLED — v0.23, revised v0.30)
 
-Applies **only** to a new trainer/gym battle context. Wild encounters (`fight()`, ball-throwing, `resolveEncounterStep()`, `processOfflineTime()`) are completely untouched by this feature.
+Originally applied only to trainer/gym battles, with wild encounters (`fight()`,
+ball-throwing, `resolveEncounterStep()`, `processOfflineTime()`) completely untouched.
+**As of v0.30, wild encounters now share this same damage formula, crit mechanic, and
+speed check** — see "Combat System" for the wild-specific turn loop, catch formula,
+and move-assignment rules layered on top of this shared engine.
 
 ### Move Mechanic
 - 18 types × 2 categories (Physical/Special) = 36 possible move slots per species. Every Pokémon starts each available slot at power 40.
@@ -874,7 +989,21 @@ Damage = floor(floor(floor(2×Level/5 + 2) × Power × A/D) / 50) + 2
        × Random(0.85–1.00)
 ```
 - `A`/`D` = level-scaled stats via a new reusable `calcStat(base, level)` function — extracted from the inline `st()` helper already used in `calcBST()` (`floor((base×2×level)/100)+5`). Applies to Atk/Def (Physical) or SpAtk/SpDef (Special) on both sides.
-- No crits, no status, no priority, 100% accuracy, unlimited PP.
+- No status, no priority, 100% accuracy, unlimited PP. (Crits added v0.30 — see below.)
+
+### Critical Hits (SETTLED — v0.30, NEW)
+- Modern mainline mechanic: flat **1/24 (≈4.17%)** chance, **×1.5** damage multiplier,
+  applied uniformly to every attacker (gym trainer AI, lead, and wild Pokémon alike —
+  all route through `calcBattleDamage()`).
+- No high-crit-ratio moves, no crit-boosting items/abilities — this game's moves are
+  abstracted to type+category+power only with no per-move flags, and there's no held-
+  item system, so a flat uniform rate is the only version that fits; documented here as
+  a deliberate simplification, not a partial implementation.
+- **Watched Gym Battle screen only:** a crit gets a `"A critical hit! "` prefix on the
+  existing per-turn move/damage text line (e.g. "A critical hit! Weedle used Bug
+  Physical — 19 dmg!"). Silent paths (offline gym catch-up, silent wild encounters)
+  compute the same math with no display change, consistent with their existing
+  no-per-instance-text design.
 
 ### Battle Loop
 - Speed-based turn order, reusing the existing effective-speed formula (`floor((baseSpd×2×level)/100)+5`), evaluated every round (not once per battle), random tie-break.
@@ -958,8 +1087,14 @@ Builds on the v0.23 battle engine (above) with 8 regular Gyms + Indigo Plateau (
 - **Indigo Plateau gauntlet (tier 9 and tier 10) specifics:** between each of the 5 legs, team order can be reshuffled and healing items may be used (existing `getWeakestEffectivePotion()` inter-battle auto-heal logic, unchanged). No-heal-*within*-a-leg and full-reset-on-loss-resets-to-leg-1 rules are unchanged — this only opens a management window *between* legs.
 - **Indigo Plateau tier 9** (the original Elite Four/Champion clear) is always watched via this button — never offline, regardless of badge status. **Indigo Plateau tier 10** (postgame rebattle) can also be watched via this button, but isn't required to be — see the mission-modal grind path above for the offline alternative.
 
-### Loss / Retry Behavior
-- Regular gym battles: no penalty, auto-retry — identical to wild encounter loss handling.
+### Loss / Retry Behavior (SETTLED — wording revised v0.30)
+- Regular gym battles: auto-retry, no gameplay penalty — behavior unchanged.
+  **v0.30:** the "No penalty — try again" phrasing is dropped from all three
+  player-facing strings (mission-modal grind-path log line, watched-battle log line,
+  watched-battle result text) — now reads "Lost to [gym] (Tier [tier]). Try again."
+  / "Lost a gym battle. Try again." / "Defeated. Try again." Wording only; the actual
+  no-penalty behavior is unchanged. (DESIGN.md's own description of the mechanic is
+  documentation, not player-facing copy, and is unaffected.)
 - Tier-9 gauntlet: **no heal between the 5 battles.** A loss at any point resets the entire attempt back to battle 1 (first Elite Four member).
 
 ### Inter-Battle Healing
@@ -1015,6 +1150,15 @@ Builds on the v0.23 battle engine (above) with 8 regular Gyms + Indigo Plateau (
 - No `state` changes — this is UI/content only, no SAVE_VERSION impact.
 - All copy was verified against the actual live game constants before being locked in: shiny rate 1/4096, income formula ($1.00/min base + $0.01 per 100 catches), level cap formula (`10 + badges×10`, 100 post-Champion), and tick intervals (10s open / 30s closed) all match code exactly.
 - Full topic copy lives in the v0.27 change-request thread / commit message — not duplicated here to avoid drift between two copies of the same text; treat the in-code strings as canonical once implemented.
+
+### Battles Topic — Copy Correction (SETTLED — v0.30)
+- The "Battles" topic's first line — *"Wild encounters are simplified and solely based
+  on level, no moves or type advantages"* — is now false as of v0.30 (see "Combat
+  System") and is replaced with: *"Wild encounters now use the same battle engine as
+  trainer fights — type matchups, moves, and catch odds based on the wild Pokémon's
+  remaining HP all come into play."*
+- The rest of the Battles topic (trainer-fight description, the "Moves" sub-header)
+  remains accurate as-is and is unchanged.
 
 ---
 

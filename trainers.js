@@ -1,5 +1,5 @@
 // PokeProf — Trainers Database (Gym Battle System, v0.25)
-// Auto-generated: 8/3/2026, 9:51:24 PM
+// Auto-generated: 8/5/2026, 10:42:31 PM
 // Entries: 320
 // One row per team-slot: (trainerId, tier[, gauntletOrder]) groups into one battle roster.
 

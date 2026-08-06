@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.30</title>
+<title>PokeProf v0.31</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -110,7 +110,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span style="font-size:11px;color:#6080a0;">v0.30</span></h1>
+  <h1>PokeProf <span style="font-size:11px;color:#6080a0;">v0.31</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">100.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -470,10 +470,12 @@ function makePokemon(sp,lv,gender,holder=null,dexId=null){
   if(!entry) entry=SPECIES[sp];
   const resolvedDexId=dexId||(entry?entry.dexId||entry.id:0);
   const growthRate=(entry&&entry.growthRate)||'mediumFast';
-  const maxHP=calcMaxHP(sp,lv,resolvedDexId);
+  const ivs=rollIVs(resolvedDexId);
+  const nature=rollNature();
+  const maxHP=calcMaxHP(sp,lv,resolvedDexId,ivs.hp);
   const startExp=expToLevel(lv,growthRate);
   const ability=assignAbility(entry);
-  return{
+  const p={
     id:state.dexIdCounter++, species:sp, pokedexId:resolvedDexId, level:lv, gender,
     currentHP:maxHP, maxHP, growthRate,
     exp:isNaN(startExp)?0:startExp,
@@ -483,8 +485,11 @@ function makePokemon(sp,lv,gender,holder=null,dexId=null){
     friendship:0,
     nickname:null,
     evolveBlocked:false,
+    ivs, nature, // v0.31
     equippedMoves:getDefaultEquippedMoves(entry) // v0.23 — Trainer Battle System
   };
+  recalcStats(p); // v0.31 — populates p.stats (and re-derives p.maxHP identically to the line above)
+  return p;
 }
 
 // Returns the nickname if set, otherwise the species name. Use this at every
@@ -679,18 +684,100 @@ function expToLevel(lv,r){
   return Math.floor(Math.pow(lv,3));
 }
 
-function calcMaxHP(sp,lv,dexId=null){
+// v0.31 — optional iv param (0-31). Default 0 keeps every pre-v0.31 call site byte-identical
+// to its old output (species-reference displays like calcBST's entry.bst usage, makeWildBattler).
+function calcMaxHP(sp,lv,dexId=null,iv=0){
   const s=dexId?getPokemonEntry(dexId):SPECIES[sp]; if(!s) return lv+10;
-  return Math.floor((s.baseHP*2*lv)/100)+lv+10;
+  return Math.floor(((s.baseHP||0)*2+iv)*lv/100)+lv+10;
 }
 
 // v0.23 — extracted from the inline st() helper that used to live only inside calcBST(),
 // so the Trainer Battle System's damage formula can reuse the same level-scaled stat calc.
-function calcStat(base,level){
-  return Math.floor(((base||0)*2*level)/100)+5;
+// v0.31 — optional iv param (0-31) and optional natureMod (1.1/0.9/1) applied after the +5,
+// then floored again — matches the real games' order of operations (minus EVs, which this
+// game doesn't model). Default iv=0/natureMod=1 keeps old callers byte-identical.
+function calcStat(base,level,iv=0,natureMod=1){
+  const raw=Math.floor(((base||0)*2+iv)*level/100)+5;
+  return natureMod===1?raw:Math.floor(raw*natureMod);
 }
 
-function calcBST(sp,lv,dexId=null){
+// v0.31 — full standard 25-nature table. Each non-neutral nature boosts one stat +10% and
+// reduces another -10%; nature never touches HP. Neutral natures have no boost/reduce stat.
+const NATURES={
+  Hardy:{boost:null,reduce:null}, Lonely:{boost:'atk',reduce:'def'}, Brave:{boost:'atk',reduce:'spd'},
+  Adamant:{boost:'atk',reduce:'spatk'}, Naughty:{boost:'atk',reduce:'spdef'},
+  Bold:{boost:'def',reduce:'atk'}, Docile:{boost:null,reduce:null}, Relaxed:{boost:'def',reduce:'spd'},
+  Impish:{boost:'def',reduce:'spatk'}, Lax:{boost:'def',reduce:'spdef'},
+  Timid:{boost:'spd',reduce:'atk'}, Hasty:{boost:'spd',reduce:'def'}, Serious:{boost:null,reduce:null},
+  Jolly:{boost:'spd',reduce:'spatk'}, Naive:{boost:'spd',reduce:'spdef'},
+  Modest:{boost:'spatk',reduce:'atk'}, Mild:{boost:'spatk',reduce:'def'}, Quiet:{boost:'spatk',reduce:'spd'},
+  Bashful:{boost:null,reduce:null}, Rash:{boost:'spatk',reduce:'spdef'},
+  Calm:{boost:'spdef',reduce:'atk'}, Gentle:{boost:'spdef',reduce:'def'}, Sassy:{boost:'spdef',reduce:'spd'},
+  Careful:{boost:'spdef',reduce:'spatk'}, Quirky:{boost:null,reduce:null}
+};
+function natureModFor(natureName,statKey){
+  const n=NATURES[natureName]; if(!n) return 1;
+  if(n.boost===statKey) return 1.1;
+  if(n.reduce===statKey) return 0.9;
+  return 1;
+}
+// v0.31 — rolls 6 IVs (0-31 each). If the species' dex page is already complete
+// (isDexPageComplete), each stat is rolled 10× and the best kept instead of a single roll —
+// checked fresh at creation time, so a species completed mid-game benefits immediately.
+function rollIVs(dexId){
+  const advantage=dexId&&isDexPageComplete(dexId);
+  const rollOne=()=>{
+    if(!advantage) return Math.floor(Math.random()*32);
+    let best=0;
+    for(let i=0;i<10;i++) best=Math.max(best,Math.floor(Math.random()*32));
+    return best;
+  };
+  return {hp:rollOne(),atk:rollOne(),def:rollOne(),spatk:rollOne(),spdef:rollOne(),spd:rollOne()};
+}
+function rollNature(){
+  const names=Object.keys(NATURES);
+  return names[Math.floor(Math.random()*names.length)];
+}
+// v0.31 — "perfect IV" = all 6 stats rolled at the max, 31.
+function isPerfectIV(p){
+  return !!(p.ivs&&p.ivs.hp===31&&p.ivs.atk===31&&p.ivs.def===31&&p.ivs.spatk===31&&p.ivs.spdef===31&&p.ivs.spd===31);
+}
+// v0.31 — rarity badge for PER-INDIVIDUAL displays only (party card, detail modal, Day Care
+// picker, Dex list entries). Deliberately NOT used on species-level aggregate indicators
+// (evolution chain nodes, Pokédex grid, Species Detail header) — those stay shiny-only via
+// hasLiveShiny(dexId), which is a different "any live individual of this species" concept.
+function getRarityBadge(p){
+  const perfect=isPerfectIV(p);
+  if(p.isShiny&&perfect) return '🦄';
+  if(perfect) return '💥';
+  if(p.isShiny) return '✨';
+  return '';
+}
+// v0.31 — computes and caches p.maxHP and p.stats={atk,def,spatk,spdef,spd} from base stats +
+// level + p.ivs + p.nature. Single source of truth, called at every point that recalculates
+// maxHP: creation, level-up, evolution, migration. Battle functions read the cached values
+// directly rather than recomputing from IV/nature each time.
+function recalcStats(p){
+  const s=getPokemonEntry(p.pokedexId); if(!s) return;
+  const ivs=p.ivs||{hp:0,atk:0,def:0,spatk:0,spdef:0,spd:0};
+  p.maxHP=calcMaxHP(p.species,p.level,p.pokedexId,ivs.hp);
+  p.stats={
+    atk:calcStat(s.baseAtk,p.level,ivs.atk,natureModFor(p.nature,'atk')),
+    def:calcStat(s.baseDef,p.level,ivs.def,natureModFor(p.nature,'def')),
+    spatk:calcStat(s.baseSpatk,p.level,ivs.spatk,natureModFor(p.nature,'spatk')),
+    spdef:calcStat(s.baseSpdef,p.level,ivs.spdef,natureModFor(p.nature,'spdef')),
+    spd:calcStat(s.baseSpd,p.level,ivs.spd,natureModFor(p.nature,'spd'))
+  };
+}
+// v0.31 — BST for a live individual now reflects their IV/nature-adjusted stats, not just
+// species+level. Accepts the actual Pokemon object (needs p.stats/p.maxHP, both cached by
+// recalcStats). Falls back to a pure base-stat calc if p.stats isn't populated (defensive).
+function calcBST(sp,lv,dexIdOrP=null){
+  if(dexIdOrP&&typeof dexIdOrP==='object'&&dexIdOrP.stats){
+    const p=dexIdOrP;
+    return (p.maxHP||0)+p.stats.atk+p.stats.def+p.stats.spatk+p.stats.spdef+p.stats.spd;
+  }
+  const dexId=(dexIdOrP&&typeof dexIdOrP==='object')?null:dexIdOrP;
   const s=dexId?getPokemonEntry(dexId):SPECIES[sp]; if(!s) return 0;
   return calcMaxHP(sp,lv,dexId)+calcStat(s.baseAtk,lv)+calcStat(s.baseDef,lv)+calcStat(s.baseSpatk,lv)+calcStat(s.baseSpdef,lv)+calcStat(s.baseSpd,lv);
 }
@@ -767,8 +854,11 @@ function calcBattleDamage(attacker,defender,move){
   const defEntry=getPokemonEntry(defender.pokedexId);
   if(!atkEntry||!defEntry||!move) return 0;
   const isPhysical=move.category==='Physical';
-  const A=calcStat(isPhysical?atkEntry.baseAtk:atkEntry.baseSpatk,attacker.level);
-  const D=calcStat(isPhysical?defEntry.baseDef:defEntry.baseSpdef,defender.level);
+  // v0.31 — reads each individual's cached, IV/nature-adjusted stats (attacker.stats/defender.stats)
+  // instead of recomputing from base+level. Falls back to a level-only calcStat() if stats weren't
+  // populated (defensive — should not happen for any real battle participant post-v0.31).
+  const A=attacker.stats?(isPhysical?attacker.stats.atk:attacker.stats.spatk):calcStat(isPhysical?atkEntry.baseAtk:atkEntry.baseSpatk,attacker.level);
+  const D=defender.stats?(isPhysical?defender.stats.def:defender.stats.spdef):calcStat(isPhysical?defEntry.baseDef:defEntry.baseSpdef,defender.level);
   const base=Math.floor(Math.floor(Math.floor((2*attacker.level)/5+2)*move.power*A/D)/50)+2;
   const stab=(move.type===atkEntry.type1||move.type===atkEntry.type2)?1.5:1;
   const eff=(typeof getTypeEffectiveness==='function')?getTypeEffectiveness(move.type,defEntry.type1,defEntry.type2):1;
@@ -788,6 +878,7 @@ function applyCrit(baseDamage){
 // Turn order — reuses the same effective-speed formula as calcStat (identical to the existing
 // wild-encounter speed calc), evaluated every round rather than once per battle.
 function getBattleSpeed(p){
+  if(p.stats) return p.stats.spd;
   const entry=getPokemonEntry(p.pokedexId);
   return calcStat(entry?entry.baseSpd:0,p.level);
 }
@@ -912,17 +1003,32 @@ function getGymTrainerIdsAtLocation(locId){
 // pokedexId/level/currentHP/maxHP/equippedMoves — everything runTrainerBattle/calcBattleDamage
 // needs). gauntletOrder is only passed for the Indigo gauntlet at tier 9 or 10 (1-5, one leg's
 // roster) — see runGymEncounter().
+// v0.31 — enemy Pokemon get a flat IV (all 6 stats) by tier, not random: tiers 1-8 -> 20,
+// tier 9 (Elite Four/Champion first clear) -> 25, tier 10 (any postgame rematch) -> 31. No
+// nature (neutral) — enemies are rebuilt fresh every battle, never persisted.
+function getEnemyIVForTier(tier){
+  if(tier>=10) return 31;
+  if(tier===9) return 25;
+  return 20;
+}
 function buildEnemyTeam(trainerId,tier,gauntletOrder){
   if(typeof getTrainerRoster!=='function') return [];
   const roster=getTrainerRoster(trainerId,tier,gauntletOrder);
+  const iv=getEnemyIVForTier(tier);
   return roster.map(slot=>{
-    const maxHP=calcMaxHP(null,slot.level,slot.dexId);
+    const s=getPokemonEntry(slot.dexId);
+    const maxHP=calcMaxHP(null,slot.level,slot.dexId,iv);
+    const stats=s?{
+      atk:calcStat(s.baseAtk,slot.level,iv), def:calcStat(s.baseDef,slot.level,iv),
+      spatk:calcStat(s.baseSpatk,slot.level,iv), spdef:calcStat(s.baseSpdef,slot.level,iv),
+      spd:calcStat(s.baseSpd,slot.level,iv)
+    }:{atk:0,def:0,spatk:0,spdef:0,spd:0};
     const moves=[1,2,3,4].map(n=>{
       const type=slot['move'+n+'Type'],cat=slot['move'+n+'Category'],pow=slot['move'+n+'Power'];
       return (type&&cat&&pow)?{type,category:cat,power:pow}:null;
     });
     return {id:'enemy-'+trainerId+'-'+tier+'-'+(gauntletOrder||0)+'-'+slot.slotIndex,
-      pokedexId:slot.dexId,level:slot.level,currentHP:maxHP,maxHP,equippedMoves:moves};
+      pokedexId:slot.dexId,level:slot.level,currentHP:maxHP,maxHP,stats,equippedMoves:moves};
   });
 }
 
@@ -936,13 +1042,18 @@ function awardGymWin(trainerId,tier){
   const row=TRAINERS_DATA.find(t=>t.trainerId===trainerId&&t.badgeItemId);
   if(!row) return;
   const badgeId=row.badgeItemId;
-  if((state.trainerBag[badgeId]||0)>0) return; // already earned — no further effect
-  state.trainerBag[badgeId]=(state.trainerBag[badgeId]||0)+1;
-  const badgeItem=getItem(badgeId);
-  addLog('🎖 Badge earned: '+(badgeItem?badgeItem.name:badgeId)+'!','evolve');
+  // v0.31 — badge-earning is separated from TM-granting so a rematch (badge already held) can
+  // still award a TM. First win: tier+4 TMs. Rematch: flat 1 TM. Gauntlet (Indigo): never any TM.
+  const alreadyEarned=(state.trainerBag[badgeId]||0)>0;
+  if(!alreadyEarned){
+    state.trainerBag[badgeId]=(state.trainerBag[badgeId]||0)+1;
+    const badgeItem=getItem(badgeId);
+    addLog('🎖 Badge earned: '+(badgeItem?badgeItem.name:badgeId)+'!','evolve');
+  }
   if(!row.isGauntlet){
-    state.professorBag['tm']=(state.professorBag['tm']||0)+1;
-    addLog('Received 1 TM for defeating the gym!','catch');
+    const tmAward=alreadyEarned?1:(tier+4);
+    state.professorBag['tm']=(state.professorBag['tm']||0)+tmAward;
+    addLog('Received '+tmAward+' TM'+(tmAward!==1?'s':'')+' for defeating the gym!','catch');
   }
   renderBagDisplay();
 }
@@ -962,7 +1073,7 @@ function healPartyBeforeGymBattle(){
 // player Pokemon still conscious at the end, summed per enemy Pokemon KO'd (baseExpYield×level/7,
 // same formula as wild encounters).
 function runOneGymBattle(enemyTeam){
-  const playerTeam=state.party.filter(p=>p.currentHP>0).map(p=>({id:p.id,pokedexId:p.pokedexId,level:p.level,currentHP:p.currentHP,maxHP:p.maxHP,equippedMoves:p.equippedMoves||[]}));
+  const playerTeam=state.party.filter(p=>p.currentHP>0).map(p=>({id:p.id,pokedexId:p.pokedexId,level:p.level,currentHP:p.currentHP,maxHP:p.maxHP,stats:p.stats,equippedMoves:p.equippedMoves||[]}));
   if(!playerTeam.length||!enemyTeam.length) return {winner:'enemy',log:[]};
   const result=runTrainerBattle(playerTeam,enemyTeam);
   // Write HP back to the real party objects — runTrainerBattle operates on copies.
@@ -1036,7 +1147,7 @@ function runGymEncounter(trainerId,tier){
 // but uses giveExpSilent() instead of giveExp() to avoid per-battle log spam over a long away
 // period — consistent with how offline wild encounters already use giveExpSilent().
 function runOneGymBattleSilent(enemyTeam){
-  const playerTeam=state.party.filter(p=>p.currentHP>0).map(p=>({id:p.id,pokedexId:p.pokedexId,level:p.level,currentHP:p.currentHP,maxHP:p.maxHP,equippedMoves:p.equippedMoves||[]}));
+  const playerTeam=state.party.filter(p=>p.currentHP>0).map(p=>({id:p.id,pokedexId:p.pokedexId,level:p.level,currentHP:p.currentHP,maxHP:p.maxHP,stats:p.stats,equippedMoves:p.equippedMoves||[]}));
   if(!playerTeam.length||!enemyTeam.length) return {winner:'enemy',log:[]};
   const result=runTrainerBattle(playerTeam,enemyTeam);
   playerTeam.forEach(pt=>{
@@ -1063,10 +1174,16 @@ function awardGymWinSilent(trainerId,tier,summary){
   const row=TRAINERS_DATA.find(t=>t.trainerId===trainerId&&t.badgeItemId);
   if(!row) return;
   const badgeId=row.badgeItemId;
-  if((state.trainerBag[badgeId]||0)>0) return; // already earned — no further effect
-  state.trainerBag[badgeId]=(state.trainerBag[badgeId]||0)+1;
-  summary.badgesEarned=(summary.badgesEarned||0)+1;
-  if(!row.isGauntlet){ state.professorBag['tm']=(state.professorBag['tm']||0)+1; }
+  // v0.31 — mirrors awardGymWin()'s tiered TM logic exactly (see there for rationale).
+  const alreadyEarned=(state.trainerBag[badgeId]||0)>0;
+  if(!alreadyEarned){
+    state.trainerBag[badgeId]=(state.trainerBag[badgeId]||0)+1;
+    summary.badgesEarned=(summary.badgesEarned||0)+1;
+  }
+  if(!row.isGauntlet){
+    const tmAward=alreadyEarned?1:(tier+4);
+    state.professorBag['tm']=(state.professorBag['tm']||0)+tmAward;
+  }
 }
 
 // v0.26 — offline gym battle simulation. Mirrors runGymEncounter()'s logic exactly (same
@@ -1520,7 +1637,7 @@ function isSpeciesKnown(dexId){ return !!state.researchLog[dexId]; }
 function applySpeciesSwap(p,newEntry){
   const om=p.maxHP;
   p.species=newEntry.name; p.pokedexId=newEntry.dexId;
-  p.maxHP=calcMaxHP(p.species,p.level,p.pokedexId);
+  recalcStats(p); // v0.31 — recomputes maxHP AND p.stats together, using this Pokemon's existing ivs/nature
   p.currentHP=Math.min(p.maxHP,p.currentHP+(p.maxHP-om));
   if(!SPECIES[p.species]) SPECIES[p.species]=newEntry;
   recordNewSpecies(newEntry.dexId,p.species);
@@ -1560,10 +1677,10 @@ function professorAutoTestEvolutions(){
       if(r.testedMethods.includes(itemName)) continue; // already tested this item against this species
 
       const entry=getPokemonEntry(dexId);
-      let matched=false;
-      let targetId=null;
+      let path1Matched=false, path1Target=null;
 
-      // Path 1: single-target SPECIES evolution (pokedex.js) — matched by item NAME.
+      // Path 1: single-target SPECIES evolution (pokedex.js) — matched by item NAME. Always a
+      // single unambiguous target; no form-variant/multi-branch concept on this path.
       // v0.26 fix: previously split into evolvesByStone (required item.effect==='evolve-stone')
       // and evolvesByTrade (required entry.evolveMethod==='trade', for item.effect==='evolve-trade').
       // The Pokedex data standardized on evolveMethod:'use-item' for EVERY item-based evolution,
@@ -1575,33 +1692,51 @@ function professorAutoTestEvolutions(){
       // this). Fix: match by item name alone, independent of the item's effect field — effect is
       // otherwise never branched on differently anywhere else in the codebase (confirmed by audit).
       if(entry&&entry.evolveMethod==='use-item'&&entry.evolveItem===itemName){
-        matched=true; targetId=entry.evolvesIntoId;
+        path1Matched=true; path1Target=entry.evolvesIntoId;
       }
 
-      // Path 2 (v0.20): EVO_TREE branching evolutions — matched by itemId
-      if(!matched){
-        const branch=getEvolutions(dexId).find(b=>b.evolveMethod==='use-item'&&b.evolveItem===itemId);
-        if(branch&&branch.toDexId){ matched=true; targetId=branch.toDexId; }
-      }
+      // Path 2 (v0.20): EVO_TREE branching evolutions — matched by itemId. v0.31 fix: collects
+      // ALL matching branches (was .find(), first-match-only) — a species with multiple branches
+      // sharing one item (e.g. Raichu/Alolan Raichu, both Thunder Stone) previously could only
+      // ever have ONE branch discovered/confirmed, permanently locking out the other the moment
+      // this item+species pair was marked tested. See DESIGN.md "Raichu / Alolan Raichu".
+      const path2Branches=getEvolutions(dexId).filter(b=>b.evolveMethod==='use-item'&&b.evolveItem===itemId&&b.toDexId);
 
-      if(!matched){
+      if(!path1Matched&&!path2Branches.length){
         r.testedMethods.push(itemName); // ruled out — costs nothing, mark tested
         continue;
       }
+      r.testedMethods.push(itemName);
+
+      // Confirm EVERY Path 2 branch into research regardless of whether it gets auto-applied
+      // below — this is what makes a form-variant branch show up as a manual "🔬 Evolve" choice
+      // on the detail modal even though the professor never auto-evolves anyone into it.
+      path2Branches.forEach(b=>recordEvolution(dexId,b.toDexId,itemName,0));
+
+      // v0.31 — auto-apply candidates: Path 1's target (always — single-target by definition),
+      // plus any Path 2 branch WITHOUT a form-variant tag (toFormName null = the "default"/base
+      // form, e.g. Kantonian Raichu). A form-variant branch (toFormName set, e.g. Alolan) is
+      // confirmed above but never auto-applied — the player chooses it manually instead.
+      const autoTargets=[];
+      if(path1Matched) autoTargets.push(path1Target);
+      path2Branches.filter(b=>!b.toFormName).forEach(b=>{ if(!autoTargets.includes(b.toDexId)) autoTargets.push(b.toDexId); });
+
+      if(!autoTargets.length) continue; // only form-variant branches matched — nothing to auto-evolve, item not consumed
+      const targetId=autoTargets[0];
 
       // v0.21: matched — find an eligible individual to auto-evolve.
       // Eligible = owned, in the Professor's possession (!p.holder — not with an aide), not evolveBlocked.
       // Highest level wins; ties broken by array order.
       const candidates=state.dex.filter(p=>p.pokedexId===dexId&&!p.holder&&!p.evolveBlocked);
       if(!candidates.length){
-        // No eligible individual right now — defer entirely. Not marked tested, item not consumed.
-        // Retried automatically the next time this function runs (next purchase or new-species catch).
+        // No eligible individual right now — item not consumed. Retried automatically the next
+        // time this function runs (next purchase or new-species catch) — testedMethods is already
+        // marked above so a form-variant-only confirmation isn't lost even if this branch defers.
         continue;
       }
       candidates.sort((a,b)=>b.level-a.level);
       const chosen=candidates[0];
 
-      r.testedMethods.push(itemName);
       state.professorBag[itemId]--;
       if(state.professorBag[itemId]<=0) delete state.professorBag[itemId];
       const toEntry=getPokemonEntry(targetId);
@@ -1669,6 +1804,30 @@ function getEvolutionDisplayText(dexId){
 }
 
 // ── EVOLUTION ──
+// v0.31 — shared branch-selection logic for EVO_TREE's Path 2 (used by both checkEvolution and
+// applyEvolutionSilent, so live and offline behave identically). Priority order:
+//   1. Nickname trigger (fully generic, species-agnostic — see DESIGN.md "Nickname-Triggered
+//      Evolution Branches"): if any qualifying branch's evolveNickname is a substring of this
+//      individual's nickname (case-insensitive, trimmed), that branch wins outright.
+//   2. Tyrogue (dexId 236) special case: resolves Hitmonlee/Hitmonchan/Hitmontop by comparing
+//      this individual's actual Atk vs Def stat (IV+nature baked in via p.stats, already
+//      recomputed by the level-up call that led here) — see DESIGN.md "Tyrogue Evolution Fix".
+//   3. Otherwise, the original random-among-qualifying-branches fallback (dormant for every
+//      other species today, since no other species has multiple branches sharing one condition).
+function selectEvolutionBranch(p,branches){
+  if(!branches.length) return null;
+  const nick=(p.nickname||'').trim().toLowerCase();
+  if(nick){
+    const nickMatch=branches.find(b=>b.evolveNickname&&nick.includes(String(b.evolveNickname).trim().toLowerCase()));
+    if(nickMatch) return nickMatch;
+  }
+  if(p.pokedexId===236&&branches.length>1&&p.stats){
+    const target=p.stats.atk>p.stats.def?106:(p.stats.def>p.stats.atk?107:237);
+    const tyrogueMatch=branches.find(b=>b.toDexId===target);
+    if(tyrogueMatch) return tyrogueMatch;
+  }
+  return branches[Math.floor(Math.random()*branches.length)];
+}
 function checkEvolution(p){
   if(p.evolveBlocked) return; // v0.20 — per-individual block, skip entirely regardless of path
   // Path 1: dexId-based lookup — simple linear (single-target) evolutions from pokedex.js.
@@ -1738,7 +1897,7 @@ function checkEvolution(p){
       return false;
     });
     if(branches.length>0){
-      const branch=branches[Math.floor(Math.random()*branches.length)];
+      const branch=selectEvolutionBranch(p,branches);
       const newEntry=getPokemonEntry(branch.toDexId);
       if(newEntry){
         const old=getDisplayName(p); const prevDexId=p.pokedexId;
@@ -1770,7 +1929,7 @@ function giveExp(pokemon,amount){
     const need=expToLevel(pokemon.level+1,gr);
     if(pokemon.exp>=need&&pokemon.level<getLevelCap()){
       pokemon.level++; levelled=true;
-      const om=pokemon.maxHP; pokemon.maxHP=calcMaxHP(pokemon.species,pokemon.level,pokemon.pokedexId);
+      const om=pokemon.maxHP; recalcStats(pokemon);
       pokemon.currentHP=Math.min(pokemon.maxHP,pokemon.currentHP+(pokemon.maxHP-om));
       addLog(getDisplayName(pokemon)+' #'+pokemon.id+' -> Lv'+pokemon.level+'!','evolve');
       checkEvolution(pokemon); saveGame();
@@ -1787,7 +1946,7 @@ function giveExpSilent(p,amount){
     const gr=p.growthRate||(s?s.growthRate:null)||'mediumFast';
     if(p.exp>=expToLevel(p.level+1,gr)&&p.level<getLevelCap()){
       p.level++;
-      const om=p.maxHP; p.maxHP=calcMaxHP(p.species,p.level,p.pokedexId);
+      const om=p.maxHP; recalcStats(p);
       p.currentHP=Math.min(p.maxHP,p.currentHP+(p.maxHP-om));
       applyEvolutionSilent(p);
       checkMethodRuleOut(p.pokedexId,p.level,p.friendship);
@@ -1834,7 +1993,7 @@ function applyEvolutionSilent(p){
       return false;
     });
     if(branches.length>0){
-      const branch=branches[Math.floor(Math.random()*branches.length)];
+      const branch=selectEvolutionBranch(p,branches);
       tryApply(branch.toDexId,branch.evolveMethod);
     }
   }
@@ -2125,10 +2284,11 @@ function rollFromTable(table){
 // Per-species cap: flat max 6 non-shiny individuals, regardless of aide count. Shiny exempt.
 // Catch-then-release: stats (totalCatches, dexHistory) already counted before this is called.
 // v0.26 — cap is now editable (state.speciesCap, 1-6, default 6), was previously hardcoded 6.
+// v0.31 — perfect-IV individuals get the same exemption as shinies.
 function checkSpeciesCap(caught){
-  if(caught.isShiny) return; // shinies never released
+  if(caught.isShiny||isPerfectIV(caught)) return; // shinies and perfect-IV individuals never released
   const cap=state.speciesCap||6;
-  const liveNonShiny=state.dex.filter(p=>p.pokedexId===caught.pokedexId&&!p.isShiny);
+  const liveNonShiny=state.dex.filter(p=>p.pokedexId===caught.pokedexId&&!p.isShiny&&!isPerfectIV(p));
   if(liveNonShiny.length>cap){
     state.dex=state.dex.filter(p=>p.id!==caught.id);
     addLog('Released '+getDisplayName(caught)+' #'+caught.id+' — species cap reached ('+cap+' max).','info');
@@ -2138,7 +2298,8 @@ function checkSpeciesCap(caught){
 // v0.26 — dropdown handler for the editable per-species cap. Raising applies immediately (never
 // releases anything). Lowering shows a confirm dialog, then sweeps every species over the new
 // cap, releasing the newest excess and keeping the earliest catches — same order as the existing
-// catch-then-release overflow rule above. Shinies are always exempt from both the cap and sweep.
+// catch-then-release overflow rule above. Shinies (and, v0.31, perfect-IV individuals) are always
+// exempt from both the cap and sweep.
 function onSpeciesCapChange(selectEl){
   const newCap=parseInt(selectEl.value)||6;
   const oldCap=state.speciesCap||6;
@@ -2148,7 +2309,7 @@ function onSpeciesCapChange(selectEl){
     saveGame(); render();
     return;
   }
-  const proceed=confirm('Are you sure you would like to change the species cap for Pokémon in your box? Lowering the cap will result in any excess being dropped. (Earliest caught kept, shiny Pokémon excluded)');
+  const proceed=confirm('Are you sure you would like to change the species cap for Pokémon in your box? Lowering the cap will result in any excess being dropped. (Earliest caught kept, shiny/perfect-IV Pokémon excluded)');
   if(!proceed){
     selectEl.value=oldCap;
     return;
@@ -2157,7 +2318,7 @@ function onSpeciesCapChange(selectEl){
   let released=0;
   const bySpecies={};
   state.dex.forEach(p=>{
-    if(p.isShiny) return;
+    if(p.isShiny||isPerfectIV(p)) return;
     (bySpecies[p.pokedexId]=bySpecies[p.pokedexId]||[]).push(p);
   });
   const toRelease=new Set();
@@ -2214,8 +2375,8 @@ function resolveEncounterStep(){
     state.dex.push(caught); state.totalCatches++; state.totalSightings++;
     state.dexHistory[caught.pokedexId]=(state.dexHistory[caught.pokedexId]||0)+1;
     recordAbilityObserved(caught.pokedexId,caught.ability);
-    const s_=SPECIES[enc.species];
-    const exp=Math.floor(((s_?s_.baseExpYield||s_.baseExp:51)*enc.level)/7);
+    const s_=getPokemonEntry(enc.pokedexId);
+    const exp=Math.floor(((s_?s_.baseExpYield:51)||51)*enc.level/7);
     giveExp(lead,exp);
     recordCapture(caught.pokedexId,enc.species);
     addLog('✨ SHINY '+getDisplayName(caught)+' caught automatically! ✨','evolve');
@@ -2414,8 +2575,8 @@ function catchPokemon(lead,enc,isShiny){
   state.dexHistory[caught.pokedexId]=(state.dexHistory[caught.pokedexId]||0)+1;
   recordAbilityObserved(caught.pokedexId,caught.ability);
   if(isShiny) addLog('✨ SHINY '+getDisplayName(caught)+' caught automatically! ✨','evolve');
-  const s_=SPECIES[enc.species];
-  const exp=Math.floor(((s_?s_.baseExpYield||s_.baseExp:51)*enc.level)/7);
+  const s_=getPokemonEntry(enc.pokedexId);
+  const exp=Math.floor(((s_?s_.baseExpYield:51)||51)*enc.level/7);
   giveExp(lead,exp);
   recordCapture(caught.pokedexId,enc.species);
   addLog('Caught '+getDisplayName(caught)+' #'+caught.id+' (Lv'+enc.level+' '+enc.gender+(isShiny?' ✨':'')+')! +'+exp+' EXP','catch');
@@ -2745,6 +2906,10 @@ const INFO_TOPICS=[
     {header:null,text:'Each location shows you the types of encounters you can have: grass, surf, fish, cave, rock-smash.'},
     {header:null,text:'You are able to dynamically choose the rate at which you would like to do each type of encounter.'},
     {header:null,text:'Certain encounters such as fishing are blocked until you have the item necessary to get to them.'}
+  ]},
+  {id:'evolutionSecrets',title:'Evolution Secrets',sections:[
+    {header:null,text:'Some Pokémon have more than one possible evolution outcome. For a few of these, giving a Pokémon the right nickname before it evolves can lock in a specific result instead of leaving it to chance.'},
+    {header:null,text:'There\'s no in-game list of which species or which words work — experimentation (or comparing notes with other Professors) is part of the fun.'}
   ]}
 ];
 function showInfoMenu(){
@@ -3334,7 +3499,7 @@ function daycarePickerRowHtml(p,onclickJs){
   const sprite=getSpriteUrl(p.pokedexId,p.species,p.isShiny||false);
   return '<div onclick="'+onclickJs+'" style="display:flex;align-items:center;gap:8px;background:#0f1a2a;border-radius:4px;padding:6px 8px;margin-bottom:5px;cursor:pointer;">'+
     '<img src="'+sprite+'" style="width:32px;height:32px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'">'+
-    '<div style="flex:1;"><div style="color:#fff;font-size:11px;">'+getDisplayName(p)+' #'+p.id+(p.isShiny?' ✨':'')+'</div>'+
+    '<div style="flex:1;"><div style="color:#fff;font-size:11px;">'+getDisplayName(p)+' #'+p.id+(getRarityBadge(p)?' '+getRarityBadge(p):'')+'</div>'+
     '<div style="color:#a0a0c0;font-size:9px;">Lv'+p.level+' · '+genderLabel+' · '+(p.holder?'👤 held':'📦 box')+'</div></div></div>';
 }
 
@@ -3437,6 +3602,34 @@ function revivePokemon(catchId){
   addLog('💊 '+getDisplayName(p)+' #'+p.id+' revived!','info');
 }
 
+// v0.31 — HP/ATK/DEF/SATK/SDEF/SPD IV row + Current Stat row for the Pokémon detail modal.
+// Plain numbers, no colored bars. IV row gets a +/− marker on whichever stat this individual's
+// nature boosts/reduces. Returns '' if this Pokemon predates v0.31 stats (defensive only —
+// migration backfills every pre-v0.31 save, so this should never actually happen post-load).
+function buildStatTableHtml(p){
+  if(!p.stats||!p.ivs) return '';
+  const cols=[
+    {label:'HP',iv:p.ivs.hp,stat:p.maxHP,key:'hp'},
+    {label:'ATK',iv:p.ivs.atk,stat:p.stats.atk,key:'atk'},
+    {label:'DEF',iv:p.ivs.def,stat:p.stats.def,key:'def'},
+    {label:'SATK',iv:p.ivs.spatk,stat:p.stats.spatk,key:'spatk'},
+    {label:'SDEF',iv:p.ivs.spdef,stat:p.stats.spdef,key:'spdef'},
+    {label:'SPD',iv:p.ivs.spd,stat:p.stats.spd,key:'spd'}
+  ];
+  const nat=NATURES[p.nature];
+  const marker=key=>{
+    if(!nat) return '';
+    if(nat.boost===key) return '+';
+    if(nat.reduce===key) return '−';
+    return '';
+  };
+  const rowHtml=(label,cellFn)=>'<div style="display:flex;align-items:center;"><div style="width:30px;flex-shrink:0;color:#555;font-size:9px;">'+label+'</div>'+cols.map(c=>'<div style="flex:1;text-align:center;font-size:10px;">'+cellFn(c)+'</div>').join('')+'</div>';
+  return '<div style="margin:8px 0;background:#0f1a2a;border-radius:4px;padding:6px 4px;">'
+    +rowHtml('',c=>'<span style="color:#6080a0;font-size:9px;">'+c.label+'</span>')
+    +rowHtml('IV',c=>'<span style="color:#a0a0c0;">'+c.iv+marker(c.key)+'</span>')
+    +rowHtml('Stat',c=>'<span style="color:#fff;font-weight:bold;">'+c.stat+'</span>')
+    +'</div>';
+}
 function showPokemonDetail(catchId){
   const p=state.dex.find(x=>x.id===catchId); if(!p) return;
   const entry=getPokemonEntry(p.pokedexId);
@@ -3446,7 +3639,10 @@ function showPokemonDetail(catchId){
   modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
 
   // Build one evolve button per confirmed item-based branch (v0.20 — branching evolutions
-  // like Eevee can have several simultaneously confirmed). Hidden entirely if evolveBlocked.
+  // like Eevee/Raichu can have several simultaneously confirmed). Hidden entirely if evolveBlocked.
+  // v0.31 — label now shows the TARGET species name, not just the item name; two branches
+  // sharing one item (e.g. Raichu/Alolan Raichu, both Thunder Stone) previously rendered as
+  // identical, indistinguishable buttons.
   const r=state.researchLog[p.pokedexId];
   const nonManualMethods=['level','friendship','friendship-day','friendship-night','use-move','in-party'];
   let evolveBtnHtml='';
@@ -3454,7 +3650,9 @@ function showPokemonDetail(catchId){
     evolveBtnHtml=r.confirmedBranches.filter(b=>!nonManualMethods.includes(b.method)).map(b=>{
       const itemEntry=typeof ITEMS_DATA!=='undefined'?ITEMS_DATA.find(i=>i.name===b.method):null;
       const hasItem=itemEntry&&(state.professorBag[itemEntry.itemId]>0);
-      return '<button onclick="applyItemEvolution('+p.id+','+b.intoId+')" '+(hasItem?'':'disabled')+' style="flex:1;border-color:#f4d03f;color:#f4d03f;">🔬 Evolve ('+b.method+')</button>';
+      const targetEntry=getPokemonEntry(b.intoId);
+      const targetName=targetEntry?(targetEntry.name+(targetEntry.formName?' ('+targetEntry.formName+')':'')):('#'+b.intoId);
+      return '<button onclick="applyItemEvolution('+p.id+','+b.intoId+')" '+(hasItem?'':'disabled')+' style="flex:1;border-color:#f4d03f;color:#f4d03f;">🔬 Evolve → '+targetName+' ('+b.method+')</button>';
     }).join('');
   }
 
@@ -3468,7 +3666,30 @@ function showPokemonDetail(catchId){
   // v0.23 — Trainer Battle System: tappable move slots (Upgrade/Change/Add, gated by TM)
   const movesHtml='<div style="margin-bottom:10px;"><div style="color:#a0a0c0;font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Moves</div>'+getMoveSlotsHtml(p,false)+'</div>';
 
-  modal.innerHTML='<div style="background:#16213e;border:1px solid #e63946;border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:#e63946;font-size:14px;font-weight:bold;">#'+(p.pokedexId||'?')+' '+getDisplayName(p)+(p.nickname?' <span style="color:#6080a0;font-size:11px;">('+p.species+')</span>':'')+(p.formName?' ('+p.formName+')':'')+' (catch #'+p.id+')</div><button onclick="document.getElementById(\'poke-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div><div style="color:#a0a0c0;font-size:11px;line-height:2;border-bottom:1px solid #0f3460;margin-bottom:10px;padding-bottom:10px;"><div>Level: <span style="color:#fff">'+p.level+'</span> &nbsp;·&nbsp; Gender: <span style="color:#fff">'+p.gender+'</span></div><div>Type: <span style="color:#fff">'+(entry?entry.type1+(entry.type2?' / '+entry.type2:''):'?')+'</span></div><div>HP: <span style="color:#fff">'+p.currentHP+'/'+p.maxHP+'</span></div><div>Ability: <span style="color:#fff">'+(p.ability||'Unknown')+'</span></div><div>Friendship: <span style="color:#fff">'+(p.friendship||0)+'</span></div>'+(entry&&entry.heightM?'<div>Height: <span style="color:#fff">'+(metersToFeetStr(entry.heightM)||entry.heightM+'m')+'</span></div>':'')+(entry&&entry.weightKg?'<div>Weight: <span style="color:#fff">'+(kgToLbsStr(entry.weightKg)||entry.weightKg+'kg')+'</span></div>':'')+'<div>Holder: <span style="color:#2ecc71">'+(p.breeding?'🥚 At Day Care':(p.holder||'Unassigned'))+'</span></div>'+(p.isShiny?'<div style="color:#f4d03f;">✨ SHINY</div>':'')+'</div>'+nicknameHtml+evolveBlockHtml+movesHtml+'<div style="display:flex;gap:8px;flex-wrap:wrap;">'+((!p.holder)?'<button onclick="assignToAide('+p.id+')" class="primary" style="flex:1;">+ Party</button>':'')+(p.holder?'<button onclick="unassignPokemon('+p.id+')" style="flex:1;">− Remove</button>':'')+(p.currentHP<=0?'<button onclick="revivePokemon('+p.id+')" style="flex:1;border-color:#f4d03f;color:#f4d03f;">💊 Revive ($20)</button>':'')+evolveBtnHtml+'<button onclick="document.getElementById(\'poke-modal\').remove()" style="flex:1;">Close</button></div></div>';
+  // v0.31 — type shown as colored badges (matching the Species Detail page's convention),
+  // not plain text.
+  const typeBadgeHtml=t=>t?'<span style="background:'+(TYPE_COLORS[t]||'#444')+';color:#fff;padding:2px 7px;border-radius:3px;font-size:10px;margin-right:4px;">'+t+'</span>':'';
+
+  // v0.31 — rarity status line: 🦄 shiny+perfect IV, 💥 perfect IV, ✨ shiny (unchanged), else nothing.
+  const badge=getRarityBadge(p);
+  const badgeText=badge==='🦄'?'🦄 SHINY + PERFECT IV':badge==='💥'?'💥 PERFECT IV':badge==='✨'?'✨ SHINY':'';
+  const badgeHtml=badgeText?'<div style="color:#f4d03f;">'+badgeText+'</div>':'';
+
+  modal.innerHTML='<div style="background:#16213e;border:1px solid #e63946;border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:#e63946;font-size:14px;font-weight:bold;">#'+(p.pokedexId||'?')+' '+getDisplayName(p)+(p.nickname?' <span style="color:#6080a0;font-size:11px;">('+p.species+')</span>':'')+(p.formName?' ('+p.formName+')':'')+' (catch #'+p.id+')</div><button onclick="document.getElementById(\'poke-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'
+    +'<div style="color:#a0a0c0;font-size:11px;line-height:2;border-bottom:1px solid #0f3460;margin-bottom:10px;padding-bottom:10px;">'
+    +'<div>Level: <span style="color:#fff">'+p.level+'</span> &nbsp;·&nbsp; Gender: <span style="color:#fff">'+p.gender+'</span></div>'
+    +'<div style="margin:2px 0;">'+typeBadgeHtml(entry?entry.type1:null)+typeBadgeHtml(entry?entry.type2:null)+'</div>'
+    +'<div>Ability: <span style="color:#fff">'+(p.ability||'Unknown')+'</span> &nbsp;·&nbsp; Nature: <span style="color:#fff">'+(p.nature||'Unknown')+'</span></div>'
+    +'<div>Friendship: <span style="color:#fff">'+(p.friendship||0)+'</span></div>'
+    +((entry&&entry.heightM)||(entry&&entry.weightKg)?'<div>'+(entry&&entry.heightM?'Height: <span style="color:#fff">'+(metersToFeetStr(entry.heightM)||entry.heightM+'m')+'</span>':'')+((entry&&entry.heightM&&entry&&entry.weightKg)?' &nbsp;·&nbsp; ':'')+(entry&&entry.weightKg?'Weight: <span style="color:#fff">'+(kgToLbsStr(entry.weightKg)||entry.weightKg+'kg')+'</span>':'')+'</div>':'')
+    +buildStatTableHtml(p)
+    +'<div>HP: <span style="color:#fff">'+p.currentHP+'/'+p.maxHP+'</span></div>'
+    +'<div>Holder: <span style="color:#2ecc71">'+(p.breeding?'🥚 At Day Care':(p.holder||'Unassigned'))+'</span></div>'
+    +badgeHtml
+    +'</div>'
+    +nicknameHtml+evolveBlockHtml+movesHtml
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;">'+((!p.holder)?'<button onclick="assignToAide('+p.id+')" class="primary" style="flex:1;">+ Party</button>':'')+(p.holder?'<button onclick="unassignPokemon('+p.id+')" style="flex:1;">− Remove</button>':'')+(p.currentHP<=0?'<button onclick="revivePokemon('+p.id+')" style="flex:1;border-color:#f4d03f;color:#f4d03f;">💊 Revive ($20)</button>':'')+evolveBtnHtml+'<button onclick="document.getElementById(\'poke-modal\').remove()" style="flex:1;">Close</button></div></div>';
   modal.onclick=(e)=>{ if(e.target===modal) modal.remove(); };
   document.body.appendChild(modal);
 }
@@ -3648,7 +3869,7 @@ function renderBagDisplay(){
     const tms=state.professorBag['tm']||0;
     const potions=getProfessorItemCountByEffect(['heal-hp','heal-hp-full']);
     const revives=getProfessorItemCountByEffect(['revive-half','revive-full']);
-    summaryEl.textContent='Professor: '+getBallCount()+' Balls | '+tms+' TMs | '+potions+' Potions | '+revives+' Revives';
+    summaryEl.textContent=getBallCount()+' Balls | '+tms+' TMs | '+potions+' Potions | '+revives+' Revives';
   }
   // v0.27 — keep badge sprites on the name line in sync even when only renderBagDisplay() runs
   // (e.g. right after a gym win), not just on a full renderParty() pass.
@@ -3717,7 +3938,7 @@ function renderParty(){
     d.className='party-slot'+(fainted?' fainted':'');
     const spriteUrl=getSpriteUrl(p.pokedexId,p.species,p.isShiny||false);
     spritesHtml+='<img src="'+spriteUrl+'" class="aide-sprite-mini" style="opacity:'+(fainted?'0.3':'1')+';image-rendering:pixelated;" onerror="this.style.display=\'none\'">';
-    d.innerHTML='<div style="display:flex;align-items:flex-start;gap:8px;"><img src="'+spriteUrl+'" class="party-sprite" onerror="this.style.display=\'none\'"><div style="flex:1;"><div class="poke-name">'+(fainted?'💀':'🐾')+' '+getDisplayName(p)+' #'+p.id+(p.isShiny?'<span class="shiny-badge">✨</span>':'')+'</div><div class="poke-level">Lv '+p.level+' · '+p.gender+(p.ability?' · '+p.ability:'')+'</div><div style="color:#6080a0;font-size:10px;">❤ '+(p.friendship||0)+' friendship</div><div class="hp-bar-wrap"><div class="hp-bar" style="width:'+hpPct+'%;background:'+hpColor+';"></div></div><div class="hp-text">HP: '+p.currentHP+'/'+p.maxHP+'</div><div class="exp-bar-wrap"><div class="exp-bar" style="width:'+ePct+'%;"></div></div></div></div>'+getMoveSlotsHtml(p,true);
+    d.innerHTML='<div style="display:flex;align-items:flex-start;gap:8px;"><img src="'+spriteUrl+'" class="party-sprite" onerror="this.style.display=\'none\'"><div style="flex:1;"><div class="poke-name">'+(fainted?'💀':'🐾')+' '+getDisplayName(p)+' #'+p.id+(getRarityBadge(p)?'<span class="shiny-badge">'+getRarityBadge(p)+'</span>':'')+'</div><div class="poke-level">Lv '+p.level+' · '+p.gender+(p.ability?' · '+p.ability:'')+'</div><div style="color:#6080a0;font-size:10px;">❤ '+(p.friendship||0)+' friendship</div><div class="hp-bar-wrap"><div class="hp-bar" style="width:'+hpPct+'%;background:'+hpColor+';"></div></div><div class="hp-text">HP: '+p.currentHP+'/'+p.maxHP+'</div><div class="exp-bar-wrap"><div class="exp-bar" style="width:'+ePct+'%;"></div></div></div></div>'+getMoveSlotsHtml(p,true);
     d.onclick=()=>showPokemonDetail(p.id);
     c.appendChild(d);
   });
@@ -3796,6 +4017,14 @@ function updateDexChrome(){
 
 // ── EVOLUTION CHAIN VISUAL (v0.22) — shared by Family Cards and Species Detail ──
 function evoMethodLabel(e){
+  // v0.31 — Tyrogue's 3 branches all share method:"level"/level:20 (their real differentiator is
+  // an Atk/Def stat comparison, invisible from static edge data) — without this override all 3
+  // arrows would render as identical "Lv 20" labels. See DESIGN.md "Tyrogue Evolution Fix".
+  if(e.from===236&&e.method==='level'){
+    if(e.to===106) return 'Lv20 · A>D';
+    if(e.to===107) return 'Lv20 · D>A';
+    if(e.to===237) return 'Lv20 · A=D';
+  }
   if(e.method==='level') return 'Lv '+(e.level!=null?e.level:'?');
   if(e.method==='friendship') return 'Friendship';
   if(e.method==='friendship-day') return 'Friendship (Day)';
@@ -3962,7 +4191,8 @@ function renderDexPokedexGrid(){
       const sprite=getSpriteUrl(dexId,entry.name,false);
       const filter=captured?'':'filter:brightness(0);';
       const shinyBadge=hasLiveShiny(dexId)?'<span class="shiny-badge">✨</span>':'';
-      cell.innerHTML='<img src="'+sprite+'" style="width:48px;height:48px;image-rendering:pixelated;'+filter+'" onerror="this.style.display=\'none\'"><div style="font-size:9px;color:#a0a0c0;margin-top:2px;text-align:center;">#'+dexId+' '+entry.name+shinyBadge+'</div>';
+      const completeBadge=isDexPageComplete(dexId)?'<span title="Dex page complete" style="font-size:10px;margin-left:2px;">🔬</span>':'';
+      cell.innerHTML='<img src="'+sprite+'" style="width:48px;height:48px;image-rendering:pixelated;'+filter+'" onerror="this.style.display=\'none\'"><div style="font-size:9px;color:#a0a0c0;margin-top:2px;text-align:center;">#'+dexId+' '+entry.name+shinyBadge+completeBadge+'</div>';
       cell.onclick=()=>{ dexSelectedDexId=dexId; dexSelectedFamily=entry.familyId; dexView='detail'; renderDex(); };
     } else {
       cell.innerHTML='<div style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;font-size:22px;color:#555;">?</div><div style="font-size:9px;color:#555;margin-top:2px;">#'+dexId+'</div>';
@@ -4164,7 +4394,7 @@ function renderDexDetail(){
     const hpColor=hpPct>50?'#2ecc71':hpPct>20?'#f4d03f':'#e74c3c';
     const catchSprite=getSpriteUrl(p.pokedexId,p.species,p.isShiny||false);
     const statusText=p.breeding?'🥚 At Day Care':(p.holder?'👤 '+p.holder:'📦');
-    d.innerHTML='<div style="display:flex;align-items:center;gap:8px;"><img src="'+catchSprite+'" style="width:40px;height:40px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div class="dex-header"><span class="dex-name">'+getDisplayName(p)+' #'+p.id+(p.isShiny?'<span class="shiny-badge">✨</span>':'')+'</span><span class="dex-id">'+statusText+'</span></div><div class="dex-details">Lv'+p.level+' · '+p.gender+(p.ability?' · '+p.ability:'')+' · Friendship:'+(p.friendship||0)+'</div><div style="background:#0a0a1a;border-radius:2px;height:4px;margin-top:3px;overflow:hidden;"><div style="width:'+hpPct+'%;height:100%;background:'+hpColor+';border-radius:2px;"></div></div></div></div>';
+    d.innerHTML='<div style="display:flex;align-items:center;gap:8px;"><img src="'+catchSprite+'" style="width:40px;height:40px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div class="dex-header"><span class="dex-name">'+getDisplayName(p)+' #'+p.id+(getRarityBadge(p)?'<span class="shiny-badge">'+getRarityBadge(p)+'</span>':'')+'</span><span class="dex-id">'+statusText+'</span></div><div class="dex-details">Lv'+p.level+' · '+p.gender+(p.ability?' · '+p.ability:'')+' · Friendship:'+(p.friendship||0)+'</div><div style="background:#0a0a1a;border-radius:2px;height:4px;margin-top:3px;overflow:hidden;"><div style="width:'+hpPct+'%;height:100%;background:'+hpColor+';border-radius:2px;"></div></div></div></div>';
     d.onclick=()=>showPokemonDetail(p.id);
     c.appendChild(d);
   });
@@ -4184,7 +4414,7 @@ function renderDexViewAll(){
   else if(sort==='dexid') entries.sort((a,b)=>(a.pokedexId||0)-(b.pokedexId||0));
   else if(sort==='level') entries.sort((a,b)=>b.level-a.level);
   else if(sort==='hp') entries.sort((a,b)=>b.maxHP-a.maxHP);
-  else if(sort==='total') entries.sort((a,b)=>calcBST(b.species,b.level)-calcBST(a.species,a.level));
+  else if(sort==='total') entries.sort((a,b)=>calcBST(b.species,b.level,b)-calcBST(a.species,a.level,a));
   else if(sort==='family') entries.sort((a,b)=>{
     const fa=(getPokemonEntry(a.pokedexId)||{}).familyId||0, fb=(getPokemonEntry(b.pokedexId)||{}).familyId||0;
     return fa-fb||(a.pokedexId||0)-(b.pokedexId||0);
@@ -4197,7 +4427,7 @@ function renderDexViewAll(){
     const sprite=getSpriteUrl(p.pokedexId,p.species,p.isShiny||false);
     const statusIcon=p.breeding?'🥚':(p.holder?'👤':'📦');
     const statusText=p.breeding?'At Day Care':(p.holder?'Held by: '+p.holder:'Unassigned');
-    d.innerHTML='<div style="display:flex;align-items:center;gap:8px;"><img src="'+sprite+'" style="width:36px;height:36px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div class="dex-header"><span class="dex-name">#'+(p.pokedexId||'?')+' '+getDisplayName(p)+(p.isShiny?'<span class="shiny-badge">✨</span>':'')+' (catch #'+p.id+')</span><span class="dex-id">'+statusIcon+'</span></div><div class="dex-details">Lv'+p.level+' · '+p.gender+' · HP '+p.currentHP+'/'+p.maxHP+' · BST '+calcBST(p.species,p.level)+'</div><div class="dex-holder">'+statusText+'</div></div></div>';
+    d.innerHTML='<div style="display:flex;align-items:center;gap:8px;"><img src="'+sprite+'" style="width:36px;height:36px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div class="dex-header"><span class="dex-name">#'+(p.pokedexId||'?')+' '+getDisplayName(p)+(getRarityBadge(p)?'<span class="shiny-badge">'+getRarityBadge(p)+'</span>':'')+' (catch #'+p.id+')</span><span class="dex-id">'+statusIcon+'</span></div><div class="dex-details">Lv'+p.level+' · '+p.gender+' · HP '+p.currentHP+'/'+p.maxHP+' · BST '+calcBST(p.species,p.level,p)+'</div><div class="dex-holder">'+statusText+'</div></div></div>';
     d.onclick=()=>showPokemonDetail(p.id);
     c.appendChild(d);
   });
@@ -4282,7 +4512,12 @@ const SAVE_KEY='pokeprof_save';
 // v0.28 — SAVE_VERSION 19: Day Care slot record reshaped for continuous batch hatching —
 // `eggsQueued` (int) + `nextReadyAt` (ongoing anchor) replace the single-use `readyAt` field.
 // Migration below converts any legacy `readyAt` slot to the new shape on load.
-const SAVE_VERSION=19;
+// v0.31 — SAVE_VERSION 20: p.ivs{hp,atk,def,spatk,spdef,spd} and p.nature (string) added to
+// every Pokemon object; p.stats{atk,def,spatk,spdef,spd} is a new cached/derived field (HP stays
+// represented by the existing maxHP). Migration below rolls ivs/nature retroactively for every
+// pre-v0.31 individual (single roll, not the dex-complete 10× advantage — that only applies going
+// forward at creation time), then runs recalcStats() and full-heals currentHP to the new maxHP.
+const SAVE_VERSION=20;
 let saveTimer=0;
 
 function saveGame(){
@@ -4325,9 +4560,9 @@ function loadGame(){
     const data=JSON.parse(raw);
     if(!data) return false;
 
-    // ── SAVE_VERSION 19 MIGRATION ──
-    // Accepts v11-v18 saves and migrates them; rejects anything older.
-    if(data.version!==SAVE_VERSION&&data.version!==18&&data.version!==17&&data.version!==16&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
+    // ── SAVE_VERSION 20 MIGRATION ──
+    // Accepts v11-v19 saves and migrates them; rejects anything older.
+    if(data.version!==SAVE_VERSION&&data.version!==19&&data.version!==18&&data.version!==17&&data.version!==16&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
     const s=data.state;
 
     // Migrate inventory: v11 had a single `bag`; v12 splits to professorBag/trainerBag.
@@ -4396,6 +4631,15 @@ function loadGame(){
       if(p.evolveBlocked===undefined) p.evolveBlocked=false; // v0.20
       if(p.equippedMoves===undefined) p.equippedMoves=getDefaultEquippedMoves(getPokemonEntry(p.pokedexId)); // v0.23
       if(p.breeding===undefined) p.breeding=false; // v0.26
+      // v0.31 — pre-existing individuals get ivs/nature rolled retroactively (single roll, not
+      // the dex-complete 10× advantage — that's a creation-time-only bonus), then recalcStats()
+      // populates p.stats and recomputes maxHP; currentHP is full-healed since maxHP just shifted.
+      if(p.ivs===undefined){
+        p.ivs=rollIVs(null); // null dexId = always a single roll, regardless of dex completion
+        p.nature=rollNature();
+        recalcStats(p);
+        p.currentHP=p.maxHP;
+      }
     });
     // v0.20 migration: researchLog schema changes
     Object.keys(state.researchLog).forEach(dexIdStr=>{

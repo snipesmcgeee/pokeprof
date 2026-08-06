@@ -1,6 +1,6 @@
 // PokeProf — Items Database
-// Auto-generated: 8/3/2026, 9:51:24 PM
-// Entries: 73
+// Auto-generated: 8/5/2026, 10:42:31 PM
+// Entries: 72
 
 const ITEMS_DATA = [
   {
@@ -190,9 +190,9 @@ const ITEMS_DATA = [
     "description": "A better ball with a higher catch rate",
     "effect": "catch",
     "effectValue": null,
-    "shopPrice": null,
+    "shopPrice": 5,
     "sellPrice": null,
-    "shopTier": null,
+    "shopTier": "basic",
     "isConsumable": false,
     "catchRateModifier": 1.5,
     "requiresTarget": false,
@@ -208,9 +208,9 @@ const ITEMS_DATA = [
     "description": "Catches any Pokémon without fail",
     "effect": "catch-guaranteed",
     "effectValue": null,
-    "shopPrice": null,
+    "shopPrice": 1000000,
     "sellPrice": null,
-    "shopTier": null,
+    "shopTier": "full",
     "isConsumable": false,
     "catchRateModifier": 255,
     "requiresTarget": false,
@@ -226,33 +226,15 @@ const ITEMS_DATA = [
     "description": "A high-performance ball with a great catch rate",
     "effect": "catch",
     "effectValue": null,
-    "shopPrice": null,
+    "shopPrice": 20,
     "sellPrice": null,
-    "shopTier": null,
+    "shopTier": "basic",
     "isConsumable": false,
     "catchRateModifier": 2,
     "requiresTarget": false,
     "usableInField": false,
     "usableInBattle": false,
     "sprite": "ultra-ball",
-    "bagType": "Professor"
-  },
-  {
-    "itemId": "poke-ball",
-    "name": "Poké Ball",
-    "itemCategory": "ball",
-    "description": "A basic ball for catching Pokémon",
-    "effect": "catch",
-    "effectValue": null,
-    "shopPrice": 1,
-    "sellPrice": null,
-    "shopTier": "lab",
-    "isConsumable": true,
-    "catchRateModifier": 1,
-    "requiresTarget": false,
-    "usableInField": true,
-    "usableInBattle": false,
-    "sprite": "poke-ball",
     "bagType": "Professor"
   },
   {

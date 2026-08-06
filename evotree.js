@@ -1,5 +1,5 @@
 // PokeProf — Evolution Tree (branching evolutions)
-// Auto-generated: 8/3/2026, 9:51:24 PM
+// Auto-generated: 8/5/2026, 10:42:31 PM
 // Entries: 27
 
 const EVO_TREE = [
@@ -9,7 +9,8 @@ const EVO_TREE = [
     "evolveMethod": "use-item",
     "evolveLevel": null,
     "evolveItem": "water-stone",
-    "toFormName": null
+    "toFormName": null,
+    "evolveNickname": "Vaporeon"
   },
   {
     "fromDexId": 133,
@@ -17,7 +18,8 @@ const EVO_TREE = [
     "evolveMethod": "use-item",
     "evolveLevel": null,
     "evolveItem": "thunder-stone",
-    "toFormName": null
+    "toFormName": null,
+    "evolveNickname": "Jolteon"
   },
   {
     "fromDexId": 133,
@@ -25,7 +27,8 @@ const EVO_TREE = [
     "evolveMethod": "use-item",
     "evolveLevel": null,
     "evolveItem": "fire-stone",
-    "toFormName": null
+    "toFormName": null,
+    "evolveNickname": "Flareon"
   },
   {
     "fromDexId": 133,
@@ -33,7 +36,8 @@ const EVO_TREE = [
     "evolveMethod": "friendship-day",
     "evolveLevel": null,
     "evolveItem": null,
-    "toFormName": null
+    "toFormName": null,
+    "evolveNickname": "Espeon"
   },
   {
     "fromDexId": 133,
@@ -41,7 +45,8 @@ const EVO_TREE = [
     "evolveMethod": "friendship-night",
     "evolveLevel": null,
     "evolveItem": null,
-    "toFormName": null
+    "toFormName": null,
+    "evolveNickname": "Umbreon"
   },
   {
     "fromDexId": 133,
@@ -49,7 +54,8 @@ const EVO_TREE = [
     "evolveMethod": "use-item",
     "evolveLevel": null,
     "evolveItem": "leaf-stone",
-    "toFormName": null
+    "toFormName": null,
+    "evolveNickname": "Leafeon"
   },
   {
     "fromDexId": 133,
@@ -57,7 +63,8 @@ const EVO_TREE = [
     "evolveMethod": "use-item",
     "evolveLevel": null,
     "evolveItem": "ice-stone",
-    "toFormName": null
+    "toFormName": null,
+    "evolveNickname": "Glaceon"
   },
   {
     "fromDexId": 133,
@@ -65,7 +72,8 @@ const EVO_TREE = [
     "evolveMethod": "use-move",
     "evolveLevel": 40,
     "evolveItem": "fairy-special",
-    "toFormName": null
+    "toFormName": null,
+    "evolveNickname": "Sylveon"
   },
   {
     "fromDexId": 44,
@@ -73,7 +81,8 @@ const EVO_TREE = [
     "evolveMethod": "use-item",
     "evolveLevel": null,
     "evolveItem": "leaf-stone",
-    "toFormName": null
+    "toFormName": null,
+    "evolveNickname": "Vileplume"
   },
   {
     "fromDexId": 44,
@@ -81,7 +90,8 @@ const EVO_TREE = [
     "evolveMethod": "use-item",
     "evolveLevel": null,
     "evolveItem": "sun-stone",
-    "toFormName": null
+    "toFormName": null,
+    "evolveNickname": "Bellossom"
   },
   {
     "fromDexId": 61,
@@ -89,7 +99,8 @@ const EVO_TREE = [
     "evolveMethod": "use-item",
     "evolveLevel": null,
     "evolveItem": "water-stone",
-    "toFormName": null
+    "toFormName": null,
+    "evolveNickname": "Poliwrath"
   },
   {
     "fromDexId": 61,
@@ -97,7 +108,8 @@ const EVO_TREE = [
     "evolveMethod": "use-item",
     "evolveLevel": null,
     "evolveItem": "kings-rock",
-    "toFormName": null
+    "toFormName": null,
+    "evolveNickname": "Politoed"
   },
   {
     "fromDexId": 79,
@@ -105,7 +117,8 @@ const EVO_TREE = [
     "evolveMethod": "level",
     "evolveLevel": 37,
     "evolveItem": null,
-    "toFormName": null
+    "toFormName": null,
+    "evolveNickname": "Slowbro"
   },
   {
     "fromDexId": 79,
@@ -113,7 +126,8 @@ const EVO_TREE = [
     "evolveMethod": "use-item",
     "evolveLevel": null,
     "evolveItem": "kings-rock",
-    "toFormName": null
+    "toFormName": null,
+    "evolveNickname": "Slowking"
   },
   {
     "fromDexId": 123,
@@ -121,7 +135,8 @@ const EVO_TREE = [
     "evolveMethod": "use-item",
     "evolveLevel": null,
     "evolveItem": "metal-coat",
-    "toFormName": null
+    "toFormName": null,
+    "evolveNickname": "Scizor"
   },
   {
     "fromDexId": 123,
@@ -129,31 +144,35 @@ const EVO_TREE = [
     "evolveMethod": "use-item",
     "evolveLevel": null,
     "evolveItem": "black-augurite",
-    "toFormName": null
+    "toFormName": null,
+    "evolveNickname": "Kleavor"
   },
   {
     "fromDexId": 236,
     "toDexId": 106,
-    "evolveMethod": "unknown",
-    "evolveLevel": null,
+    "evolveMethod": "level",
+    "evolveLevel": 20,
     "evolveItem": null,
-    "toFormName": null
+    "toFormName": null,
+    "evolveNickname": null
   },
   {
     "fromDexId": 236,
     "toDexId": 107,
-    "evolveMethod": "unknown",
-    "evolveLevel": null,
+    "evolveMethod": "level",
+    "evolveLevel": 20,
     "evolveItem": null,
-    "toFormName": null
+    "toFormName": null,
+    "evolveNickname": null
   },
   {
     "fromDexId": 236,
     "toDexId": 237,
-    "evolveMethod": "unknown",
-    "evolveLevel": null,
+    "evolveMethod": "level",
+    "evolveLevel": 20,
     "evolveItem": null,
-    "toFormName": null
+    "toFormName": null,
+    "evolveNickname": null
   },
   {
     "fromDexId": 25,
@@ -161,15 +180,17 @@ const EVO_TREE = [
     "evolveMethod": "use-item",
     "evolveLevel": null,
     "evolveItem": "thunder-stone",
-    "toFormName": null
+    "toFormName": null,
+    "evolveNickname": "Kantonian"
   },
   {
     "fromDexId": 25,
     "toDexId": 26,
-    "evolveMethod": "unknown",
+    "evolveMethod": "use-item",
     "evolveLevel": null,
-    "evolveItem": null,
-    "toFormName": "Alolan"
+    "evolveItem": "thunder-stone",
+    "toFormName": "Alolan",
+    "evolveNickname": "Alolan"
   },
   {
     "fromDexId": 102,
@@ -177,15 +198,17 @@ const EVO_TREE = [
     "evolveMethod": "use-item",
     "evolveLevel": null,
     "evolveItem": "leaf-stone",
-    "toFormName": null
+    "toFormName": null,
+    "evolveNickname": "Kantonian"
   },
   {
     "fromDexId": 102,
     "toDexId": 103,
-    "evolveMethod": "unknown",
+    "evolveMethod": "use-item",
     "evolveLevel": null,
-    "evolveItem": null,
-    "toFormName": "Alolan"
+    "evolveItem": "leaf-stone",
+    "toFormName": "Alolan",
+    "evolveNickname": "Alolan"
   },
   {
     "fromDexId": 104,
@@ -193,7 +216,8 @@ const EVO_TREE = [
     "evolveMethod": "level",
     "evolveLevel": 28,
     "evolveItem": null,
-    "toFormName": null
+    "toFormName": null,
+    "evolveNickname": "Kantonian"
   },
   {
     "fromDexId": 104,
@@ -201,7 +225,8 @@ const EVO_TREE = [
     "evolveMethod": "friendship-night",
     "evolveLevel": null,
     "evolveItem": null,
-    "toFormName": "Alolan"
+    "toFormName": "Alolan",
+    "evolveNickname": "Alolan"
   },
   {
     "fromDexId": 109,
@@ -209,15 +234,17 @@ const EVO_TREE = [
     "evolveMethod": "level",
     "evolveLevel": 35,
     "evolveItem": null,
-    "toFormName": null
+    "toFormName": null,
+    "evolveNickname": "Kantonian"
   },
   {
     "fromDexId": 109,
     "toDexId": 110,
-    "evolveMethod": "unknown",
-    "evolveLevel": null,
+    "evolveMethod": "level",
+    "evolveLevel": 35,
     "evolveItem": null,
-    "toFormName": "Galarian"
+    "toFormName": "Galarian",
+    "evolveNickname": "Alolan"
   }
 ];
 

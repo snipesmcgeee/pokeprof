@@ -1184,6 +1184,105 @@ Builds on the v0.23 battle engine (above) with 8 regular Gyms + Indigo Plateau (
 
 ---
 
+## Gym TM Rewards — Tiered Scaling (SETTLED — v0.31, revised)
+
+- First badge win (regular gyms, tier 1–8): awards `tier+4` TMs (5 at tier 1, up to 12 at tier 8), replacing the previous flat 1 TM.
+- Rematch win (badge already held — live re-tap of "Battle Gym," or the offline/mission-modal grind path): awards flat 1 TM. Previously 0 (the award function returned early once the badge was already held).
+- Indigo Plateau (gauntlet, tier 9/10): unchanged, 0 TM always.
+- Applies identically to `awardGymWin()` (live) and `awardGymWinSilent()` (offline simulation).
+
+---
+
+## Individual Values (IVs) + Natures + Cached Per-Individual Stats (SETTLED — v0.31, NEW)
+
+### Data Model
+- `p.ivs = {hp,atk,def,spatk,spdef,spd}`, 0–31 each (standard mainline range).
+- `p.nature` (string) — full standard 25-nature table (5 neutral, 20 that boost one stat +10%/reduce another −10%; nature never affects HP).
+- `p.stats = {atk,def,spatk,spdef,spd}` — cached computed stats. HP remains represented by the existing `p.maxHP` field, not duplicated into `p.stats`.
+- Both `p.ivs` and `p.nature` are rolled once, at individual creation, inside `makePokemon()` — covers every new individual (wild catch, egg hatch, starter) at a single choke point.
+
+### Roll Timing (SETTLED)
+IVs/Nature are rolled at the moment of capture/hatch/creation — **not** when a wild encounter first appears. Wild encounters are ephemeral (`enc` objects, no persisted identity) until a catch succeeds; a failed catch or flee never generated IVs to begin with.
+
+### Dex-Complete IV Advantage Roll (SETTLED — v0.31, NEW)
+- `rollIVs(dexId)` checks `isDexPageComplete(dexId)` (existing helper) at creation time. If that species' dex page is complete, each of the 6 IV stats is rolled **10× and the best kept**, instead of a single roll.
+- Checked fresh at every creation — a species completed mid-game benefits immediately on its next catch. No retroactive reroll for individuals caught before completion.
+- 🔬 icon added to the Pokédex grid cell (species overview) for any species where `isDexPageComplete(dexId)` is true. Species-level only — not applied to per-individual displays. **Resolves "Per-species dex completion tracking UI" from Future Goals** (partial — grid icon only, no dedicated tracking screen).
+
+### Stat Calculation
+- `calcStat(base, level, iv=0)` → `floor((2×base+iv)×level/100)+5`, then × nature modifier (1.1/0.9) if that stat is nature-boosted/-reduced, floored again.
+- `calcMaxHP(sp, lv, dexId, iv=0)` → `floor((2×base+iv)×level/100)+level+10`. Nature never applies to HP.
+- Default `iv=0` param means any call site that doesn't pass one is byte-identical to pre-v0.31 output — zero regression for `calcBST()`'s species-reference usage (`entry.bst`, unaffected) and `makeWildBattler()` (ephemeral pre-catch display).
+- New central helper `recalcStats(p)` computes `p.maxHP` and `p.stats` together, called at every existing `maxHP`-recalculation site: creation, level-up, evolution (`applySpeciesSwap`), migration.
+
+### Battle System (SETTLED)
+- `calcBattleDamage()`/`getBattleSpeed()` read `attacker.stats.atk/.spatk`, `defender.stats.def/.spdef`, `p.stats.spd` directly — no IV/nature/formula logic inside battle functions themselves.
+- Player-team battle copies (`runOneGymBattle`/`runOneGymBattleSilent`) carry `stats:p.stats` through, same as `maxHP` already does.
+- Enemy trainer teams (`buildEnemyTeam`, rebuilt fresh each battle, never persisted) get flat IVs by tier: tiers 1–8 → IV 20, tier 9 (Elite Four/Champion first clear) → IV 25, tier 10 (any postgame rematch) → IV 31. All stats, no nature (neutral).
+
+### Tyrogue Evolution Fix (SETTLED — v0.31)
+- **Root cause:** Tyrogue's flat `pokedex.js` fields (`evolveMethod:"level", evolveLevel:20, evolvesIntoId:106`) were checked and auto-applied by `checkEvolution()`'s Path 1 *before* the branching `EVO_TREE` entries (Hitmonlee/Hitmonchan/Hitmontop, all previously `evolveMethod:"unknown"`) were ever reached — every Tyrogue evolved into Hitmonlee, unconditionally. Hitmonchan/Hitmontop were unreachable.
+- **Data fix (Jack's Excel task):** `Pokedex` sheet, Tyrogue row — `evolvesIntoId`/`evolveMethod`/`evolveLevel` cleared to blank. `EvoTree` sheet, all 3 Tyrogue branch rows — `evolveMethod` set to `level`, `evolveLevel` set to `20`.
+- **Code fix:** at level 20, `checkEvolution()` special-cases dexId 236 — compares already-recomputed `p.stats.atk` vs `p.stats.def` (IV + nature both baked in): Atk>Def→Hitmonlee(106), Def>Atk→Hitmonchan(107), tie→Hitmontop(237). Intercepts before the generic (dormant, previously unexercised by any other species) random-among-qualifying-branches fallback.
+- Pokédex "Evolution Methods Tested" list stays unspoiled — shows generic "Level Lv20" for all 3 branches (driven by the `EvoTree` fields, unchanged).
+- Evolution Chain diagram (`evoMethodLabel()`) gets a Tyrogue-specific arrow-label override: "Lv20 · A>D" → Hitmonlee, "Lv20 · D>A" → Hitmonchan, "Lv20 · A=D" → Hitmontop, replacing three otherwise-identical "Lv 20" labels.
+
+### Dex List "BST" (SETTLED)
+- `calcBST()` updated to sum `p.maxHP + p.stats.atk+def+spatk+spdef+spd` for a real individual — both call sites (display, sort-by-total comparator) now pass the actual Pokémon object instead of bare species+level, so it correctly reflects that individual's IV/nature, not just species+level.
+- Unrelated to `entry.bst` (the static species-reference field on the Species Detail page), which is untouched.
+
+### Pokémon Detail Modal Redesign (SETTLED — v0.31)
+- Header: unchanged (dex#, nickname/species, catch #).
+- Level/Gender — one line.
+- Type — image badges (`typeBadge()`, matching the Species Detail page), not text.
+- **Ability/Nature — one line** (moved up from separate lines).
+- **Friendship — bumps down to its own line.**
+- Height/Weight — one line.
+- New stat table: columns HP/ATK/DEF/SATK/SDEF/SPD, with an IV row and a Current Stat row beneath, plain numbers (no colored bars). IV row shows a `+`/`−` marker on whichever stat that individual's nature boosts/reduces.
+- Existing "HP: current/max" line (battle-injury status) is **kept**, separate from the table's HP column (full/max stat).
+- Holder, nickname input, Block Evolution, moves, action buttons — unchanged.
+
+### Perfect-IV / Shiny+Perfect Badges (SETTLED — v0.31, NEW)
+- New helper `isPerfectIV(p)` — all 6 IV stats at 31.
+- New helper `getRarityBadge(p)`: Shiny+Perfect → 🦄, Perfect only → 💥, Shiny only → ✨ (unchanged), neither → nothing.
+- Applied **only** at true per-individual displays: party card, `showPokemonDetail` modal (including its standalone status line, now "💥 PERFECT IV" / "🦄 SHINY + PERFECT IV" as appropriate), Day Care parent-picker rows, both Dex list entry variants.
+- **Not** applied to species-level aggregate indicators (evolution chain nodes, Pokédex grid, Species Detail header) — those stay shiny-only via `hasLiveShiny(dexId)`, unchanged.
+
+### Perfect-IV Species-Cap Exemption (SETTLED — v0.31, NEW)
+- `checkSpeciesCap()`'s auto-release-on-catch-overflow check extended from `if(caught.isShiny) return;` to also exempt `isPerfectIV(caught)` — mirrors existing shiny behavior exactly.
+- The manual cap-lowering sweep (`onSpeciesCapChange`) gets the same exemption — perfect-IV individuals excluded from the release-eligible pool alongside shinies, regardless of how low the cap is set.
+
+### SAVE_VERSION — v0.31 (19 → 20)
+- Migration: every existing party/dex Pokémon gets `ivs` and `nature` rolled retroactively (single roll, not the 10× dex-complete advantage — that only applies going forward at creation time), then `recalcStats()` is run. `currentHP` is set to the new `maxHP` (full heal) since `maxHP` shifts as a result of the newly-applied IV/nature.
+
+---
+
+## Nickname-Triggered Evolution Branches (SETTLED — v0.31, NEW)
+
+- New `EvoTree` column `evolveNickname` (blank for most rows) — fully generic, species-agnostic. No dexId is ever referenced in this logic; it applies to any branch a nickname trigger is set on, present or future.
+- `checkEvolution()`'s branch-selection logic: for any branch, if `evolveNickname` is set and is a **substring** of `p.nickname` (case-insensitive, trimmed) **and** that branch's normal condition is also met, it wins immediately — bypasses the random-among-qualifying-branches fallback entirely.
+- If no branch's nickname trigger matches, falls through unchanged to the existing random fallback.
+- New "Evolution Secrets" entry added to the in-game Info menu (`INFO_TOPICS`) — general hint that nicknames can lock in certain evolutions, without spoiling species or exact trigger words.
+- Jack's data task (any time, no code changes required): populate `evolveNickname` on whichever `EvoTree` rows desired — Koffing/Galarian Weezing and Espeon/Umbreon are the known first candidates, not a hardcoded list.
+
+---
+
+## Raichu / Alolan Raichu — Player-Choice Item Evolution (SETTLED — v0.31, NEW)
+
+- **Root cause found:** item-based evolutions are already player-chosen by design (`applyItemEvolution()`, manually triggered from the Professor's Bag / Pokémon detail modal — same mechanism Eevee's stone evolutions already use). The blocker was `professorAutoTestEvolutions()`'s passive research system, which auto-consumes an item and auto-evolves an individual **immediately** on first match via `.find()` — for two branches sharing one item, this would silently lock out the second branch from ever being discovered, and rob the player of the choice on whichever individual happened to be auto-evolved.
+- **Fix (fully generic, not Raichu-specific):** `professorAutoTestEvolutions()` now checks **all** matching branches for an item+species pair (`.filter()` instead of `.find()`), confirming every match into `confirmedBranches`. Any branch with a non-null `toFormName` (regional/form variant) is confirmed but **never auto-applied** by the passive system — only the base-form branch (`toFormName: null`) is auto-evolved automatically, which is what makes the base form the "default." The form-variant branch becomes available as a manual "🔬 Evolve" choice on any other eligible individual; the item is only consumed at the moment it's actually applied.
+- Evolve-button labels (Pokémon detail modal) fixed to include the **target species name** (e.g. "🔬 Evolve → Alolan Raichu"), not just the item name — previously, two same-item branches rendered identical, indistinguishable buttons.
+- Jack's data task: `EvoTree` — Alolan Raichu branch's `evolveMethod`/`evolveItem` set to match the Kantonian branch (`use-item`/`thunder-stone`); same pattern applies to any future dual-branch-same-item species (e.g. Exeggcute/Alolan Exeggutor) with zero additional code changes.
+
+---
+
+## Bug Fixes (SETTLED — v0.31)
+
+- **`baseExp` NaN landmine** — live-combat EXP calc (lines 2218, 2418) contained `s_?s_.baseExpYield||s_.baseExp:51`, which by operator precedence evaluates as `(s_.baseExpYield||s_.baseExp):51` — since `baseExp` never exists as a field in `pokedex.js` (only `baseExpYield` does), any species with a falsy `baseExpYield` (confirmed real: Mega Venusaur, dexId 3, `baseExpYield:null`) produced `NaN` EXP instead of the intended `51` default. Fixed to `(s_?.baseExpYield||51)`, matching the already-correct offline-path pattern (line 1921). Live and offline EXP math had quietly diverged; now consistent.
+- **Removed "Professor:" label** from the party-page inventory summary line (`renderBagDisplay()`) — shows just Balls/TMs/Potions/Revives.
+
+---
+
 ## Things That Are Future Goals (Do Not Implement Yet)
 
 - ~~Manual/interactive trainer battle mode~~ — **resolved v0.29** (playback variant chosen — see "Watched Gym Battle — Aide Card Trigger"; true player-controlled move selection remains undone/not implemented).
@@ -1192,7 +1291,7 @@ Builds on the v0.23 battle engine (above) with 8 regular Gyms + Indigo Plateau (
 - New trainer recruitment mechanics
 - Item selling UI
 - Shinydex completion tracking UI
-- Per-species dex completion tracking UI
+- ~~Per-species dex completion tracking UI~~ — **partially resolved v0.31** (🔬 grid icon only on the Pokédex overview; no dedicated tracking screen).
 - Distribution charts for height/weight on species detail page
 - `swarm` encounter method — future-proofing only; mechanic undefined (possible time/rotation-based active swarm). Not implemented.
 - `honey` encounter method — future-proofing only; would require `requiresItem: honey`-type item placed on a tree, possibly with a wait/return timer. Not implemented.
@@ -1204,3 +1303,5 @@ Builds on the v0.23 battle engine (above) with 8 regular Gyms + Indigo Plateau (
 - **~~18 evolution items missing from Items sheet~~ — resolved, verified v0.28.** All 18 (Protector, Dragon Scale, Electirizer, Magmarizer, Up Grade, Razor Fang, Razor Claw, Peat Block, Dubious Disc, Reaper Cloth, Deep Sea Tooth, Sachet, Whipped Dream, Tart Apple, Cracked Pot, Metal Alloy, Auspicious Armor, Unremarkable Teacup) confirmed present in `items.js` with correct slugs, `evolutionItem` category, and correctly wired via the existing name-matching convention (`entry.evolveItem===itemName`, same pattern as Water Stone/Fire Stone).
 - **2 blank-`evolveItem` `use-item` rows** in the single-target Pokédex columns, identified as Kubfu and Dipplin. Confirmed harmless via code trace — Path 1 failing silently falls through to Path 2 (EVO_TREE), so this only matters if their EVO_TREE rows are *also* incomplete. Worth a quick check on Jack's end, not urgent.
 - **4 orphaned items** in the Items sheet not referenced by any species: King's Rock, Black Augurite, Scroll of Darkness, Scroll of Waters. Purchasable but currently non-functional — harmless, just unused data.
+- **~~Duplicate `poke-ball` entry~~ — resolved v0.31.** Removed directly from `items.js` by Jack (second row had `shopTier:"lab"`, a tier no location used — was dormant, not actively harmful, but would have resurfaced as a duplicate shop listing the moment the `shopTier` string-comparison issue below got fixed or a `lab`-tier location was added).
+- **`formVariant` column** — every row is `null` except dexId 555 (Darmanitan), which has `formVariant:1`. Field is unreferenced anywhere in `pokeprof.html`. Not pruning yet — worth checking whether this is a breadcrumb of an intended Standard/Zen form-variant system before treating it as pure cruft. Tabled, no urgency.

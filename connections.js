@@ -1,5 +1,5 @@
 // PokeProf — Connections Database
-// Auto-generated: 8/2/2026, 10:09:05 AM
+// Auto-generated: 8/5/2026, 10:42:31 PM
 // Connections: 224
 
 // Flat array with full data (used for requiresItem checks)
@@ -31,7 +31,7 @@ const CONNECTIONS_DATA = [
   {
     "fromLocationId": "route21",
     "toLocationId": "palletTown",
-    "requiresItem": null,
+    "requiresItem": "hm-surf",
     "travelTime": null
   },
   {
@@ -1027,25 +1027,25 @@ const CONNECTIONS_DATA = [
   {
     "fromLocationId": "route18",
     "toLocationId": "route17",
-    "requiresItem": null,
+    "requiresItem": "bicycle",
     "travelTime": null
   },
   {
     "fromLocationId": "route17",
     "toLocationId": "route18",
-    "requiresItem": null,
+    "requiresItem": "bicycle",
     "travelTime": null
   },
   {
     "fromLocationId": "route17",
     "toLocationId": "route16",
-    "requiresItem": null,
+    "requiresItem": "bicycle",
     "travelTime": null
   },
   {
     "fromLocationId": "route16",
     "toLocationId": "route17",
-    "requiresItem": null,
+    "requiresItem": "bicycle",
     "travelTime": null
   },
   {
@@ -1057,19 +1057,19 @@ const CONNECTIONS_DATA = [
   {
     "fromLocationId": "route20E",
     "toLocationId": "route19",
-    "requiresItem": null,
+    "requiresItem": "hm-surf",
     "travelTime": null
   },
   {
     "fromLocationId": "route20E",
     "toLocationId": "seafoamIslandsW",
-    "requiresItem": null,
+    "requiresItem": "hm-surf",
     "travelTime": null
   },
   {
     "fromLocationId": "seafoamIslandsW",
     "toLocationId": "route20E",
-    "requiresItem": null,
+    "requiresItem": "hm-surf",
     "travelTime": null
   },
   {
@@ -1171,19 +1171,19 @@ const CONNECTIONS_DATA = [
   {
     "fromLocationId": "seafoamIslandsE",
     "toLocationId": "route20W",
-    "requiresItem": null,
+    "requiresItem": "hm-surf",
     "travelTime": null
   },
   {
     "fromLocationId": "route20W",
     "toLocationId": "seafoamIslandsE",
-    "requiresItem": null,
+    "requiresItem": "hm-surf",
     "travelTime": null
   },
   {
     "fromLocationId": "route20W",
     "toLocationId": "cinnabarIsland",
-    "requiresItem": null,
+    "requiresItem": "hm-surf",
     "travelTime": null
   },
   {
@@ -1201,7 +1201,7 @@ const CONNECTIONS_DATA = [
   {
     "fromLocationId": "route21",
     "toLocationId": "cinnabarIsland",
-    "requiresItem": null,
+    "requiresItem": "hm-surf",
     "travelTime": null
   },
   {
@@ -1315,7 +1315,7 @@ const CONNECTIONS_DATA = [
   {
     "fromLocationId": "gameCorner",
     "toLocationId": "celadonCity",
-    "requiresItem": null,
+    "requiresItem": "coinCase",
     "travelTime": null
   },
   {

@@ -1,5 +1,5 @@
 // PokeProf — Locations Database
-// Auto-generated: 8/3/2026, 9:51:24 PM
+// Auto-generated: 8/5/2026, 10:42:31 PM
 // Entries: 103
 
 const LOCATIONS = [

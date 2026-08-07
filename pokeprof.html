@@ -2836,27 +2836,44 @@ function computeLocationSightings(locId){
   return Object.values(log).reduce((sum,v)=>sum+((v&&v.seen)||0),0);
 }
 
-// v0.33 — "Wander" mode: continuously re-routes toward whichever reachable, discovered location
-// currently has the fewest lifetime encounters. Single shared implementation, called from both
-// live gameTick() (every 1s tick) and processOfflineTime()'s catch-up loop (every simulated
-// encounter-interval) — same lesson as the evolution-testing trigger fix: one source of truth,
-// not two near-identical copies that can drift.
-// Stable against thrashing: sightings only accumulate at the aide's CURRENT location, so an idle
-// location's count can't change while the aide is elsewhere — two idle locations can never
-// ping-pong the aide. A redirect only fires when the current waypoint's own count climbs high
-// enough that some other already-known location becomes STRICTLY lower (ties keep the current
-// target, avoiding churn from equal rankings).
+// v0.33 — "Wander" mode: continuously re-routes toward whichever reachable, discovered,
+// ENCOUNTER-CAPABLE location currently has the fewest lifetime encounters. Single shared
+// implementation, called from both live gameTick() (every 1s tick) and processOfflineTime()'s
+// catch-up loop (every simulated encounter-interval) — same lesson as the evolution-testing
+// trigger fix: one source of truth, not two near-identical copies that can drift.
+// v0.33 fix (found post-release): a brand-new game starting in Pallet Town got permanently stuck
+// there. Every reachable location starts at 0 sightings, and the tie-break rule ("keep the
+// current target unless something is STRICTLY lower") meant nothing could ever beat a tied 0 —
+// compounded by Pallet Town's only encounter rows being fish/surf, all `requiresItem`-gated
+// (Good Rod, Super Rod, etc.) that a brand-new save doesn't own yet, so buildRouteTable()
+// correctly returns 0 CURRENTLY-TRIGGERABLE rows for it right now — not because it structurally
+// lacks encounters, but because none of its rows are reachable with the aide's current items.
+// Its own sightings count could never move off 0 either way. Fix: the candidate pool is filtered
+// to buildRouteTable(locId).length>0 — the same live, item-aware filter already established for
+// the Encounters sort mode (see "Mission Modal — Destination Sorting") — and the current target
+// no longer automatically wins ties if it isn't itself in that eligible pool, forcing an initial
+// move to somewhere currently reachable instead of stalling forever. Because the filter is
+// re-evaluated fresh on every check, Pallet Town (or any other rod/Surf-gated location) becomes
+// eligible again automatically the moment the required item is obtained — no further code change
+// needed.
+// Stable against thrashing otherwise: sightings only accumulate at the aide's CURRENT location,
+// so an idle location's count can't change while the aide is elsewhere — two idle eligible
+// locations can never ping-pong the aide. A redirect only fires when the current waypoint's own
+// count climbs high enough that some other already-known eligible location becomes STRICTLY
+// lower (ties among eligible locations keep the current target, avoiding churn).
 function evaluateWanderTarget(){
   if(!state.wanderMode) return;
   const currentLoc=state.currentLocation||'palletTown';
-  const reachable=getReachableDiscoveredLocations(currentLoc);
-  if(!reachable.length) return;
-  let best=state.missionDestination, bestCount=computeLocationSightings(state.missionDestination);
+  const reachable=getReachableDiscoveredLocations(currentLoc).filter(locId=>buildRouteTable(locId).length>0);
+  if(!reachable.length) return; // nothing reachable can ever have an encounter — nothing to do
+  const currentIsEligible=reachable.includes(state.missionDestination);
+  let best=currentIsEligible?state.missionDestination:reachable[0];
+  let bestCount=computeLocationSightings(best);
   reachable.forEach(locId=>{
     const c=computeLocationSightings(locId);
     if(c<bestCount){ best=locId; bestCount=c; }
   });
-  if(best===state.missionDestination) return; // current target still lowest (or tied) — no redirect
+  if(best===state.missionDestination) return; // current target still eligible and lowest (or tied) — no redirect
   state.missionDestination=best;
   if(currentLoc===best){
     state.travelPath=[]; state.travelPathIndex=0; state.travelCyclesRemaining=0;
@@ -2959,10 +2976,12 @@ function showMissionModal(){
 
 // v0.33 — picks the current lowest-encounter reachable location as the mission target and marks
 // the dispatch as Wander mode; confirmMission() sets state.wanderMode=true on actual dispatch.
+// v0.33 fix — same encounter-capable filter as evaluateWanderTarget(): a location with zero
+// possible wild encounters (e.g. Pallet Town) is never a useful initial Wander pick either.
 function selectWanderMode(){
   const currentLoc=state.currentLocation||'palletTown';
-  const reachable=getReachableDiscoveredLocations(currentLoc);
-  if(!reachable.length){ addLog('No reachable destinations for Wander mode.','fail'); return; }
+  const reachable=getReachableDiscoveredLocations(currentLoc).filter(locId=>buildRouteTable(locId).length>0);
+  if(!reachable.length){ addLog('No reachable destinations with possible encounters for Wander mode.','fail'); return; }
   let best=reachable[0], bestCount=computeLocationSightings(reachable[0]);
   reachable.forEach(locId=>{
     const c=computeLocationSightings(locId);

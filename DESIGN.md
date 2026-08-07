@@ -79,6 +79,7 @@ There is no survival element. Aides do not need food, sleep, or anything like th
 - **Bug fixed post-release (v0.24):** the same SAVE_VERSION 16 migration also backfills `researchLog[dexId].firstSeen`/`firstCaught` (new v0.24 fields — see "Pokédex Grid View" seen-but-not-caught fix) for every pre-existing research-log entry. Without this, any save from before v0.24 would see a false "🎯 Captured" finding fire on the *next* catch of every already-known species (even ones caught hundreds of times), since those two fields were simply `undefined` on anything researched pre-v0.24 and `!r.firstCaught` reads as true. Backfill logic: if a `researchLog` entry exists at all, `firstSeen` is set `true` (it's definitely been seen); `firstCaught` is set `true` only if that dexId is also present in `dexHistory` (definitely already caught).
 - **v0.25 requires SAVE_VERSION 17** due to: badge entries added to `aide.bag` (new `itemCategory: badge` items) and a new per-gym highest-tier-reached tracker on aide objects (likely `aide.gymProgress[gymId] = highestTier`) — see "Gym / Trainer Battle System — Triggers, Badges, Level Cap". Migration: existing saves initialize both to empty on load (no badges held, no gym progress recorded).
 - **v0.30 stays on SAVE_VERSION 19** — no `state` schema changes. Every change this version either reads existing fields (`catchRate`, `breeding`, `professorBag` contents) in new ways, or is UI/behavior-only.
+- **v0.32 stays on SAVE_VERSION 20** — no `state` schema changes. Every change this version either reads/mutates existing fields (`p.ivs`, `p.currentHP`, `state.party`, `state.professorBag`/`trainerBag`, `state.funds`) in new ways, or is pure logic/UI — no new fields, no migration needed.
 - **v0.26 requires SAVE_VERSION 18** due to: `state.daycareSlots` (new — see "Day Care / Breeding System"), `state.speciesCap` (new — see "Editable Per-Species Cap"), and a one-time `testedMethods` cleanup pass (see "Trade/Item-Evolution Matching Fix"). All three migrations run in a single combined pass on load from v17. `state.autoRepeat` is retired (no longer read anywhere — see "Idle State Removal") but requires no migration, since removing a field needs no backfill.
 - **v0.27 stays on SAVE_VERSION 18** — no `state` schema changes in this batch (onboarding modal, Info menu, shop condensing, purchase quantity buttons, and badge sprite display are all UI/rendering-only; the Day Care location move repoints an existing constant, it doesn't touch `state` shape).
 - **v0.28 requires SAVE_VERSION 19** due to: Day Care slot record reshaped for continuous batch hatching (`eggsQueued` count + `nextReadyAt` anchor replacing single-use `readyAt`) — see "Day Care / Breeding System" below. Migration: any existing slot with the legacy `readyAt` field converts to `nextReadyAt: readyAt, eggsQueued: 0` on load.
@@ -284,35 +285,41 @@ resolved silently and instantly, never as a watched playback.
   unrestricted. (Moot in practice since they only ever have one move, but stated
   explicitly since this diverges from the Trainer Battle System's AI rule.)
 
-### Wild Encounter Turn Loop (SETTLED — v0.30, replaces old Fight Formula)
+### Wild Encounter Turn Loop (SETTLED — v0.32, replaces v0.30 ball-throw rules)
 Each round, while the encounter is still active:
-1. **If wild HP > 1:** compute catch probability (see formula above) using the
-   lowest-tier owned ball. If ≥90%, throw it. Otherwise, attack instead.
-2. **If wild HP == 1:** this overrides rule 1 entirely — throw the lowest-tier owned
-   ball with catch probability >70%, or the highest-tier owned ball if none clear 70%.
-3. **Ball throw resolution:** always resolves before any speed check (bypasses turn
+1. **Zero-balls guard (checked first, every move):** if `getBallCount()===0`, skip all
+   ball logic — always attack. Overrides both the alternating schedule and the
+   1HP-forced-throw phase below. Re-checked live every move (balls can run out
+   mid-encounter).
+2. **Timing** (only reached if ≥1 ball owned): move 1 of the encounter throws a ball;
+   then alternates attack/throw/attack/throw... while wild HP > 1. Once wild HP == 1,
+   every move is a throw (overrides alternating — no more attacks). Counter resets at
+   the start of each new encounter.
+3. **Ball selection** (applies to every throw): if the species has never been caught
+   (`state.dexHistory[dexId]` is 0/unset), throw the highest-tier owned ball. Otherwise
+   throw the lowest-tier owned ball with catch probability ≥50% (per the Real Catch
+   Formula above); if none clears 50%, throw the lowest-tier owned ball anyway (worst
+   odds, but never skip the throw).
+4. **Ball throw resolution:** always resolves before any speed check (bypasses turn
    order entirely). Success → `catchPokemon()`, battle ends immediately, no
    retaliation. Failure → wild retaliates at **full** `calcBattleDamage()` — the old
    flat 25%-of-normal miss penalty no longer applies.
-4. **Attack turn** (no ball thrown): speed-ordered exchange (existing effective-speed
-   formula), both sides using the real `calcBattleDamage()` — lead via the Trainer
-   Battle System's `selectAIMove()` across its real equipped moves, wild always using
-   its single default move.
-5. **HP floor:** while any ball remains in the Professor's inventory, wild HP is
-   clamped at a minimum of 1 — it cannot faint. Once balls are exhausted, the floor
-   lifts and a normal KO becomes possible (a "win" — EXP only, no catch, matching the
-   old Fight Formula's win condition).
-6. Loop ends on: capture (success), wild faints (no-balls win), or the lead's whole
+5. **Attack turn** (no ball thrown, or zero-balls guard active): speed-ordered exchange
+   (existing effective-speed formula), both sides using the real `calcBattleDamage()` —
+   lead via the Trainer Battle System's `selectAIMove()` across its real equipped
+   moves, wild always using its single default move.
+6. **HP floor:** while any ball remains in the Professor's inventory, wild HP is
+   clamped at a minimum of 1 — it cannot faint. Once balls are exhausted (including
+   mid-encounter), the floor lifts and a normal KO becomes possible (a "win" — EXP
+   only, no catch, matching the old Fight Formula's win condition).
+7. Loop ends on: capture (success), wild faints (no-balls win), or the lead's whole
    party faints (existing Faint-Switch Behavior / flee rule, unchanged).
 - **Fully silent/instant** — the entire multi-round encounter resolves within a single
-  function call, live or offline, with no watched playback (unlike Gym battles). This
-  is a structural change to `resolveEncounterStep()`/`processOfflineTime()`'s loop
-  shape: previously one ball-throw-or-fight-attempt per tick, now the whole encounter
-  resolves the moment it's triggered.
+  function call, live or offline, with no watched playback (unlike Gym battles).
 - **Ball consumption unchanged:** one ball consumed per throw attempt regardless of
   outcome — this was a deliberate, confirmed tradeoff, not a side effect to fix.
-- Old `fight()` function (flat `(enc.level/lead.level) × 0.5 × maxHP` formula) is
-  removed entirely, replaced by the above.
+- Old `fight()` function (flat `(enc.level/lead.level) × 0.5 × maxHP` formula) remains
+  removed, per v0.30.
 
 ### Faint-Switch Behavior (SETTLED — v0.26, unchanged by v0.30)
 - On lead faint mid-encounter: if `getLeadPokemon()` returns another Pokémon, log
@@ -402,6 +409,29 @@ The single `state.bag` is replaced with two separate inventories:
 - When a catch would exceed the cap: **catch-then-release** — the catch is fully processed (ball consumed, EXP awarded, `state.dexHistory` incremented, `totalCatches` incremented, `recordNewSpecies` called if applicable) before the overflow individual is silently released
 - Cap applies to **live held Pokémon only** — `dexHistory` counts are unaffected by and not involved in the cap check
 - The prior "no releasing or selling Pokémon" rule is **superseded** by this mechanic for overflow non-shinies only; manual releasing is still not a player action, except via the explicit cap-lowering sweep above
+
+### Family IV Inheritance on Species-Cap Overflow (SETTLED — v0.32, NEW)
+- **Trigger:** only when a catch of species X would exceed `state.speciesCap` for
+  species X specifically (the per-species check above). Shiny catches are exempt from
+  the cap (existing rule) and never trigger this.
+- **If the cap has room:** no change — this feature doesn't engage, wild is added to
+  the box normally.
+- **If the cap would be exceeded** (the "overflow individual" case above), instead of
+  simply releasing the wild:
+  1. Build the full evolutionary family pool via `EVO_TREE` — the whole connected tree,
+     all branches (e.g. all 8 Eeveelutions count as one pool), every currently-owned
+     individual across every species in that family, **shinies included**.
+  2. Sort that pool by level, **descending**.
+  3. Walk the sorted list; the **first individual whose current IV total is less than
+     the wild's IV total** inherits the wild's full IV set (`p.ivs` replaced,
+     `stats`/`maxHP` recalculated via the existing formula, HP healed to new full).
+     The wild is then discarded (not added to box).
+  4. If no pool member qualifies (wild's IV total ≤ everyone's): wild is released as
+     before — unchanged catch-then-release/overflow behavior, no change.
+- **IV total** = sum of all 6 IV stats (`hp+atk+def+spatk+spdef+spd`, max 186).
+- **New helper required:** `getFamilyDexIds(dexId)` — walks `EVO_TREE` in both
+  directions to build the full connected-component set of dexIds for a family. Did not
+  exist prior to v0.32.
 
 ---
 
@@ -1100,6 +1130,36 @@ Builds on the v0.23 battle engine (above) with 8 regular Gyms + Indigo Plateau (
 ### Inter-Battle Healing
 - Reuses existing `getWeakestEffectivePotion()` auto-heal logic unchanged (smallest potion that heals without waste, no HP threshold), pulling from `state.professorBag`.
 - Fires **only before each battle instance starts** (including before each of the 5 gauntlet legs) if not at full HP. Never mid-battle — individual battles remain single-tick resolutions with no interruption point, consistent with existing wild-encounter behavior.
+- **v0.32 fix:** the passive per-tick `checkLocationHeal()` (fires on every `gameTick()`
+  encounter-roll cycle at any `heals:true` location) was silently fully-healing the
+  party for free throughout Elite Four/Champion gauntlets, since Indigo Plateau is a
+  heal location and the whole gauntlet — including downtime between legs — happens
+  while stationed there. This bypassed the "items only, no free heal" gauntlet rule
+  above. Fixed by guarding `checkLocationHeal()` with `if(watchedBattle) return;` —
+  suppresses the passive heal only while a gym/gauntlet encounter is actively in
+  progress; normal in-town heal-on-arrival/heal-on-tick behavior is unaffected
+  everywhere else.
+
+### Per-KO EXP Attribution (SETTLED — v0.32, fixes pooled-EXP bug)
+- **Bug (pre-v0.32):** `runOneGymBattle()`/`runOneGymBattleSilent()` summed EXP across
+  every enemy Pokémon in the battle into one `totalExp`, then gave the full total to
+  every party member still conscious at the end — letting one survivor (often the
+  strongest/highest-level, since it's the one likely to survive) absorb credit for KOs
+  it never landed. Also produced a secondary symptom: a large one-shot EXP grant could
+  cascade through several level-ups, each level's HP-catch-up (`currentHP += maxHP
+  increase`) compounding into what looked like a de facto free heal.
+- **Fix:** after `runTrainerBattle()` returns, walk `result.log`. For each `{faint:X}`
+  entry where X belongs to the enemy team, the immediately preceding log entry's
+  `attacker` field is the player Pokémon that landed that KO. Award that enemy's EXP
+  (`baseExpYield×level/7`, unchanged formula) to that specific attacker via
+  `giveExp`/`giveExpSilent`, looked up by id in the real `state.party` (not the
+  battle-copy) — so credit persists even if that Pokémon faints later in the same
+  battle. Applies identically to both the live (`runOneGymBattle`) and offline/silent
+  (`runOneGymBattleSilent`) paths.
+- **EXP banking past the level cap (confirmed intended, unchanged):** `pokemon.exp`
+  accumulates unconditionally regardless of the level cap; a capped Pokémon's excess
+  EXP resolves in a burst of level-ups the moment the cap rises (e.g. a new badge). Not
+  a bug — no fix needed.
 
 ### Progress Tracking
 - Per-gym "highest tier reached" tracked as a **display/achievement stat only** — no gameplay effect, purely informational (trophy-style).
@@ -1280,6 +1340,24 @@ IVs/Nature are rolled at the moment of capture/hatch/creation — **not** when a
 
 - **`baseExp` NaN landmine** — live-combat EXP calc (lines 2218, 2418) contained `s_?s_.baseExpYield||s_.baseExp:51`, which by operator precedence evaluates as `(s_.baseExpYield||s_.baseExp):51` — since `baseExp` never exists as a field in `pokedex.js` (only `baseExpYield` does), any species with a falsy `baseExpYield` (confirmed real: Mega Venusaur, dexId 3, `baseExpYield:null`) produced `NaN` EXP instead of the intended `51` default. Fixed to `(s_?.baseExpYield||51)`, matching the already-correct offline-path pattern (line 1921). Live and offline EXP math had quietly diverged; now consistent.
 - **Removed "Professor:" label** from the party-page inventory summary line (`renderBagDisplay()`) — shows just Balls/TMs/Potions/Revives.
+
+---
+
+## Cheat Codes — AdminMode (SETTLED — v0.32, NEW)
+
+- Purely live-derived, nothing persisted, no SAVE_VERSION impact — matches the v0.23 shiny-badge pattern (reflects current state only, no cached flag).
+- `isAdminModeActive()`: true if `state.party` contains a Pokémon with `id===1` (the literal first-ever catch, per the existing "catch #" numbering already shown in the Pokémon detail modal) **and** `pokedexId===19` (Rattata, matched by dexId — never by name string, per standing principle) **and** its nickname, trimmed/lowercased, equals `"adminmode"` (same match pattern as the existing nickname-evolution check).
+- `buyItem()`: when active, price is treated as `$0` for all shop purchases (both `professorBag` and `trainerBag` items) — funds check skipped entirely, full requested quantity granted, `state.funds` untouched.
+- Shop display shows `$0 ea` per item while active, for visible confirmation the cheat is live.
+- Deactivates immediately (next check) if the nickname is changed or Catch #1 is released — no extra logic needed since nothing is cached; this is the intended "removing the nickname stops the mode" behavior, achieved for free by being purely derived.
+- Precedent-setting pattern for future cheat codes via nickname parsing (see "Things That Are Future Goals").
+
+---
+
+## Bug Fixes (SETTLED — v0.32)
+
+- **🐾 emoji removed** from non-fainted party screen entries — `(fainted?'💀':'🐾')+' '` → `(fainted?'💀 ':'')`. Fainted Pokémon still show 💀 before the name; non-fainted Pokémon show just the name.
+- **Shiny sprites not rendering in the battle modal** — `renderBattleFrame()` hardcoded `getSpriteUrl(..., false)` for both the enemy and player sprite, ignoring `isShiny` entirely (every other sprite call site in the file — party screen, Dex screen, evolution screen — already passed it correctly). Additionally, `playerSnapshot` (built in `runWatchedBattleLeg()`) never carried `p.isShiny` over from the real party object at all, so even fixing the call sites alone wouldn't have worked. Fixed both: the snapshot mapping now includes `isShiny:p.isShiny||false`, and both `getSpriteUrl()` calls in `renderBattleFrame()` now pass it through. `getSpriteUrl()` itself required no change — its shiny branch was already correct (`spriteUrl` is `null` for every entry in `pokedex.js`, so it always falls through to the shiny-aware path).
 
 ---
 

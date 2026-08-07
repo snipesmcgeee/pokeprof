@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.31</title>
+<title>PokeProf v0.32</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -110,7 +110,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span style="font-size:11px;color:#6080a0;">v0.31</span></h1>
+  <h1>PokeProf <span style="font-size:11px;color:#6080a0;">v0.32</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">100.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -352,6 +352,15 @@ function kgToLbsStr(kg){
 function getItem(itemId){
   if(typeof ITEMS_DATA==='undefined') return null;
   return ITEMS_DATA.find(i=>i.itemId===itemId)||null;
+}
+
+// v0.32 — "AdminMode" cheat code. Purely live-derived, nothing persisted: true whenever Catch #1
+// (id===1, the literal first-ever catch) is a Rattata (pokedexId 19, matched by dexId not name)
+// currently nicknamed "AdminMode" (case-insensitive, trimmed). Checks the full state.dex (not
+// just state.party) since Catch #1 may be boxed rather than on the active team. Renaming it away
+// or releasing Catch #1 deactivates this on the very next check — nothing extra needed.
+function isAdminModeActive(){
+  return state.dex.some(p=>p.id===1&&p.pokedexId===19&&(p.nickname||'').trim().toLowerCase()==='adminmode');
 }
 
 function getBallCount(){
@@ -1068,10 +1077,30 @@ function healPartyBeforeGymBattle(){
   });
 }
 
+// v0.32 — replaces the old pooled-total-to-every-survivor EXP award (see DESIGN.md "Per-KO EXP
+// Attribution"). Walks the battle log; for each enemy faint, the immediately preceding log
+// entry's attacker is the player Pokemon that landed that KO — awards that enemy's EXP to that
+// specific attacker (looked up in the real state.party, so credit persists even if the attacker
+// later faints in the same battle). giveExpFn is giveExp (live) or giveExpSilent (offline).
+function awardPerKOExp(result,enemyTeam,giveExpFn){
+  if(result.winner!=='player') return;
+  result.log.forEach((entry,i)=>{
+    if(entry.faint===undefined) return;
+    const enemy=enemyTeam.find(e=>e.id===entry.faint);
+    if(!enemy) return; // a player faint, not an enemy — no EXP to award
+    const prev=result.log[i-1];
+    if(!prev||prev.attacker===undefined) return;
+    const attackerReal=state.party.find(p=>p.id===prev.attacker);
+    if(!attackerReal) return;
+    const entryData=getPokemonEntry(enemy.pokedexId);
+    const exp=Math.floor(((entryData&&entryData.baseExpYield?entryData.baseExpYield:51)*enemy.level)/7);
+    giveExpFn(attackerReal,exp);
+  });
+}
+
 // One battle instance: full player team vs. one enemy roster, single runTrainerBattle() call —
-// no mid-battle healing even if the enemy cycles through multiple Pokemon. Applies EXP to every
-// player Pokemon still conscious at the end, summed per enemy Pokemon KO'd (baseExpYield×level/7,
-// same formula as wild encounters).
+// no mid-battle healing even if the enemy cycles through multiple Pokemon. v0.32 — EXP is now
+// awarded per-KO (see awardPerKOExp above), not pooled to every survivor.
 function runOneGymBattle(enemyTeam){
   const playerTeam=state.party.filter(p=>p.currentHP>0).map(p=>({id:p.id,pokedexId:p.pokedexId,level:p.level,currentHP:p.currentHP,maxHP:p.maxHP,stats:p.stats,equippedMoves:p.equippedMoves||[]}));
   if(!playerTeam.length||!enemyTeam.length) return {winner:'enemy',log:[]};
@@ -1081,13 +1110,7 @@ function runOneGymBattle(enemyTeam){
     const real=state.party.find(p=>p.id===pt.id);
     if(real) real.currentHP=pt.currentHP;
   });
-  if(result.winner==='player'){
-    const totalExp=enemyTeam.reduce((sum,e)=>{
-      const entry=getPokemonEntry(e.pokedexId);
-      return sum+Math.floor(((entry&&entry.baseExpYield?entry.baseExpYield:51)*e.level)/7);
-    },0);
-    state.party.filter(p=>p.currentHP>0).forEach(p=>giveExp(p,totalExp));
-  }
+  awardPerKOExp(result,enemyTeam,giveExp);
   return result;
 }
 
@@ -1154,13 +1177,7 @@ function runOneGymBattleSilent(enemyTeam){
     const real=state.party.find(p=>p.id===pt.id);
     if(real) real.currentHP=pt.currentHP;
   });
-  if(result.winner==='player'){
-    const totalExp=enemyTeam.reduce((sum,e)=>{
-      const entry=getPokemonEntry(e.pokedexId);
-      return sum+Math.floor(((entry&&entry.baseExpYield?entry.baseExpYield:51)*e.level)/7);
-    },0);
-    state.party.filter(p=>p.currentHP>0).forEach(p=>giveExpSilent(p,totalExp));
-  }
+  awardPerKOExp(result,enemyTeam,giveExpSilent);
   return result;
 }
 
@@ -1358,7 +1375,7 @@ function runWatchedBattleLeg(){
   const enemyTeam=buildEnemyTeam(watchedBattle.trainerId,watchedBattle.tier,watchedBattle.isGauntlet?watchedBattle.leg:undefined);
   // Snapshot BEFORE the battle mutates currentHP — used only to drive the playback's starting
   // HP bars; the actual outcome is untouched by anything here.
-  const playerSnapshot=state.party.filter(p=>p.currentHP>0).map(p=>({id:p.id,pokedexId:p.pokedexId,level:p.level,maxHP:p.maxHP,startHP:p.currentHP}));
+  const playerSnapshot=state.party.filter(p=>p.currentHP>0).map(p=>({id:p.id,pokedexId:p.pokedexId,level:p.level,maxHP:p.maxHP,startHP:p.currentHP,isShiny:p.isShiny||false}));
   if(!playerSnapshot.length||!enemyTeam.length){ finishWatchedBattle({winner:'enemy',log:[]}); return; }
   const result=runOneGymBattle(enemyTeam);
   showBattleScreen(playerSnapshot,enemyTeam,result);
@@ -1397,11 +1414,11 @@ function showBattleScreen(playerTeamSnapshot,enemyTeam,result){
         '<div style="margin-bottom:10px;">'+
           '<div style="color:#e0e0e0;font-size:11px;">'+(enEntry?enEntry.name:'???')+' Lv'+(en?en.level:'?')+'</div>'+
           '<div style="background:#0a0a1a;border-radius:3px;height:8px;margin:3px 0;overflow:hidden;"><div style="height:100%;width:'+enPct+'%;background:'+barColor(enPct)+';transition:width 0.3s;"></div></div>'+
-          '<img src="'+(en?getSpriteUrl(en.pokedexId,'',false):'')+'" style="width:80px;height:80px;image-rendering:pixelated;display:block;margin:4px auto;" onerror="this.style.display=\'none\'">'+
+          '<img src="'+(en?getSpriteUrl(en.pokedexId,'',en.isShiny||false):'')+'" style="width:80px;height:80px;image-rendering:pixelated;display:block;margin:4px auto;" onerror="this.style.display=\'none\'">'+
         '</div>'+
         '<div id="battle-log-line" style="color:#f4d03f;font-size:11px;min-height:16px;text-align:center;margin:6px 0;"></div>'+
         '<div style="margin-top:10px;">'+
-          '<img src="'+(p?getSpriteUrl(p.pokedexId,'',false):'')+'" style="width:80px;height:80px;image-rendering:pixelated;display:block;margin:4px auto;transform:scaleX(-1);" onerror="this.style.display=\'none\'">'+
+          '<img src="'+(p?getSpriteUrl(p.pokedexId,'',p.isShiny||false):'')+'" style="width:80px;height:80px;image-rendering:pixelated;display:block;margin:4px auto;transform:scaleX(-1);" onerror="this.style.display=\'none\'">'+
           '<div style="background:#0a0a1a;border-radius:3px;height:8px;margin:3px 0;overflow:hidden;"><div style="height:100%;width:'+pPct+'%;background:'+barColor(pPct)+';transition:width 0.3s;"></div></div>'+
           '<div style="color:#e0e0e0;font-size:11px;">'+(pEntry?pEntry.name:'???')+' Lv'+(p?p.level:'?')+'</div>'+
         '</div>'
@@ -2126,7 +2143,7 @@ function runWildEncounterLoopSilent(lead,enc,summary,encLocKey,encDexKey){
     lead=getLeadPokemon();
     if(!lead) return; // caller's outer loop already handles the full-wipe case before calling in
     const hasBalls=getBallCount()>0;
-    const throwDecision=hasBalls?decideWildBallThrow(wild.currentHP,wild.maxHP,wild.catchRate):null;
+    const throwDecision=hasBalls?decideWildBallThrow(wild.currentHP,wild.maxHP,wild.catchRate,enc.pokedexId,round%2===0):null;
 
     if(throwDecision){
       useItemFromBag(throwDecision.ballId,null);
@@ -2281,18 +2298,56 @@ function rollFromTable(table){
   return null;
 }
 
+// v0.32 — walks EVO_TREE in both directions (fromDexId and toDexId edges) to build the full
+// connected-component set of dexIds for a family — e.g. every Eeveelution, regardless of branch,
+// counts as one pool. Used by Family IV Inheritance below. Falls back to [dexId] alone if
+// EVO_TREE is unavailable or this species has no evolution edges at all.
+function getFamilyDexIds(dexId){
+  if(typeof EVO_TREE==='undefined') return [dexId];
+  const visited=new Set([dexId]);
+  const queue=[dexId];
+  while(queue.length){
+    const cur=queue.shift();
+    EVO_TREE.forEach(e=>{
+      if(e.fromDexId===cur&&e.toDexId&&!visited.has(e.toDexId)){ visited.add(e.toDexId); queue.push(e.toDexId); }
+      if(e.toDexId===cur&&e.fromDexId&&!visited.has(e.fromDexId)){ visited.add(e.fromDexId); queue.push(e.fromDexId); }
+    });
+  }
+  return [...visited];
+}
+// v0.32 — sum of all 6 IV stats (max 186). Used by Family IV Inheritance below.
+function ivTotal(p){
+  const iv=p&&p.ivs?p.ivs:{hp:0,atk:0,def:0,spatk:0,spdef:0,spd:0};
+  return iv.hp+iv.atk+iv.def+iv.spatk+iv.spdef+iv.spd;
+}
+
 // Per-species cap: flat max 6 non-shiny individuals, regardless of aide count. Shiny exempt.
 // Catch-then-release: stats (totalCatches, dexHistory) already counted before this is called.
 // v0.26 — cap is now editable (state.speciesCap, 1-6, default 6), was previously hardcoded 6.
 // v0.31 — perfect-IV individuals get the same exemption as shinies.
+// v0.32 — Family IV Inheritance: on overflow, instead of a flat release, the wild's IVs may be
+// donated to a lower-IV family member (any branch, any species in the evolutionary tree) before
+// the wild itself is discarded. See DESIGN.md "Family IV Inheritance on Species-Cap Overflow".
 function checkSpeciesCap(caught){
   if(caught.isShiny||isPerfectIV(caught)) return; // shinies and perfect-IV individuals never released
   const cap=state.speciesCap||6;
   const liveNonShiny=state.dex.filter(p=>p.pokedexId===caught.pokedexId&&!p.isShiny&&!isPerfectIV(p));
-  if(liveNonShiny.length>cap){
+  if(liveNonShiny.length<=cap) return;
+  const familyIds=getFamilyDexIds(caught.pokedexId);
+  const pool=state.dex.filter(p=>p.id!==caught.id&&familyIds.includes(p.pokedexId));
+  pool.sort((a,b)=>b.level-a.level);
+  const wildIV=ivTotal(caught);
+  const recipient=pool.find(p=>ivTotal(p)<wildIV);
+  if(recipient){
+    recipient.ivs=caught.ivs;
+    recalcStats(recipient);
+    recipient.currentHP=recipient.maxHP;
     state.dex=state.dex.filter(p=>p.id!==caught.id);
-    addLog('Released '+getDisplayName(caught)+' #'+caught.id+' — species cap reached ('+cap+' max).','info');
+    addLog(getDisplayName(recipient)+' #'+recipient.id+' inherited superior IVs from the newly caught '+getDisplayName(caught)+'!','evolve');
+    return;
   }
+  state.dex=state.dex.filter(p=>p.id!==caught.id);
+  addLog('Released '+getDisplayName(caught)+' #'+caught.id+' — species cap reached ('+cap+' max).','info');
 }
 
 // v0.26 — dropdown handler for the editable per-species cap. Raising applies immediately (never
@@ -2349,6 +2404,7 @@ function isHealLocation(locId){
 }
 
 function checkLocationHeal(){
+  if(watchedBattle) return; // v0.32 — suppress passive free-heal while a gym/gauntlet encounter is in progress
   const locData=typeof LOCATIONS!=='undefined'?getLocation(state.currentLocation):null;
   if(locData&&(locData.heals==='TRUE'||locData.heals===true||locData.heals==='true')){
     const needsHeal=state.party.some(p=>p.currentHP<p.maxHP||p.currentHP<=0);
@@ -2439,26 +2495,25 @@ function catchProbabilityForBall(ballId,wildHP,wildMaxHP,speciesCatchRate){
   return calcCatchProbability(wildHP,wildMaxHP,speciesCatchRate,modifier);
 }
 
-// Decides which ball (if any) to throw this round, per the settled v0.30 catch-loop rules:
-// - wildHP>1: lowest-tier owned ball reaching >=90%, else null (attack instead).
-// - wildHP==1: overrides rule above entirely — lowest-tier owned ball reaching >70%,
-//   or the highest-tier owned ball if none clear 70%.
-function decideWildBallThrow(wildHP,wildMaxHP,speciesCatchRate){
+// v0.32 — replaces the v0.30 90%/70%-threshold rules. Decides which ball (if any) to throw this
+// round. Zero-balls guard is handled by the caller (hasBalls check before calling this at all).
+// isThrowTurn = whether THIS round is a throw round per the alternating schedule (round 0, 2, 4...
+// starting with a throw) — irrelevant once wildHP<=1, which always throws every round.
+function decideWildBallThrow(wildHP,wildMaxHP,speciesCatchRate,dexId,isThrowTurn){
   const owned=getOwnedBallsAscending();
   if(!owned.length) return null;
-  if(wildHP<=1){
-    for(const id of owned){
-      const prob=catchProbabilityForBall(id,wildHP,wildMaxHP,speciesCatchRate);
-      if(prob>0.70) return {ballId:id,prob};
-    }
+  if(wildHP>1&&!isThrowTurn) return null;
+  const neverCaught=!state.dexHistory[dexId];
+  if(neverCaught){
     const highest=owned[owned.length-1];
     return {ballId:highest,prob:catchProbabilityForBall(highest,wildHP,wildMaxHP,speciesCatchRate)};
   }
   for(const id of owned){
     const prob=catchProbabilityForBall(id,wildHP,wildMaxHP,speciesCatchRate);
-    if(prob>=0.90) return {ballId:id,prob};
+    if(prob>=0.50) return {ballId:id,prob};
   }
-  return null;
+  const lowest=owned[0];
+  return {ballId:lowest,prob:catchProbabilityForBall(lowest,wildHP,wildMaxHP,speciesCatchRate)};
 }
 
 // Builds an ephemeral battle-ready wild Pokemon — never stored, exists only for one encounter's
@@ -2491,7 +2546,7 @@ function runWildEncounterLoop(lead,enc){
     lead=getLeadPokemon();
     if(!lead){ endMission(); return; }
     const hasBalls=getBallCount()>0;
-    const throwDecision=hasBalls?decideWildBallThrow(wild.currentHP,wild.maxHP,wild.catchRate):null;
+    const throwDecision=hasBalls?decideWildBallThrow(wild.currentHP,wild.maxHP,wild.catchRate,enc.pokedexId,round%2===0):null;
 
     if(throwDecision){
       // Ball throw always resolves before any speed check.
@@ -2788,10 +2843,11 @@ function buildShopItemRowHtml(item){
   const itemDef=getItem(item.itemId);
   const isTrainer=itemDef&&itemDef.bagType&&itemDef.bagType.toLowerCase()==='trainer';
   const bagQty=(isTrainer?state.trainerBag:state.professorBag)[item.itemId]||0;
+  const displayPrice=isAdminModeActive()?0:item.shopPrice; // v0.32 — AdminMode cheat code
   return '<div style="margin-bottom:8px;background:#0f1a2a;border-radius:4px;padding:8px;">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">'
     +'<span style="color:#e0e0e0;font-size:11px;">'+item.name+'</span>'
-    +'<span style="color:#a0a0c0;font-size:10px;">$'+item.shopPrice+' ea &nbsp; Bag: <span id="bag-'+item.itemId+'">'+bagQty+'</span></span>'
+    +'<span style="color:#a0a0c0;font-size:10px;">$'+displayPrice+' ea &nbsp; Bag: <span id="bag-'+item.itemId+'">'+bagQty+'</span></span>'
     +'</div>'
     +'<div style="display:flex;gap:4px;">'
     +'<button onclick="buyItem(\''+item.itemId+'\',1)" style="flex:1;padding:5px 2px;font-size:10px;border-color:#f4d03f;color:#f4d03f;">×1</button>'
@@ -3186,13 +3242,19 @@ function buyItem(itemId, qty){
   qty=parseInt(qty)||1;
   const item=getItem(itemId);
   if(!item||!item.shopPrice) return;
-  const price=parseFloat(item.shopPrice);
-  if(state.funds<price){ addLog('Not enough funds for '+item.name+'!','fail'); return; }
-  const maxCanBuy=Math.floor(state.funds/price);
-  if(maxCanBuy<=0){ addLog('Not enough funds for '+item.name+'!','fail'); return; }
-  const actualQty=Math.min(qty,maxCanBuy);
-  const totalCost=Math.round(price*actualQty*100)/100;
-  state.funds=Math.round((state.funds-totalCost)*100)/100;
+  const adminMode=isAdminModeActive(); // v0.32 — "AdminMode" cheat code, see isAdminModeActive()
+  const price=adminMode?0:parseFloat(item.shopPrice);
+  let actualQty, totalCost;
+  if(adminMode){
+    actualQty=qty; totalCost=0;
+  } else {
+    if(state.funds<price){ addLog('Not enough funds for '+item.name+'!','fail'); return; }
+    const maxCanBuy=Math.floor(state.funds/price);
+    if(maxCanBuy<=0){ addLog('Not enough funds for '+item.name+'!','fail'); return; }
+    actualQty=Math.min(qty,maxCanBuy);
+    totalCost=Math.round(price*actualQty*100)/100;
+    state.funds=Math.round((state.funds-totalCost)*100)/100;
+  }
 
   // Route to correct inventory by bagType
   const isTrainerItem=item.bagType&&item.bagType.toLowerCase()==='trainer';
@@ -3938,7 +4000,7 @@ function renderParty(){
     d.className='party-slot'+(fainted?' fainted':'');
     const spriteUrl=getSpriteUrl(p.pokedexId,p.species,p.isShiny||false);
     spritesHtml+='<img src="'+spriteUrl+'" class="aide-sprite-mini" style="opacity:'+(fainted?'0.3':'1')+';image-rendering:pixelated;" onerror="this.style.display=\'none\'">';
-    d.innerHTML='<div style="display:flex;align-items:flex-start;gap:8px;"><img src="'+spriteUrl+'" class="party-sprite" onerror="this.style.display=\'none\'"><div style="flex:1;"><div class="poke-name">'+(fainted?'💀':'🐾')+' '+getDisplayName(p)+' #'+p.id+(getRarityBadge(p)?'<span class="shiny-badge">'+getRarityBadge(p)+'</span>':'')+'</div><div class="poke-level">Lv '+p.level+' · '+p.gender+(p.ability?' · '+p.ability:'')+'</div><div style="color:#6080a0;font-size:10px;">❤ '+(p.friendship||0)+' friendship</div><div class="hp-bar-wrap"><div class="hp-bar" style="width:'+hpPct+'%;background:'+hpColor+';"></div></div><div class="hp-text">HP: '+p.currentHP+'/'+p.maxHP+'</div><div class="exp-bar-wrap"><div class="exp-bar" style="width:'+ePct+'%;"></div></div></div></div>'+getMoveSlotsHtml(p,true);
+    d.innerHTML='<div style="display:flex;align-items:flex-start;gap:8px;"><img src="'+spriteUrl+'" class="party-sprite" onerror="this.style.display=\'none\'"><div style="flex:1;"><div class="poke-name">'+(fainted?'💀 ':'')+getDisplayName(p)+' #'+p.id+(getRarityBadge(p)?'<span class="shiny-badge">'+getRarityBadge(p)+'</span>':'')+'</div><div class="poke-level">Lv '+p.level+' · '+p.gender+(p.ability?' · '+p.ability:'')+'</div><div style="color:#6080a0;font-size:10px;">❤ '+(p.friendship||0)+' friendship</div><div class="hp-bar-wrap"><div class="hp-bar" style="width:'+hpPct+'%;background:'+hpColor+';"></div></div><div class="hp-text">HP: '+p.currentHP+'/'+p.maxHP+'</div><div class="exp-bar-wrap"><div class="exp-bar" style="width:'+ePct+'%;"></div></div></div></div>'+getMoveSlotsHtml(p,true);
     d.onclick=()=>showPokemonDetail(p.id);
     c.appendChild(d);
   });

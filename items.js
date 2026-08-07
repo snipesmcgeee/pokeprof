@@ -1,5 +1,5 @@
 // PokeProf — Items Database
-// Auto-generated: 8/5/2026, 10:42:31 PM
+// Auto-generated: 8/7/2026, 5:49:26 PM
 // Entries: 72
 
 const ITEMS_DATA = [

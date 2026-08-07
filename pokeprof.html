@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.32</title>
+<title>PokeProf v0.33</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -110,7 +110,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span style="font-size:11px;color:#6080a0;">v0.32</span></h1>
+  <h1>PokeProf <span style="font-size:11px;color:#6080a0;">v0.33</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">100.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -168,6 +168,10 @@
     <div id="encounter-display">
       <div class="enc-title">⚔ Encounter</div>
       <div class="enc-body" id="enc-body">No active encounter.</div>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:6px;">
+      <button id="log-tab-full" onclick="setLogViewMode('full')" style="flex:1;padding:6px 2px;font-size:10px;border-color:#5dade2;color:#5dade2;">Full</button>
+      <button id="log-tab-condensed" onclick="setLogViewMode('condensed')" style="flex:1;padding:6px 2px;font-size:10px;">Condensed</button>
     </div>
     <div id="log"></div>
   </div>
@@ -246,8 +250,14 @@ if(typeof POKEDEX_DATA !== 'undefined'){
 // ── POKEDEX ENTRY HELPER ──
 // Prefers formName===null; falls back to first entry with that dexId.
 // Required for form-only species like Nidoran M/F where every entry has a non-null formName.
-function getPokemonEntry(dexId){
+// v0.33 — optional formName param fetches a specific form row (e.g. Alolan Raichu). Omitted
+// (all pre-v0.33 call sites) keeps prior behavior exactly: prefer the formName===null row.
+function getPokemonEntry(dexId,formName){
   if(typeof POKEDEX_DATA==='undefined') return null;
+  if(formName){
+    const formRow=POKEDEX_DATA.find(x=>x.dexId===dexId&&x.formName===formName);
+    if(formRow) return formRow;
+  }
   const nullForm = POKEDEX_DATA.find(x=>x.dexId===dexId&&x.formName===null);
   if(nullForm) return nullForm;
   return POKEDEX_DATA.find(x=>x.dexId===dexId) || null;
@@ -286,15 +296,18 @@ function buildBadgeSpritesHtml(){
 }
 
 // ── ENCOUNTER METHODS ──
-const EVOLUTION_METHODS = [
-  'level','friendship','friendship-day','friendship-night','use-move','in-party',
-  'Moon Stone','Thunder Stone','Fire Stone','Leaf Stone','Water Stone',
-  'Sun Stone','Shiny Stone','Dusk Stone','Dawn Stone','Ice Stone',
-  'Oval Stone','Metal Coat','Protector','Dragon Scale','Electirizer',
-  'Up Grade','Dubious Disc','Razor Fang','Razor Claw','Peat Block',
-  'Reaper Cloth','Deep Sea Tooth','Sachet','Whipped Dream','Tart Apple',
-  'Cracked Pot','Metal Alloy','Auspicious Armor','Unremarkable Teacup','Link Cable'
-];
+// v0.33 — derived live from ITEMS_DATA instead of a hardcoded array. Previously this list
+// drifted out of sync by hand (8 items with effect evolve-stone/evolve-trade were missing),
+// which let testedMethods.length exceed EVOLUTION_METHODS.length and falsely trip "fully
+// tested"/"Does not evolve". Deriving it live from the same data the auto-test loop already
+// reads makes that drift structurally impossible going forward.
+const EVOLUTION_METHODS = (function(){
+  const base=['level','friendship','friendship-day','friendship-night','use-move','in-party'];
+  const items=(typeof ITEMS_DATA!=='undefined'?ITEMS_DATA:[])
+    .filter(i=>i.effect==='evolve-stone'||i.effect==='evolve-trade')
+    .map(i=>i.name);
+  return base.concat(items);
+})();
 
 // ── ENCOUNTER TABLE ──
 // v0.21 — scoped fix: fishing splits into per-rod-tier sub-methods so each rod can be
@@ -355,12 +368,30 @@ function getItem(itemId){
 }
 
 // v0.32 — "AdminMode" cheat code. Purely live-derived, nothing persisted: true whenever Catch #1
-// (id===1, the literal first-ever catch) is a Rattata (pokedexId 19, matched by dexId not name)
-// currently nicknamed "AdminMode" (case-insensitive, trimmed). Checks the full state.dex (not
-// just state.party) since Catch #1 may be boxed rather than on the active team. Renaming it away
-// or releasing Catch #1 deactivates this on the very next check — nothing extra needed.
+// (id===1, the literal first-ever catch) is currently nicknamed "AdminMode" (case-insensitive,
+// trimmed). Checks the full state.dex (not just state.party) since Catch #1 may be boxed rather
+// than on the active team. Renaming it away or releasing Catch #1 deactivates this on the very
+// next check — nothing extra needed.
+// v0.33 fix — evolution-proofing: this previously also required pokedexId===19 (Rattata). Since
+// id is permanent but pokedexId changes on evolution (applySpeciesSwap() only ever writes
+// species/pokedexId/formName, never id), AdminMode would silently stop working the moment
+// Catch #1 evolved into Raticate — species identity was being used where catch-order identity
+// was the actual intent. Fix: drop the pokedexId check entirely, key only on id===1.
 function isAdminModeActive(){
-  return state.dex.some(p=>p.id===1&&p.pokedexId===19&&(p.nickname||'').trim().toLowerCase()==='adminmode');
+  return state.dex.some(p=>p.id===1&&(p.nickname||'').trim().toLowerCase()==='adminmode');
+}
+
+// v0.33 — "TurboMode" cheat code, same pattern as AdminMode: Catch #1, by permanent catch-order
+// id (not species), nicknamed "TurboMode". When active, ENC_INTERVAL_OPEN/ENC_INTERVAL_CLOSED
+// both effectively drop to 1 second — see getEncounterInterval() below.
+function isTurboModeActive(){
+  return state.dex.some(p=>p.id===1&&(p.nickname||'').trim().toLowerCase()==='turbomode');
+}
+// v0.33 — returns the effective encounter interval, respecting TurboMode. Every site that sets
+// state.nextEncounterIn reads through this instead of the raw ENC_INTERVAL_OPEN/CLOSED constants.
+function getEncounterInterval(isOpen){
+  if(isTurboModeActive()) return 1;
+  return isOpen?ENC_INTERVAL_OPEN:ENC_INTERVAL_CLOSED;
 }
 
 function getBallCount(){
@@ -437,7 +468,7 @@ function useItemFromBag(itemId, pokemon){
 // ── STATE ──
 let state={
   funds:100.00, totalCatches:0, totalSightings:0,
-  missionElapsed:0, nextEncounterIn:ENC_INTERVAL_OPEN,
+  missionElapsed:0, nextEncounterIn:ENC_INTERVAL_OPEN, // module-level default only — cannot call getEncounterInterval() here, state doesn't exist yet during its own initializer
   incomeAccumulator:0,
   party:[], dex:[], dexIdCounter:1, currentEncounter:null, log:[],
   // v0.26 — idle removed: destination defaults to the starting location itself, so research
@@ -503,16 +534,23 @@ function makePokemon(sp,lv,gender,holder=null,dexId=null){
 
 // Returns the nickname if set, otherwise the species name. Use this at every
 // instance-level display/log site — species-wide displays (cards, tables) keep p.species.
+// v0.33 — for un-nicknamed individuals, appends the form when present (e.g. "Raichu (Alolan)")
+// so a form-variant individual is distinguishable at a glance. Nicknamed individuals unaffected
+// — nickname still takes full priority, unchanged.
 function getDisplayName(p){
-  return (p&&p.nickname)?p.nickname:(p?p.species:'');
+  if(p&&p.nickname) return p.nickname;
+  if(!p) return '';
+  return p.formName?p.species+' ('+p.formName+')':p.species;
 }
 
 // ── SPRITES ──
 const SPRITE_BASE='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon';
-function getSpriteUrl(dexId,name,isShiny=false){
+// v0.33 — optional formName param so a form-variant individual's actual sprite resolves,
+// instead of always falling through to the base form's spriteUrl.
+function getSpriteUrl(dexId,name,isShiny=false,formName=null){
   if(!dexId||dexId===0) return '';
   if(typeof POKEDEX_DATA!=='undefined'){
-    const entry=getPokemonEntry(dexId);
+    const entry=getPokemonEntry(dexId,formName);
     if(entry&&entry.spriteUrl) return entry.spriteUrl;
   }
   return (isShiny?SPRITE_BASE+'/shiny':SPRITE_BASE)+'/'+dexId+'.png';
@@ -695,8 +733,10 @@ function expToLevel(lv,r){
 
 // v0.31 — optional iv param (0-31). Default 0 keeps every pre-v0.31 call site byte-identical
 // to its old output (species-reference displays like calcBST's entry.bst usage, makeWildBattler).
-function calcMaxHP(sp,lv,dexId=null,iv=0){
-  const s=dexId?getPokemonEntry(dexId):SPECIES[sp]; if(!s) return lv+10;
+// v0.33 — optional formName param threads through to getPokemonEntry() so a form-variant
+// individual's actual base stats are used, not always the base form's.
+function calcMaxHP(sp,lv,dexId=null,iv=0,formName=null){
+  const s=dexId?getPokemonEntry(dexId,formName):SPECIES[sp]; if(!s) return lv+10;
   return Math.floor(((s.baseHP||0)*2+iv)*lv/100)+lv+10;
 }
 
@@ -766,10 +806,12 @@ function getRarityBadge(p){
 // level + p.ivs + p.nature. Single source of truth, called at every point that recalculates
 // maxHP: creation, level-up, evolution, migration. Battle functions read the cached values
 // directly rather than recomputing from IV/nature each time.
+// v0.33 — respects p.formName, so a form-variant individual's cached stats reflect its actual
+// base stats (e.g. Alolan Raichu) rather than always the base/Kantonian form's.
 function recalcStats(p){
-  const s=getPokemonEntry(p.pokedexId); if(!s) return;
+  const s=getPokemonEntry(p.pokedexId,p.formName); if(!s) return;
   const ivs=p.ivs||{hp:0,atk:0,def:0,spatk:0,spdef:0,spd:0};
-  p.maxHP=calcMaxHP(p.species,p.level,p.pokedexId,ivs.hp);
+  p.maxHP=calcMaxHP(p.species,p.level,p.pokedexId,ivs.hp,p.formName);
   p.stats={
     atk:calcStat(s.baseAtk,p.level,ivs.atk,natureModFor(p.nature,'atk')),
     def:calcStat(s.baseDef,p.level,ivs.def,natureModFor(p.nature,'def')),
@@ -970,9 +1012,10 @@ function countRegularBadges(){
   const regularBadgeIds=[...new Set(TRAINERS_DATA.filter(t=>!t.isGauntlet&&t.badgeItemId).map(t=>t.badgeItemId))];
   return regularBadgeIds.filter(id=>id!==champId&&state.trainerBag[id]>0).length;
 }
-// cap = 100 once Champion is beaten, else 10 + (regular badges × 10). Range 10-100.
+// v0.33 — cap = 100 once Champion is beaten, else 15 + (regular badges × 10). Range 15-100
+// (was 10-100 through v0.32). Progression: 15,25,35,...,95, then 100 on Champion.
 function getLevelCap(){
-  return hasChampionBadge()?100:10+countRegularBadges()*10;
+  return hasChampionBadge()?100:15+countRegularBadges()*10;
 }
 function isIndigoTrainer(trainerId){
   return typeof TRAINERS_DATA!=='undefined'&&TRAINERS_DATA.some(t=>t.trainerId===trainerId&&t.isGauntlet);
@@ -1058,6 +1101,7 @@ function awardGymWin(trainerId,tier){
     state.trainerBag[badgeId]=(state.trainerBag[badgeId]||0)+1;
     const badgeItem=getItem(badgeId);
     addLog('🎖 Badge earned: '+(badgeItem?badgeItem.name:badgeId)+'!','evolve');
+    addSignificantLog('🎖 Badge earned: '+(badgeItem?badgeItem.name:badgeId)+'!','evolve');
   }
   if(!row.isGauntlet){
     const tmAward=alreadyEarned?1:(tier+4);
@@ -1298,7 +1342,7 @@ function renderTeamOrderModal(){
   const modal=document.getElementById('teamorder-modal'); if(!modal||!watchedBattle) return;
   const legNote=watchedBattle.isGauntlet?(' · Leg '+watchedBattle.leg+'/5'):'';
   const rows=state.party.map(p=>{
-    const sprite=getSpriteUrl(p.pokedexId,p.species,p.isShiny||false);
+    const sprite=getSpriteUrl(p.pokedexId,p.species,p.isShiny||false,p.formName);
     const fainted=p.currentHP<=0;
     return '<div class="teamorder-row" data-id="'+p.id+'" style="display:flex;align-items:center;gap:8px;background:#0f1a2a;border-radius:4px;padding:6px 8px;margin-bottom:5px;opacity:'+(fainted?'0.5':'1')+';touch-action:none;user-select:none;">'+
       '<span style="color:#6080a0;font-size:14px;cursor:grab;">☰</span>'+
@@ -1567,11 +1611,12 @@ function getResearch(dexId){
   }
   return state.researchLog[dexId];
 }
-// v0.23 — computed live, never persisted. Guarantees correctness even after EVOLUTION_METHODS
-// grows (e.g. Black Augurite is added later) — a species previously "fully tested" against N
-// methods correctly reverts to "not yet ruled out" once a new method exists it hasn't seen.
+// v0.33 — hardened from a length comparison to a content check. The length-only version could
+// be fooled by any stray/duplicate entry inflating testedMethods.length past EVOLUTION_METHODS
+// .length without every real method having been individually attempted (the "38/36" bug) — this
+// is immune to that regardless of source, not just the specific cause fixed elsewhere.
 function isNonEvolutionConfirmed(r){
-  return !!r && r.testedMethods.length>=EVOLUTION_METHODS.length;
+  return !!r && EVOLUTION_METHODS.every(m=>r.testedMethods.includes(m));
 }
 function recordSighting(dexId,level){
   const r=getResearch(dexId);
@@ -1595,17 +1640,21 @@ function checkMethodRuleOut(dexId,level,friendship){
 }
 // Records one confirmed evolution branch for a species. A species can accumulate
 // multiple confirmed branches (e.g. Eevee: Water Stone AND Thunder Stone both confirmed).
-function recordEvolution(fromDexId,toDexId,method,level){
+// v0.33 — toFormName added. Two branches can share the same intoId (e.g. Kantonian/Alolan
+// Raichu both -> dexId 26) and previously collided in confirmedBranches since the duplicate
+// check only compared {method, intoId} — the second branch silently never got stored.
+function recordEvolution(fromDexId,toDexId,method,level,toFormName){
+  toFormName=toFormName||null;
   const r=getResearch(fromDexId);
-  const already=r.confirmedBranches.some(b=>b.method===method&&b.intoId===toDexId);
+  const already=r.confirmedBranches.some(b=>b.method===method&&b.intoId===toDexId&&(b.toFormName||null)===toFormName);
   if(!already){
     r.evolutionConfirmed=true;
-    r.confirmedBranches.push({method,intoId:toDexId});
+    r.confirmedBranches.push({method,intoId:toDexId,toFormName});
     if((method==='level'||method==='friendship'||method==='friendship-day'||method==='friendship-night'||method==='use-move'||method==='in-party')&&!r.testedMethods.includes(method)){
       r.testedMethods.push(method);
     }
     const fromEntry=getPokemonEntry(fromDexId);
-    const toEntry=getPokemonEntry(toDexId);
+    const toEntry=getPokemonEntry(toDexId,toFormName);
     addFinding('evolution',fromEntry?fromEntry.name:'#'+fromDexId,toEntry?toEntry.name:'#'+toDexId,method,level);
   }
 }
@@ -1626,7 +1675,7 @@ function isDexPageComplete(dexId){
   if(!entry) return false;
   const r=state.researchLog[dexId];
   if(!r) return false;
-  if((r.testedMethods.length||0)<EVOLUTION_METHODS.length) return false;
+  if(!EVOLUTION_METHODS.every(m=>(r.testedMethods||[]).includes(m))) return false;
   const obs=r.abilitiesObserved||{};
   if(entry.ability1&&!obs.ability1) return false;
   if(entry.ability2&&!obs.ability2) return false;
@@ -1635,41 +1684,70 @@ function isDexPageComplete(dexId){
 }
 function recordNewSpecies(dexId,name){
   const r=getResearch(dexId);
-  if(!r.firstSeen){ r.firstSeen=true; addFinding('species',name,dexId); }
+  if(!r.firstSeen){
+    r.firstSeen=true; addFinding('species',name,dexId);
+    // v0.33 — previously only reached the separate pendingFindings/Findings Report mechanism,
+    // never the Log tab in any form. Now appears in both Full and Condensed.
+    const msg='🆕 New Species: '+name+' first sighted!';
+    addLog(msg,'catch'); addSignificantLog(msg,'catch');
+  }
 }
 // v0.24 — fires "🎯 Captured" on first successful catch of a species (distinct from
 // recordNewSpecies' "🆕 New Species", which now fires on first sighting instead of first catch).
 // Tagged with dexId so showFindingsReport() can dedupe a same-report seen+captured pair.
 function recordCapture(dexId,name){
   const r=getResearch(dexId);
-  if(!r.firstCaught){ r.firstCaught=true; addFinding('captured',name,dexId); }
+  if(!r.firstCaught){
+    r.firstCaught=true; addFinding('captured',name,dexId);
+    // v0.33 — same "newly appears in the Log tab" note as recordNewSpecies above.
+    const msg='🎯 Captured: '+name+' first caught!';
+    addLog(msg,'catch'); addSignificantLog(msg,'catch');
+  }
 }
 function addFinding(type,...args){ state.pendingFindings.push({type,args,time:Date.now()}); }
 function isSpeciesKnown(dexId){ return !!state.researchLog[dexId]; }
 
-// Shared evolution apply-logic: species/dexId swap, maxHP recalc (preserving missing HP),
+// Shared evolution apply-logic: species/dexId/form swap, maxHP recalc (preserving missing HP),
 // SPECIES registration, and research bookkeeping (recordNewSpecies, recordAbilityObserved,
 // dexHistory increment). Used by checkEvolution()'s three paths, applyItemEvolution(), and
 // professorAutoTestEvolutions()'s auto-apply (v0.21) — do not duplicate this block elsewhere.
+// v0.33: writes p.formName from newEntry.formName (newEntry is whatever getPokemonEntry(dexId,
+// formName) resolved to at the call site, so this is always the correct specific form). Also
+// registers a form-aware SPECIES key alongside the existing name-only one — same-name form
+// variants (e.g. Kantonian/Alolan Raichu, both named "Raichu") previously collided in the
+// name-only SPECIES{} dict exactly like the already-documented Nidoran gender-variant case.
 function applySpeciesSwap(p,newEntry){
   const om=p.maxHP;
-  p.species=newEntry.name; p.pokedexId=newEntry.dexId;
+  p.species=newEntry.name; p.pokedexId=newEntry.dexId; p.formName=newEntry.formName||null;
   recalcStats(p); // v0.31 — recomputes maxHP AND p.stats together, using this Pokemon's existing ivs/nature
   p.currentHP=Math.min(p.maxHP,p.currentHP+(p.maxHP-om));
   if(!SPECIES[p.species]) SPECIES[p.species]=newEntry;
+  const formKey=p.species+'|'+(p.formName||'');
+  if(!SPECIES[formKey]) SPECIES[formKey]=newEntry;
   recordNewSpecies(newEntry.dexId,p.species);
   recordAbilityObserved(newEntry.dexId,p.ability);
   state.dexHistory[newEntry.dexId]=(state.dexHistory[newEntry.dexId]||0)+1;
 }
 
 // ── PROFESSOR EVOLUTION RESEARCH ──
-// Auto-tests every owned evolution item against every known species.
-// Fires on stone acquisition (buyItem) and on new species catch.
-// Failed tests cost nothing — only successes consume an item.
+// v0.33 — trigger moved to the top of gameTick() (see below); this function itself is
+// unconditional there. No longer called from catchPokemon()/buyItem() — those explicit
+// triggers were removed as redundant now that this runs every tick regardless of how or
+// where a Pokemon was created (fixes: shiny auto-catch, offline catches, and Day Care
+// hatching previously never fired this at all).
 // v0.20: also tests EVO_TREE `use-item` branches (branching species like Eevee),
 // matched by itemId (a string slug, e.g. "water-stone") — distinct from the single-target
 // pokedex.js evolveItem field, which stays matched by item NAME ("Water Stone").
-// v0.21: a successful test also immediately evolves a matching owned individual (see below).
+// v0.33 — confirmation now REQUIRES a live eligible candidate. Ruling an item out (no
+// matching branch at all) is still a pure data fact, marked immediately with no candidate
+// needed. But confirming a branch works is an experimental claim — test and apply are now
+// the same event. Every distinct branch for an item+species pair (the single-target match,
+// plus every EVO_TREE branch, form-variants included) is resolved independently: if a
+// candidate exists, it evolves immediately and that confirms the branch; if not, that
+// specific branch stays genuinely unknown and is retried on a later tick once a candidate
+// exists. testedMethods is only marked for this item+species pair once EVERY branch has
+// been resolved (confirmed or, for the whole pair, ruled out) — a branch with no candidate
+// yet keeps the pair open for retry rather than closing off future testing.
 function professorAutoTestEvolutions(){
   if(!state.professorBag) return;
   const knownDexIds=Object.keys(state.dexHistory).map(Number).filter(id=>id>0);
@@ -1691,77 +1769,56 @@ function professorAutoTestEvolutions(){
       if((state.professorBag[itemId]||0)<=0) break; // out of stock
 
       const r=getResearch(dexId);
-      if(r.testedMethods.includes(itemName)) continue; // already tested this item against this species
+      if(r.testedMethods.includes(itemName)) continue; // already fully resolved this item+species pair
 
       const entry=getPokemonEntry(dexId);
       let path1Matched=false, path1Target=null;
 
       // Path 1: single-target SPECIES evolution (pokedex.js) — matched by item NAME. Always a
       // single unambiguous target; no form-variant/multi-branch concept on this path.
-      // v0.26 fix: previously split into evolvesByStone (required item.effect==='evolve-stone')
-      // and evolvesByTrade (required entry.evolveMethod==='trade', for item.effect==='evolve-trade').
-      // The Pokedex data standardized on evolveMethod:'use-item' for EVERY item-based evolution,
-      // including trade-style ones like Link Cable (use-item + evolveItem:"Link Cable") — no
-      // species uses the literal 'trade' method value anymore, so evolvesByTrade could never
-      // match, and evolvesByStone only matched items whose effect was specifically 'evolve-stone'.
-      // Any evolve-trade item fell through both checks and was silently ruled out on first test,
-      // regardless of how many times it should have matched (Haunter/Kadabra + Link Cable surfaced
-      // this). Fix: match by item name alone, independent of the item's effect field — effect is
-      // otherwise never branched on differently anywhere else in the codebase (confirmed by audit).
       if(entry&&entry.evolveMethod==='use-item'&&entry.evolveItem===itemName){
         path1Matched=true; path1Target=entry.evolvesIntoId;
       }
 
-      // Path 2 (v0.20): EVO_TREE branching evolutions — matched by itemId. v0.31 fix: collects
-      // ALL matching branches (was .find(), first-match-only) — a species with multiple branches
-      // sharing one item (e.g. Raichu/Alolan Raichu, both Thunder Stone) previously could only
-      // ever have ONE branch discovered/confirmed, permanently locking out the other the moment
-      // this item+species pair was marked tested. See DESIGN.md "Raichu / Alolan Raichu".
+      // Path 2 (v0.20): EVO_TREE branching evolutions — matched by itemId.
       const path2Branches=getEvolutions(dexId).filter(b=>b.evolveMethod==='use-item'&&b.evolveItem===itemId&&b.toDexId);
 
       if(!path1Matched&&!path2Branches.length){
-        r.testedMethods.push(itemName); // ruled out — costs nothing, mark tested
+        r.testedMethods.push(itemName); // no matching branch exists at all — a data fact, rule out immediately
         continue;
       }
-      r.testedMethods.push(itemName);
 
-      // Confirm EVERY Path 2 branch into research regardless of whether it gets auto-applied
-      // below — this is what makes a form-variant branch show up as a manual "🔬 Evolve" choice
-      // on the detail modal even though the professor never auto-evolves anyone into it.
-      path2Branches.forEach(b=>recordEvolution(dexId,b.toDexId,itemName,0));
+      // Every distinct branch this item+species pair could confirm — form-variant branches
+      // included, no longer treated as auto-apply-exempt. Each needs its own live candidate.
+      const branches=[];
+      if(path1Matched) branches.push({toDexId:path1Target,toFormName:null});
+      path2Branches.forEach(b=>branches.push({toDexId:b.toDexId,toFormName:b.toFormName||null}));
 
-      // v0.31 — auto-apply candidates: Path 1's target (always — single-target by definition),
-      // plus any Path 2 branch WITHOUT a form-variant tag (toFormName null = the "default"/base
-      // form, e.g. Kantonian Raichu). A form-variant branch (toFormName set, e.g. Alolan) is
-      // confirmed above but never auto-applied — the player chooses it manually instead.
-      const autoTargets=[];
-      if(path1Matched) autoTargets.push(path1Target);
-      path2Branches.filter(b=>!b.toFormName).forEach(b=>{ if(!autoTargets.includes(b.toDexId)) autoTargets.push(b.toDexId); });
+      let allResolved=true;
+      for(const br of branches){
+        if((state.professorBag[itemId]||0)<=0){ allResolved=false; break; } // ran out mid-species
 
-      if(!autoTargets.length) continue; // only form-variant branches matched — nothing to auto-evolve, item not consumed
-      const targetId=autoTargets[0];
+        const alreadyConfirmed=r.confirmedBranches.some(b=>b.method===itemName&&b.intoId===br.toDexId&&(b.toFormName||null)===br.toFormName);
+        if(alreadyConfirmed) continue; // resolved on an earlier run
 
-      // v0.21: matched — find an eligible individual to auto-evolve.
-      // Eligible = owned, in the Professor's possession (!p.holder — not with an aide), not evolveBlocked.
-      // Highest level wins; ties broken by array order.
-      const candidates=state.dex.filter(p=>p.pokedexId===dexId&&!p.holder&&!p.evolveBlocked);
-      if(!candidates.length){
-        // No eligible individual right now — item not consumed. Retried automatically the next
-        // time this function runs (next purchase or new-species catch) — testedMethods is already
-        // marked above so a form-variant-only confirmation isn't lost even if this branch defers.
-        continue;
+        // Eligible = owned, in the Professor's possession (!p.holder — not with an aide), not evolveBlocked.
+        // Highest level wins; ties broken by array order.
+        const candidates=state.dex.filter(p=>p.pokedexId===dexId&&!p.holder&&!p.evolveBlocked);
+        if(!candidates.length){ allResolved=false; continue; } // no eligible individual for this branch right now
+        candidates.sort((a,b)=>b.level-a.level);
+        const chosen=candidates[0];
+
+        state.professorBag[itemId]--;
+        if(state.professorBag[itemId]<=0) delete state.professorBag[itemId];
+        const toEntry=getPokemonEntry(br.toDexId,br.toFormName);
+        recordEvolution(dexId,br.toDexId,itemName,chosen.level,br.toFormName);
+        const oldName=getDisplayName(chosen);
+        if(toEntry) applySpeciesSwap(chosen,toEntry);
+        const toLabel=toEntry?(br.toFormName?toEntry.name+' ('+br.toFormName+')':toEntry.name):'#'+br.toDexId;
+        addLog('🔬 Research: '+(entry?entry.name:'#'+dexId)+' confirmed to evolve with '+itemName+' → '+toLabel+'! '+oldName+' #'+chosen.id+' evolved into '+getDisplayName(chosen)+'!','evolve');
+        anyChange=true;
       }
-      candidates.sort((a,b)=>b.level-a.level);
-      const chosen=candidates[0];
-
-      state.professorBag[itemId]--;
-      if(state.professorBag[itemId]<=0) delete state.professorBag[itemId];
-      const toEntry=getPokemonEntry(targetId);
-      recordEvolution(dexId,targetId,itemName,chosen.level);
-      const oldName=getDisplayName(chosen);
-      if(toEntry) applySpeciesSwap(chosen,toEntry);
-      addLog('🔬 Research: '+(entry?entry.name:'#'+dexId)+' confirmed to evolve with '+itemName+' → '+(toEntry?toEntry.name:'#'+targetId)+'! '+oldName+' #'+chosen.id+' evolved into '+getDisplayName(chosen)+'!','evolve');
-      anyChange=true;
+      if(allResolved) r.testedMethods.push(itemName);
     }
   }
   if(anyChange){ renderDex(); renderBagDisplay(); }
@@ -1771,20 +1828,24 @@ function professorAutoTestEvolutions(){
 // intoId identifies which confirmed branch to apply — required since a branching species
 // (e.g. Eevee) can have multiple simultaneously-confirmed item evolutions.
 // Level-up and friendship evolutions remain automatic via checkEvolution() — this is for item/trade methods only.
-function applyItemEvolution(catchId,intoId){
+// v0.33 — toFormName param disambiguates branches that share the same intoId but differ by
+// form (e.g. Kantonian vs Alolan Raichu, both intoId 26). Omitted/null matches a base-form
+// branch, same as before this param existed.
+function applyItemEvolution(catchId,intoId,toFormName){
+  toFormName=toFormName||null;
   const p=state.dex.find(x=>x.id===catchId); if(!p) return;
   if(p.evolveBlocked){ addLog('Evolution is blocked for this Pokémon.','fail'); return; }
   const r=state.researchLog[p.pokedexId];
   if(!r||!r.confirmedBranches||!r.confirmedBranches.length) return;
   const nonManual=['level','friendship','friendship-day','friendship-night','use-move','in-party'];
-  const branch=r.confirmedBranches.find(b=>b.intoId===intoId&&!nonManual.includes(b.method));
+  const branch=r.confirmedBranches.find(b=>b.intoId===intoId&&(b.toFormName||null)===toFormName&&!nonManual.includes(b.method));
   if(!branch){ addLog('That evolution is not available.','fail'); return; }
   const methodName=branch.method;
   const itemEntry=typeof ITEMS_DATA!=='undefined'?ITEMS_DATA.find(i=>i.name===methodName):null;
   if(!itemEntry){ addLog('Item not found in database: '+methodName,'fail'); return; }
   const itemId=itemEntry.itemId;
   if(!(state.professorBag[itemId]>0)){ addLog('No '+methodName+' in Professor\'s bag!','fail'); return; }
-  const newEntry=getPokemonEntry(intoId);
+  const newEntry=getPokemonEntry(intoId,toFormName);
   if(!newEntry){ addLog('Evolution target not found in database.','fail'); return; }
   // Consume item
   state.professorBag[itemId]--;
@@ -1941,7 +2002,7 @@ function giveExp(pokemon,amount){
   addLog(getDisplayName(pokemon)+' #'+pokemon.id+' +'+amount+' EXP','exp');
   let levelled=false;
   while(true){
-    const s=getPokemonEntry(pokemon.pokedexId)||SPECIES[pokemon.species];
+    const s=getPokemonEntry(pokemon.pokedexId,pokemon.formName)||SPECIES[pokemon.species+'|'+(pokemon.formName||'')]||SPECIES[pokemon.species];
     const gr=pokemon.growthRate||(s?s.growthRate:null)||'mediumFast';
     const need=expToLevel(pokemon.level+1,gr);
     if(pokemon.exp>=need&&pokemon.level<getLevelCap()){
@@ -1959,7 +2020,7 @@ function giveExp(pokemon,amount){
 function giveExpSilent(p,amount){
   p.exp+=amount;
   while(true){
-    const s=getPokemonEntry(p.pokedexId)||SPECIES[p.species];
+    const s=getPokemonEntry(p.pokedexId,p.formName)||SPECIES[p.species+'|'+(p.formName||'')]||SPECIES[p.species];
     const gr=p.growthRate||(s?s.growthRate:null)||'mediumFast';
     if(p.exp>=expToLevel(p.level+1,gr)&&p.level<getLevelCap()){
       p.level++;
@@ -2032,8 +2093,17 @@ function processOfflineTime(secsAway){
   }
 
   let remaining=secsAway, nextIn=state.nextEncounterIn;
-  while(remaining>=nextIn){
-    remaining-=nextIn; nextIn=ENC_INTERVAL_CLOSED; summary.encounters++;
+  // v0.33 — hard cap on iterations. Without this, a long offline gap combined with TurboMode's
+  // 1-second interval could mean tens of thousands of loop iterations processed synchronously
+  // the instant the app reopens — a real freeze risk, not hypothetical. Past the cap, remaining
+  // offline time simply stops simulating individual encounters; funds/friendship already accrue
+  // from secsAway directly elsewhere in this function, so nothing else is lost.
+  let offlineLoopIterations=0;
+  const OFFLINE_LOOP_CAP=2000;
+  while(remaining>=nextIn&&offlineLoopIterations<OFFLINE_LOOP_CAP){
+    offlineLoopIterations++;
+    remaining-=nextIn; nextIn=getEncounterInterval(false); summary.encounters++;
+    evaluateWanderTarget(); // v0.33 — Wander re-routes during offline catch-up too, not just live play
     // v0.22 fix: checkLocationHeal() previously only ran in live gameTick(), never offline —
     // missions dwelling in/passing through a heals:true location took real damage offline
     // that they wouldn't take live. Mirrors live order: heal-check fires before the encounter.
@@ -2097,6 +2167,7 @@ function processOfflineTime(secsAway){
         const exp=Math.floor(((s_?s_.baseExpYield:51)||51)*enc.level/7);
         giveExpSilent(lead,exp);
         recordCapture(caught.pokedexId,enc.species);
+        logCaptureRarity(caught,false);
         if(encDexKey) state.locationEncounterLog[encLocKey][encDexKey].caught++;
         checkSpeciesCap(caught);
         advanceTravelPath();
@@ -2156,6 +2227,7 @@ function runWildEncounterLoopSilent(lead,enc,summary,encLocKey,encDexKey){
         const exp=Math.floor(((wild.baseExpYield||51)*enc.level)/7);
         giveExpSilent(lead,exp);
         recordCapture(caught.pokedexId,enc.species);
+        logCaptureRarity(caught,false);
         if(encDexKey) state.locationEncounterLog[encLocKey][encDexKey].caught++;
         checkSpeciesCap(caught);
         return;
@@ -2435,6 +2507,7 @@ function resolveEncounterStep(){
     const exp=Math.floor(((s_?s_.baseExpYield:51)||51)*enc.level/7);
     giveExp(lead,exp);
     recordCapture(caught.pokedexId,enc.species);
+    logCaptureRarity(caught,false);
     addLog('✨ SHINY '+getDisplayName(caught)+' caught automatically! ✨','evolve');
     document.getElementById('total-catches').textContent=state.totalCatches;
     document.getElementById('total-sightings').textContent=state.totalSightings;
@@ -2621,15 +2694,11 @@ function runWildEncounterLoop(lead,enc){
 function catchPokemon(lead,enc,isShiny){
   const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId);
   caught.isShiny=isShiny;
-  // v0.24 — captured before dexHistory increments, so this reflects "first time this species
-  // has ever been caught" for professorAutoTestEvolutions()'s trigger, independent of the
-  // firstSeen/firstCaught research-log flags (sighting now happens earlier, at encounter
-  // generation in gameTick() — see recordSighting/recordNewSpecies there).
-  const newToDexHistory=!state.dexHistory[caught.pokedexId];
   state.dex.push(caught); state.totalCatches++; state.totalSightings++;
   state.dexHistory[caught.pokedexId]=(state.dexHistory[caught.pokedexId]||0)+1;
   recordAbilityObserved(caught.pokedexId,caught.ability);
   if(isShiny) addLog('✨ SHINY '+getDisplayName(caught)+' caught automatically! ✨','evolve');
+  logCaptureRarity(caught,true);
   const s_=getPokemonEntry(enc.pokedexId);
   const exp=Math.floor(((s_?s_.baseExpYield:51)||51)*enc.level/7);
   giveExp(lead,exp);
@@ -2646,8 +2715,10 @@ function catchPokemon(lead,enc,isShiny){
   }
   // Per-species cap: catch-then-release overflow non-shinies
   checkSpeciesCap(caught);
-  // Professor auto-tests evolution items against new species
-  if(newToDexHistory) professorAutoTestEvolutions();
+  // v0.33 — evolution testing trigger removed from here; professorAutoTestEvolutions() now runs
+  // unconditionally at the top of every gameTick() instead (see there) — one source of truth,
+  // fixes species whose first individual arrived via a path other than this one (shiny auto-catch,
+  // offline catches, Day Care hatching) never getting tested.
   state.currentEncounter=null;
   advanceTravelPath();
   document.getElementById('enc-body').textContent='Caught '+enc.species+' Lv'+enc.level+(isShiny?' ✨ SHINY!':'!');
@@ -2670,6 +2741,12 @@ function incomeTick(){
 
 // ── GAME TICK ──
 function gameTick(){
+  // v0.33 — both run unconditionally, every tick, before any early return below. Evolution
+  // testing: replaces the old event-triggered design (buy item / catch new species) which missed
+  // three other catch-creation paths and Day Care hatching entirely — see professorAutoTestEvolutions().
+  // Wander: no-ops immediately if state.wanderMode is false — see evaluateWanderTarget().
+  professorAutoTestEvolutions();
+  evaluateWanderTarget();
   incomeTick();
   // v0.26 — idle removed: research runs continuously wherever the Aide is, so friendship ticks
   // and the encounter loop below both always run — no more missionActive gate.
@@ -2682,10 +2759,10 @@ function gameTick(){
   if(state.currentEncounter){ resolveEncounterStep(); render(); return; }
   if(state.nextEncounterIn<=0){
     checkLocationHeal();
-    state.currentEncounter=rollEncounter(); state.nextEncounterIn=ENC_INTERVAL_OPEN;
+    state.currentEncounter=rollEncounter(); state.nextEncounterIn=getEncounterInterval(true);
     if(!state.currentEncounter){
       advanceTravelPath();
-      state.nextEncounterIn=ENC_INTERVAL_OPEN; updateLocation(); return;
+      state.nextEncounterIn=getEncounterInterval(true); updateLocation(); return;
     }
     const enc=state.currentEncounter;
     if(enc.type==='gym'){
@@ -2759,6 +2836,40 @@ function computeLocationSightings(locId){
   return Object.values(log).reduce((sum,v)=>sum+((v&&v.seen)||0),0);
 }
 
+// v0.33 — "Wander" mode: continuously re-routes toward whichever reachable, discovered location
+// currently has the fewest lifetime encounters. Single shared implementation, called from both
+// live gameTick() (every 1s tick) and processOfflineTime()'s catch-up loop (every simulated
+// encounter-interval) — same lesson as the evolution-testing trigger fix: one source of truth,
+// not two near-identical copies that can drift.
+// Stable against thrashing: sightings only accumulate at the aide's CURRENT location, so an idle
+// location's count can't change while the aide is elsewhere — two idle locations can never
+// ping-pong the aide. A redirect only fires when the current waypoint's own count climbs high
+// enough that some other already-known location becomes STRICTLY lower (ties keep the current
+// target, avoiding churn from equal rankings).
+function evaluateWanderTarget(){
+  if(!state.wanderMode) return;
+  const currentLoc=state.currentLocation||'palletTown';
+  const reachable=getReachableDiscoveredLocations(currentLoc);
+  if(!reachable.length) return;
+  let best=state.missionDestination, bestCount=computeLocationSightings(state.missionDestination);
+  reachable.forEach(locId=>{
+    const c=computeLocationSightings(locId);
+    if(c<bestCount){ best=locId; bestCount=c; }
+  });
+  if(best===state.missionDestination) return; // current target still lowest (or tied) — no redirect
+  state.missionDestination=best;
+  if(currentLoc===best){
+    state.travelPath=[]; state.travelPathIndex=0; state.travelCyclesRemaining=0;
+  } else {
+    const path=buildTravelPath(currentLoc,best);
+    if(!path.length) return; // unreachable by an actual walkable path — leave destination as-is
+    state.travelPath=path; state.travelPathIndex=0;
+    arriveAtLocation(state.travelPath[0]);
+  }
+  const locData=typeof LOCATIONS!=='undefined'?getLocation(best):null;
+  addLog('🧭 Carl Oak changes course — new lowest-encounter destination: '+(locData?locData.name:best)+'.','info');
+}
+
 function destSortButtonHtml(field,label){
   const active=missionSortField===field;
   const arrow=active?(missionSortDir==='asc'?' ▲':' ▼'):'';
@@ -2795,7 +2906,13 @@ function renderDestList(){
       } else if(missionSortField==='alpha'){
         const aLoc=typeof LOCATIONS!=='undefined'?getLocation(a):null;
         const bLoc=typeof LOCATIONS!=='undefined'?getLocation(b):null;
-        av=(aLoc?aLoc.name:a).toLowerCase(); bv=(bLoc?bLoc.name:b).toLowerCase();
+        // v0.33 — natural/numeric-aware compare instead of plain lexicographic string compare,
+        // which sorted "Route 11" before "Route 2" (character-wise, '1' < '2'). This branch
+        // returns its own comparison directly rather than falling through to the shared av<bv
+        // check below, since that check can't express natural ordering.
+        const aName=(aLoc?aLoc.name:a); const bName=(bLoc?bLoc.name:b);
+        const cmp=aName.localeCompare(bName,undefined,{numeric:true,sensitivity:'base'});
+        return missionSortDir==='asc'?cmp:-cmp;
       } else {
         av=computeLocationSightings(a); bv=computeLocationSightings(b);
       }
@@ -2829,11 +2946,37 @@ function showMissionModal(){
   modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
   missionShopCategory=null; // v0.27 — reset shop category drill-down each time the modal opens
   const sortButtonsHtml='<div id="dest-sort-buttons" style="display:flex;gap:4px;margin-bottom:8px;">'+destSortButtonHtml('distance','Distance')+destSortButtonHtml('alpha','Alphabetical')+destSortButtonHtml('encounters','Encounters')+'</div>';
-  modal.innerHTML='<div style="background:#16213e;border:1px solid #5dade2;border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;"><div style="color:#5dade2;font-size:13px;font-weight:bold;margin-bottom:12px;">🗺 Choose Destination</div><div style="font-size:10px;color:#6080a0;margin-bottom:8px;">From: '+currentLoc+'</div>'+sortButtonsHtml+'<div id="dest-list-container" style="max-height:220px;overflow-y:auto;"></div><div id="mission-summary" style="color:#a0a0c0;font-size:11px;margin:10px 0;min-height:18px;"></div><div id="method-prefs"></div><div id="shop-section-container"></div><div style="display:flex;gap:8px;"><button onclick="document.getElementById(\'mission-modal\').remove()" style="flex:1;">✕ Cancel</button><button id="confirm-mission" onclick="confirmMission()" class="primary" style="flex:1;" disabled>▶ Dispatch</button></div></div>';
+  // v0.33 — "Wander" mode: continuously re-routes toward the lowest-encounter reachable location
+  // instead of a fixed destination. Mutually exclusive with manual destination selection.
+  const wanderButtonHtml='<button onclick="selectWanderMode()" id="wander-select-btn" style="width:100%;padding:8px;margin-bottom:8px;font-size:11px;border-color:#5dade2;color:#5dade2;">🧭 Wander (lowest-encounter destination)</button>';
+  modal.innerHTML='<div style="background:#16213e;border:1px solid #5dade2;border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;"><div style="color:#5dade2;font-size:13px;font-weight:bold;margin-bottom:12px;">🗺 Choose Destination</div><div style="font-size:10px;color:#6080a0;margin-bottom:8px;">From: '+currentLoc+'</div>'+wanderButtonHtml+sortButtonsHtml+'<div id="dest-list-container" style="max-height:220px;overflow-y:auto;"></div><div id="mission-summary" style="color:#a0a0c0;font-size:11px;margin:10px 0;min-height:18px;"></div><div id="method-prefs"></div><div id="shop-section-container"></div><div style="display:flex;gap:8px;"><button onclick="document.getElementById(\'mission-modal\').remove()" style="flex:1;">✕ Cancel</button><button id="confirm-mission" onclick="confirmMission()" class="primary" style="flex:1;" disabled>▶ Dispatch</button></div></div>';
   document.body.appendChild(modal);
   renderDestList();
   renderShopSection(currentLoc);
   state._missionDest=null;
+  state._wanderSelected=false;
+}
+
+// v0.33 — picks the current lowest-encounter reachable location as the mission target and marks
+// the dispatch as Wander mode; confirmMission() sets state.wanderMode=true on actual dispatch.
+function selectWanderMode(){
+  const currentLoc=state.currentLocation||'palletTown';
+  const reachable=getReachableDiscoveredLocations(currentLoc);
+  if(!reachable.length){ addLog('No reachable destinations for Wander mode.','fail'); return; }
+  let best=reachable[0], bestCount=computeLocationSightings(reachable[0]);
+  reachable.forEach(locId=>{
+    const c=computeLocationSightings(locId);
+    if(c<bestCount){ best=locId; bestCount=c; }
+  });
+  state._missionDest=best;
+  state._wanderSelected=true;
+  const locData=typeof LOCATIONS!=='undefined'?getLocation(best):null;
+  const name=locData?locData.name:best;
+  document.getElementById('mission-summary').textContent='🧭 Carl Oak → Wander mode (currently: '+name+')';
+  document.getElementById('confirm-mission').disabled=false;
+  const el=document.getElementById('method-prefs'); if(el) el.innerHTML='';
+  const btn=document.getElementById('wander-select-btn');
+  if(btn) btn.style.cssText='width:100%;padding:8px;margin-bottom:8px;font-size:11px;border-color:#f4d03f;color:#f4d03f;';
 }
 
 // ── SHOP SECTION (v0.27 — category condensing for full-tier shops) ──
@@ -2941,7 +3084,7 @@ const INFO_TOPICS=[
     {header:null,text:'You will earn $1.00 per minute at default. That amount will go up by $0.01 for every 100 Pokemon you catch.'}
   ]},
   {id:'levelCaps',title:'Level Caps',sections:[
-    {header:null,text:'Each Aide will begin with a Level Cap of 10, which raises by 10 for each badge earned. Once that Aide defeats the Champion, their level cap will be 100.'}
+    {header:null,text:'Each Aide will begin with a Level Cap of 15, which raises by 10 for each badge earned. Once that Aide defeats the Champion, their level cap will be 100.'}
   ]},
   {id:'time',title:'Time',sections:[
     {header:null,text:'When you have the game open, actions will occur every 10 seconds; that number raises to 30 seconds while the game is closed.'},
@@ -3002,6 +3145,9 @@ function renderInfoTopicPage(topicId){
 
 function selectMissionDest(locId){
   state._missionDest=locId;
+  state._wanderSelected=false;
+  const btn=document.getElementById('wander-select-btn');
+  if(btn) btn.style.cssText='width:100%;padding:8px;margin-bottom:8px;font-size:11px;border-color:#5dade2;color:#5dade2;';
   const locData=typeof LOCATIONS!=='undefined'?getLocation(locId):null;
   const name=locData?locData.name:locId;
   // v0.27 — Daycare has nothing to research; clarify that breeding is managed via the Map tab.
@@ -3086,14 +3232,22 @@ function updateMethodPrefs(locId){
 }
 
 // Toggle expand/collapse of evolution methods panel in dex detail
-function toggleEvoSection(btn){
+// v0.33 — expand/collapse state for the "Evolution Methods Tested" dropdown, keyed per dexId.
+// Previously lived only in the DOM (button.nextElementSibling.style.display), which gameTick()'s
+// periodic renderDex() call (every ~10s, on each encounter roll) wiped back to collapsed on every
+// rebuild — it wasn't auto-collapsing, it was being torn down and redrawn collapsed. Tracking it
+// here lets buildEvoMethodsHtml() restore the correct state on every rebuild.
+const expandedEvoDexIds=new Set();
+function toggleEvoSection(btn,dexId){
   const section=btn.nextElementSibling;
   if(section.style.display==='none'){
     section.style.display='block';
     btn.textContent=btn.textContent.replace('▼','▲');
+    if(dexId!=null) expandedEvoDexIds.add(dexId);
   } else {
     section.style.display='none';
     btn.textContent=btn.textContent.replace('▲','▼');
+    if(dexId!=null) expandedEvoDexIds.delete(dexId);
   }
 }
 
@@ -3104,6 +3258,7 @@ function confirmMission(){
   state.missionBehavior='research';
   state.missionDestination=state._missionDest||'route1';
   state.missionOrigin=state.currentLocation||'palletTown';
+  state.wanderMode=!!state._wanderSelected; // v0.33 — Wander mode, mutually exclusive with a fixed manual pick
   // v0.26 — dispatching to your CURRENT location (now a valid choice — see
   // getReachableDiscoveredLocations) needs 0 travel, but buildTravelPath() only ever returns a
   // path when it finds an edge leading back to the start, which an empty/same-location "path"
@@ -3120,7 +3275,7 @@ function confirmMission(){
     state.travelPathIndex=0;
     arriveAtLocation(state.travelPath[0]);
   }
-  state.nextEncounterIn=ENC_INTERVAL_OPEN;
+  state.nextEncounterIn=getEncounterInterval(true);
   const locData=typeof LOCATIONS!=='undefined'?getLocation(state.missionDestination):null;
   // v0.27 — Daycare gets a distinct dispatch message (see selectMissionDest for the modal-preview equivalent).
   const arrivalNote=(state.missionDestination===DAYCARE_LOCATION_ID)?'manage breeding on arrival':'research on arrival';
@@ -3144,6 +3299,7 @@ function recallMission(){
 // Always calls showFindingsReport().
 function endMission(reason='faint'){
   state.currentEncounter=null;
+  if(reason==='recall') state.wanderMode=false; // v0.33 — Wander is per-mission, cleared on recall like missionDestination
   const returnLocId=state.lastHealLocation||state.missionOrigin||'palletTown';
   const originLoc=typeof LOCATIONS!=='undefined'?getLocation(returnLocId):null;
   const originName=originLoc?originLoc.name:returnLocId;
@@ -3171,7 +3327,7 @@ function endMission(reason='faint'){
     state.missionDestination=returnLocId;
     state.travelPath=[]; state.travelPathIndex=0; state.travelCyclesRemaining=0;
   }
-  state.nextEncounterIn=ENC_INTERVAL_OPEN;
+  state.nextEncounterIn=getEncounterInterval(true);
   showFindingsReport();
   updateLocation(); render(); saveGame();
 }
@@ -3273,10 +3429,8 @@ function buyItem(itemId, qty){
   } else {
     addLog('Bought '+actualQty+'× '+item.name+' ($'+totalCost.toFixed(2)+')','info');
   }
-  // Auto-test evolution items the moment they enter the professor's bag
-  if(!isTrainerItem&&(item.effect==='evolve-stone'||item.effect==='evolve-trade')){
-    professorAutoTestEvolutions();
-  }
+  // v0.33 — explicit trigger removed here; professorAutoTestEvolutions() now runs unconditionally
+  // at the top of every gameTick() instead — one source of truth (see gameTick()).
   saveGame();
 }
 
@@ -3545,8 +3699,8 @@ function daycareOrderedParents(pA,pB){
 // active-slot display. `known` gates the result sprite exactly like the existing text `?`.
 function daycareSpriteRowHtml(pA,pB,resultDexId,known){
   const [first,second]=daycareOrderedParents(pA,pB);
-  const s1=getSpriteUrl(first.pokedexId,first.species,first.isShiny||false);
-  const s2=getSpriteUrl(second.pokedexId,second.species,second.isShiny||false);
+  const s1=getSpriteUrl(first.pokedexId,first.species,first.isShiny||false,first.formName);
+  const s2=getSpriteUrl(second.pokedexId,second.species,second.isShiny||false,second.formName);
   const resultEntry=getPokemonEntry(resultDexId);
   const sR=known?getSpriteUrl(resultDexId,resultEntry?resultEntry.name:'',false):'';
   const imgTag=src=>src?('<img src="'+src+'" style="width:28px;height:28px;image-rendering:pixelated;" onerror="this.outerHTML=\'<span style=&quot;font-size:18px;&quot;>❓</span>\'">'):'<span style="font-size:18px;">❓</span>';
@@ -3558,7 +3712,7 @@ function daycareSpriteRowHtml(pA,pB,resultDexId,known){
 function daycarePickerRowHtml(p,onclickJs){
   const entry=getPokemonEntry(p.pokedexId);
   const genderLabel=p.gender?p.gender:(entry&&entry.genderMalePct==null?'—':'?');
-  const sprite=getSpriteUrl(p.pokedexId,p.species,p.isShiny||false);
+  const sprite=getSpriteUrl(p.pokedexId,p.species,p.isShiny||false,p.formName);
   return '<div onclick="'+onclickJs+'" style="display:flex;align-items:center;gap:8px;background:#0f1a2a;border-radius:4px;padding:6px 8px;margin-bottom:5px;cursor:pointer;">'+
     '<img src="'+sprite+'" style="width:32px;height:32px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'">'+
     '<div style="flex:1;"><div style="color:#fff;font-size:11px;">'+getDisplayName(p)+' #'+p.id+(getRarityBadge(p)?' '+getRarityBadge(p):'')+'</div>'+
@@ -3712,9 +3866,10 @@ function showPokemonDetail(catchId){
     evolveBtnHtml=r.confirmedBranches.filter(b=>!nonManualMethods.includes(b.method)).map(b=>{
       const itemEntry=typeof ITEMS_DATA!=='undefined'?ITEMS_DATA.find(i=>i.name===b.method):null;
       const hasItem=itemEntry&&(state.professorBag[itemEntry.itemId]>0);
-      const targetEntry=getPokemonEntry(b.intoId);
-      const targetName=targetEntry?(targetEntry.name+(targetEntry.formName?' ('+targetEntry.formName+')':'')):('#'+b.intoId);
-      return '<button onclick="applyItemEvolution('+p.id+','+b.intoId+')" '+(hasItem?'':'disabled')+' style="flex:1;border-color:#f4d03f;color:#f4d03f;">🔬 Evolve → '+targetName+' ('+b.method+')</button>';
+      const targetEntry=getPokemonEntry(b.intoId,b.toFormName);
+      const targetName=targetEntry?(targetEntry.name+(b.toFormName?' ('+b.toFormName+')':'')):('#'+b.intoId);
+      const formArg=b.toFormName?"'"+b.toFormName.replace(/'/g,"\\'")+"'":'null';
+      return '<button onclick="applyItemEvolution('+p.id+','+b.intoId+','+formArg+')" '+(hasItem?'':'disabled')+' style="flex:1;border-color:#f4d03f;color:#f4d03f;">🔬 Evolve → '+targetName+' ('+b.method+')</button>';
     }).join('');
   }
 
@@ -3990,7 +4145,7 @@ function renderParty(){
   state.party.forEach(p=>{
     const hpPct=Math.max(0,(p.currentHP/p.maxHP)*100);
     const hpColor=hpPct>50?'#2ecc71':hpPct>20?'#f4d03f':'#e74c3c';
-    const s=SPECIES[p.species];
+    const s=SPECIES[p.species+'|'+(p.formName||'')]||SPECIES[p.species];
     const gr=p.growthRate||(s?s.growthRate:null)||'mediumFast';
     const nextExp=expToLevel(p.level+1,gr);
     const curExp=expToLevel(p.level,gr);
@@ -3998,7 +4153,7 @@ function renderParty(){
     const fainted=p.currentHP<=0;
     const d=document.createElement('div');
     d.className='party-slot'+(fainted?' fainted':'');
-    const spriteUrl=getSpriteUrl(p.pokedexId,p.species,p.isShiny||false);
+    const spriteUrl=getSpriteUrl(p.pokedexId,p.species,p.isShiny||false,p.formName);
     spritesHtml+='<img src="'+spriteUrl+'" class="aide-sprite-mini" style="opacity:'+(fainted?'0.3':'1')+';image-rendering:pixelated;" onerror="this.style.display=\'none\'">';
     d.innerHTML='<div style="display:flex;align-items:flex-start;gap:8px;"><img src="'+spriteUrl+'" class="party-sprite" onerror="this.style.display=\'none\'"><div style="flex:1;"><div class="poke-name">'+(fainted?'💀 ':'')+getDisplayName(p)+' #'+p.id+(getRarityBadge(p)?'<span class="shiny-badge">'+getRarityBadge(p)+'</span>':'')+'</div><div class="poke-level">Lv '+p.level+' · '+p.gender+(p.ability?' · '+p.ability:'')+'</div><div style="color:#6080a0;font-size:10px;">❤ '+(p.friendship||0)+' friendship</div><div class="hp-bar-wrap"><div class="hp-bar" style="width:'+hpPct+'%;background:'+hpColor+';"></div></div><div class="hp-text">HP: '+p.currentHP+'/'+p.maxHP+'</div><div class="exp-bar-wrap"><div class="exp-bar" style="width:'+ePct+'%;"></div></div></div></div>'+getMoveSlotsHtml(p,true);
     d.onclick=()=>showPokemonDetail(p.id);
@@ -4106,15 +4261,16 @@ function evoMethodLabel(e){
   }
   return e.method||'?';
 }
-function evoNodeHtml(entry,isHighlight){
-  const sprite=getSpriteUrl(entry.dexId,entry.name,false);
+function evoNodeHtml(entry,isHighlight,formName){
+  const sprite=getSpriteUrl(entry.dexId,entry.name,false,formName||null);
   const border=isHighlight?'border:2px solid #f4d03f;':'border:1px solid #1a4a80;';
   const shinyBadge=hasLiveShiny(entry.dexId)?'<span class="shiny-badge">✨</span>':'';
+  const label=formName?entry.name+' ('+formName+')':entry.name;
   // v0.28 — data-dexid enables familyChainNodeClick() to jump straight to this species' detail
   // page when tapped, from either the Family Card or Species Detail context.
   return '<div data-dexid="'+entry.dexId+'" style="display:inline-flex;flex-direction:column;align-items:center;'+border+'border-radius:6px;padding:4px;background:#0f3460;min-width:52px;cursor:pointer;">'+
     '<img src="'+sprite+'" style="width:40px;height:40px;image-rendering:pixelated;" onerror="this.style.display=\'none\'">'+
-    '<div style="font-size:8px;color:#a0a0c0;margin-top:2px;text-align:center;white-space:nowrap;">#'+entry.dexId+' '+entry.name+shinyBadge+'</div></div>';
+    '<div style="font-size:8px;color:#a0a0c0;margin-top:2px;text-align:center;white-space:nowrap;">#'+entry.dexId+' '+label+shinyBadge+'</div></div>';
 }
 // v0.28 — shared delegated click handler for the evolution chain visual (Family Card and
 // Species Detail contexts). Walks up from the click target to the nearest [data-dexid] node —
@@ -4153,11 +4309,11 @@ function renderEvolutionChainVisual(famId,highlightDexId){
   const edges=[];
   allMembers.forEach(m=>{
     if(m.evolvesIntoId&&memberSet.has(m.evolvesIntoId)){
-      edges.push({from:m.dexId,to:m.evolvesIntoId,method:m.evolveMethod,level:m.evolveLevel,item:m.evolveItem});
+      edges.push({from:m.dexId,to:m.evolvesIntoId,method:m.evolveMethod,level:m.evolveLevel,item:m.evolveItem,toFormName:null});
     }
     getEvolutions(m.dexId).forEach(b=>{
       if(b.toDexId&&memberSet.has(b.toDexId)){
-        edges.push({from:m.dexId,to:b.toDexId,method:b.evolveMethod,level:b.evolveLevel,item:b.evolveItem});
+        edges.push({from:m.dexId,to:b.toDexId,method:b.evolveMethod,level:b.evolveLevel,item:b.evolveItem,toFormName:b.toFormName||null});
       }
     });
   });
@@ -4177,20 +4333,28 @@ function renderEvolutionChainVisual(famId,highlightDexId){
   // these could never be equal, so no item-based evolution (Eevee's stones, etc.) could ever
   // register as confirmed here, no matter how many times it had actually happened. Fix: compare
   // against the edge's item name when the method is 'use-item', matching what was actually stored.
+  // v0.33 fix — also matches on toFormName. Two branches can share both intoId and matchKey (e.g.
+  // Kantonian/Alolan Raichu, both Thunder Stone -> dexId 26) — without the form check, both
+  // rendered as identical, colliding duplicate edges regardless of which was actually confirmed.
   function isEdgeConfirmed(e,r){
     if(!r||!r.confirmedBranches) return false;
     const matchKey=e.method==='use-item'?e.item:e.method;
-    return r.confirmedBranches.some(b=>b.method===matchKey&&b.intoId===e.to);
+    return r.confirmedBranches.some(b=>b.method===matchKey&&b.intoId===e.to&&(b.toFormName||null)===(e.toFormName||null));
   }
-  function walk(dexId){
-    const entry=allMembers.find(m=>m.dexId===dexId);
-    if(!entry) return '';
+  // v0.33 — formName param: a node reached via a form-variant branch (e.g. Alolan Raichu) now
+  // renders its own specific entry/sprite/label instead of always the deduped base-form entry
+  // getFamilyMembers() would otherwise return for every occurrence of this dexId.
+  function walk(dexId,formName){
+    formName=formName||null;
+    const baseEntry=allMembers.find(m=>m.dexId===dexId);
+    if(!baseEntry) return '';
+    const entry=formName?(getPokemonEntry(dexId,formName)||baseEntry):baseEntry;
     const isSeen=seenDexIds.has(dexId);
     // v0.26 — an unseen node (most commonly an unseen root) renders as an opaque placeholder,
     // same visual language as an unconfirmed branch, instead of hiding the whole chain. It still
     // participates normally in the walk below — if it has an outgoing edge to a species that HAS
     // been seen (e.g. an unseen Pichu -> a caught Pikachu), that continuation still renders.
-    const html=isSeen?evoNodeHtml(entry,dexId===highlightDexId):evoPlaceholderHtml();
+    const html=isSeen?evoNodeHtml(entry,dexId===highlightDexId,formName):evoPlaceholderHtml();
     const outgoing=edges.filter(e=>e.from===dexId);
     const r=state.researchLog[dexId];
     // v0.23 — terminal node (no data-defined evolution target at all, e.g. Sandslash) no longer
@@ -4215,11 +4379,11 @@ function renderEvolutionChainVisual(famId,highlightDexId){
       // Arrow label: real method if formally confirmed, generic '?' if the species is known but
       // the method itself hasn't been tested (e.g. seen only via breeding).
       const label=isEdgeConfirmed(e,r)?evoMethodLabel(e):'?';
-      return evoArrowHtml(label)+walk(e.to);
+      return evoArrowHtml(label)+walk(e.to,e.toFormName);
     });
     return html+branches.join('<span style="color:#5dade2;font-size:11px;margin:0 2px;align-self:center;">/</span>');
   }
-  return roots.map(root=>'<div style="display:flex;align-items:flex-start;flex-wrap:wrap;gap:2px;margin:4px 0;">'+walk(root.dexId)+'</div>').join('');
+  return roots.map(root=>'<div style="display:flex;align-items:flex-start;flex-wrap:wrap;gap:2px;margin:4px 0;">'+walk(root.dexId,null)+'</div>').join('');
 }
 
 // v0.22 — full roster, one slot per unique dexId, form-deduped identically to getFamilyMembers()
@@ -4358,10 +4522,11 @@ function buildEvoMethodsHtml(dexId){
     }
   }
 
+  const isOpen=expandedEvoDexIds.has(dexId);
   return '<div style="margin-top:10px;padding-top:10px;border-top:1px solid #1a4a80;">'
-    +'<button onclick="toggleEvoSection(this)" style="width:100%;text-align:left;padding:6px 8px;background:#0f1a2a;border:1px solid #1a4a80;border-radius:3px;color:#5dade2;font-size:10px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">'
-    +'🔬 '+tested+'/'+total+' Evolution Methods Tested ▼</button>'
-    +'<div style="display:none;margin-top:6px;padding:6px 8px;background:#0a1a2a;border-radius:3px;">'+inner+'</div>'
+    +'<button onclick="toggleEvoSection(this,'+dexId+')" style="width:100%;text-align:left;padding:6px 8px;background:#0f1a2a;border:1px solid #1a4a80;border-radius:3px;color:#5dade2;font-size:10px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">'
+    +'🔬 '+tested+'/'+total+' Evolution Methods Tested '+(isOpen?'▲':'▼')+'</button>'
+    +'<div style="display:'+(isOpen?'block':'none')+';margin-top:6px;padding:6px 8px;background:#0a1a2a;border-radius:3px;">'+inner+'</div>'
     +'</div>';
 }
 
@@ -4454,7 +4619,7 @@ function renderDexDetail(){
     d.className='dex-entry'+((p.holder||p.breeding)?'':' unassigned'); d.style.cursor='pointer';
     const hpPct=Math.max(0,(p.currentHP/p.maxHP)*100);
     const hpColor=hpPct>50?'#2ecc71':hpPct>20?'#f4d03f':'#e74c3c';
-    const catchSprite=getSpriteUrl(p.pokedexId,p.species,p.isShiny||false);
+    const catchSprite=getSpriteUrl(p.pokedexId,p.species,p.isShiny||false,p.formName);
     const statusText=p.breeding?'🥚 At Day Care':(p.holder?'👤 '+p.holder:'📦');
     d.innerHTML='<div style="display:flex;align-items:center;gap:8px;"><img src="'+catchSprite+'" style="width:40px;height:40px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div class="dex-header"><span class="dex-name">'+getDisplayName(p)+' #'+p.id+(getRarityBadge(p)?'<span class="shiny-badge">'+getRarityBadge(p)+'</span>':'')+'</span><span class="dex-id">'+statusText+'</span></div><div class="dex-details">Lv'+p.level+' · '+p.gender+(p.ability?' · '+p.ability:'')+' · Friendship:'+(p.friendship||0)+'</div><div style="background:#0a0a1a;border-radius:2px;height:4px;margin-top:3px;overflow:hidden;"><div style="width:'+hpPct+'%;height:100%;background:'+hpColor+';border-radius:2px;"></div></div></div></div>';
     d.onclick=()=>showPokemonDetail(p.id);
@@ -4486,7 +4651,7 @@ function renderDexViewAll(){
     const d=document.createElement('div');
     // v0.30 — breeding takes priority over the held/unassigned dimming, since it isn't idle.
     d.className='dex-entry'+((p.holder||p.breeding)?'':' unassigned'); d.style.cursor='pointer';
-    const sprite=getSpriteUrl(p.pokedexId,p.species,p.isShiny||false);
+    const sprite=getSpriteUrl(p.pokedexId,p.species,p.isShiny||false,p.formName);
     const statusIcon=p.breeding?'🥚':(p.holder?'👤':'📦');
     const statusText=p.breeding?'At Day Care':(p.holder?'Held by: '+p.holder:'Unassigned');
     d.innerHTML='<div style="display:flex;align-items:center;gap:8px;"><img src="'+sprite+'" style="width:36px;height:36px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div class="dex-header"><span class="dex-name">#'+(p.pokedexId||'?')+' '+getDisplayName(p)+(getRarityBadge(p)?'<span class="shiny-badge">'+getRarityBadge(p)+'</span>':'')+' (catch #'+p.id+')</span><span class="dex-id">'+statusIcon+'</span></div><div class="dex-details">Lv'+p.level+' · '+p.gender+' · HP '+p.currentHP+'/'+p.maxHP+' · BST '+calcBST(p.species,p.level,p)+'</div><div class="dex-holder">'+statusText+'</div></div></div>';
@@ -4529,15 +4694,76 @@ function switchTab(name){
   if(name==='dex') renderDex();
 }
 
+// v0.33 — Log tab Full/Condensed sub-tabs. Transient UI-only, not persisted (resets to 'full'
+// each load, same convention as missionSortField). Condensed reads from a SEPARATELY-capped
+// state.significantLog rather than filtering the shared state.log — if it were just a filtered
+// view of the shared log, routine activity could push a rare event out of the shared 200-entry
+// buffer before it was ever seen. A separate cap guarantees that can't happen.
+let logViewMode='full';
+function renderLogPanel(){
+  const logEl=document.getElementById('log'); if(!logEl) return;
+  const fullBtn=document.getElementById('log-tab-full'), condBtn=document.getElementById('log-tab-condensed');
+  if(fullBtn) fullBtn.style.cssText='flex:1;padding:6px 2px;font-size:10px;'+(logViewMode==='full'?'border-color:#5dade2;color:#5dade2;':'');
+  if(condBtn) condBtn.style.cssText='flex:1;padding:6px 2px;font-size:10px;'+(logViewMode==='condensed'?'border-color:#5dade2;color:#5dade2;':'');
+  const source=logViewMode==='condensed'?(state.significantLog||[]):state.log;
+  logEl.innerHTML='';
+  [...source].reverse().forEach(e=>{
+    const d=document.createElement('div');
+    d.className='log-entry '+(e.type||'');
+    d.textContent=e.msg;
+    logEl.appendChild(d);
+  });
+}
+function setLogViewMode(mode){
+  logViewMode=mode;
+  renderLogPanel();
+}
 function addLog(msg,type=''){
   state.log.unshift({msg,type});
   if(state.log.length>200) state.log.pop();
-  const el=document.getElementById('log');
-  const d=document.createElement('div');
-  d.className='log-entry '+type;
-  d.textContent=msg;
-  el.insertBefore(d,el.firstChild);
-  if(el.children.length>200) el.removeChild(el.lastChild);
+  if(logViewMode==='full'){
+    const el=document.getElementById('log');
+    if(el){
+      const d=document.createElement('div');
+      d.className='log-entry '+type;
+      d.textContent=msg;
+      el.insertBefore(d,el.firstChild);
+      if(el.children.length>200) el.removeChild(el.lastChild);
+    }
+  }
+}
+// v0.33 — significant-events log: New Species Found, New Species Captured, Shiny Capture,
+// Perfect IV Capture, Unicorn Capture, Badge Earned. Called alongside addLog() at each of those
+// six trigger points — see call sites. Separately capped from state.log (see note above).
+function addSignificantLog(msg,type=''){
+  if(!state.significantLog) state.significantLog=[];
+  state.significantLog.unshift({msg,type});
+  if(state.significantLog.length>200) state.significantLog.pop();
+  if(logViewMode==='condensed'){
+    const el=document.getElementById('log');
+    if(el){
+      const d=document.createElement('div');
+      d.className='log-entry '+type;
+      d.textContent=msg;
+      el.insertBefore(d,el.firstChild);
+      if(el.children.length>200) el.removeChild(el.lastChild);
+    }
+  }
+}
+// v0.33 — shared helper for the Shiny/Perfect IV/Unicorn significant-log trigger, called from
+// every catch-creation site (live catch, live shiny auto-catch, offline shiny/regular catch)
+// instead of duplicating the check at each — same lesson as the evolution-testing trigger fix.
+// alsoFullLog: offline paths are silent by existing design (no per-encounter Full-log spam,
+// tallied into the return summary instead) — only the live paths pass true here.
+function logCaptureRarity(caught,alsoFullLog){
+  const perfect=isPerfectIV(caught);
+  let msg=null;
+  if(caught.isShiny&&perfect) msg='🦄 UNICORN CAPTURE: '+getDisplayName(caught)+' #'+caught.id+' — shiny AND perfect IV!';
+  else if(perfect) msg='💥 Perfect IV Capture: '+getDisplayName(caught)+' #'+caught.id+'!';
+  else if(caught.isShiny) msg='✨ Shiny Capture: '+getDisplayName(caught)+' #'+caught.id+'!';
+  if(!msg) return;
+  addSignificantLog(msg,'evolve');
+  if(alsoFullLog) addLog(msg,'evolve');
 }
 
 // ── SAVE / LOAD / RESET ──
@@ -4579,7 +4805,14 @@ const SAVE_KEY='pokeprof_save';
 // represented by the existing maxHP). Migration below rolls ivs/nature retroactively for every
 // pre-v0.31 individual (single roll, not the dex-complete 10× advantage — that only applies going
 // forward at creation time), then runs recalcStats() and full-heals currentHP to the new maxHP.
-const SAVE_VERSION=20;
+// v0.33 — SAVE_VERSION 21: p.formName (string|null) added to every Pokemon object (see
+// "Same-DexId Branching Form Evolutions"); state.wanderMode (boolean, default false, see
+// "Wander Mode"); state.significantLog (array, default [], see "Log Tab Full/Condensed").
+// Also: any confirmedBranches/testedMethods entry for an item with a real matching EVO_TREE/
+// single-target branch is reset, since old saves can't distinguish a legitimately-earned
+// confirmation from a phantom one under the pre-v0.33 rule (see "Professor Auto-Test Loop").
+// Entries for items correctly ruled out (no matching branch at all) are left untouched.
+const SAVE_VERSION=21;
 let saveTimer=0;
 
 function saveGame(){
@@ -4608,7 +4841,8 @@ function saveGame(){
         locationMethodPrefs:state.locationMethodPrefs||{},
         lastHealLocation:state.lastHealLocation||'palletTown',
         dexHistory:state.dexHistory||{},
-        freeSkipsRemaining:state.freeSkipsRemaining||0
+        freeSkipsRemaining:state.freeSkipsRemaining||0,
+        wanderMode:!!state.wanderMode, significantLog:(state.significantLog||[]).slice(0,50) // v0.33
       }
     }));
     setSaveIndicator('✔ Saved','saving');
@@ -4622,9 +4856,9 @@ function loadGame(){
     const data=JSON.parse(raw);
     if(!data) return false;
 
-    // ── SAVE_VERSION 20 MIGRATION ──
-    // Accepts v11-v19 saves and migrates them; rejects anything older.
-    if(data.version!==SAVE_VERSION&&data.version!==19&&data.version!==18&&data.version!==17&&data.version!==16&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
+    // ── SAVE_VERSION 21 MIGRATION ──
+    // Accepts v11-v20 saves and migrates them; rejects anything older.
+    if(data.version!==SAVE_VERSION&&data.version!==20&&data.version!==19&&data.version!==18&&data.version!==17&&data.version!==16&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
     const s=data.state;
 
     // Migrate inventory: v11 had a single `bag`; v12 splits to professorBag/trainerBag.
@@ -4673,7 +4907,8 @@ function loadGame(){
       locationMethodPrefs:s.locationMethodPrefs??{},
       lastHealLocation:s.lastHealLocation??'palletTown',
       dexHistory:s.dexHistory??{},
-      freeSkipsRemaining:s.freeSkipsRemaining??0
+      freeSkipsRemaining:s.freeSkipsRemaining??0,
+      wanderMode:s.wanderMode??false, significantLog:s.significantLog??[] // v0.33
     });
     // v0.26 migration — idle removed: a pre-v0.26 save that was sitting Idle (old
     // missionActive===false) may have a stale missionDestination left over from a previous
@@ -4693,6 +4928,7 @@ function loadGame(){
       if(p.evolveBlocked===undefined) p.evolveBlocked=false; // v0.20
       if(p.equippedMoves===undefined) p.equippedMoves=getDefaultEquippedMoves(getPokemonEntry(p.pokedexId)); // v0.23
       if(p.breeding===undefined) p.breeding=false; // v0.26
+      if(p.formName===undefined) p.formName=null; // v0.33 — accurate for every pre-v0.33 save; no alt-form branch could ever have been applied before this fix existed
       // v0.31 — pre-existing individuals get ivs/nature rolled retroactively (single roll, not
       // the dex-complete 10× advantage — that's a creation-time-only bonus), then recalcStats()
       // populates p.stats and recomputes maxHP; currentHP is full-healed since maxHP just shifted.
@@ -4779,16 +5015,37 @@ function loadGame(){
         }
       });
     }
+    // v0.33 migration — confirmation now requires a live candidate (test and apply are the same
+    // event, see "Professor Auto-Test Loop"). Existing saves can't retroactively distinguish a
+    // legitimately-earned confirmation from a phantom one under the old rule (which confirmed on
+    // any owned-item+known-species match regardless of whether an eligible individual existed).
+    // For every species, any testedMethods/confirmedBranches entry for an item that HAS a real
+    // matching branch (single-target OR EVO_TREE) is wiped. Entries for items correctly ruled out
+    // (no matching branch at all — a data fact, never phantom) are left untouched, and so are all
+    // non-item methods (level/friendship/friendship-day/friendship-night/use-move/in-party) —
+    // those were already gated on real individual state via other mechanisms.
+    Object.keys(state.researchLog).forEach(dexIdStr=>{
+      const dexId=Number(dexIdStr);
+      const r=state.researchLog[dexIdStr];
+      if(!r) return;
+      const entry=getPokemonEntry(dexId);
+      const realItemNames=new Set();
+      if(entry&&entry.evolveMethod==='use-item'&&entry.evolveItem) realItemNames.add(entry.evolveItem);
+      (typeof getEvolutions==='function'?getEvolutions(dexId):[]).forEach(b=>{
+        if(b.evolveMethod==='use-item'&&b.evolveItem){
+          const itemEntry=typeof ITEMS_DATA!=='undefined'?ITEMS_DATA.find(i=>i.itemId===b.evolveItem):null;
+          if(itemEntry) realItemNames.add(itemEntry.name);
+        }
+      });
+      if(!realItemNames.size) return;
+      if(r.testedMethods) r.testedMethods=r.testedMethods.filter(m=>!realItemNames.has(m));
+      if(r.confirmedBranches) r.confirmedBranches=r.confirmedBranches.filter(b=>!realItemNames.has(b.method));
+    });
     const secsAway=Math.floor((Date.now()-data.savedAt)/1000);
     let offSum=null;
     if(secsAway>10) offSum=processOfflineTime(secsAway); // v0.26 — research is always active, no missionWasActive gate needed
     const logEl=document.getElementById('log'); logEl.innerHTML='';
-    [...state.log].reverse().forEach(e=>{
-      const d=document.createElement('div');
-      d.className='log-entry '+(e.type||'');
-      d.textContent=e.msg;
-      logEl.appendChild(d);
-    });
+    renderLogPanel();
     document.getElementById('funds-display').textContent=state.funds.toFixed(2);
     document.getElementById('total-catches').textContent=state.totalCatches;
     document.getElementById('total-sightings').textContent=state.totalSightings;
@@ -4841,7 +5098,7 @@ if(!hasSave){
   }
   state={
     funds:100.00, totalCatches:0, totalSightings:0,
-    missionElapsed:0, nextEncounterIn:ENC_INTERVAL_OPEN,
+    missionElapsed:0, nextEncounterIn:getEncounterInterval(true),
     incomeAccumulator:0,
     party:[], dex:[], dexIdCounter:1, currentEncounter:null, log:[],
     missionDestination:'palletTown', missionBehavior:'research',
@@ -4857,7 +5114,8 @@ if(!hasSave){
     locationMethodPrefs:{},
     lastHealLocation:'palletTown',
     dexHistory:{},
-    freeSkipsRemaining:50 // v0.24 — onboarding-only, brand new saves get 50 free encounter skips
+    freeSkipsRemaining:50, // v0.24 — onboarding-only, brand new saves get 50 free encounter skips
+    wanderMode:false, significantLog:[] // v0.33
   };
   init();
   setSaveIndicator('⬤ New game','');

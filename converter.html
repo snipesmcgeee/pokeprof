@@ -136,6 +136,19 @@ function numVal(v) {
   return isNaN(n) ? null : n;
 }
 
+// v0.34 — spriteURL column accepts either a bare PokeAPI numeric ID (e.g. 10100) or a full URL.
+// A bare number gets auto-templated into the standard sprite path; anything else (a full URL,
+// including from any other source) passes through unchanged. Excel entry only ever needs the number.
+function spriteUrlVal(v) {
+  const s = val(v);
+  if (s === null) return null;
+  const trimmed = String(s).trim();
+  if (/^\d+$/.test(trimmed)) {
+    return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/' + trimmed + '.png';
+  }
+  return s;
+}
+
 function getSheet(name) {
   if (!workbook.Sheets[name]) return null;
   return XLSX.utils.sheet_to_json(workbook.Sheets[name], { header: 1, defval: '' });
@@ -254,7 +267,7 @@ function convertPokedex() {
       baseFormId: numVal(r[col('baseFormId')]),
       isLegendary: boolVal(r[col('isLegendary')]),
       isMythical: boolVal(r[col('isMythical')]),
-      spriteUrl: val(r[col('spriteURL')] !== undefined ? r[col('spriteURL')] : r[col('spriteUrl')]),
+      spriteUrl: spriteUrlVal(r[col('spriteURL')] !== undefined ? r[col('spriteURL')] : r[col('spriteUrl')]),
     };
 
     // v0.23 — Trainer Battle System: 36 move-slot columns (18 types × Physical/Special).

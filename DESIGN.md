@@ -1079,7 +1079,7 @@ Damage = floor(floor(floor(2×Level/5 + 2) × Power × A/D) / 50) + 2
 
 ### converter.html
 - `convertPokedex()` extended to read and pass through the 36 new columns as plain numeric/null fields (no ID casting needed).
-- **v0.34:** `spriteUrl` field — if the Excel `spriteURL` cell is a bare number, the converter now builds the full PokeAPI sprite URL automatically (`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{number}.png`); a full URL pasted directly still passes through unchanged.
+- **v0.34: `spriteUrl` field** — if the Excel `spriteURL` cell is a bare number, the converter now builds the full PokeAPI sprite URL automatically (`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{number}.png`); a full URL pasted directly still passes through unchanged. Converter bumped to **v8** for this (v7 was the last logic change — Trainers move-column revision).
 
 ### New Standalone Fetcher Tool (separate build, not part of converter.html)
 - Same dexId-range + single-name UX as the existing Pokedex fetcher.

@@ -1,5 +1,5 @@
 // PokeProf — Items Database
-// Auto-generated: 8/7/2026, 5:49:26 PM
+// Auto-generated: 8/8/2026, 10:56:07 AM
 // Entries: 72
 
 const ITEMS_DATA = [
@@ -606,7 +606,7 @@ const ITEMS_DATA = [
     "effectValue": null,
     "shopPrice": 100,
     "sellPrice": null,
-    "shopTier": null,
+    "shopTier": "full",
     "isConsumable": true,
     "catchRateModifier": null,
     "requiresTarget": false,
@@ -624,7 +624,7 @@ const ITEMS_DATA = [
     "effectValue": null,
     "shopPrice": 100,
     "sellPrice": null,
-    "shopTier": null,
+    "shopTier": "full",
     "isConsumable": true,
     "catchRateModifier": null,
     "requiresTarget": false,
@@ -642,7 +642,7 @@ const ITEMS_DATA = [
     "effectValue": null,
     "shopPrice": 100,
     "sellPrice": null,
-    "shopTier": null,
+    "shopTier": "full",
     "isConsumable": true,
     "catchRateModifier": null,
     "requiresTarget": false,
@@ -660,7 +660,7 @@ const ITEMS_DATA = [
     "effectValue": null,
     "shopPrice": 100,
     "sellPrice": null,
-    "shopTier": null,
+    "shopTier": "full",
     "isConsumable": true,
     "catchRateModifier": null,
     "requiresTarget": false,
@@ -678,7 +678,7 @@ const ITEMS_DATA = [
     "effectValue": null,
     "shopPrice": 100,
     "sellPrice": null,
-    "shopTier": null,
+    "shopTier": "full",
     "isConsumable": true,
     "catchRateModifier": null,
     "requiresTarget": false,

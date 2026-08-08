@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.33</title>
+<title>PokeProf v0.34</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -110,7 +110,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span style="font-size:11px;color:#6080a0;">v0.33</span></h1>
+  <h1>PokeProf <span style="font-size:11px;color:#6080a0;">v0.34</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">100.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -694,6 +694,20 @@ function arriveAtLocation(locId){
 
 function advanceTravelPath(){
   if(!state.travelPath||state.travelPath.length===0) return;
+  // v0.34 — travelPathIndex===-1 means a Wander redirect's departure dwell is in progress (see
+  // evaluateWanderTarget()): the aide is still physically at its old location, paying that
+  // location's own travelTime before the newly queued path actually begins. Counts down exactly
+  // like any other waypoint dwell; once it hits 0, the redirect becomes official (missionDestination
+  // updates to the queued path's real target) and the first real step of the journey begins.
+  if(state.travelPathIndex===-1){
+    state.travelCyclesRemaining--;
+    if(state.travelCyclesRemaining<=0){
+      state.travelPathIndex=0;
+      state.missionDestination=state.travelPath[state.travelPath.length-1];
+      arriveAtLocation(state.travelPath[0]);
+    }
+    return;
+  }
   if(state.travelPathIndex>=state.travelPath.length) return;
   state.travelCyclesRemaining--;
   if(state.travelCyclesRemaining<=0){
@@ -2863,6 +2877,17 @@ function computeLocationSightings(locId){
 // lower (ties among eligible locations keep the current target, avoiding churn).
 function evaluateWanderTarget(){
   if(!state.wanderMode) return;
+  // v0.34 fix — only re-evaluate while stably at the current destination, never mid-journey.
+  // "Stable" means travelPathIndex has reached (or passed) the end of travelPath — NOT
+  // travelPath.length===0, since advanceTravelPath() never resets travelPath after a normal
+  // arrival, it just leaves travelPathIndex sitting past the array's end. Previously this ran
+  // on every tick regardless of travel state: a redirect could interrupt an in-progress journey,
+  // and — because sightings accumulate wherever the aide currently stands — a location being
+  // passed through would climb in ranking the longer the aide dwelled there, eventually becoming
+  // the new "best" target and letting Wander redirect to the aide's own current spot, which used
+  // to zero out travelCyclesRemaining outright: a free, instant "arrival" with no travel time paid.
+  const tp=state.travelPath||[];
+  if(state.travelPathIndex<tp.length) return;
   const currentLoc=state.currentLocation||'palletTown';
   const reachable=getReachableDiscoveredLocations(currentLoc).filter(locId=>buildRouteTable(locId).length>0);
   if(!reachable.length) return; // nothing reachable can ever have an encounter — nothing to do
@@ -2874,17 +2899,23 @@ function evaluateWanderTarget(){
     if(c<bestCount){ best=locId; bestCount=c; }
   });
   if(best===state.missionDestination) return; // current target still eligible and lowest (or tied) — no redirect
-  state.missionDestination=best;
-  if(currentLoc===best){
-    state.travelPath=[]; state.travelPathIndex=0; state.travelCyclesRemaining=0;
-  } else {
-    const path=buildTravelPath(currentLoc,best);
-    if(!path.length) return; // unreachable by an actual walkable path — leave destination as-is
-    state.travelPath=path; state.travelPathIndex=0;
-    arriveAtLocation(state.travelPath[0]);
-  }
-  const locData=typeof LOCATIONS!=='undefined'?getLocation(best):null;
-  addLog('🧭 Carl Oak changes course — new lowest-encounter destination: '+(locData?locData.name:best)+'.','info');
+  const path=buildTravelPath(currentLoc,best);
+  if(!path.length) return; // unreachable by an actual walkable path — leave destination as-is
+  // v0.34 fix — the current location is about to stop being the destination, so it must be
+  // *departed* like any other waypoint: pay its own travelTime as a dwell cost before the new
+  // path's first real step begins. travelPathIndex=-1 is a sentinel meaning "departure dwell in
+  // progress, haven't started the queued path yet" — advanceTravelPath() below counts it down
+  // exactly like any other waypoint dwell. state.missionDestination is intentionally NOT updated
+  // yet, so research continues normally at the current location for the whole departure dwell,
+  // exactly like every other occupied waypoint already behaves — only once departure completes
+  // does the new target become official and the real journey begin.
+  const locData=typeof LOCATIONS!=='undefined'?getLocation(currentLoc):null;
+  const cycles=locData&&locData.travelTime?parseInt(locData.travelTime):1;
+  state.travelCyclesRemaining=Math.max(1,cycles);
+  state.travelPath=path;
+  state.travelPathIndex=-1;
+  const destLocData=typeof LOCATIONS!=='undefined'?getLocation(best):null;
+  addLog('🧭 Carl Oak changes course — new lowest-encounter destination: '+(destLocData?destLocData.name:best)+'.','info');
 }
 
 function destSortButtonHtml(field,label){
@@ -3205,13 +3236,21 @@ function renderMethodPrefs(locId){
   // Load or default prefs
   const prefs=state.locationMethodPrefs[locId];
   const defaultChecked=availMethods; // all available checked by default
+  // v0.34 fix — prefs only ever recorded which methods were CHECKED, so a method absent from that
+  // list was indistinguishable from "player unchecked it on purpose" vs "didn't exist yet" — newly
+  // unlocked methods (Surf, a rod tier, gym battle, etc.) rendered unchecked by default forever.
+  // knownMethods tracks every available method ever actually offered as a toggle here, separate
+  // from which ones are currently checked. Pre-v0.34 saves lack this field entirely — fall back to
+  // treating the old checked-list as the known set, so anything not in it (new OR previously
+  // available-but-unchecked) defaults to checked once, self-correcting with one tap if undesired.
+  const knownMethods=prefs?(prefs.knownMethods||prefs.methods||[]):[];
 
   let html='<div style="margin-top:10px;border-top:1px solid #0f3460;padding-top:10px;">';
   html+='<div style="color:#a0a0c0;font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Encounter Methods</div>';
 
   allMethods.forEach(method=>{
     const locked=lockedMethods.has(method);
-    const checked=locked?false:(prefs?prefs.methods.includes(method):defaultChecked.includes(method));
+    const checked=locked?false:(prefs?(knownMethods.includes(method)?prefs.methods.includes(method):true):defaultChecked.includes(method));
     const weight=prefs&&prefs.weights?(prefs.weights[method]||1):1;
     let label=FISH_ROD_LABELS[method]||method;
     if(method==='gym'){
@@ -3238,16 +3277,25 @@ function updateMethodPrefs(locId){
   const gymTrainerIds=getGymTrainerIdsAtLocation(locId).filter(t=>isGymAccessible(t)&&isGymGrindEligible(t));
   const allMethods=[...new Set(allEncs.map(e=>getEncounterSubMethod(e.encounterMethod||'grass',e.requiresItem)))];
   if(gymTrainerIds.length) allMethods.push('gym');
-  const methods=[]; const weights={};
+  const methods=[]; const weights={}; const knownNow=[];
   allMethods.forEach(method=>{
     const cb=document.getElementById('meth-'+method);
     const wt=document.getElementById('wt-'+method);
-    if(cb&&cb.checked&&!cb.disabled){
-      methods.push(method);
-      weights[method]=parseInt(wt?wt.value:1)||1;
+    if(cb&&!cb.disabled){
+      // v0.34 — genuinely offered as a real toggle right now (not locked), regardless of checked
+      // state; this is what future renders check against to detect truly-new methods.
+      knownNow.push(method);
+      if(cb.checked){
+        methods.push(method);
+        weights[method]=parseInt(wt?wt.value:1)||1;
+      }
     }
   });
-  state.locationMethodPrefs[locId]={methods,weights};
+  // v0.34 — merge with any previously-known methods so knownMethods only ever grows, never shrinks
+  // (defensive against this running before a re-render, or a method temporarily re-locking).
+  const prevKnown=(state.locationMethodPrefs[locId]&&state.locationMethodPrefs[locId].knownMethods)||[];
+  const knownMethods=[...new Set([...prevKnown,...knownNow])];
+  state.locationMethodPrefs[locId]={methods,weights,knownMethods};
 }
 
 // Toggle expand/collapse of evolution methods panel in dex detail
@@ -3867,7 +3915,10 @@ function buildStatTableHtml(p){
 }
 function showPokemonDetail(catchId){
   const p=state.dex.find(x=>x.id===catchId); if(!p) return;
-  const entry=getPokemonEntry(p.pokedexId);
+  // v0.34 fix — formName was previously omitted here, so type badges/height/weight always showed
+  // the base form's data (getPokemonEntry() prefers the null-form row when none is specified) even
+  // for a form-variant individual, despite the stat table below correctly resolving the true form.
+  const entry=getPokemonEntry(p.pokedexId,p.formName);
   const existing=document.getElementById('poke-modal'); if(existing) existing.remove();
   const modal=document.createElement('div');
   modal.id='poke-modal';
@@ -3912,7 +3963,11 @@ function showPokemonDetail(catchId){
   const badgeHtml=badgeText?'<div style="color:#f4d03f;">'+badgeText+'</div>':'';
 
   modal.innerHTML='<div style="background:#16213e;border:1px solid #e63946;border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;">'
-    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:#e63946;font-size:14px;font-weight:bold;">#'+(p.pokedexId||'?')+' '+getDisplayName(p)+(p.nickname?' <span style="color:#6080a0;font-size:11px;">('+p.species+')</span>':'')+(p.formName?' ('+p.formName+')':'')+' (catch #'+p.id+')</div><button onclick="document.getElementById(\'poke-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'
+    // v0.34 fix — getDisplayName(p) already appends "(formName)" for un-nicknamed form-variant
+    // individuals, so the old unconditional +(p.formName?...) here doubled it (e.g. "Raichu (Alolan)
+    // (Alolan)"). Removed for that case. For the nicknamed case, the species parenthetical is now
+    // form-aware too — it previously showed just "(Raichu)", silently dropping form context.
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:#e63946;font-size:14px;font-weight:bold;">#'+(p.pokedexId||'?')+' '+getDisplayName(p)+(p.nickname?' <span style="color:#6080a0;font-size:11px;">('+p.species+(p.formName?' ('+p.formName+')':'')+')</span>':'')+' (catch #'+p.id+')</div><button onclick="document.getElementById(\'poke-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'
     +'<div style="color:#a0a0c0;font-size:11px;line-height:2;border-bottom:1px solid #0f3460;margin-bottom:10px;padding-bottom:10px;">'
     +'<div>Level: <span style="color:#fff">'+p.level+'</span> &nbsp;·&nbsp; Gender: <span style="color:#fff">'+p.gender+'</span></div>'
     +'<div style="margin:2px 0;">'+typeBadgeHtml(entry?entry.type1:null)+typeBadgeHtml(entry?entry.type2:null)+'</div>'
@@ -4726,7 +4781,11 @@ function renderLogPanel(){
   if(condBtn) condBtn.style.cssText='flex:1;padding:6px 2px;font-size:10px;'+(logViewMode==='condensed'?'border-color:#5dade2;color:#5dade2;':'');
   const source=logViewMode==='condensed'?(state.significantLog||[]):state.log;
   logEl.innerHTML='';
-  [...source].reverse().forEach(e=>{
+  // v0.34 fix — source is already newest-first (built via .unshift()), matching the live-update
+  // insertBefore(el.firstChild) path in addLog()/addSignificantLog(). The old .reverse() here put
+  // oldest first instead, backwards; Full self-corrected within moments via live inserts, Condensed
+  // (rare significant events) stayed visibly backwards for long stretches.
+  source.forEach(e=>{
     const d=document.createElement('div');
     d.className='log-entry '+(e.type||'');
     d.textContent=e.msg;

@@ -1,5 +1,5 @@
 // PokeProf — Encounters Database
-// Auto-generated: 8/7/2026, 5:49:26 PM
+// Auto-generated: 8/8/2026, 10:56:07 AM
 // Entries: 1301
 
 const ENCOUNTERS = [

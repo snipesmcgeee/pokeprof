@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.34</title>
+<title>PokeProf v0.35</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -15,60 +15,86 @@
 <script src="trainers.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  body { background:#1a1a2e; color:#e0e0e0; font-family:'Courier New',monospace; font-size:13px; height:100dvh; display:flex; flex-direction:column; overflow:hidden; }
 
-  #header { background:#16213e; border-bottom:2px solid #e63946; padding:8px 12px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
-  #header h1 { font-size:15px; color:#e63946; letter-spacing:2px; text-transform:uppercase; }
+  /* ── THEME TOKENS (v0.35) ──────────────────────────────────────────────
+     Two player-facing seeds: Main (one hue → bg/panel/card/border + a 3-tier
+     text ramp) and Accent (one hue → dark/base/light, interactive-only).
+     Defaults below are "Classic" (Main=Blue, Accent=Red), matching the
+     pre-v0.35 look as closely as a 2-seed model allows. Actual values are set
+     live by applyTheme() (see THEME ENGINE below) — these are just the
+     first-paint fallback before JS runs. Everything NOT listed here (type
+     colors, HP-bar states, log-category colors, success-green, currency-gold,
+     and all warning/error states) is a fixed constant, never theme-driven —
+     see DESIGN.md "Theming System" for the full rationale. */
+  :root {
+    --main-bg: #0a0a1a;
+    --main-panel: #16213e;
+    --main-card: #0f3460;
+    --main-border: #1a4a80;
+    --main-text: #e0e0e0;
+    --main-text-secondary: #a0a0c0;
+    --main-text-muted: #6080a0;
+    --accent: #e63946;
+    --accent-light: #ff6b76;
+    --accent-dark: #3a1020;
+    /* fixed constants — never overwritten by applyTheme() */
+    --c-danger: #e74c3c;
+  }
+
+  body { background:var(--main-bg); color:var(--main-text); font-family:'Courier New',monospace; font-size:13px; height:100dvh; display:flex; flex-direction:column; overflow:hidden; }
+
+  #header { background:var(--main-panel); border-bottom:2px solid var(--accent); padding:8px 12px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+  #header h1 { font-size:15px; color:var(--accent); letter-spacing:2px; text-transform:uppercase; }
   .funds { font-size:14px; color:#f4d03f; font-weight:bold; }
-  .income-rate { font-size:10px; color:#9090b0; }
+  .income-rate { font-size:10px; color:var(--main-text-muted); }
   #save-indicator { font-size:10px; color:#555; text-align:right; }
   #save-indicator.saving { color:#2ecc71; }
-  #save-indicator.error { color:#e63946; }
+  #save-indicator.error { color:var(--c-danger); }
 
   #offline-banner { display:none; background:#1a3a1a; border-bottom:1px solid #2ecc71; padding:10px 14px; flex-shrink:0; }
   #offline-banner .ob-title { color:#2ecc71; font-weight:bold; font-size:12px; margin-bottom:4px; }
   #offline-banner .ob-body { color:#a0c0a0; font-size:11px; line-height:1.6; }
   #offline-banner button { margin-top:8px; }
 
-  #tab-bar { display:flex; background:#0f3460; border-bottom:1px solid #1a4a80; flex-shrink:0; }
-  .tab-btn { flex:1; padding:10px 4px; text-align:center; font-family:'Courier New',monospace; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:#6080a0; background:none; border:none; border-bottom:2px solid transparent; cursor:pointer; }
-  .tab-btn.active { color:#e0e0e0; border-bottom-color:#e63946; }
+  #tab-bar { display:flex; background:var(--main-card); border-bottom:1px solid var(--main-border); flex-shrink:0; }
+  .tab-btn { flex:1; padding:10px 4px; text-align:center; font-family:'Courier New',monospace; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--main-text-muted); background:none; border:none; border-bottom:2px solid transparent; cursor:pointer; }
+  .tab-btn.active { color:var(--main-text); border-bottom-color:var(--accent); }
   .tab-icon { display:block; font-size:16px; margin-bottom:2px; }
 
   #panels { flex:1; overflow:hidden; }
   .panel { display:none; flex-direction:column; height:100%; overflow:hidden; }
   .panel.active { display:flex; }
-  .panel-title { background:#0f3460; padding:6px 12px; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:#a0a0c0; flex-shrink:0; }
+  .panel-title { background:var(--main-card); padding:6px 12px; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--main-text-secondary); flex-shrink:0; }
 
-  #aide-info { padding:10px 12px; border-bottom:1px solid #0f3460; background:#16213e; flex-shrink:0; }
-  #aide-info .aide-name { color:#e63946; font-size:14px; margin-bottom:3px; }
-  #aide-info .aide-location { color:#a0a0c0; font-size:11px; }
+  #aide-info { padding:10px 12px; border-bottom:1px solid var(--main-card); background:var(--main-panel); flex-shrink:0; }
+  #aide-info .aide-name { color:var(--accent); font-size:14px; margin-bottom:3px; }
+  #aide-info .aide-location { color:var(--main-text-secondary); font-size:11px; }
 
-  #party-list { overflow-y:auto; flex:1; padding:8px; background:#16213e; }
-  .party-slot { background:#0f3460; border:1px solid #1a4a80; border-radius:6px; padding:10px; margin-bottom:8px; }
-  .party-slot.fainted { opacity:0.5; border-color:#e63946; }
-  .party-slot .poke-name { font-size:13px; color:#fff; margin-bottom:3px; }
-  .party-slot .poke-level { color:#a0c4ff; font-size:11px; margin-bottom:4px; }
-  .hp-bar-wrap { background:#0a0a1a; border-radius:3px; height:7px; margin:5px 0 3px; overflow:hidden; }
+  #party-list { overflow-y:auto; flex:1; padding:8px; background:var(--main-panel); }
+  .party-slot { background:var(--main-card); border:1px solid var(--main-border); border-radius:6px; padding:10px; margin-bottom:8px; }
+  .party-slot.fainted { opacity:0.5; border-color:var(--c-danger); }
+  .party-slot .poke-name { font-size:13px; color:var(--main-text); margin-bottom:3px; }
+  .party-slot .poke-level { color:var(--main-text-secondary); font-size:11px; margin-bottom:4px; }
+  .hp-bar-wrap { background:var(--main-bg); border-radius:3px; height:7px; margin:5px 0 3px; overflow:hidden; }
   .hp-bar { height:100%; border-radius:3px; transition:width 0.3s; }
-  .hp-text { font-size:10px; color:#a0a0c0; }
-  .exp-bar-wrap { background:#0a0a1a; border-radius:3px; height:3px; margin-top:5px; overflow:hidden; }
+  .hp-text { font-size:10px; color:var(--main-text-secondary); }
+  .exp-bar-wrap { background:var(--main-bg); border-radius:3px; height:3px; margin-top:5px; overflow:hidden; }
   .exp-bar { height:100%; background:#9b59b6; border-radius:3px; }
 
-  #controls { background:#16213e; border-top:1px solid #0f3460; padding:10px 12px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; flex-shrink:0; }
+  #controls { background:var(--main-panel); border-top:1px solid var(--main-card); padding:10px 12px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; flex-shrink:0; }
 
-  button { background:#0f3460; color:#e0e0e0; border:1px solid #1a4a80; border-radius:4px; padding:8px 14px; font-family:'Courier New',monospace; font-size:11px; cursor:pointer; letter-spacing:1px; text-transform:uppercase; transition:background 0.15s; }
-  button:active { background:#1a4a80; }
+  button { background:var(--main-card); color:var(--main-text); border:1px solid var(--main-border); border-radius:4px; padding:8px 14px; font-family:'Courier New',monospace; font-size:11px; cursor:pointer; letter-spacing:1px; text-transform:uppercase; transition:background 0.15s; }
+  button:active { background:var(--main-border); }
   button:disabled { opacity:0.4; cursor:not-allowed; }
-  button.danger { border-color:#e63946; color:#e63946; }
+  button.danger { border-color:var(--c-danger); color:var(--c-danger); }
   button.danger:active { background:#3a1020; }
   button.primary { border-color:#2ecc71; color:#2ecc71; }
   button.primary:active { background:#0a3020; }
   button.reset { border-color:#555; color:#777; font-size:10px; padding:5px 10px; }
 
-  #encounter-display { background:#0f3460; border-bottom:1px solid #1a4a80; padding:10px 12px; flex-shrink:0; }
-  .enc-title { font-size:10px; letter-spacing:2px; text-transform:uppercase; color:#a0a0c0; margin-bottom:4px; }
-  .enc-body { font-size:12px; color:#e0e0e0; min-height:18px; }
+  #encounter-display { background:var(--main-card); border-bottom:1px solid var(--main-border); padding:10px 12px; flex-shrink:0; }
+  .enc-title { font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--main-text-secondary); margin-bottom:4px; }
+  .enc-body { font-size:12px; color:var(--main-text); min-height:18px; }
 
   #log { overflow-y:auto; flex:1; padding:8px; }
   .log-entry { padding:4px 6px; border-bottom:1px solid #0a0f1a; font-size:11px; color:#8090a0; }
@@ -76,41 +102,41 @@
   .log-entry.evolve { color:#f4d03f; }
   .log-entry.damage { color:#e74c3c; }
   .log-entry.win { color:#3498db; }
-  .log-entry.faint { color:#e63946; }
+  .log-entry.faint { color:var(--c-danger); }
   .log-entry.fail { color:#e67e22; }
   .log-entry.exp { color:#9b59b6; }
   .log-entry.info { color:#5dade2; }
 
   #panel-dex { display:none; flex-direction:column; height:100%; overflow:hidden; }
   #panel-dex.active { display:flex; }
-  #dex-stats { background:#0f3460; padding:6px 12px; font-size:10px; color:#a0a0c0; display:flex; gap:12px; flex-shrink:0; border-bottom:1px solid #1a4a80; }
-  #dex-stats span { color:#e0e0e0; }
-  .dex-entry { background:#0f3460; border:1px solid #1a4a80; border-radius:6px; padding:10px; margin-bottom:6px; }
+  #dex-stats { background:var(--main-card); padding:6px 12px; font-size:10px; color:var(--main-text-secondary); display:flex; gap:12px; flex-shrink:0; border-bottom:1px solid var(--main-border); }
+  #dex-stats span { color:var(--main-text); }
+  .dex-entry { background:var(--main-card); border:1px solid var(--main-border); border-radius:6px; padding:10px; margin-bottom:6px; }
   .dex-entry.unassigned { opacity:0.7; }
   .dex-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:3px; }
-  .dex-name { font-size:12px; color:#fff; }
-  .dex-id { font-size:10px; color:#6080a0; }
-  .dex-details { font-size:10px; color:#a0a0c0; }
-  .dex-holder { font-size:10px; color:#5dade2; margin-top:2px; }
+  .dex-name { font-size:12px; color:var(--main-text); }
+  .dex-id { font-size:10px; color:var(--main-text-muted); }
+  .dex-details { font-size:10px; color:var(--main-text-secondary); }
+  .dex-holder { font-size:10px; color:var(--main-text-secondary); margin-top:2px; }
   .shiny-badge { color:#f4d03f; font-size:10px; margin-left:4px; }
   .aide-party-sprites { display:inline-flex; gap:4px; vertical-align:middle; margin-left:0; margin-top:4px; }
   .aide-sprite-mini { width:28px; height:28px; }
   .aide-badge-sprites { display:inline-flex; gap:3px; vertical-align:middle; margin-left:8px; }
   .aide-badge-sprite { width:18px; height:18px; image-rendering:pixelated; }
   .aide-badge-emoji { font-size:15px; line-height:18px; }
-  #info-btn { position:fixed; bottom:16px; right:16px; z-index:500; border-radius:50%; width:48px; height:48px; padding:0; background:#0f3460; border:2px solid #5dade2; color:#5dade2; font-size:18px; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(0,0,0,0.5); }
+  #info-btn { position:fixed; bottom:16px; right:16px; z-index:500; border-radius:50%; width:48px; height:48px; padding:0; background:var(--main-card); border:2px solid var(--accent); color:var(--accent-light); font-size:18px; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(0,0,0,0.5); }
   .party-sprite { width:112px; height:112px; image-rendering:pixelated; }
 
   #panel-map { display:none; flex-direction:column; height:100%; overflow:hidden; }
   #panel-map.active { display:flex; }
 
-  #bag-display { background:#16213e; border-bottom:1px solid #0f3460; padding:6px 12px; font-size:10px; color:#a0a0c0; flex-shrink:0; }
+  #bag-display { background:var(--main-panel); border-bottom:1px solid var(--main-card); padding:6px 12px; font-size:10px; color:var(--main-text-secondary); flex-shrink:0; }
 </style>
 </head>
 <body>
 
 <div id="header">
-  <h1>PokeProf <span style="font-size:11px;color:#6080a0;">v0.34</span></h1>
+  <h1>PokeProf <span style="font-size:11px;color:var(--main-text-muted);">v0.35</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">100.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -145,8 +171,8 @@
       <div class="aide-name">🧑‍🔬 Carl Oak</div>
       <div id="aide-party-sprites-row"></div>
       <div class="aide-location" id="aide-location">📍 Pallet Town — Researching</div>
-      <button id="skip-encounter-btn" onclick="skipToNextEncounter()" style="display:none;margin-top:6px;font-size:10px;padding:5px 10px;border-color:#5dade2;color:#5dade2;">⏭ Skip to Encounter x50</button>
-      <button id="battle-gym-btn" style="display:none;margin-top:6px;font-size:10px;padding:5px 10px;border-color:#e63946;color:#e63946;">⚔ Battle Gym</button>
+      <button id="skip-encounter-btn" onclick="skipToNextEncounter()" style="display:none;margin-top:6px;font-size:10px;padding:5px 10px;border-color:var(--main-border);color:var(--main-text-secondary);">⏭ Skip to Encounter x50</button>
+      <button id="battle-gym-btn" style="display:none;margin-top:6px;font-size:10px;padding:5px 10px;border-color:var(--accent);color:var(--accent-light);">⚔ Battle Gym</button>
       <div id="badge-cap-display" style="font-size:10px;color:#f4d03f;margin-top:2px;"></div>
       <div id="bag-display" style="display:none;"></div>
     </div>
@@ -170,7 +196,7 @@
       <div class="enc-body" id="enc-body">No active encounter.</div>
     </div>
     <div style="display:flex;gap:6px;margin-bottom:6px;">
-      <button id="log-tab-full" onclick="setLogViewMode('full')" style="flex:1;padding:6px 2px;font-size:10px;border-color:#5dade2;color:#5dade2;">Full</button>
+      <button id="log-tab-full" onclick="setLogViewMode('full')" style="flex:1;padding:6px 2px;font-size:10px;border-color:var(--main-border);color:var(--main-text-secondary);">Full</button>
       <button id="log-tab-condensed" onclick="setLogViewMode('condensed')" style="flex:1;padding:6px 2px;font-size:10px;">Condensed</button>
     </div>
     <div id="log"></div>
@@ -234,6 +260,185 @@
 </div>
 
 <script>
+// ── THEME ENGINE (v0.35) ──
+// Two player-facing seeds — Main (backgrounds + all text, one hue ramped dark→light) and
+// Accent (interactive-only: brand, active states, buttons) — persisted device-local, OUTSIDE
+// the save file (purely cosmetic, no gameplay impact, deliberately doesn't travel with an
+// exported save to another browser/device). See DESIGN.md "Theming System" for full rationale.
+const THEME_STORAGE_KEY='pokeprof_theme';
+// 20-color shipped preset grid, shared by both Main and Accent. Each color's hue/saturation plus
+// a tuned preview lightness (pL) so swatches read as the intended color — flat lightness across
+// all 20 made yellow read as muddy mustard, since yellow is an inherently light hue.
+const THEME_COLORS=[
+  {name:'Red',       h:355, s:70, pL:50},
+  {name:'Orange',    h:25,  s:85, pL:52},
+  {name:'Amber',     h:38,  s:85, pL:55},
+  {name:'Yellow',    h:50,  s:90, pL:74},
+  {name:'Lime',      h:80,  s:65, pL:55},
+  {name:'Green',     h:145, s:55, pL:42},
+  {name:'Teal',      h:175, s:55, pL:38},
+  {name:'Cyan',      h:190, s:65, pL:50},
+  {name:'Sky Blue',  h:200, s:65, pL:52},
+  {name:'Blue',      h:213, s:70, pL:45},
+  {name:'Indigo',    h:243, s:55, pL:48},
+  {name:'Purple',    h:270, s:50, pL:48},
+  {name:'Violet',    h:280, s:55, pL:52},
+  {name:'Magenta',   h:310, s:60, pL:48},
+  {name:'Pink',      h:330, s:65, pL:58},
+  {name:'Rose',      h:345, s:65, pL:52},
+  {name:'Brown',     h:25,  s:40, pL:35},
+  {name:'Gray',      h:220, s:8,  pL:50},
+  {name:'Black',     h:0,   s:0,  special:'black', pL:8},
+  {name:'White',     h:0,   s:0,  special:'white', pL:96}
+];
+const THEME_MAIN_DEFAULT={h:213,s:70};   // Classic — Blue
+const THEME_ACCENT_DEFAULT={h:355,s:70}; // Classic — Red
+function themeHsl(h,s,l){ return 'hsl('+h+', '+Math.max(0,s)+'%, '+Math.max(0,Math.min(100,l))+'%)'; }
+// Converts a #rrggbb hex string (from the native custom picker) into a {h,s,special} seed —
+// unifies "preset click" and "custom pick" into the same downstream derivation path. Very
+// low-saturation input is treated as Black/White/Gray, matching how those presets behave.
+function themeHexToSeed(hex){
+  hex=(hex||'#5dade2').replace('#','');
+  const r=parseInt(hex.substr(0,2),16)/255, g=parseInt(hex.substr(2,2),16)/255, b=parseInt(hex.substr(4,2),16)/255;
+  const max=Math.max(r,g,b), min=Math.min(r,g,b);
+  let h=0; const l=(max+min)/2; let s=0;
+  if(max!==min){
+    const d=max-min;
+    s=l>0.5?d/(2-max-min):d/(max+min);
+    if(max===r) h=(g-b)/d+(g<b?6:0);
+    else if(max===g) h=(b-r)/d+2;
+    else h=(r-g)/d+4;
+    h*=60;
+  }
+  h=Math.round(h); s=Math.round(s*100);
+  if(s<6){
+    if(l<0.12) return {h:0,s:0,special:'black'};
+    if(l>0.9) return {h:0,s:0,special:'white'};
+    return {h:220,s:8}; // near-neutral, treat as Gray
+  }
+  return {h,s};
+}
+// Main → 4 backgrounds/border + 3 text tiers, all one hue. Black gets its own near-0 floor
+// (the shared ~8% floor used for hue-based colors reads as "dark gray", not black); White flips
+// the ramp direction (light-mode) instead of extending the dark-mode ramp further; warm/yellow
+// hues (30-70) are tapered on the background steps specifically, since a fully saturated dark
+// yellow is physically mustard/olive, not "dark yellow".
+function deriveMainTheme(c){
+  const light=c.special==='white';
+  const isBlack=c.special==='black';
+  const stepsDark=isBlack?[0,3,6,10,55,72,92]:[8,14,22,32,55,72,92];
+  const stepsLight=[96,91,84,74,42,26,10];
+  const steps=light?stepsLight:stepsDark;
+  const sat=c.special?0:c.s;
+  const isWarm=c.h>=30&&c.h<=70;
+  const satAt=i=>{
+    if(c.special) return 0;
+    let base=(i>=4)?sat*0.5:sat;
+    if(isWarm&&i<4) base=base*0.5;
+    return base;
+  };
+  const v=steps.map((l,i)=>themeHsl(c.h,satAt(i),l));
+  return {bg:v[0],panel:v[1],card:v[2],border:v[3],textMuted:v[4],textSecondary:v[5],text:v[6]};
+}
+function deriveAccentTheme(c){
+  if(c.special==='black') return {dark:themeHsl(0,0,4),base:themeHsl(0,0,10),light:themeHsl(0,0,20)};
+  const sat=c.special?0:c.s;
+  return {
+    dark:themeHsl(c.h,sat,c.special==='white'?85:35),
+    base:themeHsl(c.h,sat,c.special==='white'?96:50),
+    light:themeHsl(c.h,sat,c.special==='white'?100:68)
+  };
+}
+function applyTheme(mainSeed,accentSeed){
+  const m=deriveMainTheme(mainSeed);
+  const a=deriveAccentTheme(accentSeed);
+  const root=document.documentElement.style;
+  root.setProperty('--main-bg',m.bg);
+  root.setProperty('--main-panel',m.panel);
+  root.setProperty('--main-card',m.card);
+  root.setProperty('--main-border',m.border);
+  root.setProperty('--main-text',m.text);
+  root.setProperty('--main-text-secondary',m.textSecondary);
+  root.setProperty('--main-text-muted',m.textMuted);
+  root.setProperty('--accent',a.base);
+  root.setProperty('--accent-light',a.light);
+  root.setProperty('--accent-dark',a.dark);
+}
+function saveThemeChoice(mainSeed,accentSeed){
+  try{ localStorage.setItem(THEME_STORAGE_KEY,JSON.stringify({main:mainSeed,accent:accentSeed})); }catch(e){}
+}
+function loadThemeChoice(){
+  try{
+    const raw=localStorage.getItem(THEME_STORAGE_KEY);
+    if(!raw) return {main:THEME_MAIN_DEFAULT,accent:THEME_ACCENT_DEFAULT};
+    const parsed=JSON.parse(raw);
+    return {main:parsed.main||THEME_MAIN_DEFAULT,accent:parsed.accent||THEME_ACCENT_DEFAULT};
+  }catch(e){ return {main:THEME_MAIN_DEFAULT,accent:THEME_ACCENT_DEFAULT}; }
+}
+// Current in-memory selection, initialized at boot from storage, updated by every picker
+// interaction. Kept separate from `state` deliberately — this never touches the save file.
+let currentTheme=loadThemeChoice();
+function setTheme(mainSeed,accentSeed){
+  currentTheme={main:mainSeed,accent:accentSeed};
+  applyTheme(mainSeed,accentSeed);
+  saveThemeChoice(mainSeed,accentSeed);
+}
+// Apply immediately — before the rest of the game boots — so there's no flash of default theme.
+applyTheme(currentTheme.main,currentTheme.accent);
+
+// ── THEME PICKER UI (Info modal → Display section) ──
+function themeSwatchButtonHtml(role,c){
+  const cur=role==='main'?currentTheme.main:currentTheme.accent;
+  const isSel=cur&&((cur.special&&cur.special===c.special)||(!cur.special&&!c.special&&cur.h===c.h&&cur.s===c.s));
+  const bg=c.special==='black'?'#000':c.special==='white'?'#fff':themeHsl(c.h,c.s,c.pL);
+  const border=isSel?'border:3px solid var(--accent-light);':'border:2px solid #333;';
+  return '<button onclick="pickThemePreset(\''+role+'\',\''+c.name+'\')" title="'+c.name+'" style="width:28px;height:28px;border-radius:5px;'+border+'background:'+bg+';padding:0;cursor:pointer;margin:2px;"></button>';
+}
+function pickThemePreset(role,colorName){
+  const c=THEME_COLORS.find(x=>x.name===colorName)||THEME_COLORS.find(x=>x.name==='Blue');
+  const seed={h:c.h,s:c.s}; if(c.special) seed.special=c.special;
+  if(role==='main') setTheme(seed,currentTheme.accent);
+  else setTheme(currentTheme.main,seed);
+  renderDisplaySettings();
+}
+function pickThemeCustom(role,hexValue){
+  const seed=themeHexToSeed(hexValue);
+  if(role==='main') setTheme(seed,currentTheme.accent);
+  else setTheme(currentTheme.main,seed);
+  renderDisplaySettings();
+}
+function themeSeedToHex(seed){
+  // Best-effort round-trip for the native <input type=color> value attribute (which requires a
+  // hex string) — approximates the seed's hue/sat at a mid lightness. Only used to preload the
+  // custom picker's swatch; the actual theme continues to be driven by the derived HSL ramp.
+  if(!seed) return '#5dade2';
+  if(seed.special==='black') return '#000000';
+  if(seed.special==='white') return '#ffffff';
+  const h=seed.h/360, s=seed.s/100, l=0.5;
+  const hue2rgb=(p,q,t)=>{ if(t<0)t+=1; if(t>1)t-=1; if(t<1/6)return p+(q-p)*6*t; if(t<1/2)return q; if(t<2/3)return p+(q-p)*(2/3-t)*6; return p; };
+  const q=l<0.5?l*(1+s):l+s-l*s, p=2*l-q;
+  const r=Math.round(hue2rgb(p,q,h+1/3)*255), g=Math.round(hue2rgb(p,q,h)*255), b=Math.round(hue2rgb(p,q,h-1/3)*255);
+  const toHex=n=>n.toString(16).padStart(2,'0');
+  return '#'+toHex(r)+toHex(g)+toHex(b);
+}
+function renderDisplaySettings(){
+  const modal=document.getElementById('info-modal'); if(!modal) return;
+  const mainSwatches=THEME_COLORS.map(c=>themeSwatchButtonHtml('main',c)).join('');
+  const accentSwatches=THEME_COLORS.map(c=>themeSwatchButtonHtml('accent',c)).join('');
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><button onclick="renderInfoTopicList()" style="padding:5px 10px;font-size:10px;border-color:var(--accent);color:var(--accent-light);">◀ Back</button><button onclick="document.getElementById(\'info-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'
+    +'<div style="color:var(--accent);font-size:13px;font-weight:bold;margin-bottom:4px;">🎨 Display</div>'
+    +'<div style="color:var(--main-text-secondary);font-size:10px;margin-bottom:12px;">Stored on this device only — not part of your save file.</div>'
+    +'<div style="color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Main (backgrounds + text)</div>'
+    +'<div style="display:flex;flex-wrap:wrap;margin-bottom:6px;">'+mainSwatches+'</div>'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;"><label style="font-size:10px;color:var(--main-text-secondary);">Custom:</label><input type="color" value="'+themeSeedToHex(currentTheme.main)+'" onchange="pickThemeCustom(\'main\',this.value)" style="width:36px;height:28px;padding:0;border:2px solid #333;border-radius:5px;background:none;cursor:pointer;"></div>'
+    +'<div style="color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Accent (interactive-only)</div>'
+    +'<div style="display:flex;flex-wrap:wrap;margin-bottom:6px;">'+accentSwatches+'</div>'
+    +'<div style="display:flex;align-items:center;gap:8px;"><label style="font-size:10px;color:var(--main-text-secondary);">Custom:</label><input type="color" value="'+themeSeedToHex(currentTheme.accent)+'" onchange="pickThemeCustom(\'accent\',this.value)" style="width:36px;height:28px;padding:0;border:2px solid #333;border-radius:5px;background:none;cursor:pointer;"></div>'
+    +'</div>';
+  modal.onclick=(e)=>{ if(e.target===modal) modal.remove(); };
+}
+
 // ── SPECIES LOOKUP ──
 const SPECIES = {};
 if(typeof POKEDEX_DATA !== 'undefined'){
@@ -1364,8 +1569,8 @@ function renderTeamOrderModal(){
       '<div style="flex:1;pointer-events:none;"><div style="color:#fff;font-size:11px;">'+getDisplayName(p)+'</div>'+
       '<div style="color:#a0a0c0;font-size:9px;">Lv'+p.level+' · '+p.currentHP+'/'+p.maxHP+' HP'+(fainted?' (fainted)':'')+'</div></div></div>';
   }).join('');
-  modal.innerHTML='<div style="background:#16213e;border:1px solid #5dade2;border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;max-height:85vh;overflow-y:auto;">'+
-    '<div style="color:#5dade2;font-size:13px;font-weight:bold;margin-bottom:4px;">⚔ Set Team Order'+legNote+'</div>'+
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;max-height:85vh;overflow-y:auto;">'+
+    '<div style="color:var(--accent);font-size:13px;font-weight:bold;margin-bottom:4px;">⚔ Set Team Order'+legNote+'</div>'+
     '<div style="color:#6080a0;font-size:10px;margin-bottom:10px;">Drag to reorder — lead Pokémon battles first.</div>'+
     '<div id="teamorder-list">'+rows+'</div>'+
     '<button onclick="confirmTeamOrder()" class="primary" style="width:100%;margin-top:8px;">▶ Begin Battle</button>'+
@@ -1465,9 +1670,9 @@ function showBattleScreen(playerTeamSnapshot,enemyTeam,result){
     const pPct=p?Math.max(0,Math.min(100,(pHP/p.maxHP)*100)):0;
     const enPct=en?Math.max(0,Math.min(100,(enHP/en.maxHP)*100)):0;
     const barColor=pct=>pct>50?'#2ecc71':pct>20?'#f4d03f':'#e63946';
-    modal.innerHTML='<div style="background:#16213e;border:1px solid #5dade2;border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;">'+
+    modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;">'+
       (showTrainerIntro?
-        '<div style="text-align:center;padding:20px 0;">'+getTrainerPortraitHtml(trainerName)+'<div style="color:#5dade2;font-size:13px;font-weight:bold;margin-top:8px;">'+trainerName+'</div></div>'
+        '<div style="text-align:center;padding:20px 0;">'+getTrainerPortraitHtml(trainerName)+'<div style="color:var(--accent);font-size:13px;font-weight:bold;margin-top:8px;">'+trainerName+'</div></div>'
         :
         '<div style="margin-bottom:10px;">'+
           '<div style="color:#e0e0e0;font-size:11px;">'+(enEntry?enEntry.name:'???')+' Lv'+(en?en.level:'?')+'</div>'+
@@ -1533,10 +1738,10 @@ function finishWatchedBattle(result){
   if(!won){
     if(watchedBattle.isGauntlet){
       addLog('⚔ Lost the Elite Four/Champion gauntlet at leg '+watchedBattle.leg+'/5 — attempt reset.','fail');
-      if(resultArea) resultArea.innerHTML='<div style="color:#e63946;font-size:12px;text-align:center;">Lost at leg '+watchedBattle.leg+'/5. Attempt reset.</div><button onclick="closeWatchedBattle()" style="width:100%;margin-top:8px;">Close</button>';
+      if(resultArea) resultArea.innerHTML='<div style="color:var(--c-danger);font-size:12px;text-align:center;">Lost at leg '+watchedBattle.leg+'/5. Attempt reset.</div><button onclick="closeWatchedBattle()" style="width:100%;margin-top:8px;">Close</button>';
     } else {
       addLog('⚔ Lost a gym battle. Try again.','fail');
-      if(resultArea) resultArea.innerHTML='<div style="color:#e63946;font-size:12px;text-align:center;">Defeated. Try again.</div><button onclick="closeWatchedBattle()" style="width:100%;margin-top:8px;">Close</button>';
+      if(resultArea) resultArea.innerHTML='<div style="color:var(--c-danger);font-size:12px;text-align:center;">Defeated. Try again.</div><button onclick="closeWatchedBattle()" style="width:100%;margin-top:8px;">Close</button>';
     }
     saveGame();
     return;
@@ -1741,6 +1946,12 @@ function applySpeciesSwap(p,newEntry){
   recordNewSpecies(newEntry.dexId,p.species);
   recordAbilityObserved(newEntry.dexId,p.ability);
   state.dexHistory[newEntry.dexId]=(state.dexHistory[newEntry.dexId]||0)+1;
+  // v0.35 fix — species cap was never enforced on evolution, only on wild catches. Every
+  // evolution path routes through this shared helper, so checking here (once) covers all of
+  // them: checkEvolution()'s three paths, applyItemEvolution(), and professorAutoTestEvolutions()
+  // 's auto-apply. May release `p` itself (the individual that just evolved) or a different,
+  // weaker same-species individual — see checkSpeciesCap() for the full priority order.
+  checkSpeciesCap(p);
 }
 
 // ── PROFESSOR EVOLUTION RESEARCH ──
@@ -2406,6 +2617,20 @@ function ivTotal(p){
   const iv=p&&p.ivs?p.ivs:{hp:0,atk:0,def:0,spatk:0,spdef:0,spd:0};
   return iv.hp+iv.atk+iv.def+iv.spatk+iv.spdef+iv.spd;
 }
+// v0.35 — sum of all 4 equipped move slots' power (empty slots contribute 0). Used by the
+// species-cap release-priority tiebreak below.
+function movePowerTotal(p){
+  return (p.equippedMoves||[]).reduce((sum,m)=>sum+((m&&m.power)||0),0);
+}
+// Removes a Pokemon from the box and, if currently fielded, its party slot too — shared by
+// every release path in checkSpeciesCap() below. v0.35 — previously each release path only
+// filtered state.dex; harmless for wild-catch releases (a fresh catch is never already in the
+// party), but evolution can now trigger a release (see below), and an evolved individual CAN be
+// a current party member — leaving state.party unfiltered would orphan that slot.
+function removePokemonFromBoxAndParty(id){
+  state.dex=state.dex.filter(p=>p.id!==id);
+  state.party=state.party.filter(p=>p.id!==id);
+}
 
 // Per-species cap: flat max 6 non-shiny individuals, regardless of aide count. Shiny exempt.
 // Catch-then-release: stats (totalCatches, dexHistory) already counted before this is called.
@@ -2414,26 +2639,44 @@ function ivTotal(p){
 // v0.32 — Family IV Inheritance: on overflow, instead of a flat release, the wild's IVs may be
 // donated to a lower-IV family member (any branch, any species in the evolutionary tree) before
 // the wild itself is discarded. See DESIGN.md "Family IV Inheritance on Species-Cap Overflow".
-function checkSpeciesCap(caught){
-  if(caught.isShiny||isPerfectIV(caught)) return; // shinies and perfect-IV individuals never released
+// v0.35 — BUG: applySpeciesSwap() (every evolution path) never called this at all — only wild
+// catches did. An evolution could push a species over cap with zero check. FIX: this function is
+// now also called after every evolution (see applySpeciesSwap below), and the parameter is
+// renamed `individual` to reflect that it's no longer catch-specific. Also: the old fallback
+// ALWAYS released the incoming individual specifically. Now, when IV-donation doesn't apply, the
+// WEAKEST individual across the full same-species pool (not just the incoming one) is released —
+// compared by total equipped-move power (movePowerTotal(), lowest released), ties broken by
+// catch order (p.id ascending = earlier; the LATER catch is released, keeping the original/
+// longest-held individual). An existing weaker individual can now be released instead of the new
+// arrival.
+function checkSpeciesCap(individual){
+  if(individual.isShiny||isPerfectIV(individual)) return; // shinies and perfect-IV individuals never released
   const cap=state.speciesCap||6;
-  const liveNonShiny=state.dex.filter(p=>p.pokedexId===caught.pokedexId&&!p.isShiny&&!isPerfectIV(p));
+  const liveNonShiny=state.dex.filter(p=>p.pokedexId===individual.pokedexId&&!p.isShiny&&!isPerfectIV(p));
   if(liveNonShiny.length<=cap) return;
-  const familyIds=getFamilyDexIds(caught.pokedexId);
-  const pool=state.dex.filter(p=>p.id!==caught.id&&familyIds.includes(p.pokedexId));
+  const familyIds=getFamilyDexIds(individual.pokedexId);
+  const pool=state.dex.filter(p=>p.id!==individual.id&&familyIds.includes(p.pokedexId));
   pool.sort((a,b)=>b.level-a.level);
-  const wildIV=ivTotal(caught);
+  const wildIV=ivTotal(individual);
   const recipient=pool.find(p=>ivTotal(p)<wildIV);
   if(recipient){
-    recipient.ivs=caught.ivs;
+    recipient.ivs=individual.ivs;
     recalcStats(recipient);
     recipient.currentHP=recipient.maxHP;
-    state.dex=state.dex.filter(p=>p.id!==caught.id);
-    addLog(getDisplayName(recipient)+' #'+recipient.id+' inherited superior IVs from the newly caught '+getDisplayName(caught)+'!','evolve');
+    removePokemonFromBoxAndParty(individual.id);
+    addLog(getDisplayName(recipient)+' #'+recipient.id+' inherited superior IVs from the newly caught '+getDisplayName(individual)+'!','evolve');
     return;
   }
-  state.dex=state.dex.filter(p=>p.id!==caught.id);
-  addLog('Released '+getDisplayName(caught)+' #'+caught.id+' — species cap reached ('+cap+' max).','info');
+  // No IV-donation recipient — release the weakest of the full same-species pool (liveNonShiny
+  // already includes `individual` itself, since both a fresh catch and a freshly-evolved
+  // individual are already present in state.dex by the time this runs).
+  let releaseTarget=liveNonShiny[0];
+  liveNonShiny.forEach(p=>{
+    const rp=movePowerTotal(releaseTarget), pp=movePowerTotal(p);
+    if(pp<rp||(pp===rp&&p.id>releaseTarget.id)) releaseTarget=p;
+  });
+  removePokemonFromBoxAndParty(releaseTarget.id);
+  addLog('Released '+getDisplayName(releaseTarget)+' #'+releaseTarget.id+' — species cap reached ('+cap+' max).','info');
 }
 
 // v0.26 — dropdown handler for the editable per-species cap. Raising applies immediately (never
@@ -2818,7 +3061,7 @@ function startMission(){
 
 // ── MISSION MODAL — DESTINATION SORT (v0.21) ──
 // Transient UI-only state — not persisted to `state`, resets every time the modal opens.
-let missionSortField=null; // null|'distance'|'alpha'|'encounters'
+let missionSortField=null; // null|'distance'|'alpha'|'encounters'|'catches'
 let missionSortDir='asc';
 // v0.27 — Shop Condensing. Only applied when the location's shopTier is 'full' (currently
 // Celadon City, 58 purchasable items) — basic/lab tier shops stay flat lists (see DESIGN.md
@@ -2848,6 +3091,17 @@ function computeLocationSightings(locId){
   const log=state.locationEncounterLog[locId];
   if(!log) return 0;
   return Object.values(log).reduce((sum,v)=>sum+((v&&v.seen)||0),0);
+}
+// v0.35 — Catches sort/Wander metric = caught count summed across all species logged at a
+// location, from the same locationEncounterLog. Sibling to computeLocationSightings() above.
+function computeLocationCatches(locId){
+  const log=state.locationEncounterLog[locId];
+  if(!log) return 0;
+  return Object.values(log).reduce((sum,v)=>sum+((v&&v.caught)||0),0);
+}
+// v0.35 — dispatches to whichever metric is active for the given wander session/sort mode.
+function computeLocationMetric(locId,metric){
+  return metric==='catches'?computeLocationCatches(locId):computeLocationSightings(locId);
 }
 
 // v0.33 — "Wander" mode: continuously re-routes toward whichever reachable, discovered,
@@ -2891,11 +3145,12 @@ function evaluateWanderTarget(){
   const currentLoc=state.currentLocation||'palletTown';
   const reachable=getReachableDiscoveredLocations(currentLoc).filter(locId=>buildRouteTable(locId).length>0);
   if(!reachable.length) return; // nothing reachable can ever have an encounter — nothing to do
+  const metric=state.wanderMetric||'encounters'; // v0.35 — 'encounters'|'catches', set at dispatch
   const currentIsEligible=reachable.includes(state.missionDestination);
   let best=currentIsEligible?state.missionDestination:reachable[0];
-  let bestCount=computeLocationSightings(best);
+  let bestCount=computeLocationMetric(best,metric);
   reachable.forEach(locId=>{
-    const c=computeLocationSightings(locId);
+    const c=computeLocationMetric(locId,metric);
     if(c<bestCount){ best=locId; bestCount=c; }
   });
   if(best===state.missionDestination) return; // current target still eligible and lowest (or tied) — no redirect
@@ -2915,13 +3170,14 @@ function evaluateWanderTarget(){
   state.travelPath=path;
   state.travelPathIndex=-1;
   const destLocData=typeof LOCATIONS!=='undefined'?getLocation(best):null;
-  addLog('🧭 Carl Oak changes course — new lowest-encounter destination: '+(destLocData?destLocData.name:best)+'.','info');
+  const metricLabel=metric==='catches'?'lowest-catch':'lowest-encounter'; // v0.35
+  addLog('🧭 Carl Oak changes course — new '+metricLabel+' destination: '+(destLocData?destLocData.name:best)+'.','info');
 }
 
 function destSortButtonHtml(field,label){
   const active=missionSortField===field;
   const arrow=active?(missionSortDir==='asc'?' ▲':' ▼'):'';
-  return '<button onclick="setMissionSort(\''+field+'\')" style="flex:1;padding:6px 2px;font-size:10px;'+(active?'border-color:#5dade2;color:#5dade2;':'')+'">'+label+arrow+'</button>';
+  return '<button onclick="setMissionSort(\''+field+'\')" style="flex:1;padding:6px 2px;font-size:10px;'+(active?'border-color:var(--main-text-secondary);color:var(--main-text);':'')+'">'+label+arrow+'</button>';
 }
 
 function setMissionSort(field){
@@ -2942,8 +3198,9 @@ function renderDestList(){
   // v0.28 — while sorted by Encounters specifically, hide locations with zero wild encounter
   // table rows (buildRouteTable().length===0) — these can never contribute a nonzero encounter
   // count and only cluttered that sort (Day Care, pure shop towns, Indigo pre-8-badges, etc.).
-  // Distance/Alphabetical sorts are unaffected — full reachable list still shown there.
-  if(missionSortField==='encounters'){
+  // v0.35 — same filter applies to Catches, for the same reason. Distance/Alphabetical sorts
+  // are unaffected — full reachable list still shown there.
+  if(missionSortField==='encounters'||missionSortField==='catches'){
     reachable=reachable.filter(loc=>buildRouteTable(loc).length>0);
   }
   if(missionSortField){
@@ -2961,6 +3218,8 @@ function renderDestList(){
         const aName=(aLoc?aLoc.name:a); const bName=(bLoc?bLoc.name:b);
         const cmp=aName.localeCompare(bName,undefined,{numeric:true,sensitivity:'base'});
         return missionSortDir==='asc'?cmp:-cmp;
+      } else if(missionSortField==='catches'){
+        av=computeLocationCatches(a); bv=computeLocationCatches(b); // v0.35
       } else {
         av=computeLocationSightings(a); bv=computeLocationSightings(b);
       }
@@ -2975,12 +3234,12 @@ function renderDestList(){
       ?reachable.map(loc=>{
           const locData=typeof LOCATIONS!=='undefined'?getLocation(loc):null;
           const name=locData?locData.name:loc;
-          return '<button onclick="selectMissionDest(\''+loc+'\')" style="display:block;width:100%;margin-bottom:6px;padding:10px;text-align:left;border-color:#5dade2;color:#5dade2;">'+name+'</button>';
+          return '<button onclick="selectMissionDest(\''+loc+'\')" style="display:block;width:100%;margin-bottom:6px;padding:10px;text-align:left;border-color:var(--main-border);color:var(--main-text-secondary);">'+name+'</button>';
         }).join('')
       : '<div style="color:#e67e22;font-size:11px;padding:8px 0;">No destinations reachable from here.</div>';
   }
   const btnWrap=document.getElementById('dest-sort-buttons');
-  if(btnWrap) btnWrap.innerHTML=destSortButtonHtml('distance','Distance')+destSortButtonHtml('alpha','Alphabetical')+destSortButtonHtml('encounters','Encounters');
+  if(btnWrap) btnWrap.innerHTML=destSortButtonHtml('distance','Distance')+destSortButtonHtml('alpha','Alphabetical')+destSortButtonHtml('encounters','Encounters')+destSortButtonHtml('catches','Catches');
 }
 
 function showMissionModal(){
@@ -2993,40 +3252,53 @@ function showMissionModal(){
   modal.id='mission-modal';
   modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
   missionShopCategory=null; // v0.27 — reset shop category drill-down each time the modal opens
-  const sortButtonsHtml='<div id="dest-sort-buttons" style="display:flex;gap:4px;margin-bottom:8px;">'+destSortButtonHtml('distance','Distance')+destSortButtonHtml('alpha','Alphabetical')+destSortButtonHtml('encounters','Encounters')+'</div>';
-  // v0.33 — "Wander" mode: continuously re-routes toward the lowest-encounter reachable location
-  // instead of a fixed destination. Mutually exclusive with manual destination selection.
-  const wanderButtonHtml='<button onclick="selectWanderMode()" id="wander-select-btn" style="width:100%;padding:8px;margin-bottom:8px;font-size:11px;border-color:#5dade2;color:#5dade2;">🧭 Wander (lowest-encounter destination)</button>';
-  modal.innerHTML='<div style="background:#16213e;border:1px solid #5dade2;border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;"><div style="color:#5dade2;font-size:13px;font-weight:bold;margin-bottom:12px;">🗺 Choose Destination</div><div style="font-size:10px;color:#6080a0;margin-bottom:8px;">From: '+currentLoc+'</div>'+wanderButtonHtml+sortButtonsHtml+'<div id="dest-list-container" style="max-height:220px;overflow-y:auto;"></div><div id="mission-summary" style="color:#a0a0c0;font-size:11px;margin:10px 0;min-height:18px;"></div><div id="method-prefs"></div><div id="shop-section-container"></div><div style="display:flex;gap:8px;"><button onclick="document.getElementById(\'mission-modal\').remove()" style="flex:1;">✕ Cancel</button><button id="confirm-mission" onclick="confirmMission()" class="primary" style="flex:1;" disabled>▶ Dispatch</button></div></div>';
+  const sortButtonsHtml='<div id="dest-sort-buttons" style="display:flex;gap:4px;margin-bottom:8px;">'+destSortButtonHtml('distance','Distance')+destSortButtonHtml('alpha','Alphabetical')+destSortButtonHtml('encounters','Encounters')+destSortButtonHtml('catches','Catches')+'</div>';
+  // v0.33 — "Wander" mode: continuously re-routes toward the lowest reachable location by a
+  // chosen metric, instead of a fixed destination. Mutually exclusive with manual destination
+  // selection. v0.35 — two metrics, not one: Encounters (original) and Catches (new), each its
+  // own button, since dropping player choice of metric wasn't the intent behind adding Catches.
+  const wanderButtonHtml=
+    '<button onclick="selectWanderMode(\'encounters\')" id="wander-select-btn-encounters" style="width:100%;padding:8px;margin-bottom:4px;font-size:11px;border-color:var(--main-border);color:var(--main-text-secondary);">🧭 Wander (lowest encounters)</button>'+
+    '<button onclick="selectWanderMode(\'catches\')" id="wander-select-btn-catches" style="width:100%;padding:8px;margin-bottom:8px;font-size:11px;border-color:var(--main-border);color:var(--main-text-secondary);">🧭 Wander (lowest catches)</button>';
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;"><div style="color:var(--accent);font-size:13px;font-weight:bold;margin-bottom:12px;">🗺 Choose Destination</div><div style="font-size:10px;color:var(--main-text-muted);margin-bottom:8px;">From: '+currentLoc+'</div>'+wanderButtonHtml+sortButtonsHtml+'<div id="dest-list-container" style="max-height:220px;overflow-y:auto;"></div><div id="mission-summary" style="color:var(--main-text-secondary);font-size:11px;margin:10px 0;min-height:18px;"></div><div id="method-prefs"></div><div id="shop-section-container"></div><div style="display:flex;gap:8px;"><button onclick="document.getElementById(\'mission-modal\').remove()" style="flex:1;">✕ Cancel</button><button id="confirm-mission" onclick="confirmMission()" class="primary" style="flex:1;" disabled>▶ Dispatch</button></div></div>';
   document.body.appendChild(modal);
   renderDestList();
   renderShopSection(currentLoc);
   state._missionDest=null;
   state._wanderSelected=false;
+  state._wanderMetric=null;
 }
 
 // v0.33 — picks the current lowest-encounter reachable location as the mission target and marks
 // the dispatch as Wander mode; confirmMission() sets state.wanderMode=true on actual dispatch.
 // v0.33 fix — same encounter-capable filter as evaluateWanderTarget(): a location with zero
 // possible wild encounters (e.g. Pallet Town) is never a useful initial Wander pick either.
-function selectWanderMode(){
+// v0.35 — metric param ('encounters'|'catches') selects which of the two Wander buttons was
+// pressed; stored in state._wanderMetric so confirmMission() can carry it into state.wanderMetric.
+function selectWanderMode(metric){
   const currentLoc=state.currentLocation||'palletTown';
   const reachable=getReachableDiscoveredLocations(currentLoc).filter(locId=>buildRouteTable(locId).length>0);
   if(!reachable.length){ addLog('No reachable destinations with possible encounters for Wander mode.','fail'); return; }
-  let best=reachable[0], bestCount=computeLocationSightings(reachable[0]);
+  let best=reachable[0], bestCount=computeLocationMetric(reachable[0],metric);
   reachable.forEach(locId=>{
-    const c=computeLocationSightings(locId);
+    const c=computeLocationMetric(locId,metric);
     if(c<bestCount){ best=locId; bestCount=c; }
   });
   state._missionDest=best;
   state._wanderSelected=true;
+  state._wanderMetric=metric;
   const locData=typeof LOCATIONS!=='undefined'?getLocation(best):null;
   const name=locData?locData.name:best;
-  document.getElementById('mission-summary').textContent='🧭 Carl Oak → Wander mode (currently: '+name+')';
+  const metricLabel=metric==='catches'?'catches':'encounters';
+  document.getElementById('mission-summary').textContent='🧭 Carl Oak → Wander mode, by '+metricLabel+' (currently: '+name+')';
   document.getElementById('confirm-mission').disabled=false;
   const el=document.getElementById('method-prefs'); if(el) el.innerHTML='';
-  const btn=document.getElementById('wander-select-btn');
-  if(btn) btn.style.cssText='width:100%;padding:8px;margin-bottom:8px;font-size:11px;border-color:#f4d03f;color:#f4d03f;';
+  const encBtn=document.getElementById('wander-select-btn-encounters');
+  const catchBtn=document.getElementById('wander-select-btn-catches');
+  const selectedStyle='width:100%;padding:8px;margin-bottom:{{MB}};font-size:11px;border-color:var(--accent);color:var(--accent-light);';
+  const unselectedStyle='width:100%;padding:8px;margin-bottom:{{MB}};font-size:11px;border-color:var(--main-border);color:var(--main-text-secondary);';
+  if(encBtn) encBtn.style.cssText=(metric==='encounters'?selectedStyle:unselectedStyle).replace('{{MB}}','4px');
+  if(catchBtn) catchBtn.style.cssText=(metric==='catches'?selectedStyle:unselectedStyle).replace('{{MB}}','8px');
 }
 
 // ── SHOP SECTION (v0.27 — category condensing for full-tier shops) ──
@@ -3083,7 +3355,7 @@ function renderShopSection(locId){
       const it=getItem(item.itemId);
       return it&&SHOP_CATEGORY_MAP[it.itemCategory]===missionShopCategory;
     });
-    body='<button onclick="shopCategoryBack()" style="margin-bottom:8px;padding:6px 10px;font-size:10px;border-color:#5dade2;color:#5dade2;">◀ Back to Categories</button>'
+    body='<button onclick="shopCategoryBack()" style="margin-bottom:8px;padding:6px 10px;font-size:10px;border-color:var(--main-border);color:var(--main-text-secondary);">◀ Back to Categories</button>'
       +catItems.map(buildShopItemRowHtml).join('');
   }
   container.innerHTML='<div style="margin-top:10px;border-top:1px solid #0f3460;padding-top:10px;">'+shopHeaderHtml()+body+'</div>';
@@ -3097,8 +3369,8 @@ function showPreambleModal(){
   const modal=document.createElement('div');
   modal.id='preamble-modal';
   modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:1300;display:flex;align-items:center;justify-content:center;padding:16px;';
-  modal.innerHTML='<div style="background:#16213e;border:1px solid #e63946;border-radius:8px;padding:18px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;">'
-    +'<div style="color:#e63946;font-size:14px;font-weight:bold;margin-bottom:12px;">Welcome, Professor!</div>'
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:18px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;">'
+    +'<div style="color:var(--accent);font-size:14px;font-weight:bold;margin-bottom:12px;">Welcome, Professor!</div>'
     +'<div style="color:#e0e0e0;font-size:12px;line-height:1.7;margin-bottom:16px;">'
     +'Welcome to PokeProf where you are a budding professor, looking to research Pokemon and compile your findings into your very own Pokedex.<br><br>'
     +'You are in full control of your aides\' movements, though they will research for you around the clock whether you have the game open or not. They will keep researching the same area until you direct them to move to a new location.<br><br>'
@@ -3171,9 +3443,11 @@ function showInfoMenu(){
 }
 function renderInfoTopicList(){
   const modal=document.getElementById('info-modal'); if(!modal) return;
-  const tiles=INFO_TOPICS.map(t=>'<button onclick="renderInfoTopicPage(\''+t.id+'\')" style="display:block;width:100%;margin-bottom:6px;padding:10px;text-align:left;border-color:#5dade2;color:#5dade2;">'+t.title+'</button>').join('');
-  modal.innerHTML='<div style="background:#16213e;border:1px solid #5dade2;border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;">'
-    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:#5dade2;font-size:13px;font-weight:bold;">ℹ️ Info</div><button onclick="document.getElementById(\'info-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'
+  const tiles=INFO_TOPICS.map(t=>'<button onclick="renderInfoTopicPage(\''+t.id+'\')" style="display:block;width:100%;margin-bottom:6px;padding:10px;text-align:left;border-color:var(--main-border);color:var(--main-text-secondary);">'+t.title+'</button>').join('');
+  const displayTile='<button onclick="renderDisplaySettings()" style="display:block;width:100%;margin-bottom:6px;padding:10px;text-align:left;border-color:var(--accent);color:var(--accent-light);">🎨 Display</button>';
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:var(--accent);font-size:13px;font-weight:bold;">ℹ️ Info</div><button onclick="document.getElementById(\'info-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'
+    +displayTile
     +tiles
     +'</div>';
   modal.onclick=(e)=>{ if(e.target===modal) modal.remove(); };
@@ -3183,11 +3457,11 @@ function renderInfoTopicPage(topicId){
   const topic=INFO_TOPICS.find(t=>t.id===topicId); if(!topic) return;
   const body=topic.sections.map(s=>
     (s.header?'<div style="color:#f4d03f;font-size:12px;font-weight:bold;margin:10px 0 4px;">'+s.header+'</div>':'')
-    +'<div style="color:#e0e0e0;font-size:11px;line-height:1.6;">'+s.text+'</div>'
+    +'<div style="color:var(--main-text);font-size:11px;line-height:1.6;">'+s.text+'</div>'
   ).join('');
-  modal.innerHTML='<div style="background:#16213e;border:1px solid #5dade2;border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;">'
-    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><button onclick="renderInfoTopicList()" style="padding:5px 10px;font-size:10px;border-color:#5dade2;color:#5dade2;">◀ Back</button><button onclick="document.getElementById(\'info-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'
-    +'<div style="color:#5dade2;font-size:13px;font-weight:bold;margin-bottom:8px;">'+topic.title+'</div>'
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><button onclick="renderInfoTopicList()" style="padding:5px 10px;font-size:10px;border-color:var(--accent);color:var(--accent-light);">◀ Back</button><button onclick="document.getElementById(\'info-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'
+    +'<div style="color:var(--accent);font-size:13px;font-weight:bold;margin-bottom:8px;">'+topic.title+'</div>'
     +body
     +'</div>';
   modal.onclick=(e)=>{ if(e.target===modal) modal.remove(); };
@@ -3196,8 +3470,13 @@ function renderInfoTopicPage(topicId){
 function selectMissionDest(locId){
   state._missionDest=locId;
   state._wanderSelected=false;
-  const btn=document.getElementById('wander-select-btn');
-  if(btn) btn.style.cssText='width:100%;padding:8px;margin-bottom:8px;font-size:11px;border-color:#5dade2;color:#5dade2;';
+  state._wanderMetric=null;
+  const unselectedStyleEnc='width:100%;padding:8px;margin-bottom:4px;font-size:11px;border-color:var(--main-border);color:var(--main-text-secondary);';
+  const unselectedStyleCatch='width:100%;padding:8px;margin-bottom:8px;font-size:11px;border-color:var(--main-border);color:var(--main-text-secondary);';
+  const encBtn=document.getElementById('wander-select-btn-encounters');
+  const catchBtn=document.getElementById('wander-select-btn-catches');
+  if(encBtn) encBtn.style.cssText=unselectedStyleEnc;
+  if(catchBtn) catchBtn.style.cssText=unselectedStyleCatch;
   const locData=typeof LOCATIONS!=='undefined'?getLocation(locId):null;
   const name=locData?locData.name:locId;
   // v0.27 — Daycare has nothing to research; clarify that breeding is managed via the Map tab.
@@ -3326,6 +3605,7 @@ function confirmMission(){
   state.missionDestination=state._missionDest||'route1';
   state.missionOrigin=state.currentLocation||'palletTown';
   state.wanderMode=!!state._wanderSelected; // v0.33 — Wander mode, mutually exclusive with a fixed manual pick
+  state.wanderMetric=state._wanderSelected?(state._wanderMetric||'encounters'):state.wanderMetric; // v0.35
   // v0.26 — dispatching to your CURRENT location (now a valid choice — see
   // getReachableDiscoveredLocations) needs 0 travel, but buildTravelPath() only ever returns a
   // path when it finds an edge leading back to the start, which an empty/same-location "path"
@@ -3366,7 +3646,7 @@ function recallMission(){
 // Always calls showFindingsReport().
 function endMission(reason='faint'){
   state.currentEncounter=null;
-  if(reason==='recall') state.wanderMode=false; // v0.33 — Wander is per-mission, cleared on recall like missionDestination
+  if(reason==='recall'){ state.wanderMode=false; state.wanderMetric=null; } // v0.33/v0.35 — Wander is per-mission, cleared on recall like missionDestination
   const returnLocId=state.lastHealLocation||state.missionOrigin||'palletTown';
   const originLoc=typeof LOCATIONS!=='undefined'?getLocation(returnLocId):null;
   const originName=originLoc?originLoc.name:returnLocId;
@@ -3715,7 +3995,7 @@ function buildDaycareHtml(){
         '<div style="color:'+(queued>0?'#2ecc71':'#a0a0c0')+';font-size:10px;margin-bottom:6px;">'+(queued>0?queued+' egg'+(queued>1?'s':'')+' ready · ':'')+'next in '+remainingMin+':'+remainingSec.toString().padStart(2,'0')+'</div>'+
         '<div style="display:flex;gap:6px;">'+
           '<button '+(isCurrent&&queued>0?'':'disabled')+' onclick="collectDaycareSlot('+i+')" style="flex:1;font-size:10px;border-color:#2ecc71;color:#2ecc71;">Collect'+(queued>0?' ('+queued+')':'')+'</button>'+
-          '<button onclick="releaseDaycarePair('+i+')" style="flex:1;font-size:10px;border-color:#e63946;color:#e63946;">Pull Out</button>'+
+          '<button onclick="releaseDaycarePair('+i+')" style="flex:1;font-size:10px;border-color:var(--c-danger);color:var(--c-danger);">Pull Out</button>'+
         '</div>';
     }
     html+='</div>';
@@ -3802,8 +4082,8 @@ function renderDaycareModalStep1(){
   const rows=options.length
     ?options.map(p=>daycarePickerRowHtml(p,'selectDaycareParentA('+p.id+')')).join('')
     :'<div style="color:#555;font-size:11px;">No eligible Pokémon.</div>';
-  modal.innerHTML='<div style="background:#16213e;border:1px solid #5dade2;border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;max-height:85vh;overflow-y:auto;">'+
-    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:#5dade2;font-size:13px;font-weight:bold;">Day Care — Slot '+(daycareModalSlot+1)+' · Parent A</div><button onclick="document.getElementById(\'daycare-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'+
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;max-height:85vh;overflow-y:auto;">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:var(--accent);font-size:13px;font-weight:bold;">Day Care — Slot '+(daycareModalSlot+1)+' · Parent A</div><button onclick="document.getElementById(\'daycare-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'+
     rows+
     '</div>';
 }
@@ -3821,10 +4101,10 @@ function renderDaycareModalStep2(){
     :'<div style="color:#555;font-size:11px;">No compatible partners.</div>';
   const pB=daycareParentB?state.dex.find(p=>p.id===daycareParentB):null;
   const previewHtml=pB?buildDaycarePreviewHtml(pA,pB):'';
-  modal.innerHTML='<div style="background:#16213e;border:1px solid #5dade2;border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;max-height:85vh;overflow-y:auto;">'+
-    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><div style="color:#5dade2;font-size:13px;font-weight:bold;">Day Care — Slot '+(daycareModalSlot+1)+' · Parent B</div><button onclick="document.getElementById(\'daycare-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'+
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;max-height:85vh;overflow-y:auto;">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><div style="color:var(--accent);font-size:13px;font-weight:bold;">Day Care — Slot '+(daycareModalSlot+1)+' · Parent B</div><button onclick="document.getElementById(\'daycare-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'+
     '<div style="color:#a0a0c0;font-size:10px;margin-bottom:8px;">Parent A: '+getDisplayName(pA)+' #'+pA.id+' ('+(pA.gender||'—')+')</div>'+
-    '<button onclick="renderDaycareModalStep1()" style="margin-bottom:8px;padding:5px 10px;font-size:10px;border-color:#5dade2;color:#5dade2;">◀ Back</button>'+
+    '<button onclick="renderDaycareModalStep1()" style="margin-bottom:8px;padding:5px 10px;font-size:10px;border-color:var(--accent);color:var(--accent-light);">◀ Back</button>'+
     rows+
     '<div id="daycare-preview" style="color:#a0a0c0;font-size:11px;min-height:32px;margin:8px 0;">'+previewHtml+'</div>'+
     '<button id="daycare-confirm-btn" '+(pB?'':'disabled')+' onclick="confirmDaycareAssignFromModal()" class="primary" style="width:100%;">Drop Off Pair</button>'+
@@ -3962,12 +4242,12 @@ function showPokemonDetail(catchId){
   const badgeText=badge==='🦄'?'🦄 SHINY + PERFECT IV':badge==='💥'?'💥 PERFECT IV':badge==='✨'?'✨ SHINY':'';
   const badgeHtml=badgeText?'<div style="color:#f4d03f;">'+badgeText+'</div>':'';
 
-  modal.innerHTML='<div style="background:#16213e;border:1px solid #e63946;border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;">'
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;">'
     // v0.34 fix — getDisplayName(p) already appends "(formName)" for un-nicknamed form-variant
     // individuals, so the old unconditional +(p.formName?...) here doubled it (e.g. "Raichu (Alolan)
     // (Alolan)"). Removed for that case. For the nicknamed case, the species parenthetical is now
     // form-aware too — it previously showed just "(Raichu)", silently dropping form context.
-    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:#e63946;font-size:14px;font-weight:bold;">#'+(p.pokedexId||'?')+' '+getDisplayName(p)+(p.nickname?' <span style="color:#6080a0;font-size:11px;">('+p.species+(p.formName?' ('+p.formName+')':'')+')</span>':'')+' (catch #'+p.id+')</div><button onclick="document.getElementById(\'poke-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:var(--accent);font-size:14px;font-weight:bold;">#'+(p.pokedexId||'?')+' '+getDisplayName(p)+(p.nickname?' <span style="color:#6080a0;font-size:11px;">('+p.species+(p.formName?' ('+p.formName+')':'')+')</span>':'')+' (catch #'+p.id+')</div><button onclick="document.getElementById(\'poke-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'
     +'<div style="color:#a0a0c0;font-size:11px;line-height:2;border-bottom:1px solid #0f3460;margin-bottom:10px;padding-bottom:10px;">'
     +'<div>Level: <span style="color:#fff">'+p.level+'</span> &nbsp;·&nbsp; Gender: <span style="color:#fff">'+p.gender+'</span></div>'
     +'<div style="margin:2px 0;">'+typeBadgeHtml(entry?entry.type1:null)+typeBadgeHtml(entry?entry.type2:null)+'</div>'
@@ -4071,11 +4351,11 @@ function openMoveSlot(catchId,slotIndex){
       qtyPicker+
       '<div style="display:flex;gap:8px;">'+
         '<button '+((tmCount<1||atCap)?'disabled':'')+' onclick="'+upgradeOnclick+'" style="flex:1;'+(atCap?'':'border-color:#2ecc71;color:#2ecc71;')+'">'+(atCap?'Maxed':'⬆ Upgrade')+'</button>'+
-        '<button '+(tmCount<1?'disabled':'')+' onclick="showMoveChangeOptions('+catchId+','+slotIndex+')" style="flex:1;border-color:#5dade2;color:#5dade2;">🔁 Change</button>'+
+        '<button '+(tmCount<1?'disabled':'')+' onclick="showMoveChangeOptions('+catchId+','+slotIndex+')" style="flex:1;border-color:var(--main-border);color:var(--main-text-secondary);">🔁 Change</button>'+
       '</div>'+
-      (tmCount<1?'<div style="color:#e63946;font-size:10px;margin-top:8px;">Need 1 TM</div>':'');
+      (tmCount<1?'<div style="color:var(--c-danger);font-size:10px;margin-top:8px;">Need 1 TM</div>':'');
   }
-  modal.innerHTML='<div style="background:#16213e;border:1px solid #5dade2;border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;max-height:85vh;overflow-y:auto;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:#5dade2;font-size:13px;font-weight:bold;">Move Slot '+(slotIndex+1)+'</div><button onclick="document.getElementById(\'move-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div><div id="move-modal-body">'+body+'</div></div>';
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;max-height:85vh;overflow-y:auto;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:var(--accent);font-size:13px;font-weight:bold;">Move Slot '+(slotIndex+1)+'</div><button onclick="document.getElementById(\'move-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div><div id="move-modal-body">'+body+'</div></div>';
   modal.onclick=(e)=>{ if(e.target===modal) modal.remove(); };
   document.body.appendChild(modal);
 }
@@ -4101,7 +4381,7 @@ function buildMovePickerHtml(catchId,slotIndex,mode){
     const color=TYPE_COLORS[o.type]||'#444';
     const emoji=o.category==='Physical'?'💥':'🌀';
     return '<button '+(tmCount<1?'disabled':'')+' onclick="confirmMoveAction('+catchId+','+slotIndex+',\''+mode+'\',\''+o.type+'\',\''+o.category+'\')" style="text-align:left;background:'+color+';color:#fff;border:none;padding:8px 10px;">'+emoji+' '+o.type+' '+o.category+' (cap '+o.powerCap+')</button>';
-  }).join('')+'</div>'+(tmCount<1?'<div style="color:#e63946;font-size:10px;margin-top:6px;">Need 1 TM</div>':'');
+  }).join('')+'</div>'+(tmCount<1?'<div style="color:var(--c-danger);font-size:10px;margin-top:6px;">Need 1 TM</div>':'');
 }
 
 // Spends 1 TM (state.professorBag — TM's bagType is Professor, matching the Items sheet row)
@@ -4184,7 +4464,7 @@ function buildBagSectionHtml(title,bagObj,excludeCategories){
   const rows=Object.entries(bagObj||{}).filter(([id,qty])=>qty>0).map(([id,qty])=>{
     const item=getItem(id);
     if(item&&excludeCategories&&excludeCategories.includes(item.itemCategory)) return null;
-    return '<div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0;"><span style="color:#e0e0e0;">'+(item?item.name:id)+'</span><span style="color:#5dade2;">×'+qty+'</span></div>';
+    return '<div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0;"><span style="color:var(--main-text);">'+(item?item.name:id)+'</span><span style="color:var(--main-text-secondary);">×'+qty+'</span></div>';
   }).filter(Boolean);
   return '<div style="margin-bottom:14px;"><div style="color:#f4d03f;font-size:11px;font-weight:bold;margin-bottom:4px;border-bottom:1px solid #1a4a80;padding-bottom:4px;">'+title+'</div>'+
     (rows.length?rows.join(''):'<div style="color:#555;font-size:10px;padding-top:4px;">Empty</div>')+'</div>';
@@ -4367,7 +4647,7 @@ function evoPlaceholderHtml(){
     '<div style="font-size:16px;color:#555;">?</div></div>';
 }
 function evoArrowHtml(label){
-  return '<div style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;margin:0 4px;flex-shrink:0;"><div style="color:#5dade2;font-size:12px;">→</div><div style="font-size:7px;color:#6080a0;white-space:nowrap;">'+label+'</div></div>';
+  return '<div style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;margin:0 4px;flex-shrink:0;"><div style="color:var(--main-text-secondary);font-size:12px;">→</div><div style="font-size:7px;color:var(--main-text-muted);white-space:nowrap;">'+label+'</div></div>';
 }
 // Root-based walk of EVO_TREE + single-target pokedex.js evolution edges. A root is any family
 // member with no incoming edge from another family member. Each root gets its own row (Nidoran
@@ -4382,10 +4662,19 @@ function renderEvolutionChainVisual(famId,highlightDexId){
   Object.keys(state.dexHistory).forEach(id=>{ seenDexIds.add(parseInt(id)); });
   const edges=[];
   allMembers.forEach(m=>{
-    if(m.evolvesIntoId&&memberSet.has(m.evolvesIntoId)){
+    // v0.35 fix — for species with BOTH a legacy flat evolvesIntoId (pokedex.js) and EVO_TREE
+    // branch rows for the same dexId (e.g. Pikachu: flat field duplicates the EVO_TREE Kantonian
+    // Thunder Stone row, which exists alongside the real Alolan branch), counting both sources
+    // drew the same evolution edge twice. EVO_TREE is authoritative once a species has ANY branch
+    // rows — the flat field is skipped entirely in that case. Confirmed via data audit: 9 species
+    // affected (Pikachu/Raichu, Eevee, Gloom, Poliwhirl, Slowpoke, Scyther, Exeggcute, Cubone,
+    // Koffing) — every one has a flat evolvesIntoId that exactly duplicates one of its own
+    // EVO_TREE rows.
+    const branchRows=getEvolutions(m.dexId);
+    if(!branchRows.length&&m.evolvesIntoId&&memberSet.has(m.evolvesIntoId)){
       edges.push({from:m.dexId,to:m.evolvesIntoId,method:m.evolveMethod,level:m.evolveLevel,item:m.evolveItem,toFormName:null});
     }
-    getEvolutions(m.dexId).forEach(b=>{
+    branchRows.forEach(b=>{
       if(b.toDexId&&memberSet.has(b.toDexId)){
         edges.push({from:m.dexId,to:b.toDexId,method:b.evolveMethod,level:b.evolveLevel,item:b.evolveItem,toFormName:b.toFormName||null});
       }
@@ -4455,7 +4744,7 @@ function renderEvolutionChainVisual(famId,highlightDexId){
       const label=isEdgeConfirmed(e,r)?evoMethodLabel(e):'?';
       return evoArrowHtml(label)+walk(e.to,e.toFormName);
     });
-    return html+branches.join('<span style="color:#5dade2;font-size:11px;margin:0 2px;align-self:center;">/</span>');
+    return html+branches.join('<span style="color:var(--main-text-secondary);font-size:11px;margin:0 2px;align-self:center;">/</span>');
   }
   return roots.map(root=>'<div style="display:flex;align-items:flex-start;flex-wrap:wrap;gap:2px;margin:4px 0;">'+walk(root.dexId,null)+'</div>').join('');
 }
@@ -4478,7 +4767,7 @@ function getAllSpeciesRoster(){
 function renderDexPokedexGrid(){
   const c=document.getElementById('dex-list'); c.innerHTML='';
   const roster=getAllSpeciesRoster();
-  if(!roster.length){ c.innerHTML='<div style="color:#e63946;padding:12px;font-size:11px;">Database not loaded. Check pokedex.js is in GitHub.</div>'; return; }
+  if(!roster.length){ c.innerHTML='<div style="color:var(--c-danger);padding:12px;font-size:11px;">Database not loaded. Check pokedex.js is in GitHub.</div>'; return; }
   const grid=document.createElement('div');
   grid.style.cssText='display:grid;grid-template-columns:repeat(3,1fr);gap:6px;';
   roster.forEach(entry=>{
@@ -4504,7 +4793,7 @@ function renderDexPokedexGrid(){
 
 function renderDexFamilies(){
   const c=document.getElementById('dex-list'); c.innerHTML='';
-  if(typeof POKEDEX_DATA==='undefined'){ c.innerHTML='<div style="color:#e63946;padding:12px;font-size:11px;">Database not loaded. Check pokedex.js is in GitHub.</div>'; return; }
+  if(typeof POKEDEX_DATA==='undefined'){ c.innerHTML='<div style="color:var(--c-danger);padding:12px;font-size:11px;">Database not loaded. Check pokedex.js is in GitHub.</div>'; return; }
   const seenDexIds=new Set();
   state.dex.forEach(p=>{ if(p.pokedexId) seenDexIds.add(p.pokedexId); });
   Object.keys(state.dexHistory).forEach(id=>{ seenDexIds.add(parseInt(id)); });
@@ -4577,7 +4866,7 @@ function buildEvoMethodsHtml(dexId){
 
   let inner='';
   if(r&&isNonEvolutionConfirmed(r)){
-    inner='<div style="font-size:11px;color:#5dade2;padding:4px 0;">Does not evolve</div>';
+    inner='<div style="font-size:11px;color:var(--main-text-secondary);padding:4px 0;">Does not evolve</div>';
   } else {
     // Confirmed — v0.20: a species can have multiple simultaneously confirmed branches
     const confirmedMethods=(r&&r.confirmedBranches)?r.confirmedBranches.map(b=>b.method):[];
@@ -4598,7 +4887,7 @@ function buildEvoMethodsHtml(dexId){
 
   const isOpen=expandedEvoDexIds.has(dexId);
   return '<div style="margin-top:10px;padding-top:10px;border-top:1px solid #1a4a80;">'
-    +'<button onclick="toggleEvoSection(this,'+dexId+')" style="width:100%;text-align:left;padding:6px 8px;background:#0f1a2a;border:1px solid #1a4a80;border-radius:3px;color:#5dade2;font-size:10px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">'
+    +'<button onclick="toggleEvoSection(this,'+dexId+')" style="width:100%;text-align:left;padding:6px 8px;background:#0f1a2a;border:1px solid var(--main-border);border-radius:3px;color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">'
     +'🔬 '+tested+'/'+total+' Evolution Methods Tested '+(isOpen?'▲':'▼')+'</button>'
     +'<div style="display:'+(isOpen?'block':'none')+';margin-top:6px;padding:6px 8px;background:#0a1a2a;border-radius:3px;">'+inner+'</div>'
     +'</div>';
@@ -4628,7 +4917,7 @@ function buildEncounteredAtHtml(dexId){
       const pct=groupTotal>0?Math.round((row.encounterRate/groupTotal)*100):0;
       return method+' '+pct+'%';
     });
-    html+='<div style="font-size:11px;color:#e0e0e0;margin-bottom:4px;"><span style="color:#5dade2;">'+locName+'</span> — '+segments.join(' · ')+'</div>';
+    html+='<div style="font-size:11px;color:var(--main-text);margin-bottom:4px;"><span style="color:var(--main-text-secondary);">'+locName+'</span> — '+segments.join(' · ')+'</div>';
   });
   html+='</div>';
   return html;
@@ -4649,7 +4938,7 @@ function renderDexDetail(){
     caughtOfSpecies.forEach(p=>{ if(p.ability) abilityCounts[p.ability]=(abilityCounts[p.ability]||0)+1; });
     if(Object.keys(abilityCounts).length){
       abilityHtml='<div style="margin-top:10px;padding-top:10px;border-top:1px solid #1a4a80;"><div style="color:#a0a0c0;font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Observed Abilities</div>'+
-        Object.entries(abilityCounts).map(([ab,cnt])=>'<div style="font-size:11px;color:#e0e0e0;">'+ab+' <span style="color:#5dade2;">('+cnt+')</span></div>').join('')+'</div>';
+        Object.entries(abilityCounts).map(([ab,cnt])=>'<div style="font-size:11px;color:var(--main-text);">'+ab+' <span style="color:var(--main-text-secondary);">('+cnt+')</span></div>').join('')+'</div>';
     }
   }
   let genderHtml='';
@@ -4657,7 +4946,7 @@ function renderDexDetail(){
     const mCount=caughtOfSpecies.filter(p=>p.gender==='M').length;
     const fCount=caughtOfSpecies.filter(p=>p.gender==='F').length;
     if(mCount+fCount>0){
-      genderHtml='<div style="margin-top:8px;font-size:11px;color:#a0a0c0;">Gender: <span style="color:#5dade2;">'+mCount+'M / '+fCount+'F</span></div>';
+      genderHtml='<div style="margin-top:8px;font-size:11px;color:var(--main-text-secondary);">Gender: <span style="color:var(--main-text-secondary);">'+mCount+'M / '+fCount+'F</span></div>';
     }
   }
   const historyCount=state.dexHistory[dexSelectedDexId]||0;
@@ -4667,7 +4956,7 @@ function renderDexDetail(){
   const encounteredAtHtml=buildEncounteredAtHtml(dexSelectedDexId);
   const header=document.createElement('div');
   header.className='dex-entry';
-  header.innerHTML='<div style="display:flex;gap:12px;align-items:flex-start;"><img src="'+sprite+'" style="width:91px;height:91px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div style="color:#fff;font-size:14px;font-weight:bold;">#'+dexSelectedDexId+' '+(entry?entry.name:'???')+(entry&&entry.formName?'<span style="color:#a0a0c0;font-size:11px;"> ('+entry.formName+')</span>':'')+(hasLiveShiny(dexSelectedDexId)?'<span class="shiny-badge">✨</span>':'')+'</div><div style="color:#5dade2;font-size:11px;margin-top:1px;">Dex #'+dexSelectedDexId+'</div>'+(entry&&entry.category?'<div style="color:#a0a0c0;font-size:10px;margin-top:2px;">"'+entry.category+'"</div>':'')+'<div style="display:flex;gap:5px;margin-top:6px;">'+typeBadge(entry?entry.type1:null)+typeBadge(entry?entry.type2:null)+'</div><div style="color:#9090b0;font-size:10px;margin-top:5px;">'+(heightDisplay?'📏 '+heightDisplay:'')+(heightDisplay&&weightDisplay?' · ':'')+(weightDisplay?'⚖️ '+weightDisplay:'')+'</div></div></div>'+(entry&&entry.flavorText?'<div style="color:#a0c0a0;font-size:11px;font-style:italic;margin-top:10px;padding-top:10px;border-top:1px solid #1a4a80;line-height:1.6;">'+entry.flavorText+'</div>':'')+'<div style="margin-top:10px;padding-top:10px;border-top:1px solid #1a4a80;"><div style="color:#a0a0c0;font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Base Stats</div>'+(entry?[{label:'HP',val:entry.baseHP,color:'#2ecc71'},{label:'ATK',val:entry.baseAtk,color:'#e74c3c'},{label:'DEF',val:entry.baseDef,color:'#f4d03f'},{label:'SpATK',val:entry.baseSpatk,color:'#9b59b6'},{label:'SpDEF',val:entry.baseSpdef,color:'#5dade2'},{label:'SPD',val:entry.baseSpd,color:'#2ecc71'}].map(s=>'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;"><span style="color:#6080a0;font-size:10px;width:40px;text-align:right;">'+s.label+'</span><span style="color:#fff;font-size:10px;width:28px;text-align:right;">'+(s.val||'?')+'</span><div style="flex:1;background:#0a0a1a;border-radius:2px;height:6px;overflow:hidden;"><div style="width:'+Math.min(100,Math.round(((s.val||0)/255)*100))+'%;height:100%;background:'+s.color+';border-radius:2px;"></div></div></div>').join(''):'<div style="color:#555;font-size:10px;">No stat data available.</div>')+(entry?'<div style="color:#f4d03f;font-size:10px;text-align:right;margin-top:4px;">BST: '+(entry.bst||'?')+'</div>':'')+'</div>'+evoChainHtml+abilityHtml+genderHtml+buildEvoMethodsHtml(dexSelectedDexId)+encounteredAtHtml;
+  header.innerHTML='<div style="display:flex;gap:12px;align-items:flex-start;"><img src="'+sprite+'" style="width:91px;height:91px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div style="color:#fff;font-size:14px;font-weight:bold;">#'+dexSelectedDexId+' '+(entry?entry.name:'???')+(entry&&entry.formName?'<span style="color:#a0a0c0;font-size:11px;"> ('+entry.formName+')</span>':'')+(hasLiveShiny(dexSelectedDexId)?'<span class="shiny-badge">✨</span>':'')+'</div><div style="color:var(--main-text-secondary);font-size:11px;margin-top:1px;">Dex #'+dexSelectedDexId+'</div>'+(entry&&entry.category?'<div style="color:#a0a0c0;font-size:10px;margin-top:2px;">"'+entry.category+'"</div>':'')+'<div style="display:flex;gap:5px;margin-top:6px;">'+typeBadge(entry?entry.type1:null)+typeBadge(entry?entry.type2:null)+'</div><div style="color:#9090b0;font-size:10px;margin-top:5px;">'+(heightDisplay?'📏 '+heightDisplay:'')+(heightDisplay&&weightDisplay?' · ':'')+(weightDisplay?'⚖️ '+weightDisplay:'')+'</div></div></div>'+(entry&&entry.flavorText?'<div style="color:#a0c0a0;font-size:11px;font-style:italic;margin-top:10px;padding-top:10px;border-top:1px solid #1a4a80;line-height:1.6;">'+entry.flavorText+'</div>':'')+'<div style="margin-top:10px;padding-top:10px;border-top:1px solid #1a4a80;"><div style="color:#a0a0c0;font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Base Stats</div>'+(entry?[{label:'HP',val:entry.baseHP,color:'#2ecc71'},{label:'ATK',val:entry.baseAtk,color:'#e74c3c'},{label:'DEF',val:entry.baseDef,color:'#f4d03f'},{label:'SpATK',val:entry.baseSpatk,color:'#9b59b6'},{label:'SpDEF',val:entry.baseSpdef,color:'#5dade2'},{label:'SPD',val:entry.baseSpd,color:'#2ecc71'}].map(s=>'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;"><span style="color:#6080a0;font-size:10px;width:40px;text-align:right;">'+s.label+'</span><span style="color:#fff;font-size:10px;width:28px;text-align:right;">'+(s.val||'?')+'</span><div style="flex:1;background:#0a0a1a;border-radius:2px;height:6px;overflow:hidden;"><div style="width:'+Math.min(100,Math.round(((s.val||0)/255)*100))+'%;height:100%;background:'+s.color+';border-radius:2px;"></div></div></div>').join(''):'<div style="color:#555;font-size:10px;">No stat data available.</div>')+(entry?'<div style="color:#f4d03f;font-size:10px;text-align:right;margin-top:4px;">BST: '+(entry.bst||'?')+'</div>':'')+'</div>'+evoChainHtml+abilityHtml+genderHtml+buildEvoMethodsHtml(dexSelectedDexId)+encounteredAtHtml;
   c.appendChild(header);
   if(totalEver>0&&caughtOfSpecies.length===0){
     const el=document.createElement('div');
@@ -4777,8 +5066,8 @@ let logViewMode='full';
 function renderLogPanel(){
   const logEl=document.getElementById('log'); if(!logEl) return;
   const fullBtn=document.getElementById('log-tab-full'), condBtn=document.getElementById('log-tab-condensed');
-  if(fullBtn) fullBtn.style.cssText='flex:1;padding:6px 2px;font-size:10px;'+(logViewMode==='full'?'border-color:#5dade2;color:#5dade2;':'');
-  if(condBtn) condBtn.style.cssText='flex:1;padding:6px 2px;font-size:10px;'+(logViewMode==='condensed'?'border-color:#5dade2;color:#5dade2;':'');
+  if(fullBtn) fullBtn.style.cssText='flex:1;padding:6px 2px;font-size:10px;'+(logViewMode==='full'?'border-color:var(--main-text-secondary);color:var(--main-text);':'');
+  if(condBtn) condBtn.style.cssText='flex:1;padding:6px 2px;font-size:10px;'+(logViewMode==='condensed'?'border-color:var(--main-text-secondary);color:var(--main-text);':'');
   const source=logViewMode==='condensed'?(state.significantLog||[]):state.log;
   logEl.innerHTML='';
   // v0.34 fix — source is already newest-first (built via .unshift()), matching the live-update
@@ -4890,7 +5179,11 @@ const SAVE_KEY='pokeprof_save';
 // single-target branch is reset, since old saves can't distinguish a legitimately-earned
 // confirmation from a phantom one under the pre-v0.33 rule (see "Professor Auto-Test Loop").
 // Entries for items correctly ruled out (no matching branch at all) are left untouched.
-const SAVE_VERSION=21;
+// v0.35 — SAVE_VERSION 22: state.wanderMetric ('encounters'|'catches', default 'encounters', see
+// "Wander Mode") added — tracks which metric an active Wander session re-routes by. All other
+// v0.35 changes (evolution-chain dedup, migration-gating fix, species-cap-on-evolution, theming)
+// are bug fixes or UI/display-only, no additional schema impact.
+const SAVE_VERSION=22;
 let saveTimer=0;
 
 function saveGame(){
@@ -4920,7 +5213,7 @@ function saveGame(){
         lastHealLocation:state.lastHealLocation||'palletTown',
         dexHistory:state.dexHistory||{},
         freeSkipsRemaining:state.freeSkipsRemaining||0,
-        wanderMode:!!state.wanderMode, significantLog:(state.significantLog||[]).slice(0,50) // v0.33
+        wanderMode:!!state.wanderMode, wanderMetric:state.wanderMetric||'encounters', significantLog:(state.significantLog||[]).slice(0,50) // v0.33/v0.35
       }
     }));
     setSaveIndicator('✔ Saved','saving');
@@ -4934,9 +5227,9 @@ function loadGame(){
     const data=JSON.parse(raw);
     if(!data) return false;
 
-    // ── SAVE_VERSION 21 MIGRATION ──
-    // Accepts v11-v20 saves and migrates them; rejects anything older.
-    if(data.version!==SAVE_VERSION&&data.version!==20&&data.version!==19&&data.version!==18&&data.version!==17&&data.version!==16&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
+    // ── SAVE_VERSION 22 MIGRATION ──
+    // Accepts v11-v21 saves and migrates them; rejects anything older.
+    if(data.version!==SAVE_VERSION&&data.version!==21&&data.version!==20&&data.version!==19&&data.version!==18&&data.version!==17&&data.version!==16&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
     const s=data.state;
 
     // Migrate inventory: v11 had a single `bag`; v12 splits to professorBag/trainerBag.
@@ -4986,7 +5279,7 @@ function loadGame(){
       lastHealLocation:s.lastHealLocation??'palletTown',
       dexHistory:s.dexHistory??{},
       freeSkipsRemaining:s.freeSkipsRemaining??0,
-      wanderMode:s.wanderMode??false, significantLog:s.significantLog??[] // v0.33
+      wanderMode:s.wanderMode??false, wanderMetric:s.wanderMetric??'encounters', significantLog:s.significantLog??[] // v0.33/v0.35
     });
     // v0.26 migration — idle removed: a pre-v0.26 save that was sitting Idle (old
     // missionActive===false) may have a stale missionDestination left over from a previous
@@ -5102,23 +5395,34 @@ function loadGame(){
     // (no matching branch at all — a data fact, never phantom) are left untouched, and so are all
     // non-item methods (level/friendship/friendship-day/friendship-night/use-move/in-party) —
     // those were already gated on real individual state via other mechanisms.
-    Object.keys(state.researchLog).forEach(dexIdStr=>{
-      const dexId=Number(dexIdStr);
-      const r=state.researchLog[dexIdStr];
-      if(!r) return;
-      const entry=getPokemonEntry(dexId);
-      const realItemNames=new Set();
-      if(entry&&entry.evolveMethod==='use-item'&&entry.evolveItem) realItemNames.add(entry.evolveItem);
-      (typeof getEvolutions==='function'?getEvolutions(dexId):[]).forEach(b=>{
-        if(b.evolveMethod==='use-item'&&b.evolveItem){
-          const itemEntry=typeof ITEMS_DATA!=='undefined'?ITEMS_DATA.find(i=>i.itemId===b.evolveItem):null;
-          if(itemEntry) realItemNames.add(itemEntry.name);
-        }
+    // v0.35 fix — BUG: this block was never gated to run only once, for saves genuinely migrating
+    // FROM pre-v0.33. It ran unconditionally in loadGame() on every single load, including saves
+    // already fully current. Any species with an un-evolved individual + the matching item in
+    // professorBag would have its confirmation wiped here, then get silently re-tested and
+    // re-confirmed (evolving one individual, consuming one item) on the very next tick — every
+    // single time the game loaded, compounding indefinitely across sessions with zero manual
+    // action. Surfaced via a report of 13 Magnezone from repeated silent Magneton evolution. Fix:
+    // gated behind data.version<21 — runs exactly once, only for saves that actually predate this
+    // migration's introduction.
+    if(data.version<21){
+      Object.keys(state.researchLog).forEach(dexIdStr=>{
+        const dexId=Number(dexIdStr);
+        const r=state.researchLog[dexIdStr];
+        if(!r) return;
+        const entry=getPokemonEntry(dexId);
+        const realItemNames=new Set();
+        if(entry&&entry.evolveMethod==='use-item'&&entry.evolveItem) realItemNames.add(entry.evolveItem);
+        (typeof getEvolutions==='function'?getEvolutions(dexId):[]).forEach(b=>{
+          if(b.evolveMethod==='use-item'&&b.evolveItem){
+            const itemEntry=typeof ITEMS_DATA!=='undefined'?ITEMS_DATA.find(i=>i.itemId===b.evolveItem):null;
+            if(itemEntry) realItemNames.add(itemEntry.name);
+          }
+        });
+        if(!realItemNames.size) return;
+        if(r.testedMethods) r.testedMethods=r.testedMethods.filter(m=>!realItemNames.has(m));
+        if(r.confirmedBranches) r.confirmedBranches=r.confirmedBranches.filter(b=>!realItemNames.has(b.method));
       });
-      if(!realItemNames.size) return;
-      if(r.testedMethods) r.testedMethods=r.testedMethods.filter(m=>!realItemNames.has(m));
-      if(r.confirmedBranches) r.confirmedBranches=r.confirmedBranches.filter(b=>!realItemNames.has(b.method));
-    });
+    }
     const secsAway=Math.floor((Date.now()-data.savedAt)/1000);
     let offSum=null;
     if(secsAway>10) offSum=processOfflineTime(secsAway); // v0.26 — research is always active, no missionWasActive gate needed
@@ -5193,7 +5497,7 @@ if(!hasSave){
     lastHealLocation:'palletTown',
     dexHistory:{},
     freeSkipsRemaining:50, // v0.24 — onboarding-only, brand new saves get 50 free encounter skips
-    wanderMode:false, significantLog:[] // v0.33
+    wanderMode:false, wanderMetric:'encounters', significantLog:[] // v0.33/v0.35
   };
   init();
   setSaveIndicator('⬤ New game','');
@@ -5281,7 +5585,12 @@ function renderMap(){
     const circle=document.createElementNS('http://www.w3.org/2000/svg','circle');
     circle.setAttribute('cx',x); circle.setAttribute('cy',y); circle.setAttribute('r','14');
     circle.setAttribute('fill',isCurrent?'#1a3a5a':c.fill);
-    circle.setAttribute('stroke',isSelected?'#f4d03f':c.stroke);
+    // v0.35 — was hardcoded gold (#f4d03f); now the theme's Accent color. Resolved via
+    // getComputedStyle rather than passing 'var(--accent)' straight into the SVG attribute —
+    // safer/more universally supported than relying on SVG presentation attributes resolving
+    // CSS custom properties directly.
+    const accentColor=getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()||'#e63946';
+    circle.setAttribute('stroke',isSelected?accentColor:c.stroke);
     circle.setAttribute('stroke-width',isSelected?'3':'2');
     g.appendChild(circle);
 
@@ -5351,7 +5660,7 @@ function showMapDetail(locId){
       const minLv=encDb.length?Math.min(...encDb.map(e=>e.minLevel)):'?';
       const maxLv=encDb.length?Math.max(...encDb.map(e=>e.maxLevel)):'?';
       const methods=[...new Set(encDb.map(e=>e.encounterMethod).filter(Boolean))].join(', ')||'?';
-      encHtml+='<div style="display:flex;align-items:center;gap:8px;background:#0f1a2a;padding:6px 8px;border-radius:4px;"><img src="'+sprite+'" style="width:48px;height:48px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div style="color:#fff;font-size:11px;font-weight:bold;">'+name+'</div><div style="color:#a0a0c0;font-size:10px;">Lv '+minLv+'–'+maxLv+' · '+methods+'</div><div style="margin-top:3px;background:#0a0a1a;border-radius:2px;height:5px;overflow:hidden;"><div style="width:'+pct+'%;height:100%;background:#5dade2;border-radius:2px;"></div></div><div style="color:#5dade2;font-size:10px;margin-top:1px;">'+pct+'% ('+seenCount+' seen, '+caughtCount+' caught)</div></div></div>';
+      encHtml+='<div style="display:flex;align-items:center;gap:8px;background:#0f1a2a;padding:6px 8px;border-radius:4px;"><img src="'+sprite+'" style="width:48px;height:48px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div style="color:#fff;font-size:11px;font-weight:bold;">'+name+'</div><div style="color:#a0a0c0;font-size:10px;">Lv '+minLv+'–'+maxLv+' · '+methods+'</div><div style="margin-top:3px;background:#0a0a1a;border-radius:2px;height:5px;overflow:hidden;"><div style="width:'+pct+'%;height:100%;background:var(--main-text-secondary);border-radius:2px;"></div></div><div style="color:var(--main-text-secondary);font-size:10px;margin-top:1px;">'+pct+'% ('+seenCount+' seen, '+caughtCount+' caught)</div></div></div>';
     });
     encHtml+='</div>';
   } else {

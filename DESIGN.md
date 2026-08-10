@@ -85,6 +85,7 @@ There is no survival element. Aides do not need food, sleep, or anything like th
 - **v0.28 requires SAVE_VERSION 19** due to: Day Care slot record reshaped for continuous batch hatching (`eggsQueued` count + `nextReadyAt` anchor replacing single-use `readyAt`) — see "Day Care / Breeding System" below. Migration: any existing slot with the legacy `readyAt` field converts to `nextReadyAt: readyAt, eggsQueued: 0` on load.
 - **v0.33 requires SAVE_VERSION 21 (20 → 21)** due to: `p.formName` on every Pokémon object (see "Same-DexId Branching Form Evolutions"), `state.wanderMode` (see "Mission Modal — Wander Mode"), `state.significantLog` (see "Log Tab — Full/Condensed Sub-Tabs"), and a `confirmedBranches`/`testedMethods` reset for any item that has a real matching branch (see "Professor Auto-Test Loop — Confirmation Requires a Live Candidate"). All migrations run in a single combined pass on load from v20, in that order — `p.formName` backfill and the research-log reset both need to complete before any subsequent `recalcStats()` call.
 - **v0.34 stays on SAVE_VERSION 21** — no `state` schema changes. `locationMethodPrefs[locId]` gains an additive `knownMethods` field (degrades gracefully on old saves — see "Mission Modal — Method Selection" below), and every other change is display logic, travel-state handling, or converter-only.
+- **v0.35 requires SAVE_VERSION 22 (21 → 22)** due to: `state.wanderMetric` (new — see "Mission Modal — Wander Mode"). Migration: existing saves default to `'encounters'`. All other v0.35 changes (evolution-chain dedup, migration-gating fix, species-cap-on-evolution, theming) are bug fixes or UI/display-only — no additional schema impact.
 
 ---
 
@@ -148,19 +149,21 @@ There is no survival element. Aides do not need food, sleep, or anything like th
 - If an aide has no valid travel options, the modal shows no destinations
 - No location is treated as "always available" — reachability is purely graph-based
 
-### Mission Modal — Destination Sorting (SETTLED — v0.21)
-- Three sort buttons appear above the destination list: **Distance**, **Alphabetical**, **Encounters**
+### Mission Modal — Destination Sorting (SETTLED — v0.21, revised v0.35)
+- Four sort buttons appear above the destination list: **Distance**, **Alphabetical**, **Encounters**, **Catches** (v0.35, new).
 - **Distance** = sum of `travelTime` for every waypoint in `buildTravelPath(currentLoc, destId)` **strictly before** the destination itself — i.e. it excludes the destination's own `travelTime`, consistent with the settled `travelTime` rule above (a destination's own travel time never delays arrival there). A one-hop destination sorts as distance `0`.
-- **Alphabetical** = location display name, A–Z. **v0.33 fix:** previously compared names as plain lowercased strings, which sorts lexicographically — "Route 11" landed before "Route 2" (character-wise, `'1' < '2'`). Now uses `localeCompare(..., {numeric:true})`, a natural sort that treats embedded digit runs as numbers: Route 2 → Route 9 → Route 11 → Route 23. Distance and Encounters sorts were already numeric and unaffected.
-- **Encounters** = sightings (`seen`) count summed across all species logged at that location, from `state.locationEncounterLog[locId]` — locations never visited sort as `0`
-- First click on any of the three buttons sorts **ascending** (Distance: nearest first; Alphabetical: A–Z; Encounters: fewest first). A second click on the **same** button reverses to descending. Clicking a **different** button resets to ascending for the new criterion.
+- **Alphabetical** = location display name, A–Z. **v0.33 fix:** previously compared names as plain lowercased strings, which sorts lexicographically — "Route 11" landed before "Route 2" (character-wise, `'1' < '2'`). Now uses `localeCompare(..., {numeric:true})`, a natural sort that treats embedded digit runs as numbers: Route 2 → Route 9 → Route 11 → Route 23. Distance/Encounters/Catches sorts were already numeric and unaffected.
+- **Encounters** = sightings (`seen`) count summed across all species logged at that location, from `state.locationEncounterLog[locId]` — locations never visited sort as `0`.
+- **Catches** (v0.35, new) = caught (`caught`) count summed across all species logged at that location, from the same `state.locationEncounterLog[locId]` — new helper `computeLocationCatches(locId)`, sibling to the existing `computeLocationSightings(locId)`. Locations never visited (or never yielding a catch) sort as `0`.
+- First click on any of the four buttons sorts **ascending** (Distance: nearest first; Alphabetical: A–Z; Encounters/Catches: fewest first). A second click on the **same** button reverses to descending. Clicking a **different** button resets to ascending for the new criterion.
 - Sort state is transient UI-only — not persisted to `state`, not saved. The list has no default sort order when the modal opens; it resets each time.
 - No SAVE_VERSION bump (no schema change).
-- **v0.28:** while sorted by **Encounters** specifically, locations with zero wild encounter table rows (`buildRouteTable(locId).length===0`) are filtered from the list entirely — these can never contribute a nonzero encounter count and were only cluttering that sort (Day Care, pure shop towns, Indigo Plateau pre-8-badges, etc.). Gym-trainer presence is not considered by this filter — only wild-table rows. Distance and Alphabetical sorts show the full reachable list, unchanged.
+- **v0.28:** while sorted by **Encounters** specifically, locations with zero wild encounter table rows (`buildRouteTable(locId).length===0`) are filtered from the list entirely — these can never contribute a nonzero encounter count and were only cluttering that sort (Day Care, pure shop towns, Indigo Plateau pre-8-badges, etc.). Gym-trainer presence is not considered by this filter — only wild-table rows. **v0.35:** the same filter applies to **Catches** for the same reason. Distance and Alphabetical sorts show the full reachable list, unchanged.
 
-### Mission Modal — "Wander" Mode (SETTLED — v0.33, NEW; bug fixed post-release; revised v0.34)
-- New mode alongside manual destination selection: the aide continuously travels toward whichever **reachable, discovered, encounter-capable** location currently has the fewest lifetime encounters (`computeLocationSightings()` — same metric already backing the Encounters sort above), re-evaluating on an ongoing basis rather than being dispatched once to a fixed target.
+### Mission Modal — "Wander" Mode (SETTLED — v0.33, NEW; bug fixed post-release; revised v0.34, v0.35)
+- New mode alongside manual destination selection: the aide continuously travels toward whichever **reachable, discovered, encounter-capable** location currently has the fewest lifetime encounters *or* catches (metric-dependent, see below), re-evaluating on an ongoing basis rather than being dispatched once to a fixed target.
 - **New persisted field:** `state.wanderMode` (boolean, default `false`) — folded into the SAVE_VERSION 21 migration already required for other v0.33 schema changes; no additional bump needed for this field alone.
+- **v0.35 — two metrics, not one.** The mission modal now shows **two** Wander buttons: "🧭 Wander (lowest encounters)" (the original v0.33 behavior, relabeled for clarity — uses `computeLocationSightings()`) and "🧭 Wander (lowest catches)" (new — uses `computeLocationCatches()`, the same helper backing the new Catches sort above). **New persisted field:** `state.wanderMetric: 'encounters'|'catches'` — set at dispatch to whichever button was pressed, read by `evaluateWanderTarget()` on every re-evaluation so a session keeps re-routing by the same metric it was dispatched with. **Requires SAVE_VERSION 22** (21 → 22); migration: existing saves (all pre-v0.35 Wander sessions were encounter-based) default `wanderMetric` to `'encounters'`.
 - **Shared re-evaluation helper** (`evaluateWanderTarget()`), single implementation called from two places:
   - the top of `gameTick()` (live play, every 1s base tick)
   - inside `processOfflineTime()`'s catch-up loop (every simulated encounter-interval) — offline time actively re-routes too, not just live play, by explicit design decision.
@@ -169,8 +172,8 @@ There is no survival element. Aides do not need food, sleep, or anything like th
 - **Redirect logic:** only evaluated while the aide is stably at its current destination (`state.travelPath.length===0`) — a redirect never interrupts a journey already in progress. Among eligible locations, if any reachable location other than the current target is *strictly* lower, retargeting begins. If the current target is still eligible and tied for lowest, it's kept — no redirect purely from equal rankings, avoiding needless churn.
 - **Bug (found v0.34) — redirect bypassed travel time entirely:** the original redirect immediately rebuilt `state.travelPath` from the aide's current location and called `arriveAtLocation()` on the new path's first waypoint at once — a true instant teleport, zero cost. Worse, because sightings accumulate wherever the aide currently stands, a location being passed through would climb in ranking the longer the aide dwelled there; once it became the single lowest, Wander would redirect *to the aide's own current spot*, hitting the `currentLoc===best` shortcut that zeroed `travelCyclesRemaining` outright — cashing in an already-standing-still location as a free "arrival" and letting the aide dodge real travel time indefinitely.
 - **Fix (v0.34):** a redirect no longer jumps straight to the new path. The current location — now ceasing to be the destination — first has to be *departed*: `state.travelCyclesRemaining` is set to that location's own `travelTime` (same dwell mechanic every pass-through waypoint already uses, including full normal research encounters there, not the limited pass-through method — matching how it already generates encounters during travel), `state.travelPath` holds the newly built path, and `state.travelPathIndex` is set to a `-1` sentinel meaning "departure in progress, haven't started the new path yet." `advanceTravelPath()` counts this down like any other dwell; once it hits 0, `travelPathIndex` advances to `0`, `state.missionDestination` updates to the new target, and `arriveAtLocation()` fires normally for the first real waypoint of the new journey. No new persisted fields — `-1` is just a new valid value for the existing `travelPathIndex` number, so no `SAVE_VERSION` impact.
-- **Mutually exclusive with manual destination selection** for a given mission — choosing Wander replaces the destination picker in the modal. Recalling the mission clears `state.wanderMode`, the same way it already clears `state.missionDestination` today; starting a new mission requires re-selecting Wander.
-- **Log visibility:** a redirect logs `"🧭 <Aide name> changes course — new lowest-encounter destination: <name>."`, matching the existing dispatch-log style — live inline, and batched into the offline-return summary when triggered during offline processing.
+- **Mutually exclusive with manual destination selection** for a given mission — choosing Wander replaces the destination picker in the modal. Recalling the mission clears `state.wanderMode` (and, v0.35, `state.wanderMetric` alongside it), the same way it already clears `state.missionDestination` today; starting a new mission requires re-selecting Wander.
+- **Log visibility (v0.35: metric-aware):** a redirect logs `"🧭 <Aide name> changes course — new lowest-encounter destination: <name>."` when `state.wanderMetric==='encounters'`, or `"...new lowest-catch destination: <name>."` when `'catches'` — matching the existing dispatch-log style — live inline, and batched into the offline-return summary when triggered during offline processing.
 
 ### Travel HUD — Total Encounters to Destination (SETTLED — v0.28)
 - The mid-travel HUD text (`'📍 X (→ Dest, N enc left) · Next: ...'`) previously showed only `state.travelCyclesRemaining` — the cycles left in the *current* waypoint only, not the full trip.
@@ -451,6 +454,14 @@ The single `state.bag` is replaced with two separate inventories:
   directions to build the full connected-component set of dexIds for a family. Did not
   exist prior to v0.32.
 
+### Species Cap Enforcement on Evolution + Release Priority (SETTLED — v0.35, NEW)
+- **Bug:** `applySpeciesSwap()` — called by every evolution path — never checked the species cap; only wild catches did (`checkSpeciesCap()`, called from `catchPokemon()` paths only). An evolution could push a species over cap with no check at all.
+- **Fix:** cap check now fires after both catches and evolutions, via a unified helper. Priority order:
+  1. **IV-donation** (unchanged existing logic) — if any family-tree member has a lower IV total than the new/evolved individual, donate IVs to it and discard the newcomer.
+  2. **Otherwise, release the weakest individual across the full same-species pool** (not just the newcomer) — compare by **total equipped-move power** (sum of all 4 `equippedMoves[].power` slots), releasing the **lowest** total. Ties broken by **catch order** (`p.id`, ascending = earlier): the **later** catch is released, keeping the original/longest-held individual.
+- This replaces the old "always release the newcomer on overflow" fallback for both catches and evolutions — an existing weaker individual can now be released instead of the new arrival.
+- No SAVE_VERSION impact.
+
 ---
 
 ## Day Care / Breeding System (SETTLED — v0.26, revised v0.27, v0.28, v0.29)
@@ -706,6 +717,10 @@ After the while loop: `if(levelled) renderDex();`
 - **Fix (v0.26) — unified item matching:** Path 1's matching collapses to a single check, independent of the item's `effect` field: `entry.evolveMethod==='use-item' && entry.evolveItem===itemName`. This covers stones and Link Cable-style items identically — `effect: evolve-stone` vs `effect: evolve-trade` no longer has any functional difference anywhere in the codebase as a result (confirmed by audit — both values were already OR'd together at every other read site).
 - **Data audit (v0.26, ongoing — not a code fix):** a full pass of every unique `evolveMethod`/`evolveLevel`/`evolveItem` triple against the matching code turned up 18 evolution items referenced in the Pokédex sheet with no corresponding row in the Items sheet at all — see "Outstanding Data Tasks" at the end of this document for current status.
 
+##### Migration-Wipe Bug — Wiped Research on Every Load, Not Just Once (SETTLED — v0.35 fix)
+- **Bug:** the v0.33 migration that wipes `testedMethods`/`confirmedBranches` for use-item evolutions (see above) was never gated to run only when migrating a pre-v0.33 save — it ran unconditionally in `loadGame()` on every single load, including saves already fully current. Any species with an un-evolved individual + the matching item in `professorBag` would have its confirmation wiped, get silently re-tested and re-confirmed (evolving one individual) on the very next tick, every single time the game loaded — compounding indefinitely across sessions with zero manual action. Surfaced via a report of 13 Magnezone from repeated silent Magneton evolution.
+- **Fix:** the migration block is gated behind `data.version<21` — it now runs exactly once, only for saves genuinely predating v0.33's confirmation-semantics change. No SAVE_VERSION impact (bug fix only, no schema change).
+
 #### Research State per Species (`state.researchLog[dexId]`)
 Each species tracks:
 - `testedMethods[]` — all methods attempted (confirmed and ruled out)
@@ -887,6 +902,11 @@ Two structural gaps existed once `use-move`/`in-party` became real, functional m
 - Placeholder/unseen nodes (`evoPlaceholderHtml()`) remain non-interactive — no detail page exists for a species not yet seen.
 - On the Family Card, clicking elsewhere on the card (name, background, the ▶ arrow) keeps its existing behavior — navigates to that family's species list. This is purely an added shortcut on the sprite icons themselves.
 - Display/interaction-only — no `state` schema change.
+
+### Duplicate Branch on Legacy `evolvesIntoId` (SETTLED — v0.35 fix)
+- **Bug:** for any species with both a legacy flat `evolvesIntoId` (pokedex.js) and `EVO_TREE` branch rows for the same dexId, the edge-building loop in `renderEvolutionChainVisual()` counted both sources — drawing the same evolution twice (plus any genuine additional branches). Confirmed via full data audit: 9 species affected (Pikachu/Raichu, Eevee, Gloom, Poliwhirl, Slowpoke, Scyther, Exeggcute, Cubone, Koffing) — every one has a flat `evolvesIntoId` that exactly duplicates one of its own `EVO_TREE` rows.
+- **Fix:** whenever `getEvolutions(m.dexId)` returns any branch rows for a species, `EVO_TREE` is treated as the sole/authoritative edge source and the flat `evolvesIntoId` edge is skipped entirely for that species.
+- Display-only — `professorAutoTestEvolutions()` was never affected (already deduped via `alreadyConfirmed`). No SAVE_VERSION impact.
 
 ---
 
@@ -1254,6 +1274,43 @@ Builds on the v0.23 battle engine (above) with 8 regular Gyms + Indigo Plateau (
   remaining HP all come into play."*
 - The rest of the Battles topic (trainer-fight description, the "Moves" sub-header)
   remains accurate as-is and is unchanged.
+
+---
+
+## Theming System (SETTLED — v0.35, NEW)
+
+- **Motivation:** the game's entire color scheme was 262 hardcoded hex instances (88 in the static `<style>` block, 174 scattered through JS-generated inline `style="..."` attributes) with zero CSS custom properties anywhere in the file. This section replaces that with a small set of CSS variables driving the whole visual identity, plus a player-facing picker.
+
+### Token Model — Main + Accent
+- **Two tokens, not three.** An earlier draft included a separate "Text" seed; it was folded entirely into Main — a single hue, ramped from darkest (backgrounds) to lightest (primary text), rather than three independently-picked colors.
+- **Main** (1 seed color) → 4 derived values via one lightness ramp on the same hue:
+  - `bg` — page/panel background (darkest)
+  - `card` — card/tab-bar/button background
+  - `border` — card/button/tab-bar borders
+  - `text` — all text. Text *hierarchy* (primary names vs. secondary labels vs. tertiary captions like Level text or research-tested captions) is achieved via CSS `opacity` on this single value, not additional derived hues.
+  - **Black seed:** gets its own floor approaching true `0%` lightness (not the ~8% floor shared by hue-based colors, which read as "dark gray" rather than black) — `bg` reaches `0%`, with `card`/`border` compressed tightly above it (`0/3/6/10` lightness steps) so the chrome reads as authentically black against a true-black anchor.
+  - **White seed:** ramp direction flips (light-mode) — `bg` becomes the lightest value, `text` the darkest, rather than extending the dark-mode ramp further.
+  - **Warm/yellow hues (30°–70°):** saturation is tapered on the background/card/border steps specifically — a fully saturated dark yellow is physically mustard/olive, not "dark yellow"; tapering keeps those steps a clean warm dark neutral instead of muddy sludge. The swatch preview itself also uses a per-color tuned preview lightness rather than one flat value across all 20 colors, since yellow needs to preview much brighter than e.g. blue or red to read as "yellow" at all.
+- **Accent** (1 seed color) → 3 derived values: `dark` (pressed/active-state background, mirrors the existing `button:active` pattern already used in the real game, e.g. `button.danger:active`), `base`, `light`.
+  - **Scope — Accent covers, and only covers:** header title + header border, active-tab underline, aide name, Battle Gym button, all modal titles/borders (Pokémon detail modal, Day Care modal, Welcome modal, and the Destination/Mission modal — currently inconsistently red vs. light-blue across these; unified under Accent), and the map's selected-location highlight ring (currently hardcoded gold `#f4d03f`, moves to Accent).
+  - Everything else that currently reads as "interactive-ish" but isn't brand/critical — informational captions, Level text, research-tested text — pulls from Main's `text` (at reduced opacity), not Accent.
+
+### Fixed Constants (never theme-driven)
+The following stay hardcoded regardless of theme choice, for the same legibility reasons as the existing HP-bar-state convention:
+- `TYPE_COLORS` (the 18-entry type-chart map)
+- HP bar states (high/mid/low)
+- Success-green (primary/positive actions)
+- Currency-gold
+- Log-category colors (catch/evolve/damage/etc.)
+- **v0.35 addition:** all warning/error states — fainted-Pokémon border, save-indicator error state, "Database not loaded" messages, "Need 1 TM" warnings, gym-battle-lost text. These previously reused the same red hex as the (now theme-driven) Accent color; consolidated onto the existing danger constant (`#e74c3c`, already used for damage-log/low-HP) so they read consistently as "something's wrong" independent of the player's theme.
+
+### Presets & Picker UI
+- **20-color preset grid**, shared list for both Main and Accent: Red, Orange, Amber, Yellow, Lime, Green, Teal, Cyan, Sky Blue, Blue, Indigo, Purple, Violet, Magenta, Pink, Rose, Brown, Gray, Black, White.
+- **Plus a custom color picker** alongside the grid, for unlimited freedom beyond the curated 20 — the grid is for fast/scannable browsing, the custom picker is the escape valve for anyone who wants an exact color.
+- Black and White are included in the shipped set (not just a derivation-testing aid) — both use the special-cased ramp handling described above.
+- **UI location:** inside the existing Info button/modal (see "Info Menu" above), new "Display" section.
+- **Persistence:** device-local, **outside the save file** — a deliberate choice since this is a purely cosmetic, no-gameplay-impact preference. Consequence: the theme choice does not travel with an exported/imported save to a different browser/device (progress is unaffected, only the color scheme resets to default there). No SAVE_VERSION impact.
+- **Default ("Classic") values:** Main = Blue, Accent = Red — chosen to most closely match the pre-v0.35 look, though not pixel-identical (the pre-v0.35 game used both red *and* light-blue as brand/interactive colors across different elements; Accent now unifies those under one seed).
 
 ---
 

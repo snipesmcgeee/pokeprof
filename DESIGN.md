@@ -86,6 +86,7 @@ There is no survival element. Aides do not need food, sleep, or anything like th
 - **v0.33 requires SAVE_VERSION 21 (20 → 21)** due to: `p.formName` on every Pokémon object (see "Same-DexId Branching Form Evolutions"), `state.wanderMode` (see "Mission Modal — Wander Mode"), `state.significantLog` (see "Log Tab — Full/Condensed Sub-Tabs"), and a `confirmedBranches`/`testedMethods` reset for any item that has a real matching branch (see "Professor Auto-Test Loop — Confirmation Requires a Live Candidate"). All migrations run in a single combined pass on load from v20, in that order — `p.formName` backfill and the research-log reset both need to complete before any subsequent `recalcStats()` call.
 - **v0.34 stays on SAVE_VERSION 21** — no `state` schema changes. `locationMethodPrefs[locId]` gains an additive `knownMethods` field (degrades gracefully on old saves — see "Mission Modal — Method Selection" below), and every other change is display logic, travel-state handling, or converter-only.
 - **v0.35 requires SAVE_VERSION 22 (21 → 22)** due to: `state.wanderMetric` (new — see "Mission Modal — Wander Mode"). Migration: existing saves default to `'encounters'`. All other v0.35 changes (evolution-chain dedup, migration-gating fix, species-cap-on-evolution, theming) are bug fixes or UI/display-only — no additional schema impact.
+- **v0.36 requires SAVE_VERSION 23 (22 → 23)** due to: `researchLog[dexId].gendersObserved` (new — see "Research & Pokédex — Persistent Gender-Observation Tracking") and `researchLog[dexId].breedingTested` (new — see "Evolution Chain Visual — Unconfirmed Predecessor via Breeding"). Both migrations run in a single combined pass on load from v22. Every other v0.36 change is a bug fix or UI/display-only.
 
 ---
 
@@ -342,11 +343,16 @@ Each round, while the encounter is still active:
 - Old `fight()` function (flat `(enc.level/lead.level) × 0.5 × maxHP` formula) remains
   removed, per v0.30.
 
-### Faint-Switch Behavior (SETTLED — v0.26, unchanged by v0.30)
+### Faint-Switch Behavior (SETTLED — v0.26, unchanged by v0.30, message fixed v0.36)
 - On lead faint mid-encounter: if `getLeadPokemon()` returns another Pokémon, log
   "X fainted! Y was sent out!" and continue the same encounter against the new lead.
-  Only when the whole party is down does the wild Pokémon flee and the mission end via
-  `endMission()`.
+  Only when the whole party is down does the encounter end via `endMission()`.
+- **Log message fix (v0.36):** this outcome — the player's whole party fainting — was
+  previously logged as `"[species] fled."`, which is factually wrong (the wild
+  Pokémon didn't escape; the player's team was defeated). Fixed to report the actual
+  outcome in both `if(!next){...}` blocks in `runWildEncounterLoop()`.
+  Difficulty/mechanics unchanged — catch odds, HP floors, and the encounter loop are
+  untouched; this is a message-text correction only. No SAVE_VERSION impact.
 
 ### Shiny Auto-Catch (SETTLED — unchanged by v0.30)
 - Shiny check fires **before** anything else in `resolveEncounterStep()` — before lead fetch, before ball selection
@@ -610,8 +616,9 @@ The single `state.bag` is replaced with two separate inventories:
   - **New field:** `researchLog[dexId].firstCaught` — fires a new finding, **"🎯 Captured: [name]"**, on first successful catch (distinct from "🆕 New Species", which now fires on first *sighting* instead of first catch).
   - **Findings report dedupe:** findings are tagged with `dexId`. If a species has both a "seen" and "captured" finding pending in the same `showFindingsReport()` batch, only "🎯 Captured" renders — capture overwrites seen within that batch (covers an encounter caught immediately, or an offline batch that sees-then-catches within the same window).
 
-### All Catches View — Sorting (SETTLED — v0.22)
+### All Catches View — Sorting (SETTLED — v0.22, extended v0.36)
 - `sort-select` gains a `family` option alongside Catch #/Dex #/Level/HP/BST — sorts by `familyId` (via `getPokemonEntry(p.pokedexId).familyId`), with `dexId` as a secondary tiebreaker so same-family members stay grouped and ordered sensibly.
+- **v0.36:** filter dropdown gains **💥 Perfect IV** (`isPerfectIV(p)`, inclusive of unicorns) and **🦄 Shiny+Perfect** (exact intersection). Sort dropdown gains **Sort: IV Total** (sum of the 6 IVs, descending — matches the existing Level/HP/BST convention). No SAVE_VERSION impact.
 
 ### Family Grouping — `getFamilyMembers()` (SETTLED — v0.18 fix)
 - Returns one entry per unique `dexId` within a family, preferring the `formName: null` row where one exists, but **including dexIds whose only database rows have a non-null `formName`** (gender-locked base species like Nidoran♂/♀, which have no null-form sibling)
@@ -622,8 +629,8 @@ The single `state.bag` is replaced with two separate inventories:
 ### Species Detail Page
 - Header: sprite (91×91), name, type badges, all observed stats
 - Height/weight shown in feet/lbs (converted from metric)
-- Ability rarity tracker (how many caught have ability1 vs ability2 vs hiddenAbility)
-- Gender ratio observed
+- Ability observation tracker — see "Persistent Ability-Observation Display" below (v0.36 rebuild)
+- Gender observation tracker — see "Persistent Gender-Observation Tracking" below (v0.36, NEW)
 - Evolution research section (see below)
 - **Encountered At (v0.22):** lists every location where `state.locationEncounterLog[locId][dexId].seen ≥ 1` for the viewed species. Per the Dex philosophy above, unvisited-with-this-species locations don't appear at all — not even as `???`. For each qualifying location, shows the actual table percentage(s) and method(s) — reusing the same normalization the Map Detail Panel already uses for `encounters.js` rows, so numbers always match between the two screens. Multiple methods/rod-tiers at the same location each get their own line. Positioned below the ability/gender-ratio stats, above the individual-catches list.
 - List of all individual catches: "X held / Y total ever"
@@ -639,6 +646,18 @@ The single `state.bag` is replaced with two separate inventories:
 - **Bug fixed v0.24:** this check (`isDexPageComplete()`) previously hardcoded the threshold as `testedMethods.length === 34` — a stale magic number, already incorrect pre-v0.24 (should have been 35) and would have drifted further with `in-party`'s addition (36). A separate function, `isFullyTested()`, already read `EVOLUTION_METHODS.length` live and was unaffected. `isDexPageComplete()` is now aligned to the same dynamic pattern.
 - **New field:** `researchLog[dexId].abilitiesObserved` — tracks which ability slots (`ability1`/`ability2`/`hiddenAbility`) have been observed at least once for that species. Written whenever a Pokémon is caught or evolves into that species, checking its `p.ability` value against the species' ability slots. Survives releases and cap overflow — never decremented.
 - **Save migration:** backfills `abilitiesObserved` by scanning all current `state.dex` individuals' `ability` field against their species at load time (best-effort — cannot recover abilities from Pokémon already released before v0.20)
+
+### Persistent Ability-Observation Display (SETTLED — v0.36 fix)
+- The "Observed Abilities" section on Species Detail was built from **currently-held individuals only** — releasing or evolving away the one individual with a given ability slot silently removed it from this display, even though `researchLog[dexId].abilitiesObserved` (used elsewhere to gate dex completeness) correctly remembers it forever.
+- Fixed: rebuilt to list every ability slot the species has (Ability 1, Ability 2 if present, Hidden Ability if present), each showing the real name if `abilitiesObserved` has it flagged, or **"Unknown"** (dimmed) if not — directly mirroring what `isDexPageComplete()` actually requires, which was previously invisible to the player (methods could show 100% tested while the page still wasn't "complete," with no explanation why). No SAVE_VERSION impact — reads existing data.
+
+### Persistent Gender-Observation Tracking (SETTLED — v0.36, NEW)
+- Same problem existed for the Gender line, except there was no persistent flag at all to begin with. New `recordGenderObserved(dexId, gender)`, mirroring `recordAbilityObserved()`, added at all 7 of its existing call sites (4 catch paths, evolution's `applySpeciesSwap`, Day Care hatch, load-time backfill sweep).
+- New persisted field: `researchLog[dexId].gendersObserved = {M: bool, F: bool}`. Gender line rebuilt the same way as the ability fix — Male/Female shown as "Seen"/"Unknown," only for genders the species can actually have (per `genderMalePct`); fully genderless species show nothing.
+- Part of the SAVE_VERSION 22 → 23 bump (see Versioning, shared with "Evolution Chain Visual — Unconfirmed Predecessor via Breeding"). Migration: `gendersObserved:{}` defaulted on every research record, best-effort backfill from currently-held individuals.
+
+### Evolution Doesn't Log New Species as Captured (SETTLED — v0.36 fix)
+- `applySpeciesSwap()` called `recordNewSpecies()` on evolution but never `recordCapture()`, despite `dexHistory` incrementing correctly — the "🎯 Captured" finding never fired on evolution, only "🆕 New Species." Fixed: added the missing `recordCapture(newEntry.dexId, p.species)` call. No SAVE_VERSION impact.
 
 ### Species Card — Party Sprite Size (SETTLED — v0.19)
 - The `party-sprite` class image (the sprite displayed next to each Pokémon's name, level, HP, and XP bar in the party list) is **112×112px**
@@ -908,6 +927,27 @@ Two structural gaps existed once `use-move`/`in-party` became real, functional m
 - **Fix:** whenever `getEvolutions(m.dexId)` returns any branch rows for a species, `EVO_TREE` is treated as the sole/authoritative edge source and the flat `evolvesIntoId` edge is skipped entirely for that species.
 - Display-only — `professorAutoTestEvolutions()` was never affected (already deduped via `alreadyConfirmed`). No SAVE_VERSION impact.
 
+### Branch Line-Break (SETTLED — v0.36)
+- Any node with 2+ simultaneous confirmed branches (Slowpoke, Eevee, Poliwhirl, Gloom, etc.) now renders as a vertical stack instead of one wrapped inline row: row 1 = the node + a new unlabeled down-arrow (`↓`); row 2 = each branch target with its normal right-arrow + method label, wrapping as needed. The `/` separator between simultaneous branches is removed. New helper `evoArrowDownHtml()`. Applies uniformly and recursively to every branch point. Single-branch chains are unchanged. No SAVE_VERSION impact.
+
+### Method Label Sizing (SETTLED — v0.36)
+- `evoArrowHtml()`'s method-label text: 7px → 10px, `white-space:nowrap` dropped in favor of a modest `max-width` so longer labels ("Dubious Disc," "Friendship (Night)") wrap to a second line — using the vertical space already sitting empty next to the 40px sprites. Sprite/species-name labels (8px) are unchanged. No SAVE_VERSION impact.
+
+### Per-Form Species Detail Navigation (SETTLED — v0.36, NEW)
+- New in-page-only state `dexSelectedFormName` (not persisted). Pokédex grid keeps one cell per dex # (dedup logic unchanged); species with multiple `POKEDEX_DATA` rows sharing a dexId get a form tab/toggle on their Species Detail page, hidden entirely for single-form species.
+- Switching tabs re-renders stats/type/flavor/sprite via `getPokemonEntry(dexId, formName)`; caught-individuals list filters to the selected form tab.
+- Evolution chain nodes gain a `data-formname` attribute alongside the existing `data-dexid`; `familyChainNodeClick()` now also sets `dexSelectedFormName`, so tapping an alt-form node navigates with the correct tab pre-selected.
+- Research/ability/evolution data stays combined per dex # regardless of form tab (intentionally dexId-keyed, not form-keyed — unchanged from existing Research & Pokédex philosophy).
+- Default landing form via the main grid: base/null. No SAVE_VERSION impact.
+
+### Unconfirmed Predecessor via Breeding (SETTLED — v0.36, NEW)
+- Previously, a root species only ever showed a "?" placeholder before it if a real (but unseen) predecessor row already existed in the data (e.g. Pichu for Pikachu, Munchlax for Snorlax) — species with no such row at all (fossils, etc.) showed nothing before them, silently assuming "confirmed no predecessor" from the mere absence of data.
+- **New rule:** a structural root only renders with nothing before it once breeding has actually been tested on it. New persisted field `state.researchLog[dexId].breedingTested` (boolean, default `false`), set `true` in `collectDaycareSlot()` on any successful egg collection, keyed on the hatched species (`rec.resultDexId`) — one hatch confirms that lineage either way, regardless of outcome.
+- Species with **no valid egg group at all** (`getEggGroups(dexId).length===0` — legendaries, etc.) auto-skip the placeholder — breeding is impossible for them, so there's nothing to test.
+- Species that already have a real predecessor row in the data (Pichu, Munchlax) are unaffected by this — that's the separate, pre-existing, already-correct mechanism.
+- No recursion: a revealed baby form (Pichu) is always treated as the true end of the line.
+- Part of the SAVE_VERSION 22 → 23 bump (see Versioning, shared with "Research & Pokédex — Persistent Gender-Observation Tracking"). Migration: `breedingTested:false` defaulted on every existing research record — no backfill possible, starts false for everyone going forward.
+
 ---
 
 ## Shiny Symbol on Species (SETTLED — v0.23)
@@ -946,6 +986,15 @@ Two structural gaps existed once `use-move`/`in-party` became real, functional m
 - The key is always an **integer** `dexId` — use `parseInt()` on the dexId
 - **Online path**: `gameTick()` increments `seen` at the moment an encounter appears; `catchPokemon()` increments `caught` on a successful catch
 - **Offline path**: `processOfflineTime()` increments `seen` for every simulated encounter, `caught` for every simulated catch
+
+### Fixed Palette Restoration (SETTLED — v0.36 fix, reverses part of v0.35 theming)
+- **Regression:** the v0.35 theming pass swept map node fills, route labels, and connector lines into theme tokens (`var(--main-bg)`/`var(--main-card)`/`var(--main-panel)`/`var(--main-text-secondary)`/`var(--main-border)`) without ever adding the map to the Theming System's "Fixed Constants" list. Since route-type nodes (the majority of the map) ended up filled with the exact same color as the map's own background, and route labels used a muted secondary-text token, most of the map became effectively invisible under the default Classic theme.
+- **Fix:** `MAP_COLORS` and all map rendering colors become fixed constants, joining type colors, HP bars, success-green, and currency-gold — see updated "Fixed Constants" list in Theming System.
+- Node fill: uniform bright navy (`#22406b`) for all location types — type is conveyed by the stroke ring alone (green/red/blue, unchanged). Current-location fill: `#245a8a` (was `#1a3a5a`).
+- Labels: uniform bright near-white (`#f0f0f0`) for all locations, replacing the old per-type label colors. Current-location label stays gold (`#f4d03f`) — state indicator, not type indicator.
+- Selected-node ring: reverts to fixed gold (`#f4d03f`) — the selected-node highlight never needed to be tied to the theme's Accent color in the first place; **undoes the v0.35 change** (see Theming System's Accent scope, updated below).
+- Default connector lines: `var(--main-border)` → fixed `#4a5a6a`. Gated/purple dashed lines unchanged.
+- Node size (r=14) and label font (9px, separately revised — see "Evolution Chain Visual") unchanged — map is adaptive/zoomable. No SAVE_VERSION impact.
 
 ---
 
@@ -1180,7 +1229,7 @@ Builds on the v0.23 battle engine (above) with 8 regular Gyms + Indigo Plateau (
   / "Lost a gym battle. Try again." / "Defeated. Try again." Wording only; the actual
   no-penalty behavior is unchanged. (DESIGN.md's own description of the mechanic is
   documentation, not player-facing copy, and is unaffected.)
-- Tier-9 gauntlet: **no heal between the 5 battles.** A loss at any point resets the entire attempt back to battle 1 (first Elite Four member).
+- Tier-9 gauntlet: **no passive/free heal between the 5 legs** (e.g. no location-based auto-heal) — healing between legs is items-only, via the inter-leg auto-heal logic below. A loss at any point resets the entire attempt back to battle 1 (first Elite Four member).
 
 ### Inter-Battle Healing
 - Reuses existing `getWeakestEffectivePotion()` auto-heal logic unchanged (smallest potion that heals without waste, no HP threshold), pulling from `state.professorBag`.
@@ -1194,6 +1243,13 @@ Builds on the v0.23 battle engine (above) with 8 regular Gyms + Indigo Plateau (
   suppresses the passive heal only while a gym/gauntlet encounter is actively in
   progress; normal in-town heal-on-arrival/heal-on-tick behavior is unaffected
   everywhere else.
+
+### Gauntlet Full-Heal Fix (SETTLED — v0.36)
+- **Bug:** `healPartyBeforeGymBattle()`/`getWeakestEffectivePotion()` applied at most **one** potion per Pokémon, no loop — a party missing significant HP before an Elite Four/Champion leg got little or no visible healing (and could return no heal at all if the missing HP didn't land on an exact potion size).
+- **Fix scope:** Elite Four/Champion gauntlet only (tier 9 and tier 10). Regular gym battles keep the original single-application logic, unchanged.
+- New `healPartyFullBeforeGauntletLeg()`, replacing the gauntlet-specific call sites only (live `runGymEncounter()`, silent/offline `runGymEncounterSilent()`, and `runWatchedBattleLeg()` conditional on `watchedBattle.isGauntlet`).
+- Algorithm, looped per Pokémon until full HP or bag exhausted: strongest available potion that heals with zero waste first (Max Potion valued at 121 for this comparison — Hyper Potion 120 → Super Potion 60 → Potion 20), falling back to the weakest available potion to finish (overheal capped at max HP) once nothing fits without waste.
+- No SAVE_VERSION impact.
 
 ### Per-KO EXP Attribution (SETTLED — v0.32, fixes pooled-EXP bug)
 - **Bug (pre-v0.32):** `runOneGymBattle()`/`runOneGymBattleSilent()` summed EXP across
@@ -1292,7 +1348,7 @@ Builds on the v0.23 battle engine (above) with 8 regular Gyms + Indigo Plateau (
   - **White seed:** ramp direction flips (light-mode) — `bg` becomes the lightest value, `text` the darkest, rather than extending the dark-mode ramp further.
   - **Warm/yellow hues (30°–70°):** saturation is tapered on the background/card/border steps specifically — a fully saturated dark yellow is physically mustard/olive, not "dark yellow"; tapering keeps those steps a clean warm dark neutral instead of muddy sludge. The swatch preview itself also uses a per-color tuned preview lightness rather than one flat value across all 20 colors, since yellow needs to preview much brighter than e.g. blue or red to read as "yellow" at all.
 - **Accent** (1 seed color) → 3 derived values: `dark` (pressed/active-state background, mirrors the existing `button:active` pattern already used in the real game, e.g. `button.danger:active`), `base`, `light`.
-  - **Scope — Accent covers, and only covers:** header title + header border, active-tab underline, aide name, Battle Gym button, all modal titles/borders (Pokémon detail modal, Day Care modal, Welcome modal, and the Destination/Mission modal — currently inconsistently red vs. light-blue across these; unified under Accent), and the map's selected-location highlight ring (currently hardcoded gold `#f4d03f`, moves to Accent).
+  - **Scope — Accent covers, and only covers:** header title + header border, active-tab underline, aide name, Battle Gym button, and all modal titles/borders (Pokémon detail modal, Day Care modal, Welcome modal, and the Destination/Mission modal — currently inconsistently red vs. light-blue across these; unified under Accent). *(v0.36: the map's selected-node ring, briefly moved to Accent here in v0.35, reverted to fixed gold — see "Map System — Fixed Palette Restoration." No longer part of Accent's scope.)*
   - Everything else that currently reads as "interactive-ish" but isn't brand/critical — informational captions, Level text, research-tested text — pulls from Main's `text` (at reduced opacity), not Accent.
 
 ### Fixed Constants (never theme-driven)
@@ -1303,6 +1359,7 @@ The following stay hardcoded regardless of theme choice, for the same legibility
 - Currency-gold
 - Log-category colors (catch/evolve/damage/etc.)
 - **v0.35 addition:** all warning/error states — fainted-Pokémon border, save-indicator error state, "Database not loaded" messages, "Need 1 TM" warnings, gym-battle-lost text. These previously reused the same red hex as the (now theme-driven) Accent color; consolidated onto the existing danger constant (`#e74c3c`, already used for damage-log/low-HP) so they read consistently as "something's wrong" independent of the player's theme.
+- **v0.36 addition:** Map System colors — node fills, location labels, connector lines, and the selected-node ring (see "Map System — Fixed Palette Restoration"). These were swept into theme tokens by the v0.35 pass without ever being added to this list, causing a legibility regression; now explicitly exempted like everything else here.
 
 ### Presets & Picker UI
 - **20-color preset grid**, shared list for both Main and Accent: Red, Orange, Amber, Yellow, Lime, Green, Teal, Cyan, Sky Blue, Blue, Indigo, Purple, Violet, Magenta, Pink, Rose, Brown, Gray, Black, White.
@@ -1407,15 +1464,30 @@ IVs/Nature are rolled at the moment of capture/hatch/creation — **not** when a
 ### SAVE_VERSION — v0.31 (19 → 20)
 - Migration: every existing party/dex Pokémon gets `ivs` and `nature` rolled retroactively (single roll, not the 10× dex-complete advantage — that only applies going forward at creation time), then `recalcStats()` is run. `currentHP` is set to the new `maxHP` (full heal) since `maxHP` shifts as a result of the newly-applied IV/nature.
 
+### Nature Mint (SETTLED — v0.36, NEW)
+- New item `natureMint` — Excel: `consumable` category, $100, shop tier Full, `requiresTarget: TRUE`, `bagType: Professor`.
+- Poke-modal's Friendship line gets a "Change Nature" button, disabled at 0 Nature Mints owned.
+- New nature-picker modal (layered like the move picker): lists all 25 `NATURES`, each labeled with its effect (e.g. "Adamant — +ATK/-DEF"). The individual's current nature is shown grayed out/disabled. Requires a confirmation step before committing.
+- On confirm: consumes 1 Nature Mint, sets `p.nature`, calls `recalcStats(p)`, logs it, refreshes the poke-modal.
+- No SAVE_VERSION impact (`p.nature` already exists since v0.31).
+
 ---
 
-## Nickname-Triggered Evolution Branches (SETTLED — v0.31, NEW)
+## Nickname-Triggered Evolution Branches (SETTLED — v0.31, NEW, revised v0.36)
 
 - New `EvoTree` column `evolveNickname` (blank for most rows) — fully generic, species-agnostic. No dexId is ever referenced in this logic; it applies to any branch a nickname trigger is set on, present or future.
-- `checkEvolution()`'s branch-selection logic: for any branch, if `evolveNickname` is set and is a **substring** of `p.nickname` (case-insensitive, trimmed) **and** that branch's normal condition is also met, it wins immediately — bypasses the random-among-qualifying-branches fallback entirely.
-- If no branch's nickname trigger matches, falls through unchanged to the existing random fallback.
-- New "Evolution Secrets" entry added to the in-game Info menu (`INFO_TOPICS`) — general hint that nicknames can lock in certain evolutions, without spoiling species or exact trigger words.
+- New "Evolution Secrets" entry in the in-game Info menu (`INFO_TOPICS`) — general hint that nicknames can lock in certain evolutions, without spoiling species or exact trigger words.
 - Jack's data task (any time, no code changes required): populate `evolveNickname` on whichever `EvoTree` rows desired — Koffing/Galarian Weezing and Espeon/Umbreon are the known first candidates, not a hardcoded list.
+
+### Full Exclusivity Lock (SETTLED — v0.36, corrects v0.31 design)
+- **Bug (found v0.36):** the original design only let a nickname match win among branches that had *already* passed their own natural condition check — for friendship-day/night specifically, since the two are mutually exclusive by real-world clock time, only one branch was ever a candidate at all, so a nickname could never actually override anything. A player naming their Eevee "Espeon" still got Umbreon if the check happened to run at night.
+- **Corrected design:** the nickname lock is purely **exclusionary**, not a substitute qualifier. `getNicknameEvolveLock(p)` returns the one branch (if any) whose `evolveNickname` is a substring of the nickname (case-insensitive, trimmed) — or `null`. A lock does **not** make its branch fire early or bypass its natural condition (day/night clock, friendship threshold, move equipped, etc.). It only removes every *other* branch from consideration until the locked branch's own real condition is met naturally.
+- Scope spans **all three** evolution touchpoints:
+  - `checkEvolution()`/`applyEvolutionSilent()` — branch qualification is otherwise unchanged; the naturally-qualifying list is simply narrowed to the locked branch when a lock is active. If the locked branch isn't naturally qualifying yet, evolution just doesn't happen this check.
+  - `professorAutoTestEvolutions()` — the background stone-testing sweep excludes any individual whose lock target doesn't match the item/branch being tested.
+  - `applyItemEvolution()` — manual item use refuses (same style as the existing `evolveBlocked` message) if the target doesn't match the individual's lock.
+- **UI:** poke-modal shows a lock indicator near the nickname field when active (e.g. "🔒 Locked — will only evolve into Espeon").
+- Match stays substring-based. No SAVE_VERSION impact.
 
 ---
 
@@ -1452,6 +1524,16 @@ Any species where two `EVO_TREE` branches share a `toDexId` but differ by `toFor
 ### SAVE_VERSION 21 Migration
 - Backfill `p.formName = null` for every existing individual in `state.party`/`state.dex` — accurate for every pre-v0.33 save, since no alt-form branch could ever actually be applied before this fix existed.
 - See "Professor Auto-Test Loop" above for the accompanying `confirmedBranches` reset migration (folded into the same SAVE_VERSION 21 pass, not a separate bump).
+
+### Move-Picker, Battle-Math, and Display Fixes (SETTLED — v0.36)
+- Several `getPokemonEntry(dexId)` call sites were still missing the individual's `.formName`, silently falling back to base-form data — the same class of bug this section already exists to prevent, found recurring in new areas:
+  - `buildMovePickerHtml()` — TM picker showed only the base form's learnable move slots (e.g. Alolan Raichu's Psychic slot never appeared).
+  - `openMoveSlot()` — viewing/upgrading a form-exclusive equipped move read the base form's power cap.
+  - `confirmMoveAction()` — same fix, for consistency.
+  - `calcBattleDamage()`/`getBattleSpeed()` — STAB and type-effectiveness silently used base-form typing during real battles.
+  - Watched-battle screen and battle-log lines — showed the base form's name mid-battle.
+  - `getEvolutionDisplayText()` — a confirmed alt-form branch displayed using the base form's name.
+- Fix: thread `.formName`/`toFormName` through all of the above. No SAVE_VERSION impact.
 
 ---
 
@@ -1515,3 +1597,4 @@ Any species where two `EVO_TREE` branches share a `toDexId` but differ by `toFor
 - **~~4 orphaned items~~ — corrected v0.33.** King's Rock and Black Augurite were previously listed here as orphaned/unreferenced; confirmed via v0.33 audit that both are in fact wired into `evotree.js` (King's Rock: Poliwhirl→Politoed, Slowpoke→Slowking; Black Augurite: Scyther→Kleavor) — this note was simply never updated after they were wired up. **Still genuinely orphaned:** Scroll of Darkness, Scroll of Waters — purchasable, `effect: evolve-stone`/`evolve-trade`, but no species references them yet. **Newly identified as orphaned (v0.33 audit, found via the `EVOLUTION_METHODS` auto-derive fix):** Sweet Treat, Leader's Crest, Prism Scale, Magmarizer — same status, purchasable and correctly tagged but not yet referenced by any `EvoTree`/Pokédex row. All six now correctly appear in the live-derived `EVOLUTION_METHODS` list (see "Evolution Method Enum") and will show as ruled-out (not confirmed) for every species until Jack wires an actual branch to one of them.
 - **~~Duplicate `poke-ball` entry~~ — resolved v0.31.** Removed directly from `items.js` by Jack (second row had `shopTier:"lab"`, a tier no location used — was dormant, not actively harmful, but would have resurfaced as a duplicate shop listing the moment the `shopTier` string-comparison issue below got fixed or a `lab`-tier location was added).
 - **`formVariant` column** — every row is `null` except dexId 555 (Darmanitan), which has `formVariant:1`. Field is unreferenced anywhere in `pokeprof.html`. Not pruning yet — worth checking whether this is a breadcrumb of an intended Standard/Zen form-variant system before treating it as pure cruft. Tabled, no urgency.
+- **New item, v0.36:** `natureMint` needs to be added to the Items sheet (row: `natureMint | Nature Mint | consumable | Changes a Pokémon's Nature when used. | change-nature | | 100 | | full | TRUE | | TRUE | TRUE | FALSE | | Professor`) and the converter re-run. Sprite not yet sourced.

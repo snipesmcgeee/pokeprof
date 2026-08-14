@@ -1,6 +1,6 @@
 // PokeProf — Items Database
-// Auto-generated: 8/8/2026, 10:56:07 AM
-// Entries: 72
+// Auto-generated: 8/14/2026, 2:19:56 PM
+// Entries: 73
 
 const ITEMS_DATA = [
   {
@@ -1298,6 +1298,24 @@ const ITEMS_DATA = [
     "usableInBattle": false,
     "sprite": "coinCase",
     "bagType": "Trainer"
+  },
+  {
+    "itemId": "natureMint",
+    "name": "Nature Mint",
+    "itemCategory": "tool",
+    "description": "Changes a Pokémon's Nature when used.",
+    "effect": "change-nature",
+    "effectValue": null,
+    "shopPrice": 100,
+    "sellPrice": null,
+    "shopTier": "full",
+    "isConsumable": true,
+    "catchRateModifier": null,
+    "requiresTarget": true,
+    "usableInField": true,
+    "usableInBattle": false,
+    "sprite": null,
+    "bagType": "Professor"
   }
 ];
 

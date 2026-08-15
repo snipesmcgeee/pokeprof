@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.36</title>
+<title>PokeProf v0.37</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -136,7 +136,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span style="font-size:11px;color:var(--main-text-muted);">v0.36</span></h1>
+  <h1>PokeProf <span style="font-size:11px;color:var(--main-text-muted);">v0.37</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">100.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -210,40 +210,37 @@
       <span>Species: <span id="dex-species-count">0</span></span>
       <span>Dex Pages Completed: <span id="dex-pages-completed">0</span></span>
     </div>
-    <div id="dex-cap-row" style="background:var(--main-panel);border-bottom:1px solid var(--main-card);padding:6px 12px;display:flex;align-items:center;gap:8px;flex-shrink:0;">
-      <span style="color:var(--main-text-secondary);font-size:10px;">Per-Species Cap:</span>
+    <!-- v0.37 — mode chooser, shown instead of everything below whenever dexView==='chooser' -->
+    <div id="dex-mode-chooser" style="display:none;flex:1;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;background:var(--main-panel);overflow-y:auto;">
+      <button onclick="dexSwitchMode('official')" style="width:100%;max-width:280px;padding:22px 16px;font-size:13px;border-color:var(--accent);color:var(--accent-light);">📖 Official Pokédex</button>
+      <button onclick="dexSwitchMode('your')" style="width:100%;max-width:280px;padding:22px 16px;font-size:13px;">🎒 Your Pokédex</button>
+    </div>
+    <!-- v0.37 — repurposed species-cap row: now a general top-control row (Back-to-chooser + Shiny toggle + cap dropdown) -->
+    <div id="dex-top-controls" style="background:var(--main-panel);border-bottom:1px solid var(--main-card);padding:6px 12px;display:none;align-items:center;gap:8px;flex-shrink:0;">
+      <button id="dex-mode-back-btn" onclick="dexBackToChooser()" style="padding:5px 10px;font-size:10px;">◀ Back to Dex Types</button>
+      <button id="dex-shiny-toggle-btn" onclick="toggleDexShinyPreview()" style="display:none;padding:5px 10px;font-size:10px;">✨ Shiny</button>
+      <span id="dex-cap-label" style="color:var(--main-text-secondary);font-size:10px;margin-left:auto;">Per-Species Cap:</span>
       <select id="species-cap-select" onchange="onSpeciesCapChange(this)" style="background:var(--main-card);border:1px solid var(--main-border);color:var(--main-text);font-family:'Courier New',monospace;font-size:11px;padding:4px 8px;border-radius:4px;">
         <option value="1">1</option><option value="2">2</option><option value="3">3</option>
         <option value="4">4</option><option value="5">5</option><option value="6">6</option>
       </select>
     </div>
-    <div id="dex-toptabs" style="display:flex;background:var(--main-card);border-bottom:1px solid var(--main-border);flex-shrink:0;">
+    <div id="dex-toptabs" style="display:none;background:var(--main-card);border-bottom:1px solid var(--main-border);flex-shrink:0;">
       <button class="tab-btn" id="dextab-pokedex" onclick="dexSwitchTab('pokedex')">Pokédex</button>
       <button class="tab-btn" id="dextab-families" onclick="dexSwitchTab('families')">Families</button>
-      <button class="tab-btn" id="dextab-viewall" onclick="dexSwitchTab('viewall')">All Catches</button>
+      <button class="tab-btn" id="dextab-viewall" onclick="dexSwitchThirdTab()">All Catches</button>
     </div>
     <div id="dex-subnav" style="background:var(--main-panel);border-bottom:1px solid var(--main-card);padding:6px 8px;display:flex;gap:6px;flex-shrink:0;">
       <button id="dex-back-btn" onclick="dexBack()" style="display:none;padding:5px 10px;font-size:10px;">◀ Back</button>
       <span id="dex-breadcrumb" style="color:var(--main-text-secondary);font-size:10px;padding:6px 4px;flex:1;">Pokédex — Families</span>
     </div>
-    <div id="dex-viewall-controls" style="display:none;padding:6px 8px;border-bottom:1px solid var(--main-card);display:flex;gap:6px;flex-shrink:0;background:var(--main-panel);">
-      <select id="sort-select" onchange="renderDex()" style="background:var(--main-card);border:1px solid var(--main-border);color:var(--main-text);font-family:'Courier New',monospace;font-size:11px;padding:6px;border-radius:4px;flex:1;">
-        <option value="id">Sort: Catch #</option>
-        <option value="dexid">Sort: Dex #</option>
-        <option value="level">Sort: Level</option>
-        <option value="hp">Sort: HP</option>
-        <option value="total">Sort: BST</option>
-        <option value="family">Sort: Family #</option>
-        <option value="ivtotal">Sort: IV Total</option>
-      </select>
-      <select id="filter-select" onchange="renderDex()" style="background:var(--main-card);border:1px solid var(--main-border);color:var(--main-text);font-family:'Courier New',monospace;font-size:11px;padding:6px;border-radius:4px;flex:1;">
-        <option value="all">All</option>
-        <option value="unassigned">Unassigned</option>
-        <option value="assigned">Assigned</option>
-        <option value="shiny">✨ Shiny</option>
-        <option value="perfect">💥 Perfect IV</option>
-        <option value="unicorn">🦄 Shiny+Perfect</option>
-      </select>
+    <!-- v0.37 — sort dropdown + Filter popup trigger + live search bar, shared by All Catches and the new Species tab -->
+    <div id="dex-viewall-controls" style="display:none;flex-direction:column;gap:6px;padding:6px 8px;border-bottom:1px solid var(--main-card);flex-shrink:0;background:var(--main-panel);">
+      <div style="display:flex;gap:6px;">
+        <select id="sort-select" onchange="onDexListControlsChange()" style="background:var(--main-card);border:1px solid var(--main-border);color:var(--main-text);font-family:'Courier New',monospace;font-size:11px;padding:6px;border-radius:4px;flex:1;"></select>
+        <button id="dex-filter-btn" onclick="openDexFilterPopup()" style="flex:1;font-size:11px;padding:6px;">Filter ▾</button>
+      </div>
+      <input id="dex-search-input" type="text" placeholder="Search..." oninput="onDexListControlsChange()" style="background:var(--main-card);border:1px solid var(--main-border);color:var(--main-text);font-family:'Courier New',monospace;font-size:11px;padding:6px 8px;border-radius:4px;width:100%;">
     </div>
     <div id="dex-list" style="overflow-y:auto;flex:1;padding:6px;background:var(--main-panel);"></div>
   </div>
@@ -474,6 +471,12 @@ function getPokemonEntry(dexId,formName){
 // v0.23 — promoted from a local redeclaration inside renderDexDetail() so the Trainer Battle
 // System's move-slot rectangles can share the same type colors.
 const TYPE_COLORS={'Normal':'#a8a878','Fire':'#f08030','Water':'#6890f0','Grass':'#78c850','Electric':'#f8d030','Ice':'#98d8d8','Fighting':'#c03028','Poison':'#a040a0','Ground':'#e0c068','Flying':'#a890f0','Psychic':'#f85888','Bug':'#a8b820','Rock':'#b8a038','Ghost':'#705898','Dragon':'#7038f8','Dark':'#705848','Steel':'#b8b8d0','Fairy':'#ee99ac'};
+// v0.37 — extracted to global scope; previously duplicated as locally-scoped arrow functions
+// inside showPokemonDetail() and renderDexDetail() separately. Now shared by both, plus the new
+// All Catches / Species tab list rows and the Type/Move Type filter popups.
+function typeBadgeHtml(t){
+  return t?'<span style="background:'+(TYPE_COLORS[t]||'#444')+';color:#fff;padding:2px 7px;border-radius:3px;font-size:10px;margin-right:4px;">'+t+'</span>':'';
+}
 
 // v0.27 — Badge sprite display. Hardcoded (not the Items sheet's unused `sprite` column — see
 // DESIGN.md "Aide Panel — Badge Sprite Display"). Source: PokeAPI/sprites badges folder, numbered
@@ -1943,11 +1946,14 @@ function recordAbilityObserved(dexId,abilityName){
 // same rationale — the old Gender line on Species Detail was built from currently-held
 // individuals only, so releasing/evolving away the one individual of a given gender silently
 // removed it from the display. Genderless individuals (gender null) are a no-op.
+// v0.37 — gendersObserved changes shape from booleans ({M:true,F:true}) to running counts
+// ({M:0,F:0}), so Species Detail can show a real Male/Female percentage split instead of just
+// Seen/Unknown. Called at the same 7 sites as before — every new-individual creation path.
 function recordGenderObserved(dexId,gender){
   if(gender!=='M'&&gender!=='F') return;
   const r=getResearch(dexId);
   if(!r.gendersObserved) r.gendersObserved={};
-  r.gendersObserved[gender]=true;
+  r.gendersObserved[gender]=(r.gendersObserved[gender]||0)+1;
 }
 // True once every non-null ability slot the species has has been observed.
 function isDexPageComplete(dexId){
@@ -2741,10 +2747,13 @@ function removePokemonFromBoxAndParty(id){
 // catch order (p.id ascending = earlier; the LATER catch is released, keeping the original/
 // longest-held individual). An existing weaker individual can now be released instead of the new
 // arrival.
+// v0.37 — perfect-IV exemption removed (see DESIGN.md "Perfect-IV Species-Cap Exemption"). Perfect-IV
+// individuals now count toward the cap and can trigger/receive Family IV Inheritance donation just
+// like any normal individual — shiny exemption is untouched.
 function checkSpeciesCap(individual){
-  if(individual.isShiny||isPerfectIV(individual)) return; // shinies and perfect-IV individuals never released
+  if(individual.isShiny) return; // shinies never released
   const cap=state.speciesCap||6;
-  const liveNonShiny=state.dex.filter(p=>p.pokedexId===individual.pokedexId&&!p.isShiny&&!isPerfectIV(p));
+  const liveNonShiny=state.dex.filter(p=>p.pokedexId===individual.pokedexId&&!p.isShiny);
   if(liveNonShiny.length<=cap) return;
   const familyIds=getFamilyDexIds(individual.pokedexId);
   const pool=state.dex.filter(p=>p.id!==individual.id&&familyIds.includes(p.pokedexId));
@@ -2774,8 +2783,9 @@ function checkSpeciesCap(individual){
 // v0.26 — dropdown handler for the editable per-species cap. Raising applies immediately (never
 // releases anything). Lowering shows a confirm dialog, then sweeps every species over the new
 // cap, releasing the newest excess and keeping the earliest catches — same order as the existing
-// catch-then-release overflow rule above. Shinies (and, v0.31, perfect-IV individuals) are always
-// exempt from both the cap and sweep.
+// catch-then-release overflow rule above. Shinies are always exempt from both the cap and sweep.
+// v0.37 — perfect-IV exemption removed; perfect-IV individuals are now included in this sweep
+// like any normal individual (see DESIGN.md "Perfect-IV Species-Cap Exemption").
 function onSpeciesCapChange(selectEl){
   const newCap=parseInt(selectEl.value)||6;
   const oldCap=state.speciesCap||6;
@@ -2785,7 +2795,7 @@ function onSpeciesCapChange(selectEl){
     saveGame(); render();
     return;
   }
-  const proceed=confirm('Are you sure you would like to change the species cap for Pokémon in your box? Lowering the cap will result in any excess being dropped. (Earliest caught kept, shiny/perfect-IV Pokémon excluded)');
+  const proceed=confirm('Are you sure you would like to change the species cap for Pokémon in your box? Lowering the cap will result in any excess being dropped. (Earliest caught kept, shiny Pokémon excluded)');
   if(!proceed){
     selectEl.value=oldCap;
     return;
@@ -2794,7 +2804,7 @@ function onSpeciesCapChange(selectEl){
   let released=0;
   const bySpecies={};
   state.dex.forEach(p=>{
-    if(p.isShiny||isPerfectIV(p)) return;
+    if(p.isShiny) return;
     (bySpecies[p.pokedexId]=bySpecies[p.pokedexId]||[]).push(p);
   });
   const toRelease=new Set();
@@ -3892,9 +3902,12 @@ function getEggGroups(pokedexId){
   if(!e) return [];
   return [e.eggGroup1,e.eggGroup2].filter(Boolean);
 }
+// v0.37 fix — this previously checked for the literal string 'Undiscovered', but the actual data
+// value across all non-breeding species is 'No eggs' — the check never matched anything, so the
+// Day Care breeding-block below never fired. Corrected to match the real data value.
 function isUndiscoveredOnly(pokedexId){
   const groups=getEggGroups(pokedexId);
-  return groups.length>0&&groups.every(g=>g==='Undiscovered');
+  return groups.length>0&&groups.every(g=>g==='No eggs');
 }
 // Lowest-evolution root of a species' family — same root concept used by the Families Tab
 // (a family member with no incoming evolution edge). Most families have exactly one; for the
@@ -4027,6 +4040,9 @@ function collectDaycareSlot(slotIndex){
   // Predecessor via Breeding". getResearch() ensures the record exists if this is a brand-new dexId.
   getResearch(rec.resultDexId).breedingTested=true;
   let kept=0, released=0;
+  // v0.37 — tallies for the enriched batch-summary line below (see the missing-log-events fix
+  // note just under this loop).
+  let newSpeciesCount=0, unicornCount=0, perfectCount=0, shinyCount=0;
   for(let n=0;n<count;n++){
     const resultEntry=getPokemonEntry(rec.resultDexId);
     const gender=(resultEntry&&resultEntry.genderMalePct!=null)?(Math.random()*100<resultEntry.genderMalePct?'M':'F'):null;
@@ -4040,14 +4056,35 @@ function collectDaycareSlot(slotIndex){
     state.dexHistory[baby.pokedexId]=(state.dexHistory[baby.pokedexId]||0)+1;
     recordAbilityObserved(baby.pokedexId,baby.ability);
     recordGenderObserved(baby.pokedexId,baby.gender);
+    // v0.37 fix — this loop never called recordNewSpecies() or logCaptureRarity(), so breeding
+    // results were effectively invisible in the Log tab: baby-form species only discoverable via
+    // breeding (eggs skip the normal encounter/sighting phase) never fired "🆕 New Species", and
+    // shiny/Perfect-IV/Unicorn hatches produced zero Condensed-log entry. recordCapture() below
+    // was already correct and is unchanged.
+    const wasFirstSeenBefore=!!(state.researchLog[baby.pokedexId]&&state.researchLog[baby.pokedexId].firstSeen);
+    recordNewSpecies(baby.pokedexId,baby.species);
+    if(!wasFirstSeenBefore) newSpeciesCount++;
     recordCapture(baby.pokedexId,baby.species);
+    // false — matches the existing offline-catch pattern (silent, tallied into the summary line
+    // below) rather than per-egg Full-log spam, which would flood the log on a large batch.
+    logCaptureRarity(baby,false);
+    if(baby.isShiny&&isPerfectIV(baby)) unicornCount++;
+    else if(baby.isShiny) shinyCount++;
+    else if(isPerfectIV(baby)) perfectCount++;
     checkSpeciesCap(baby);
     // checkSpeciesCap() may release this individual (or an older one at cap) right back out —
     // check whether THIS baby survived it to tally an accurate kept-vs-released split.
     if(state.dex.find(p=>p.id===baby.id)) kept++; else released++;
   }
   rec.eggsQueued=0;
-  addLog('Collected '+count+' egg'+(count>1?'s':'')+' at the Day Care!'+(released>0?' ('+kept+' kept, '+released+' released — species cap)':''),'catch');
+  // v0.37 — batch summary enriched with non-zero tallies instead of per-egg Full-log lines.
+  const extras=[];
+  if(newSpeciesCount>0) extras.push(newSpeciesCount+' new species');
+  if(unicornCount>0) extras.push(unicornCount+' unicorn'+(unicornCount>1?'s':''));
+  if(perfectCount>0) extras.push(perfectCount+' perfect IV');
+  if(shinyCount>0) extras.push(shinyCount+' shiny'+(shinyCount>1?'ies':''));
+  const extrasStr=extras.length?' — '+extras.join(', ')+'!':'';
+  addLog('Collected '+count+' egg'+(count>1?'s':'')+' at the Day Care!'+(released>0?' ('+kept+' kept, '+released+' released — species cap)':'')+extrasStr,'catch');
   saveGame(); render(); showMapDetail(DAYCARE_LOCATION_ID);
 }
 function releaseDaycarePair(slotIndex){
@@ -4338,8 +4375,7 @@ function showPokemonDetail(catchId){
   const movesHtml='<div style="margin-bottom:10px;"><div style="color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Moves</div>'+getMoveSlotsHtml(p,false)+'</div>';
 
   // v0.31 — type shown as colored badges (matching the Species Detail page's convention),
-  // not plain text.
-  const typeBadgeHtml=t=>t?'<span style="background:'+(TYPE_COLORS[t]||'#444')+';color:#fff;padding:2px 7px;border-radius:3px;font-size:10px;margin-right:4px;">'+t+'</span>':'';
+  // not plain text. v0.37 — typeBadgeHtml() is now a global helper, defined once near TYPE_COLORS.
 
   // v0.31 — rarity status line: 🦄 shiny+perfect IV, 💥 perfect IV, ✨ shiny (unchanged), else nothing.
   const badge=getRarityBadge(p);
@@ -4356,7 +4392,7 @@ function showPokemonDetail(catchId){
     +'<div>Level: <span style="color:#fff">'+p.level+'</span> &nbsp;·&nbsp; Gender: <span style="color:#fff">'+p.gender+'</span></div>'
     +'<div style="margin:2px 0;">'+typeBadgeHtml(entry?entry.type1:null)+typeBadgeHtml(entry?entry.type2:null)+'</div>'
     +'<div>Ability: <span style="color:#fff">'+(p.ability||'Unknown')+'</span> &nbsp;·&nbsp; Nature: <span style="color:#fff">'+(p.nature||'Unknown')+'</span></div>'
-    +'<div>Friendship: <span style="color:#fff">'+(p.friendship||0)+'</span> <button '+((state.professorBag['natureMint']||0)<1?'disabled':'')+' onclick="event.stopPropagation();openNaturePicker('+p.id+')" style="font-size:9px;padding:3px 6px;margin-left:6px;border-color:#9b59b6;color:#9b59b6;">🌿 Change Nature</button></div>'
+    +'<div>Friendship: <span style="color:#fff">'+(p.friendship||0)+'</span> <button onclick="event.stopPropagation();openNaturePicker('+p.id+')" style="font-size:9px;padding:3px 6px;margin-left:6px;border-color:var(--accent);color:var(--accent);'+((state.professorBag['natureMint']||0)<1?'opacity:0.4;':'')+'">🌿 Change Nature</button></div>'
     +((entry&&entry.heightM)||(entry&&entry.weightKg)?'<div>'+(entry&&entry.heightM?'Height: <span style="color:#fff">'+(metersToFeetStr(entry.heightM)||entry.heightM+'m')+'</span>':'')+((entry&&entry.heightM&&entry&&entry.weightKg)?' &nbsp;·&nbsp; ':'')+(entry&&entry.weightKg?'Weight: <span style="color:#fff">'+(kgToLbsStr(entry.weightKg)||entry.weightKg+'kg')+'</span>':'')+'</div>':'')
     +buildStatTableHtml(p)
     +'<div>HP: <span style="color:#fff">'+p.currentHP+'/'+p.maxHP+'</span></div>'
@@ -4389,9 +4425,12 @@ function natureEffectLabel(natureName){
   const abbr={atk:'ATK',def:'DEF',spatk:'SpATK',spdef:'SpDEF',spd:'SPD'};
   return '+'+abbr[n.boost]+'/-'+abbr[n.reduce];
 }
+// v0.37 — the button is no longer natively `disabled` (see the poke-modal button above), so this
+// now fires on every click regardless of Nature Mint count. With 0 held, shows a themed message
+// modal instead of silently no-op'ing, matching the shell/border style used by every other modal.
 function openNaturePicker(catchId){
   const p=state.dex.find(x=>x.id===catchId); if(!p) return;
-  if((state.professorBag['natureMint']||0)<1) return;
+  if((state.professorBag['natureMint']||0)<1){ showNatureMintRequiredModal(); return; }
   const existing=document.getElementById('nature-modal'); if(existing) existing.remove();
   const modal=document.createElement('div');
   modal.id='nature-modal';
@@ -4400,7 +4439,17 @@ function openNaturePicker(catchId){
     const isCurrent=n===p.nature;
     return '<button '+(isCurrent?'disabled':'')+' onclick="confirmNatureChange('+p.id+',\''+n+'\')" style="text-align:left;padding:8px 10px;'+(isCurrent?'opacity:0.4;':'')+'">'+n+' <span style="color:var(--main-text-secondary);font-size:10px;">— '+natureEffectLabel(n)+(isCurrent?' (current)':'')+'</span></button>';
   }).join('');
-  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid #9b59b6;border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;max-height:85vh;overflow-y:auto;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><div style="color:#9b59b6;font-size:13px;font-weight:bold;">🌿 Change Nature</div><button onclick="document.getElementById(\'nature-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div><div style="display:flex;flex-direction:column;gap:5px;">'+rows+'</div></div>';
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;max-height:85vh;overflow-y:auto;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><div style="color:var(--accent);font-size:13px;font-weight:bold;">🌿 Change Nature</div><button onclick="document.getElementById(\'nature-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div><div style="display:flex;flex-direction:column;gap:5px;">'+rows+'</div></div>';
+  modal.onclick=(e)=>{ if(e.target===modal) modal.remove(); };
+  document.body.appendChild(modal);
+}
+// v0.37 — small themed message modal, same shell pattern as every other modal in the game.
+function showNatureMintRequiredModal(){
+  const existing=document.getElementById('nature-mint-required-modal'); if(existing) existing.remove();
+  const modal=document.createElement('div');
+  modal.id='nature-mint-required-modal';
+  modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:1100;display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><div style="color:var(--accent);font-size:13px;font-weight:bold;">🌿 Change Nature</div><button onclick="document.getElementById(\'nature-mint-required-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div><div style="color:var(--main-text);font-size:12px;padding:6px 0;">Nature Mint Required — available in the Shop.</div></div>';
   modal.onclick=(e)=>{ if(e.target===modal) modal.remove(); };
   document.body.appendChild(modal);
 }
@@ -4665,10 +4714,44 @@ function renderParty(){
 }
 
 // ── DEX STATE ──
-let dexView='families'; // 'grid'|'families'|'species'|'detail'|'viewall'
+// v0.37 — 'chooser' is new (Official/Your Pokédex landing screen); 'officialSpeciesList' is new
+// (Official Pokédex's "Species" sub-tab, parallels 'viewall' but species-level not individual-level).
+let dexView='chooser'; // 'chooser'|'grid'|'families'|'species'|'detail'|'viewall'|'officialSpeciesList'
+let dexMode='your'; // 'your'|'official' — v0.37
 let dexSelectedFamily=null;
 let dexSelectedDexId=null;
 let dexSelectedFormName=null; // v0.36 — in-page-only, not persisted; resets to null (base form) whenever a new species is selected via the grid
+let dexOfficialShinyPreview=false; // v0.37 — Official Pokédex only, forces every sprite to shiny palette when true
+// v0.37 — All Catches sort/filter/search state (transient, not persisted, same convention as the old sort-select/filter-select)
+let dexCatchesSort='id';
+let dexCatchesFilters={all:true,unassigned:false,assigned:false,shiny:false,perfect:false,type:null,moveType:null};
+let dexCatchesSearch='';
+// v0.37 — Species tab (Official Pokédex only) sort/filter/search state
+let dexSpeciesSort='dexid';
+let dexSpeciesFilters={all:true,type:null,moveType:null};
+let dexSpeciesSearch='';
+
+// v0.37 — device-local "last destination" (mode + top-level sub-tab), outside the save file, same
+// pattern as the Theming System. Overwritten on every top-level navigation. First-ever visit (no
+// stored value yet) lands on the chooser; every subsequent visit jumps straight to the last combo.
+const DEX_NAV_STORAGE_KEY='pokeprof_dex_nav';
+function saveDexNav(){
+  try{ localStorage.setItem(DEX_NAV_STORAGE_KEY,JSON.stringify({mode:dexMode,view:dexView})); }catch(e){}
+}
+function loadDexNav(){
+  try{
+    const raw=localStorage.getItem(DEX_NAV_STORAGE_KEY);
+    if(!raw) return null;
+    const parsed=JSON.parse(raw);
+    if(!parsed||!parsed.view) return null;
+    return parsed;
+  }catch(e){ return null; }
+}
+// Applied once at boot — if a prior destination exists, land there instead of the chooser.
+(function initDexNav(){
+  const nav=loadDexNav();
+  if(nav){ dexMode=nav.mode||'your'; dexView=nav.view||'families'; }
+})();
 
 function renderDex(){
   document.getElementById('dex-count').textContent=state.dex.length;
@@ -4681,16 +4764,20 @@ function renderDex(){
   // v0.26 — keep the species-cap dropdown in sync with state (e.g. after loading a save).
   const capSelect=document.getElementById('species-cap-select');
   if(capSelect&&capSelect.value!=String(state.speciesCap||6)) capSelect.value=state.speciesCap||6;
+  if(dexView==='chooser'){ updateDexChrome(); return; }
   if(dexView==='grid') renderDexPokedexGrid();
   else if(dexView==='families') renderDexFamilies();
   else if(dexView==='species') renderDexSpecies();
   else if(dexView==='detail') renderDexDetail();
   else if(dexView==='viewall') renderDexViewAll();
+  else if(dexView==='officialSpeciesList') renderDexOfficialSpeciesList();
   updateDexChrome();
 }
 
 // v0.22: only species/detail (drill-down within the Families tab) have a Back step —
-// the three top-level tabs (Pokédex/Families/All Catches) are reached via dexSwitchTab, not Back.
+// the three top-level tabs (Pokédex/Families/All Catches or Species) are reached via
+// dexSwitchTab/dexSwitchThirdTab, not Back. v0.37 — this is now fully separate from
+// dexBackToChooser() below, which is the new top-level "leave this mode entirely" step.
 function dexBack(){
   if(dexView==='detail') dexView='species';
   else if(dexView==='species') dexView='families';
@@ -4701,20 +4788,76 @@ function dexBack(){
 function dexSwitchTab(tab){
   if(tab==='pokedex') dexView='grid';
   else if(tab==='families') dexView='families';
-  else if(tab==='viewall') dexView='viewall';
+  saveDexNav();
+  renderDex();
+}
+// v0.37 — the 3rd top-tab button is dynamic: "All Catches" (dexView='viewall') in Your Pokédex,
+// "Species" (dexView='officialSpeciesList') in Official Pokédex. Single handler, mode-branched,
+// rather than two separate hardcoded buttons.
+function dexSwitchThirdTab(){
+  dexView=(dexMode==='official')?'officialSpeciesList':'viewall';
+  saveDexNav();
+  renderDex();
+}
+// v0.37 — entry point from the chooser screen. First navigation into a mode defaults to Families.
+function dexSwitchMode(mode){
+  dexMode=mode;
+  dexView='families';
+  saveDexNav();
+  renderDex();
+}
+// v0.37 — new top-level back step, separate from dexBack() above: returns to the Official/Your
+// Pokédex chooser screen entirely, regardless of how deep the current drill-down is.
+function dexBackToChooser(){
+  dexView='chooser';
+  saveDexNav();
+  renderDex();
+}
+// v0.37 — Official Pokédex only; forces every sprite in Official mode to its shiny palette.
+function toggleDexShinyPreview(){
+  dexOfficialShinyPreview=!dexOfficialShinyPreview;
   renderDex();
 }
 
 function updateDexChrome(){
+  const chooser=document.getElementById('dex-mode-chooser');
+  const topControls=document.getElementById('dex-top-controls');
+  const shinyBtn=document.getElementById('dex-shiny-toggle-btn');
+  const capLabel=document.getElementById('dex-cap-label');
+  const capSelect=document.getElementById('species-cap-select');
+  const toptabs=document.getElementById('dex-toptabs');
   const backBtn=document.getElementById('dex-back-btn');
   const vaCtrl=document.getElementById('dex-viewall-controls');
   const crumb=document.getElementById('dex-breadcrumb');
   const subnav=document.getElementById('dex-subnav');
+  const thirdTabBtn=document.getElementById('dextab-viewall');
+
+  if(dexView==='chooser'){
+    chooser.style.display='flex';
+    topControls.style.display='none';
+    toptabs.style.display='none';
+    subnav.style.display='none';
+    vaCtrl.style.display='none';
+    return;
+  }
+  chooser.style.display='none';
+  topControls.style.display='flex';
+  toptabs.style.display='flex';
+
+  // v0.37 — Shiny toggle only in Official mode; Per-Species Cap dropdown only in Your Pokédex mode.
+  const isOfficial=dexMode==='official';
+  shinyBtn.style.display=isOfficial?'inline-block':'none';
+  shinyBtn.style.cssText='padding:5px 10px;font-size:10px;display:'+(isOfficial?'inline-block':'none')+';'+(dexOfficialShinyPreview?'border-color:#f4d03f;color:#f4d03f;':'');
+  capLabel.style.display=isOfficial?'none':'inline';
+  capSelect.style.display=isOfficial?'none':'inline-block';
+
+  thirdTabBtn.textContent=isOfficial?'Species':'All Catches';
+
   backBtn.style.display=(dexView==='species'||dexView==='detail')?'inline-block':'none';
-  vaCtrl.style.display=(dexView==='viewall')?'flex':'none';
+  vaCtrl.style.display=(dexView==='viewall'||dexView==='officialSpeciesList')?'flex':'none';
   subnav.style.display=(dexView==='grid')?'none':'flex';
-  if(dexView==='grid') crumb.textContent='Pokédex — National Dex';
-  else if(dexView==='families') crumb.textContent='Pokédex — Families';
+  if(dexView==='grid') crumb.textContent=(isOfficial?'Official':'Your')+' Pokédex — National Dex';
+  else if(dexView==='families') crumb.textContent=(isOfficial?'Official':'Your')+' Pokédex — Families';
   else if(dexView==='species'&&dexSelectedFamily!==null){
     const fEntry=typeof POKEDEX_DATA!=='undefined'?POKEDEX_DATA.find(x=>x.familyId===dexSelectedFamily&&x.formName===null)||POKEDEX_DATA.find(x=>x.familyId===dexSelectedFamily):null;
     crumb.textContent='Family #'+dexSelectedFamily+(fEntry?' — '+fEntry.name+' line':'');
@@ -4722,12 +4865,14 @@ function updateDexChrome(){
     const dn=getPokemonEntry(dexSelectedDexId);
     crumb.textContent=(dn?dn.name:'#'+dexSelectedDexId)+' — Species Detail';
   } else if(dexView==='viewall') crumb.textContent='Pokédex — All Catches';
+  else if(dexView==='officialSpeciesList') crumb.textContent='Official Pokédex — Species';
   else crumb.textContent='Pokédex';
-  const topTabOf={grid:'pokedex',families:'families',species:'families',detail:'families',viewall:'viewall'};
+  const topTabOf={grid:'pokedex',families:'families',species:'families',detail:'families',viewall:'viewall',officialSpeciesList:'viewall'};
   const activeTab=topTabOf[dexView]||'families';
   ['pokedex','families','viewall'].forEach(t=>{
     document.getElementById('dextab-'+t).classList.toggle('active',t===activeTab);
   });
+  renderDexListControls();
 }
 
 // ── EVOLUTION CHAIN VISUAL (v0.22) — shared by Family Cards and Species Detail ──
@@ -4760,9 +4905,10 @@ function evoMethodLabel(e){
   return e.method||'?';
 }
 function evoNodeHtml(entry,isHighlight,formName){
-  const sprite=getSpriteUrl(entry.dexId,entry.name,false,formName||null);
+  const isOfficial=dexMode==='official';
+  const sprite=getSpriteUrl(entry.dexId,entry.name,isOfficial&&dexOfficialShinyPreview,formName||null);
   const border=isHighlight?'border:2px solid #f4d03f;':'border:1px solid var(--main-border);';
-  const shinyBadge=hasLiveShiny(entry.dexId)?'<span class="shiny-badge">✨</span>':'';
+  const shinyBadge=(isOfficial?dexOfficialShinyPreview:hasLiveShiny(entry.dexId))?'<span class="shiny-badge">✨</span>':'';
   const label=formName?entry.name+' ('+formName+')':entry.name;
   // v0.28 — data-dexid enables familyChainNodeClick() to jump straight to this species' detail
   // page when tapped, from either the Family Card or Species Detail context.
@@ -4810,6 +4956,7 @@ function evoArrowDownHtml(){
 // (v0.36 — see "Branch Line-Break"), each branch getting its own line-2 slot instead of fanning
 // out inline with '/'. Unconfirmed nodes render as a greyed ??? placeholder, evaluated per-row.
 function renderEvolutionChainVisual(famId,highlightDexId){
+  const isOfficial=dexMode==='official';
   const allMembers=typeof getFamilyMembers!=='undefined'?getFamilyMembers(famId):[];
   if(!allMembers.length) return '';
   const memberSet=new Set(allMembers.map(m=>m.dexId));
@@ -4856,6 +5003,7 @@ function renderEvolutionChainVisual(famId,highlightDexId){
   // Kantonian/Alolan Raichu, both Thunder Stone -> dexId 26) — without the form check, both
   // rendered as identical, colliding duplicate edges regardless of which was actually confirmed.
   function isEdgeConfirmed(e,r){
+    if(isOfficial) return true; // v0.37 — Official Pokédex shows every real edge unconditionally
     if(!r||!r.confirmedBranches) return false;
     const matchKey=e.method==='use-item'?e.item:e.method;
     return r.confirmedBranches.some(b=>b.method===matchKey&&b.intoId===e.to&&(b.toFormName||null)===(e.toFormName||null));
@@ -4868,7 +5016,7 @@ function renderEvolutionChainVisual(famId,highlightDexId){
     const baseEntry=allMembers.find(m=>m.dexId===dexId);
     if(!baseEntry) return '';
     const entry=formName?(getPokemonEntry(dexId,formName)||baseEntry):baseEntry;
-    const isSeen=seenDexIds.has(dexId);
+    const isSeen=isOfficial||seenDexIds.has(dexId); // v0.37 — Official Pokédex treats every node as seen
     // v0.26 — an unseen node (most commonly an unseen root) renders as an opaque placeholder,
     // same visual language as an unconfirmed branch, instead of hiding the whole chain. It still
     // participates normally in the walk below — if it has an outgoing edge to a species that HAS
@@ -4879,9 +5027,11 @@ function renderEvolutionChainVisual(famId,highlightDexId){
     // v0.23 — terminal node (no data-defined evolution target at all, e.g. Sandslash) no longer
     // returns silently. Missing data isn't proof of "no further evolution" — only exhaustive
     // method testing is. Same ???-arrow treatment as an unconfirmed branch, unless ruled out.
+    // v0.37 — Official Pokédex bypasses the research-log confirmation entirely here too: no
+    // outgoing edges in the real data IS authoritative proof of "does not evolve" in this mode.
     if(!outgoing.length){
       if(!isSeen) return html; // v0.26 — unseen node stays fully opaque, no speculative chain hint
-      if(r&&isNonEvolutionConfirmed(r)) return html;
+      if(isOfficial||(r&&isNonEvolutionConfirmed(r))) return html;
       return html+evoArrowHtml('?')+evoPlaceholderHtml();
     }
     // v0.26 — a branch shows its real target node if the target has been seen by ANY means
@@ -4891,7 +5041,7 @@ function renderEvolutionChainVisual(famId,highlightDexId){
     const relevant=outgoing.filter(e=>isEdgeConfirmed(e,r)||seenDexIds.has(e.to));
     if(!relevant.length){
       if(!isSeen) return html;
-      if(r&&isNonEvolutionConfirmed(r)) return html;
+      if(isOfficial||(r&&isNonEvolutionConfirmed(r))) return html;
       return html+evoArrowHtml('?')+evoPlaceholderHtml();
     }
     // v0.36 — 2+ simultaneous branches render as a vertical stack (down-arrow under the node,
@@ -4922,9 +5072,14 @@ function renderEvolutionChainVisual(famId,highlightDexId){
   // predecessor ROW in the data (fossils, etc.) silently assumed "confirmed no predecessor" just
   // because nothing was there to render, even though the player never actually confirmed that via
   // breeding. Species with no valid egg group at all can't be tested, so they're auto-skipped.
+  // v0.37 fix — getEggGroups().length>0 alone isn't enough: species like Mewtwo have a non-empty
+  // ['No eggs'] group (length 1), so this never actually caught them despite being structurally
+  // unbreedable. Now also excludes isUndiscoveredOnly() species, alongside the length check.
+  // v0.37 — Official Pokédex skips the unconfirmed-predecessor placeholder entirely; every root
+  // renders with nothing before it, since Official mode has no breeding-tested gate at all.
   return roots.map(root=>{
-    const canBreed=getEggGroups(root.dexId).length>0;
-    const bred=!!(state.researchLog[root.dexId]&&state.researchLog[root.dexId].breedingTested);
+    const canBreed=!isOfficial&&getEggGroups(root.dexId).length>0&&!isUndiscoveredOnly(root.dexId);
+    const bred=isOfficial||!!(state.researchLog[root.dexId]&&state.researchLog[root.dexId].breedingTested);
     const preHtml=(canBreed&&!bred)?(evoPlaceholderHtml()+evoArrowHtml('?')):'';
     return '<div style="display:flex;align-items:flex-start;flex-wrap:wrap;gap:2px;margin:4px 0;">'+preHtml+walk(root.dexId,null)+'</div>';
   }).join('');
@@ -4949,19 +5104,20 @@ function renderDexPokedexGrid(){
   const c=document.getElementById('dex-list'); c.innerHTML='';
   const roster=getAllSpeciesRoster();
   if(!roster.length){ c.innerHTML='<div style="color:var(--c-danger);padding:12px;font-size:11px;">Database not loaded. Check pokedex.js is in GitHub.</div>'; return; }
+  const isOfficial=dexMode==='official';
   const grid=document.createElement('div');
   grid.style.cssText='display:grid;grid-template-columns:repeat(3,1fr);gap:6px;';
   roster.forEach(entry=>{
     const dexId=entry.dexId;
-    const captured=(state.dexHistory[dexId]||0)>0;
-    const seen=isSpeciesKnown(dexId);
+    const captured=isOfficial||(state.dexHistory[dexId]||0)>0;
+    const seen=isOfficial||isSpeciesKnown(dexId);
     const cell=document.createElement('div');
     cell.style.cssText='display:flex;flex-direction:column;align-items:center;background:var(--main-card);border:1px solid var(--main-border);border-radius:6px;padding:6px;'+((captured||seen)?'cursor:pointer;':'opacity:0.5;');
     if(captured||seen){
-      const sprite=getSpriteUrl(dexId,entry.name,false);
+      const sprite=getSpriteUrl(dexId,entry.name,isOfficial&&dexOfficialShinyPreview);
       const filter=captured?'':'filter:brightness(0);';
-      const shinyBadge=hasLiveShiny(dexId)?'<span class="shiny-badge">✨</span>':'';
-      const completeBadge=isDexPageComplete(dexId)?'<span title="Dex page complete" style="font-size:10px;margin-left:2px;">🔬</span>':'';
+      const shinyBadge=(isOfficial?dexOfficialShinyPreview:hasLiveShiny(dexId))?'<span class="shiny-badge">✨</span>':'';
+      const completeBadge=(!isOfficial&&isDexPageComplete(dexId))?'<span title="Dex page complete" style="font-size:10px;margin-left:2px;">🔬</span>':'';
       cell.innerHTML='<img src="'+sprite+'" style="width:48px;height:48px;image-rendering:pixelated;'+filter+'" onerror="this.style.display=\'none\'"><div style="font-size:9px;color:var(--main-text-secondary);margin-top:2px;text-align:center;">#'+dexId+' '+entry.name+shinyBadge+completeBadge+'</div>';
       cell.onclick=()=>{ dexSelectedDexId=dexId; dexSelectedFormName=null; dexSelectedFamily=entry.familyId; dexView='detail'; renderDex(); };
     } else {
@@ -4975,34 +5131,50 @@ function renderDexPokedexGrid(){
 function renderDexFamilies(){
   const c=document.getElementById('dex-list'); c.innerHTML='';
   if(typeof POKEDEX_DATA==='undefined'){ c.innerHTML='<div style="color:var(--c-danger);padding:12px;font-size:11px;">Database not loaded. Check pokedex.js is in GitHub.</div>'; return; }
-  const seenDexIds=new Set();
-  state.dex.forEach(p=>{ if(p.pokedexId) seenDexIds.add(p.pokedexId); });
-  Object.keys(state.dexHistory).forEach(id=>{ seenDexIds.add(parseInt(id)); });
-  const seenFamilies=new Set();
-  seenDexIds.forEach(dexId=>{ const e=getPokemonEntry(dexId); if(e&&e.familyId) seenFamilies.add(e.familyId); });
+  const isOfficial=dexMode==='official';
+  // v0.37 — Official Pokédex shows every family, unfiltered by discovery — the whole point of
+  // this mode is completeness regardless of research progress.
+  let seenFamilies;
+  if(isOfficial){
+    seenFamilies=new Set(POKEDEX_DATA.filter(x=>x.familyId).map(x=>x.familyId));
+  } else {
+    const seenDexIds=new Set();
+    state.dex.forEach(p=>{ if(p.pokedexId) seenDexIds.add(p.pokedexId); });
+    Object.keys(state.dexHistory).forEach(id=>{ seenDexIds.add(parseInt(id)); });
+    seenFamilies=new Set();
+    seenDexIds.forEach(dexId=>{ const e=getPokemonEntry(dexId); if(e&&e.familyId) seenFamilies.add(e.familyId); });
+  }
   if(!seenFamilies.size){ c.innerHTML='<div style="color:#555;padding:12px;font-size:11px;">No Pokémon discovered yet.</div>'; return; }
   [...seenFamilies].sort((a,b)=>a-b).forEach(famId=>{
     const allMembers=typeof getFamilyMembers!=='undefined'?getFamilyMembers(famId):[];
     if(!allMembers.length) return;
     const baseMember=allMembers[0];
-    const liveInFamily=state.dex.filter(p=>p.pokedexId&&POKEDEX_DATA.find(x=>x.dexId===p.pokedexId&&x.familyId===famId));
-    const speciesSeen=new Set(liveInFamily.map(p=>p.pokedexId));
-    Object.keys(state.dexHistory).forEach(id=>{
-      const dexId=parseInt(id);
-      if(POKEDEX_DATA.find(x=>x.dexId===dexId&&x.familyId===famId)) speciesSeen.add(dexId);
-    });
-    const knownMembers=allMembers.filter(m=>speciesSeen.has(m.dexId));
-    const lastKnown=knownMembers[knownMembers.length-1];
-    const lastR=lastKnown?state.researchLog[lastKnown.dexId]:null;
-    const allFamKnown=allMembers.every(m=>speciesSeen.has(m.dexId))&&allMembers.length>0&&(lastR&&(lastR.evolutionConfirmed||isNonEvolutionConfirmed(lastR)));
-    const speciesDisplay=allFamKnown?speciesSeen.size+'/'+allMembers.length:speciesSeen.size+'/?';
-    let totalEverCaught=0;
-    speciesSeen.forEach(dexId=>{ totalEverCaught+=(state.dexHistory[dexId]||0); });
-    liveInFamily.forEach(p=>{ if(!state.dexHistory[p.pokedexId]) totalEverCaught++; });
-    const baseSprite=getSpriteUrl(baseMember.dexId,baseMember.name,false);
+    let speciesSeen, speciesDisplay, totalEverCaught;
+    if(isOfficial){
+      speciesSeen=new Set(allMembers.map(m=>m.dexId));
+      speciesDisplay=allMembers.length+'/'+allMembers.length;
+      totalEverCaught=null; // not applicable — no ownership data in Official mode
+    } else {
+      const liveInFamily=state.dex.filter(p=>p.pokedexId&&POKEDEX_DATA.find(x=>x.dexId===p.pokedexId&&x.familyId===famId));
+      speciesSeen=new Set(liveInFamily.map(p=>p.pokedexId));
+      Object.keys(state.dexHistory).forEach(id=>{
+        const dexId=parseInt(id);
+        if(POKEDEX_DATA.find(x=>x.dexId===dexId&&x.familyId===famId)) speciesSeen.add(dexId);
+      });
+      const knownMembers=allMembers.filter(m=>speciesSeen.has(m.dexId));
+      const lastKnown=knownMembers[knownMembers.length-1];
+      const lastR=lastKnown?state.researchLog[lastKnown.dexId]:null;
+      const allFamKnown=allMembers.every(m=>speciesSeen.has(m.dexId))&&allMembers.length>0&&(lastR&&(lastR.evolutionConfirmed||isNonEvolutionConfirmed(lastR)));
+      speciesDisplay=allFamKnown?speciesSeen.size+'/'+allMembers.length:speciesSeen.size+'/?';
+      totalEverCaught=0;
+      speciesSeen.forEach(dexId=>{ totalEverCaught+=(state.dexHistory[dexId]||0); });
+      liveInFamily.forEach(p=>{ if(!state.dexHistory[p.pokedexId]) totalEverCaught++; });
+    }
+    const baseSprite=getSpriteUrl(baseMember.dexId,baseMember.name,isOfficial&&dexOfficialShinyPreview);
     const d=document.createElement('div');
     d.className='dex-entry'; d.style.cursor='pointer';
-    d.innerHTML='<div style="display:flex;align-items:center;gap:10px;"><img src="'+baseSprite+'" style="width:48px;height:48px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div class="dex-header"><span class="dex-name">Family #'+famId+' — '+baseMember.name+' Line</span><span class="dex-id">▶</span></div><div class="dex-details">'+speciesDisplay+' species · '+totalEverCaught+' total caught</div></div></div><div onclick="event.stopPropagation();familyChainNodeClick(event)">'+renderEvolutionChainVisual(famId,null)+'</div>';
+    const detailsLine=isOfficial?(speciesDisplay+' species'):(speciesDisplay+' species · '+totalEverCaught+' total caught');
+    d.innerHTML='<div style="display:flex;align-items:center;gap:10px;"><img src="'+baseSprite+'" style="width:48px;height:48px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div class="dex-header"><span class="dex-name">Family #'+famId+' — '+baseMember.name+' Line</span><span class="dex-id">▶</span></div><div class="dex-details">'+detailsLine+'</div></div></div><div onclick="event.stopPropagation();familyChainNodeClick(event)">'+renderEvolutionChainVisual(famId,null)+'</div>';
     d.onclick=()=>{ dexSelectedFamily=famId; dexView='species'; renderDex(); };
     c.appendChild(d);
   });
@@ -5010,22 +5182,31 @@ function renderDexFamilies(){
 
 function renderDexSpecies(){
   const c=document.getElementById('dex-list'); c.innerHTML='';
+  const isOfficial=dexMode==='official';
   const allMembers=typeof getFamilyMembers!=='undefined'?getFamilyMembers(dexSelectedFamily):[];
-  const seenDexIds=new Set(state.dex.map(p=>p.pokedexId));
-  Object.keys(state.dexHistory).forEach(id=>{ seenDexIds.add(parseInt(id)); });
-  const visibleMembers=allMembers.filter(m=>seenDexIds.has(m.dexId));
+  // v0.37 — Official Pokédex shows every family member, unfiltered by discovery.
+  let visibleMembers;
+  if(isOfficial){
+    visibleMembers=allMembers;
+  } else {
+    const seenDexIds=new Set(state.dex.map(p=>p.pokedexId));
+    Object.keys(state.dexHistory).forEach(id=>{ seenDexIds.add(parseInt(id)); });
+    visibleMembers=allMembers.filter(m=>seenDexIds.has(m.dexId));
+  }
   if(!visibleMembers.length){ c.innerHTML='<div style="color:#555;padding:12px;font-size:11px;">No species encountered yet.</div>'; return; }
   visibleMembers.forEach(entry=>{
     const liveCount=state.dex.filter(p=>p.pokedexId===entry.dexId).length;
     const historyCount=state.dexHistory[entry.dexId]||0;
     const totalEver=Math.max(historyCount,liveCount);
-    const sprite=getSpriteUrl(entry.dexId,entry.name,false);
+    const sprite=getSpriteUrl(entry.dexId,entry.name,isOfficial&&dexOfficialShinyPreview);
     const d=document.createElement('div');
     d.className='dex-entry'; d.style.cursor='pointer';
-    d.innerHTML='<div style="display:flex;align-items:center;gap:10px;"><img src="'+sprite+'" style="width:40px;height:40px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div class="dex-header"><span class="dex-name">#'+entry.dexId+' '+entry.name+'</span><span class="dex-id">'+totalEver+' total ('+liveCount+' held) ▶</span></div><div class="dex-details">'+(entry.type1||'???')+(entry.type2?' / '+entry.type2:'')+' · BST '+(entry.bst||'?')+'</div><div style="color:var(--main-text-muted);font-size:10px;margin-top:2px;">'+getEvolutionDisplayText(entry.dexId)+'</div></div></div>';
+    const rightLabel=isOfficial?'▶':(totalEver+' total ('+liveCount+' held) ▶');
+    d.innerHTML='<div style="display:flex;align-items:center;gap:10px;"><img src="'+sprite+'" style="width:40px;height:40px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div class="dex-header"><span class="dex-name">#'+entry.dexId+' '+entry.name+'</span><span class="dex-id">'+rightLabel+'</span></div><div class="dex-details">'+(entry.type1||'???')+(entry.type2?' / '+entry.type2:'')+' · BST '+(entry.bst||'?')+'</div>'+(isOfficial?'':'<div style="color:var(--main-text-muted);font-size:10px;margin-top:2px;">'+getEvolutionDisplayText(entry.dexId)+'</div>')+'</div></div>';
     d.onclick=()=>{ dexSelectedDexId=entry.dexId; dexSelectedFormName=null; dexView='detail'; renderDex(); };
     c.appendChild(d);
   });
+  if(isOfficial) return;
   const lastEntry=visibleMembers[visibleMembers.length-1];
   const lastR=state.researchLog[lastEntry.dexId];
   if(!lastR||(!lastR.evolutionConfirmed&&!isNonEvolutionConfirmed(lastR))){
@@ -5040,7 +5221,26 @@ function renderDexSpecies(){
 // Button: "X/N Evolution Methods Tested" — N = EVOLUTION_METHODS.length, read live (never
 // hardcode this; the list is expected to grow, e.g. Black Augurite in a future data update).
 // Expands to show ✓ Confirmed, ? Unknown, N Ruled Out.
+// v0.37 — Official Pokédex bypasses all of this and reads the real methods straight from EVO_TREE
+// (plus the single-target SPECIES lookup), no testedMethods/confirmedBranches gating at all.
 function buildEvoMethodsHtml(dexId){
+  if(dexMode==='official'){
+    const realMethods=[];
+    const singleEntry=getPokemonEntry(dexId);
+    if(singleEntry&&singleEntry.evolvesIntoId) realMethods.push(evoMethodLabel({method:singleEntry.evolveMethod,level:singleEntry.evolveLevel,item:singleEntry.evolveItem,from:dexId,to:singleEntry.evolvesIntoId}));
+    getEvolutions(dexId).forEach(e=>{
+      realMethods.push(evoMethodLabel({method:e.evolveMethod,level:e.evolveLevel,item:e.evolveItem,from:dexId,to:e.toDexId}));
+    });
+    const inner=realMethods.length
+      ?realMethods.map(m=>'<div style="font-size:11px;color:var(--main-text);padding:3px 0;">'+m+'</div>').join('')
+      :'<div style="font-size:11px;color:var(--main-text-secondary);padding:4px 0;">Does not evolve</div>';
+    const isOpen=expandedEvoDexIds.has(dexId);
+    return '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--main-border);">'
+      +'<button onclick="toggleEvoSection(this,'+dexId+')" style="width:100%;text-align:left;padding:6px 8px;background:var(--main-bg);border:1px solid var(--main-border);border-radius:3px;color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">'
+      +'🔬 Evolution Methods '+(isOpen?'▲':'▼')+'</button>'
+      +'<div style="display:'+(isOpen?'block':'none')+';margin-top:6px;padding:6px 8px;background:var(--main-bg);border-radius:3px;">'+inner+'</div>'
+      +'</div>';
+  }
   const r=state.researchLog[dexId];
   const total=EVOLUTION_METHODS.length;
   const tested=r?r.testedMethods.length:0;
@@ -5079,12 +5279,17 @@ function buildEvoMethodsHtml(dexId){
 // encounterRate within each (location, method) weight-group — the true table-defined odds, not
 // the Map Detail Panel's empirically-observed seen-count %, which aggregates methods together
 // and can't be split per-method. Multiple methods/rod-tiers at one location each get their own segment.
+// v0.37 — Official Pokédex bypasses the seen-gate entirely and lists every location this species
+// can ever appear at, straight from ENCOUNTERS, regardless of locationEncounterLog visit history.
 function buildEncounteredAtHtml(dexId){
   if(typeof ENCOUNTERS==='undefined') return '';
-  const locIds=Object.keys(state.locationEncounterLog).filter(locId=>{
-    const rec=state.locationEncounterLog[locId][dexId];
-    return rec&&rec.seen>=1;
-  });
+  const isOfficial=dexMode==='official';
+  const locIds=isOfficial
+    ?[...new Set(ENCOUNTERS.filter(e=>e.dexId===dexId).map(e=>e.locationId))]
+    :Object.keys(state.locationEncounterLog).filter(locId=>{
+      const rec=state.locationEncounterLog[locId][dexId];
+      return rec&&rec.seen>=1;
+    });
   if(!locIds.length) return '';
   let html='<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--main-border);"><div style="color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Encountered At</div>';
   locIds.forEach(locId=>{
@@ -5118,14 +5323,16 @@ function selectDexForm(formName){
 }
 function renderDexDetail(){
   const c=document.getElementById('dex-list'); c.innerHTML='';
+  const isOfficial=dexMode==='official';
   const entry=getPokemonEntry(dexSelectedDexId,dexSelectedFormName);
   // v0.36 — caught-individuals list now filters to the selected form tab, not every individual
   // sharing this dexId regardless of form.
   const caughtOfSpecies=state.dex.filter(p=>p.pokedexId===dexSelectedDexId&&(p.formName||null)===(dexSelectedFormName||null));
   const allCaughtOfDexId=state.dex.filter(p=>p.pokedexId===dexSelectedDexId);
   if(!entry&&!allCaughtOfDexId.length){ c.innerHTML='<div style="color:#555;padding:12px;font-size:11px;">No data found.</div>'; return; }
-  const sprite=getSpriteUrl(dexSelectedDexId,entry?entry.name:'',false,dexSelectedFormName);
-  const typeBadge=(t)=>t?'<span style="background:'+(TYPE_COLORS[t]||'#444')+';color:#fff;padding:2px 7px;border-radius:3px;font-size:10px;">'+t+'</span>':'';
+  // v0.37 — Official Pokédex always shows the real sprite (never gated by seen/caught status);
+  // the Shiny toggle forces the shiny palette. Your Pokédex is unaffected — unchanged behavior.
+  const sprite=getSpriteUrl(dexSelectedDexId,entry?entry.name:'',isOfficial&&dexOfficialShinyPreview,dexSelectedFormName);
   const heightDisplay=entry&&entry.heightM?metersToFeetStr(entry.heightM):null;
   const weightDisplay=entry&&entry.weightKg?kgToLbsStr(entry.weightKg):null;
   // v0.36 — form tab/toggle, only rendered when this dexId has more than one form row.
@@ -5144,24 +5351,43 @@ function renderDexDetail(){
   // form tab (intentionally dexId-keyed, not form-keyed — same as the rest of Research & Pokédex),
   // so both sections read state.researchLog[dexSelectedDexId] even while a form tab is selected.
   const rFlags=state.researchLog[dexSelectedDexId]||{};
+  // v0.37 — Official Pokédex always shows the real ability name, never "Unknown."
   let abilityHtml='';
   if(entry&&(entry.ability1||entry.ability2||entry.hiddenAbility)){
     const obs=rFlags.abilitiesObserved||{};
     const slots=[];
-    if(entry.ability1) slots.push({label:'Ability 1',name:entry.ability1,seen:!!obs.ability1});
-    if(entry.ability2) slots.push({label:'Ability 2',name:entry.ability2,seen:!!obs.ability2});
-    if(entry.hiddenAbility) slots.push({label:'Hidden Ability',name:entry.hiddenAbility,seen:!!obs.hiddenAbility});
+    if(entry.ability1) slots.push({label:'Ability 1',name:entry.ability1,seen:isOfficial||!!obs.ability1});
+    if(entry.ability2) slots.push({label:'Ability 2',name:entry.ability2,seen:isOfficial||!!obs.ability2});
+    if(entry.hiddenAbility) slots.push({label:'Hidden Ability',name:entry.hiddenAbility,seen:isOfficial||!!obs.hiddenAbility});
     abilityHtml='<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--main-border);"><div style="color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Abilities</div>'+
       slots.map(s=>'<div style="font-size:11px;color:'+(s.seen?'var(--main-text);':'var(--main-text-muted);')+'">'+s.label+': '+(s.seen?s.name:'Unknown')+'</div>').join('')+'</div>';
   }
+  // v0.37 — replaced Seen/Unknown with an actual observed percentage split (Your Pokédex), computed
+  // from gendersObserved's running counts ({M:count,F:count}) instead of boolean flags. Male% is
+  // rounded, Female% is derived as 100-Male% (always sums to 100, no decimals). If a gender has
+  // 0 recorded but the other has ≥1, that gender shows 0% immediately rather than "Unknown" —
+  // "Unknown" is only shown when NEITHER gender has been recorded at all. Official Pokédex shows
+  // the true canonical genderMalePct from data instead, unaffected by observation counts.
   let genderHtml='';
   if(entry&&entry.genderMalePct!=null){
-    const gObs=rFlags.gendersObserved||{};
     const slots=[];
-    if(entry.genderMalePct>0) slots.push({label:'Male',seen:!!gObs.M});
-    if(entry.genderMalePct<100) slots.push({label:'Female',seen:!!gObs.F});
+    if(entry.genderMalePct>0) slots.push('Male');
+    if(entry.genderMalePct<100) slots.push('Female');
     if(slots.length){
-      genderHtml='<div style="margin-top:8px;font-size:11px;">'+slots.map(s=>'<span style="color:'+(s.seen?'var(--main-text-secondary)':'var(--main-text-muted)')+';">'+s.label+': '+(s.seen?'Seen':'Unknown')+'</span>').join('  ·  ')+'</div>';
+      if(isOfficial){
+        const pctFor={Male:entry.genderMalePct,Female:100-entry.genderMalePct};
+        genderHtml='<div style="margin-top:8px;font-size:11px;">'+slots.map(s=>'<span style="color:var(--main-text-secondary);">'+s+': '+pctFor[s]+'%</span>').join('  ·  ')+'</div>';
+      } else {
+        const gObs=rFlags.gendersObserved||{};
+        const mCount=gObs.M||0, fCount=gObs.F||0, total=mCount+fCount;
+        if(total>0){
+          const malePct=Math.round((mCount/total)*100);
+          const pctFor={Male:malePct,Female:100-malePct};
+          genderHtml='<div style="margin-top:8px;font-size:11px;">'+slots.map(s=>'<span style="color:var(--main-text-secondary);">'+s+': '+pctFor[s]+'%</span>').join('  ·  ')+'</div>';
+        } else {
+          genderHtml='<div style="margin-top:8px;font-size:11px;">'+slots.map(s=>'<span style="color:var(--main-text-muted);">'+s+': Unknown</span>').join('  ·  ')+'</div>';
+        }
+      }
     }
   }
   const historyCount=state.dexHistory[dexSelectedDexId]||0;
@@ -5171,8 +5397,11 @@ function renderDexDetail(){
   const encounteredAtHtml=buildEncounteredAtHtml(dexSelectedDexId);
   const header=document.createElement('div');
   header.className='dex-entry';
-  header.innerHTML='<div style="display:flex;gap:12px;align-items:flex-start;"><img src="'+sprite+'" style="width:91px;height:91px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div style="color:#fff;font-size:14px;font-weight:bold;">#'+dexSelectedDexId+' '+(entry?entry.name:'???')+(entry&&entry.formName?'<span style="color:var(--main-text-secondary);font-size:11px;"> ('+entry.formName+')</span>':'')+(hasLiveShiny(dexSelectedDexId)?'<span class="shiny-badge">✨</span>':'')+'</div><div style="color:var(--main-text-secondary);font-size:11px;margin-top:1px;">Dex #'+dexSelectedDexId+'</div>'+(entry&&entry.category?'<div style="color:var(--main-text-secondary);font-size:10px;margin-top:2px;">"'+entry.category+'"</div>':'')+'<div style="display:flex;gap:5px;margin-top:6px;">'+typeBadge(entry?entry.type1:null)+typeBadge(entry?entry.type2:null)+'</div><div style="color:var(--main-text-muted);font-size:10px;margin-top:5px;">'+(heightDisplay?'📏 '+heightDisplay:'')+(heightDisplay&&weightDisplay?' · ':'')+(weightDisplay?'⚖️ '+weightDisplay:'')+'</div></div></div>'+formTabHtml+(entry&&entry.flavorText?'<div style="color:#a0c0a0;font-size:11px;font-style:italic;margin-top:10px;padding-top:10px;border-top:1px solid var(--main-border);line-height:1.6;">'+entry.flavorText+'</div>':'')+'<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--main-border);"><div style="color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Base Stats</div>'+(entry?[{label:'HP',val:entry.baseHP,color:'#2ecc71'},{label:'ATK',val:entry.baseAtk,color:'#e74c3c'},{label:'DEF',val:entry.baseDef,color:'#f4d03f'},{label:'SpATK',val:entry.baseSpatk,color:'#9b59b6'},{label:'SpDEF',val:entry.baseSpdef,color:'#5dade2'},{label:'SPD',val:entry.baseSpd,color:'#2ecc71'}].map(s=>'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;"><span style="color:var(--main-text-muted);font-size:10px;width:40px;text-align:right;">'+s.label+'</span><span style="color:#fff;font-size:10px;width:28px;text-align:right;">'+(s.val||'?')+'</span><div style="flex:1;background:var(--main-bg);border-radius:2px;height:6px;overflow:hidden;"><div style="width:'+Math.min(100,Math.round(((s.val||0)/255)*100))+'%;height:100%;background:'+s.color+';border-radius:2px;"></div></div></div>').join(''):'<div style="color:#555;font-size:10px;">No stat data available.</div>')+(entry?'<div style="color:#f4d03f;font-size:10px;text-align:right;margin-top:4px;">BST: '+(entry.bst||'?')+'</div>':'')+'</div>'+evoChainHtml+abilityHtml+genderHtml+buildEvoMethodsHtml(dexSelectedDexId)+encounteredAtHtml;
+  header.innerHTML='<div style="display:flex;gap:12px;align-items:flex-start;"><img src="'+sprite+'" style="width:91px;height:91px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div style="color:#fff;font-size:14px;font-weight:bold;">#'+dexSelectedDexId+' '+(entry?entry.name:'???')+(entry&&entry.formName?'<span style="color:var(--main-text-secondary);font-size:11px;"> ('+entry.formName+')</span>':'')+((isOfficial?dexOfficialShinyPreview:hasLiveShiny(dexSelectedDexId))?'<span class="shiny-badge">✨</span>':'')+'</div><div style="color:var(--main-text-secondary);font-size:11px;margin-top:1px;">Dex #'+dexSelectedDexId+'</div>'+(entry&&entry.category?'<div style="color:var(--main-text-secondary);font-size:10px;margin-top:2px;">"'+entry.category+'"</div>':'')+'<div style="display:flex;gap:5px;margin-top:6px;">'+typeBadgeHtml(entry?entry.type1:null)+typeBadgeHtml(entry?entry.type2:null)+'</div><div style="color:var(--main-text-muted);font-size:10px;margin-top:5px;">'+(heightDisplay?'📏 '+heightDisplay:'')+(heightDisplay&&weightDisplay?' · ':'')+(weightDisplay?'⚖️ '+weightDisplay:'')+'</div></div></div>'+formTabHtml+(entry&&entry.flavorText?'<div style="color:#a0c0a0;font-size:11px;font-style:italic;margin-top:10px;padding-top:10px;border-top:1px solid var(--main-border);line-height:1.6;">'+entry.flavorText+'</div>':'')+'<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--main-border);"><div style="color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Base Stats</div>'+(entry?[{label:'HP',val:entry.baseHP,color:'#2ecc71'},{label:'ATK',val:entry.baseAtk,color:'#e74c3c'},{label:'DEF',val:entry.baseDef,color:'#f4d03f'},{label:'SpATK',val:entry.baseSpatk,color:'#9b59b6'},{label:'SpDEF',val:entry.baseSpdef,color:'#5dade2'},{label:'SPD',val:entry.baseSpd,color:'#2ecc71'}].map(s=>'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;"><span style="color:var(--main-text-muted);font-size:10px;width:40px;text-align:right;">'+s.label+'</span><span style="color:#fff;font-size:10px;width:28px;text-align:right;">'+(s.val||'?')+'</span><div style="flex:1;background:var(--main-bg);border-radius:2px;height:6px;overflow:hidden;"><div style="width:'+Math.min(100,Math.round(((s.val||0)/255)*100))+'%;height:100%;background:'+s.color+';border-radius:2px;"></div></div></div>').join(''):'<div style="color:#555;font-size:10px;">No stat data available.</div>')+(entry?'<div style="color:#f4d03f;font-size:10px;text-align:right;margin-top:4px;">BST: '+(entry.bst||'?')+'</div>':'')+'</div>'+evoChainHtml+abilityHtml+genderHtml+buildEvoMethodsHtml(dexSelectedDexId)+encounteredAtHtml;
   c.appendChild(header);
+  // v0.37 — Official Pokédex hides the caught-individuals list entirely (pure species-level
+  // reference, decoupled from ownership) regardless of whether you happen to own any.
+  if(isOfficial) return;
   if(totalEver>0&&caughtOfSpecies.length===0){
     const el=document.createElement('div');
     el.style.cssText='color:var(--main-text-muted);padding:10px;font-size:11px;';
@@ -5205,23 +5434,135 @@ function renderDexDetail(){
   });
 }
 
+// v0.37 — populates the sort dropdown's options for whichever list is active (All Catches vs the
+// new Official Species tab use different sort keys) and syncs the search box's value. Called from
+// updateDexChrome() whenever either list view becomes active.
+function renderDexListControls(){
+  const sortEl=document.getElementById('sort-select');
+  const searchEl=document.getElementById('dex-search-input');
+  if(!sortEl||!searchEl) return;
+  if(dexView==='viewall'){
+    sortEl.innerHTML='<option value="dexid">Sort: Dex #</option><option value="family">Sort: Family #</option><option value="stats">Sort: Stats</option><option value="bst">Sort: BST</option><option value="level">Sort: Level</option><option value="ivtotal">Sort: IV Total</option><option value="id">Sort: Catch #</option>';
+    sortEl.value=dexCatchesSort;
+    searchEl.value=dexCatchesSearch;
+  } else if(dexView==='officialSpeciesList'){
+    sortEl.innerHTML='<option value="dexid">Sort: Dex #</option><option value="family">Sort: Family #</option><option value="total">Sort: Total</option><option value="hp">Sort: HP</option><option value="atk">Sort: ATK</option><option value="def">Sort: DEF</option><option value="spatk">Sort: SpATK</option><option value="spdef">Sort: SpDEF</option><option value="spd">Sort: SPD</option>';
+    sortEl.value=dexSpeciesSort;
+    searchEl.value=dexSpeciesSearch;
+  }
+}
+function onDexListControlsChange(){
+  const sortEl=document.getElementById('sort-select');
+  const searchEl=document.getElementById('dex-search-input');
+  if(dexView==='viewall'){ dexCatchesSort=sortEl.value; dexCatchesSearch=searchEl.value; }
+  else if(dexView==='officialSpeciesList'){ dexSpeciesSort=sortEl.value; dexSpeciesSearch=searchEl.value; }
+  renderDex();
+}
+
+// ── FILTER POPUP (v0.37) ── shared by All Catches and the Official Species tab, branched by dexView.
+function openDexFilterPopup(){
+  const existing=document.getElementById('dex-filter-modal'); if(existing) existing.remove();
+  const modal=document.createElement('div');
+  modal.id='dex-filter-modal';
+  modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:1150;display:flex;align-items:center;justify-content:center;padding:16px;';
+  document.body.appendChild(modal);
+  renderDexFilterPopupContent();
+}
+function renderDexFilterPopupContent(){
+  const modal=document.getElementById('dex-filter-modal'); if(!modal) return;
+  const isSpecies=(dexView==='officialSpeciesList');
+  const f=isSpecies?dexSpeciesFilters:dexCatchesFilters;
+  // v0.37 — "All" overrides every other filter, but the other checkboxes stay checked underneath
+  // (just visually dimmed/inert) rather than being cleared — unchecking All restores them.
+  const dim=f.all?'opacity:0.4;pointer-events:none;':'';
+  const cb=(key,label)=>'<label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12px;'+(key!=='all'?dim:'')+'"><input type="checkbox" '+(f[key]?'checked':'')+' onchange="toggleDexFilterCheckbox(\''+key+'\')"> '+label+'</label>';
+  let rows=cb('all','All');
+  if(!isSpecies){
+    // v0.37 — Assigned/Unassigned are mutually exclusive (toggling one clears the other), rather
+    // than a same-category-OR special case in an otherwise uniform AND filter engine.
+    rows+=cb('unassigned','Unassigned');
+    rows+=cb('assigned','Assigned');
+    rows+=cb('shiny','✨ Shiny');
+    rows+=cb('perfect','💥 Perfect IV');
+  }
+  rows+='<div style="'+dim+'padding:6px 0;"><button onclick="openDexTypePicker(\'type\')" style="width:100%;font-size:11px;text-align:left;">Type: '+(f.type||'Any')+'</button></div>';
+  rows+='<div style="'+dim+'padding:6px 0;"><button onclick="openDexTypePicker(\'moveType\')" style="width:100%;font-size:11px;text-align:left;">Move Type: '+(f.moveType||'Any')+'</button></div>';
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;max-height:85vh;overflow-y:auto;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><div style="color:var(--accent);font-size:13px;font-weight:bold;">Filter</div><button onclick="document.getElementById(\'dex-filter-modal\').remove();renderDex();" style="padding:4px 10px;font-size:12px;">✕</button></div><div>'+rows+'</div></div>';
+  modal.onclick=(e)=>{ if(e.target===modal){ modal.remove(); renderDex(); } };
+}
+function toggleDexFilterCheckbox(key){
+  const isSpecies=(dexView==='officialSpeciesList');
+  const f=isSpecies?dexSpeciesFilters:dexCatchesFilters;
+  if(key==='unassigned'&&!f.unassigned){ f.unassigned=true; f.assigned=false; }
+  else if(key==='assigned'&&!f.assigned){ f.assigned=true; f.unassigned=false; }
+  else { f[key]=!f[key]; }
+  renderDexFilterPopupContent();
+  renderDex();
+}
+// v0.37 — single-select type/move-type picker, using the same colored-rectangle swatches as
+// typeBadgeHtml(), reused by both All Catches and the Official Species tab.
+function openDexTypePicker(kind){
+  const existing=document.getElementById('dex-typepicker-modal'); if(existing) existing.remove();
+  const modal=document.createElement('div');
+  modal.id='dex-typepicker-modal';
+  modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:1200;display:flex;align-items:center;justify-content:center;padding:16px;';
+  const isSpecies=(dexView==='officialSpeciesList');
+  const f=isSpecies?dexSpeciesFilters:dexCatchesFilters;
+  const swatches=Object.keys(TYPE_COLORS).map(t=>'<button onclick="pickDexFilterType(\''+kind+'\',\''+t+'\')" style="background:'+TYPE_COLORS[t]+';color:#fff;border:none;border-radius:4px;padding:8px 4px;font-size:10px;'+(f[kind]===t?'outline:2px solid #fff;':'')+'">'+t+'</button>').join('');
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><div style="color:var(--accent);font-size:13px;font-weight:bold;">'+(kind==='type'?'Type':'Move Type')+'</div><button onclick="document.getElementById(\'dex-typepicker-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">'+swatches+'</div>'+(f[kind]?'<button onclick="pickDexFilterType(\''+kind+'\',null)" style="width:100%;margin-top:10px;font-size:11px;">Clear</button>':'')+'</div>';
+  modal.onclick=(e)=>{ if(e.target===modal) modal.remove(); };
+  document.body.appendChild(modal);
+}
+function pickDexFilterType(kind,typeName){
+  const isSpecies=(dexView==='officialSpeciesList');
+  const f=isSpecies?dexSpeciesFilters:dexCatchesFilters;
+  f[kind]=typeName;
+  const tp=document.getElementById('dex-typepicker-modal'); if(tp) tp.remove();
+  renderDexFilterPopupContent();
+  renderDex();
+}
+
+// v0.37 — cross-category AND, same-category OR (Assigned/Unassigned are mutually exclusive
+// checkboxes instead, see toggleDexFilterCheckbox above). "All" short-circuits everything.
+function matchesCatchesFilters(p,f){
+  if(f.all) return true;
+  if(f.unassigned||f.assigned){
+    const isAssigned=!!(p.holder||p.breeding);
+    if(!((f.unassigned&&!isAssigned)||(f.assigned&&isAssigned))) return false;
+  }
+  if(f.shiny&&!p.isShiny) return false;
+  if(f.perfect&&!isPerfectIV(p)) return false;
+  if(f.type){
+    const entry=getPokemonEntry(p.pokedexId,p.formName);
+    if(!entry||(entry.type1!==f.type&&entry.type2!==f.type)) return false;
+  }
+  if(f.moveType&&!(p.equippedMoves||[]).some(m=>m&&m.type===f.moveType)) return false;
+  return true;
+}
+function matchesCatchesSearch(p,q){
+  if(!q) return true;
+  q=q.toLowerCase();
+  const entry=getPokemonEntry(p.pokedexId,p.formName);
+  const name=(entry?entry.name:p.species)||'';
+  return name.toLowerCase().includes(q)
+    ||(p.nickname||'').toLowerCase().includes(q)
+    ||String(p.id).includes(q)
+    ||String(p.pokedexId||'').includes(q)
+    ||(p.holder||'').toLowerCase().includes(q);
+}
+
+// v0.37 — sort/filter/search overhaul. Filter converts from a single-select dropdown to the
+// checkbox popup above; search is live "contains" across name/nickname/catch#/dex#/holder;
+// each entry now shows both of the individual's actual FORM type(s) as colored badges.
 function renderDexViewAll(){
   const c=document.getElementById('dex-list'); c.innerHTML='';
-  const sortEl=document.getElementById('sort-select');
-  const filterEl=document.getElementById('filter-select');
-  const sort=sortEl?sortEl.value:'id';
-  const filter=filterEl?filterEl.value:'all';
-  let entries=[...state.dex];
-  if(filter==='unassigned') entries=entries.filter(p=>!p.holder);
-  else if(filter==='assigned') entries=entries.filter(p=>!!p.holder);
-  else if(filter==='shiny') entries=entries.filter(p=>!!p.isShiny);
-  else if(filter==='perfect') entries=entries.filter(p=>isPerfectIV(p));
-  else if(filter==='unicorn') entries=entries.filter(p=>!!p.isShiny&&isPerfectIV(p));
+  let entries=state.dex.filter(p=>matchesCatchesFilters(p,dexCatchesFilters)&&matchesCatchesSearch(p,dexCatchesSearch));
+  const sort=dexCatchesSort;
   if(sort==='id') entries.sort((a,b)=>a.id-b.id);
   else if(sort==='dexid') entries.sort((a,b)=>(a.pokedexId||0)-(b.pokedexId||0));
   else if(sort==='level') entries.sort((a,b)=>b.level-a.level);
-  else if(sort==='hp') entries.sort((a,b)=>b.maxHP-a.maxHP);
-  else if(sort==='total') entries.sort((a,b)=>calcBST(b.species,b.level,b)-calcBST(a.species,a.level,a));
+  else if(sort==='stats') entries.sort((a,b)=>calcBST(b.species,b.level,b)-calcBST(a.species,a.level,a));
+  else if(sort==='bst') entries.sort((a,b)=>((getPokemonEntry(b.pokedexId,b.formName)||{}).bst||0)-((getPokemonEntry(a.pokedexId,a.formName)||{}).bst||0));
   else if(sort==='ivtotal') entries.sort((a,b)=>ivTotal(b)-ivTotal(a));
   else if(sort==='family') entries.sort((a,b)=>{
     const fa=(getPokemonEntry(a.pokedexId)||{}).familyId||0, fb=(getPokemonEntry(b.pokedexId)||{}).familyId||0;
@@ -5235,8 +5576,54 @@ function renderDexViewAll(){
     const sprite=getSpriteUrl(p.pokedexId,p.species,p.isShiny||false,p.formName);
     const statusIcon=p.breeding?'🥚':(p.holder?'👤':'📦');
     const statusText=p.breeding?'At Day Care':(p.holder?'Held by: '+p.holder:'Unassigned');
-    d.innerHTML='<div style="display:flex;align-items:center;gap:8px;"><img src="'+sprite+'" style="width:36px;height:36px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div class="dex-header"><span class="dex-name">#'+(p.pokedexId||'?')+' '+getDisplayName(p)+(getRarityBadge(p)?'<span class="shiny-badge">'+getRarityBadge(p)+'</span>':'')+' (catch #'+p.id+')</span><span class="dex-id">'+statusIcon+'</span></div><div class="dex-details">Lv'+p.level+' · '+p.gender+' · HP '+p.currentHP+'/'+p.maxHP+' · BST '+calcBST(p.species,p.level,p)+'</div><div class="dex-holder">'+statusText+'</div></div></div>';
+    const entry=getPokemonEntry(p.pokedexId,p.formName);
+    const typesHtml=entry?(typeBadgeHtml(entry.type1)+typeBadgeHtml(entry.type2)):'';
+    d.innerHTML='<div style="display:flex;align-items:center;gap:8px;"><img src="'+sprite+'" style="width:36px;height:36px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div class="dex-header"><span class="dex-name">#'+(p.pokedexId||'?')+' '+getDisplayName(p)+(getRarityBadge(p)?'<span class="shiny-badge">'+getRarityBadge(p)+'</span>':'')+' '+typesHtml+'(catch #'+p.id+')</span><span class="dex-id">'+statusIcon+'</span></div><div class="dex-details">Lv'+p.level+' · '+p.gender+' · HP '+p.currentHP+'/'+p.maxHP+' · BST '+calcBST(p.species,p.level,p)+'</div><div class="dex-holder">'+statusText+'</div></div></div>';
     d.onclick=()=>showPokemonDetail(p.id);
+    c.appendChild(d);
+  });
+}
+
+// v0.37 — Official Pokédex's new Species tab: one row per dexId (forms handled via the existing
+// form-tab toggle after drilling into Detail, not a separate row per form), same list mechanics
+// as All Catches but species-level — no ownership concepts (Un/Assigned, Shiny, Perfect IV).
+function matchesSpeciesFilters(entry,f){
+  if(f.all) return true;
+  if(f.type&&entry.type1!==f.type&&entry.type2!==f.type) return false;
+  if(f.moveType){
+    const slots=getAvailableMoveSlots(entry);
+    if(!slots.some(s=>s.type===f.moveType)) return false;
+  }
+  return true;
+}
+function matchesSpeciesSearch(entry,q){
+  if(!q) return true;
+  q=q.toLowerCase();
+  return (entry.name||'').toLowerCase().includes(q)||String(entry.dexId).includes(q);
+}
+function renderDexOfficialSpeciesList(){
+  const c=document.getElementById('dex-list'); c.innerHTML='';
+  const roster=getAllSpeciesRoster();
+  if(!roster.length){ c.innerHTML='<div style="color:var(--c-danger);padding:12px;font-size:11px;">Database not loaded. Check pokedex.js is in GitHub.</div>'; return; }
+  let entries=roster.filter(e=>matchesSpeciesFilters(e,dexSpeciesFilters)&&matchesSpeciesSearch(e,dexSpeciesSearch));
+  const sort=dexSpeciesSort;
+  if(sort==='dexid') entries.sort((a,b)=>a.dexId-b.dexId);
+  else if(sort==='family') entries.sort((a,b)=>(a.familyId||0)-(b.familyId||0)||a.dexId-b.dexId);
+  else if(sort==='total') entries.sort((a,b)=>(b.bst||0)-(a.bst||0));
+  else if(sort==='hp') entries.sort((a,b)=>(b.baseHP||0)-(a.baseHP||0));
+  else if(sort==='atk') entries.sort((a,b)=>(b.baseAtk||0)-(a.baseAtk||0));
+  else if(sort==='def') entries.sort((a,b)=>(b.baseDef||0)-(a.baseDef||0));
+  else if(sort==='spatk') entries.sort((a,b)=>(b.baseSpatk||0)-(a.baseSpatk||0));
+  else if(sort==='spdef') entries.sort((a,b)=>(b.baseSpdef||0)-(a.baseSpdef||0));
+  else if(sort==='spd') entries.sort((a,b)=>(b.baseSpd||0)-(a.baseSpd||0));
+  if(!entries.length){ c.innerHTML='<div style="color:#555;padding:12px;font-size:11px;">No entries.</div>'; return; }
+  entries.forEach(entry=>{
+    const d=document.createElement('div');
+    d.className='dex-entry'; d.style.cursor='pointer';
+    const sprite=getSpriteUrl(entry.dexId,entry.name,dexOfficialShinyPreview);
+    const typesHtml=typeBadgeHtml(entry.type1)+typeBadgeHtml(entry.type2);
+    d.innerHTML='<div style="display:flex;align-items:center;gap:8px;"><img src="'+sprite+'" style="width:36px;height:36px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div class="dex-header"><span class="dex-name">#'+entry.dexId+' '+entry.name+' '+typesHtml+'</span></div><div class="dex-details">Total: '+(entry.bst||'?')+'</div></div></div>';
+    d.onclick=()=>{ dexSelectedDexId=entry.dexId; dexSelectedFormName=null; dexView='detail'; renderDex(); };
     c.appendChild(d);
   });
 }
@@ -5405,7 +5792,13 @@ const SAVE_KEY='pokeprof_save';
 // "Persistent Gender-Observation Tracking") and researchLog[dexId].breedingTested (boolean, new
 // — see "Unconfirmed Predecessor via Breeding") added. Both migrations run in a single combined
 // pass on load from v22. Every other v0.36 change is a bug fix or UI/display-only.
-const SAVE_VERSION=23;
+// v0.37 — SAVE_VERSION 24 (23 -> 24): researchLog[dexId].gendersObserved changes shape from
+// boolean flags ({M:true,F:true}) to running counts ({M:0,F:0}) — see "Gender Ratio Display".
+// Migration: any pre-v24 boolean-shaped value is discarded, then re-derived via a one-time
+// backfill sweep from currently-held state.dex individuals (gated to pre-v24 loads only — see the
+// comment at that sweep below, since a count increment isn't safe to re-run on every load the way
+// the old boolean set was). Every other v0.37 change is a bug fix or UI/display-only.
+const SAVE_VERSION=24;
 let saveTimer=0;
 
 function saveGame(){
@@ -5451,7 +5844,7 @@ function loadGame(){
 
     // ── SAVE_VERSION 23 MIGRATION ──
     // Accepts v11-v22 saves and migrates them; rejects anything older.
-    if(data.version!==SAVE_VERSION&&data.version!==22&&data.version!==21&&data.version!==20&&data.version!==19&&data.version!==18&&data.version!==17&&data.version!==16&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
+    if(data.version!==SAVE_VERSION&&data.version!==23&&data.version!==22&&data.version!==21&&data.version!==20&&data.version!==19&&data.version!==18&&data.version!==17&&data.version!==16&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
     const s=data.state;
 
     // Migrate inventory: v11 had a single `bag`; v12 splits to professorBag/trainerBag.
@@ -5550,7 +5943,12 @@ function loadGame(){
       // recover gender data from Pokemon already released). breedingTested is also new — no
       // backfill is possible (hatching is the only signal), so it simply starts false and gets
       // set the next time that species is successfully bred.
-      if(!r.gendersObserved) r.gendersObserved={};
+      // v0.37 migration: gendersObserved changes shape from booleans ({M:true,F:true}) to running
+      // counts ({M:0,F:0}) — recordGenderObserved() now increments instead of setting a flag, so
+      // any pre-v0.37 boolean-shaped value is discarded here; the backfill sweep below (gated to
+      // pre-v24 loads only, since an increment isn't safe to re-run on every load like the old
+      // boolean set was) re-derives real counts from currently-held individuals.
+      if(data.version<24||!r.gendersObserved) r.gendersObserved={};
       if(r.breedingTested===undefined) r.breedingTested=false;
       // v0.24 migration: firstSeen/firstCaught are new fields. Without backfilling them, every
       // pre-existing save's next catch of ANY already-known species (even ones caught hundreds
@@ -5563,7 +5961,12 @@ function loadGame(){
       if(r.firstCaught===undefined) r.firstCaught=!!(s.dexHistory&&s.dexHistory[dexIdStr]);
     });
     state.dex.forEach(p=>{ if(p.pokedexId&&p.ability) recordAbilityObserved(p.pokedexId,p.ability); });
-    state.dex.forEach(p=>{ if(p.pokedexId&&(p.gender==='M'||p.gender==='F')) recordGenderObserved(p.pokedexId,p.gender); }); // v0.36
+    // v0.37 — gated to pre-v0.37 loads only (see comment above): recordGenderObserved() now
+    // increments a persisted counter, so running this unconditionally on every load (as the old
+    // boolean-set version safely did) would double-count on every single page refresh.
+    if(data.version<24){
+      state.dex.forEach(p=>{ if(p.pokedexId&&(p.gender==='M'||p.gender==='F')) recordGenderObserved(p.pokedexId,p.gender); });
+    }
     // v0.21 migration: fishing split into fish-old/fish-good/fish-super sub-methods.
     // Any saved location preference referencing the old bare 'fish' method is dropped entirely —
     // that location recalculates fresh defaults (all currently-unlocked methods checked evenly)

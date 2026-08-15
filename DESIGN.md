@@ -70,7 +70,7 @@ There is no survival element. Aides do not need food, sleep, or anything like th
 - The `<h1>` tag always shows the current version (e.g. `PokeProf v0.18`)
 - Increment the version on every deployed change
 - `SAVE_VERSION` in `pokeprof.html` must be incremented whenever `state` structure changes
-- Current save version: `12` (v0.19)
+- Current save version: `24` (v0.37)
 - **v0.20 requires SAVE_VERSION 13** due to: `nickname` field on Pokémon objects, `evolveBlocked` field on Pokémon objects, `researchLog[dexId].abilitiesObserved` field, and `researchLog[dexId].confirmedBranches` replacing singular `confirmedMethod`/`confirmedIntoId`. All four migrations run in a single combined pass on load from v12.
 - **v0.21 requires SAVE_VERSION 14** due to: fishing splitting into per-rod-tier sub-methods (`fish-old`/`fish-good`/`fish-super`) instead of a single `fish` method. Migration: any `state.locationMethodPrefs[locId]` entry containing the bare `'fish'` method (in `methods[]` or as a `weights` key) is dropped entirely for that location — it recalculates fresh defaults (all currently-unlocked methods/rod-tiers checked evenly) the next time that location is visited. No other v0.21 change requires a schema change.
 - **v0.22 stays on SAVE_VERSION 14** — no `state` schema changes in this batch (all 11 items are behavior/rendering fixes and additive read-only views).
@@ -87,6 +87,7 @@ There is no survival element. Aides do not need food, sleep, or anything like th
 - **v0.34 stays on SAVE_VERSION 21** — no `state` schema changes. `locationMethodPrefs[locId]` gains an additive `knownMethods` field (degrades gracefully on old saves — see "Mission Modal — Method Selection" below), and every other change is display logic, travel-state handling, or converter-only.
 - **v0.35 requires SAVE_VERSION 22 (21 → 22)** due to: `state.wanderMetric` (new — see "Mission Modal — Wander Mode"). Migration: existing saves default to `'encounters'`. All other v0.35 changes (evolution-chain dedup, migration-gating fix, species-cap-on-evolution, theming) are bug fixes or UI/display-only — no additional schema impact.
 - **v0.36 requires SAVE_VERSION 23 (22 → 23)** due to: `researchLog[dexId].gendersObserved` (new — see "Research & Pokédex — Persistent Gender-Observation Tracking") and `researchLog[dexId].breedingTested` (new — see "Evolution Chain Visual — Unconfirmed Predecessor via Breeding"). Both migrations run in a single combined pass on load from v22. Every other v0.36 change is a bug fix or UI/display-only.
+- **v0.37 requires SAVE_VERSION 24 (23 → 24)** due to: `researchLog[dexId].gendersObserved` changing from boolean flags (`{M:true,F:true}`) to running counts (`{M:0,F:0}`) — see "Research & Pokédex — Gender Ratio Display." Migration: existing boolean-flag records convert to counts via best-effort backfill from currently-held `state.dex` individuals only (historical released/evolved-away individuals aren't recoverable — same limitation as the original v0.36 backfill this replaces). Every other v0.37 change is a bug fix or UI/display-only.
 
 ---
 
@@ -459,6 +460,7 @@ The single `state.bag` is replaced with two separate inventories:
 - **New helper required:** `getFamilyDexIds(dexId)` — walks `EVO_TREE` in both
   directions to build the full connected-component set of dexIds for a family. Did not
   exist prior to v0.32.
+- **v0.37:** now also triggers for perfect-IV incoming individuals, since they're no longer exempt from `checkSpeciesCap()` entirely (see "Perfect-IV Species-Cap Exemption" below). A donor that isn't itself perfect can never make a recipient perfect — donation copies IVs wholesale, so this can't manufacture additional perfect-IV individuals beyond ones directly rolled at creation.
 
 ### Species Cap Enforcement on Evolution + Release Priority (SETTLED — v0.35, NEW)
 - **Bug:** `applySpeciesSwap()` — called by every evolution path — never checked the species cap; only wild catches did (`checkSpeciesCap()`, called from `catchPokemon()` paths only). An evolution could push a species over cap with no check at all.
@@ -508,6 +510,7 @@ The single `state.bag` is replaced with two separate inventories:
 - Two Dittos together → not breedable.
 - Genderless non-Ditto species → can only pair with Ditto.
 - **Cross-family breeding is fully supported** — two different families can interbreed if they share an egg group; this is not restricted to same-family pairs.
+- **Bug fixed v0.37:** the "Undiscovered egg group → not breedable" rule above was never actually enforced. `isUndiscoveredOnly()` checked for the literal string `'Undiscovered'`, but the real data value across all 136 non-breeding species is `'No eggs'` — the check silently never matched anything, so `canBreedPair()`'s intended block on Day Care pairing never fired. Fixed by correcting the string literal to `'No eggs'`.
 
 ### Result Species
 - The result is always the **lowest-evolution root** of the **female** parent's family (or the non-Ditto parent's family, if Ditto is involved) — mirrors the mainline "mother determines species" rule.
@@ -531,6 +534,7 @@ The single `state.bag` is replaced with two separate inventories:
 - `releaseDaycarePair()` ("Pull Out") is unchanged — still ends the loop and returns parents to the box, forfeiting any uncollected `eggsQueued`. Confirm dialog gets a one-line addition warning about this if `eggsQueued > 0` at the time.
 - `buildDaycareHtml()` slot display replaces the old "Ready to collect! / N min remaining" with a live queue count (e.g. "3 eggs ready · next in 1:24") — Collect button enabled whenever `eggsQueued > 0`.
 - **SAVE_VERSION 19 migration:** any slot with the legacy `readyAt` field converts to `nextReadyAt: readyAt, eggsQueued: 0` on load.
+- **Bug fixed v0.37 — missing log events on collection.** `collectDaycareSlot()` never called `logCaptureRarity()` (shiny/Perfect-IV/Unicorn hatches produced zero Condensed-log entry) or `recordNewSpecies()` (baby-form species only discoverable via breeding never fired "🆕 New Species," since eggs skip the normal encounter/sighting phase). `recordCapture()` was already correct and is unchanged. Fixed: both now fire per hatched individual (`logCaptureRarity(baby,false)` — `false` matching the existing offline-silent-tallied pattern, not per-egg Full-log spam). The batch-summary Full-log line is enriched with non-zero tallies instead: `"Collected N eggs at the Day Care! (kept/released clause) — X new species, Y unicorn, Z perfect IV, W shiny!"` — each category omitted if zero.
 
 ### Shiny Rolls at Hatching (SETTLED — v0.30, NEW)
 - Day Care eggs now roll for shiny — previously `collectDaycareSlot()` never checked
@@ -598,6 +602,30 @@ The single `state.bag` is replaced with two separate inventories:
 - **All Catches** tab: unchanged flat list — see "All Catches View — Sorting" below.
 - **Pokédex** tab (new, v0.22): see "Pokédex Grid View" below.
 
+### Official Pokédex / Your Pokédex (SETTLED — v0.37, NEW)
+- **Entry screen:** tapping the Dex bottom-nav tab now first shows a chooser — **"Official Pokédex"** / **"Your Pokédex"**. First-ever visit (per device) defaults here; every subsequent visit auto-jumps to the last-visited mode + sub-tab combo.
+- **Persistence: device-local, outside the save file** — same pattern as the Theming System (see below), a single "last destination" value overwritten on every navigation. No SAVE_VERSION impact.
+- **Your Pokédex:** unchanged from pre-v0.37 behavior — Pokédex/Families/All Catches sub-tabs, all existing research-gating (silhouettes, ability/gender/evolution/encounter reveals) untouched.
+- **Official Pokédex:** same visual shell, but every research-gated section is bypassed to show complete data regardless of research/catch progress:
+  - Grid: full-color sprite for every species, always clickable — no `?`/silhouette states.
+  - Abilities: always shows the real name, never "Unknown."
+  - Gender ratio: true canonical `genderMalePct` from data, not the observed-count % used in Your Pokédex (see "Gender Ratio Display" below).
+  - Evolution Chain visual: fully connected, no "unconfirmed via breeding" placeholders.
+  - Evolution Methods panel: pulled directly from `EVO_TREE`, no confirmed/tested/ruled-out gating.
+  - Encountered At: all locations from `ENCOUNTERS` data, not gated by `locationEncounterLog` visit history.
+  - Species Detail's "Caught individuals" list: hidden entirely — pure species-level reference, decoupled from ownership.
+  - Sub-tabs: **Pokédex, Families, Species** — no "All Catches" (ownership-only concept, doesn't apply here).
+- **New "Species" sub-tab** (Official Pokédex only): same list mechanics as "All Catches" (see "All Catches View — Sorting, Filtering, Search" below), one row per dexId — forms handled via the existing form-tab toggle after drilling into Detail, not a separate row per form.
+  - **Sort:** Dex #, Family #, Total (species base stat total, `entry.bst` — same underlying value as "BST" in All Catches, relabeled here since there's no individual "Stats" to disambiguate from), HP, ATK, DEF, SpATK, SpDEF, SPD (all from the species' base stat columns).
+  - **Filter:** All, Type, Move Type — reuses `getAvailableMoveSlots(entry)` (the same helper that picks a wild Pokémon's default move) to match species that can ever use a move of the selected type against their possible move pool. Ownership-only filters (Un/Assigned, Shiny, Perfect IV) don't apply at species level and are dropped.
+  - **Search:** same live "contains" match, against species name and Dex #.
+  - **Row layout:** `#Dex Name` + type badge(s) (shared `typeBadgeHtml()`) on the header line; details line shows `Total: ###`; no catch-# text (nothing replaces it).
+- **Top control row** (species-cap row, repurposed): now holds, left to right:
+  - **"◀ Back"** — returns to the Official/Your Pokédex chooser. Separate from the existing subnav "◀ Back," which still handles Detail→Species/Families drill-down within whichever mode is active.
+  - **"Shiny" toggle** (Official Pokédex only) — forces every sprite in Official mode to its shiny palette when ON. No effect in Your Pokédex mode, which always reflects real caught/individual shiny status regardless of toggle position.
+  - **Per-Species Cap dropdown** (Your Pokédex only, hidden in Official mode — this setting only governs your own roster).
+- No SAVE_VERSION impact.
+
 ### Three Views Within "Families"
 1. **Family Cards** (Layer 1): Groups Pokémon by evolutionary family (`familyId`). Shows base sprite, family number, known species count, evolution chain with `???` if the final known member hasn't confirmed no-evolution yet
 2. **Species Cards** (Layer 2): Lists known species within a family. Shows total-ever caught vs currently-held count. Shows `???` placeholder if last known species hasn't confirmed non-evolution
@@ -616,9 +644,20 @@ The single `state.bag` is replaced with two separate inventories:
   - **New field:** `researchLog[dexId].firstCaught` — fires a new finding, **"🎯 Captured: [name]"**, on first successful catch (distinct from "🆕 New Species", which now fires on first *sighting* instead of first catch).
   - **Findings report dedupe:** findings are tagged with `dexId`. If a species has both a "seen" and "captured" finding pending in the same `showFindingsReport()` batch, only "🎯 Captured" renders — capture overwrites seen within that batch (covers an encounter caught immediately, or an offline batch that sees-then-catches within the same window).
 
-### All Catches View — Sorting (SETTLED — v0.22, extended v0.36)
+### All Catches View — Sorting, Filtering, Search (SETTLED — v0.22, extended v0.36, overhauled v0.37)
 - `sort-select` gains a `family` option alongside Catch #/Dex #/Level/HP/BST — sorts by `familyId` (via `getPokemonEntry(p.pokedexId).familyId`), with `dexId` as a secondary tiebreaker so same-family members stay grouped and ordered sensibly.
 - **v0.36:** filter dropdown gains **💥 Perfect IV** (`isPerfectIV(p)`, inclusive of unicorns) and **🦄 Shiny+Perfect** (exact intersection). Sort dropdown gains **Sort: IV Total** (sum of the 6 IVs, descending — matches the existing Level/HP/BST convention). No SAVE_VERSION impact.
+- **v0.37 — full sort/filter/search overhaul:**
+  - **Sort** (unchanged dropdown, left side): Dex #, Family #, Stats (individual's actual current stat total via `calcBST(individual)` — HP+ATK+DEF+SpATK+SpDEF+SPD at current level/IV/nature), BST (species' static base stat total, `entry.bst` — distinct from Stats), Level, IV Total, Catch #.
+  - **Filter (right side) — converted from single-select dropdown to a checkbox popup:** All, Unassigned, Assigned, Shiny, Perfect IV, Type (single-select popup using the existing colored type-rectangle picker), Move Type (single-select popup, same picker — matches if any of the individual's 4 `equippedMoves[]` slots is that type).
+    - **Cross-category logic: AND** (e.g. Shiny + Type:Fire → must be both).
+    - **Same-category logic: OR** (applies to Assigned/Unassigned specifically, since Type/Move Type are single-select and Shiny/Perfect IV are standalone).
+    - **Assigned/Unassigned are mutually exclusive checkboxes** — checking one auto-unchecks the other, rather than a same-category OR exception living in an otherwise-uniform AND engine. Unchecking either restricts nothing (shows both).
+    - **All:** stays checked visibly; other checkboxes remain checked underneath but grayed out/inactive while All is active — unchecking All restores their previous state.
+  - **Search bar**, new, below the dropdowns: live-filter as you type, case-insensitive "contains" match against species name, nickname, catch #, dex #, and holder name.
+  - **Type badge on each entry:** shows both of the individual's type(s) — using their actual **form's** type, not base species — as colored rounded-rectangle badges (same component as Species Detail), positioned after the name and before the catch #.
+  - Shared `typeBadgeHtml()` helper extracted to global scope (previously duplicated as a locally-scoped arrow function inside `renderDexDetail()`/`showPokemonDetail()`) so it can be reused across this list, the Species tab (see "Official Pokédex / Your Pokédex" below), and the new Type/Move Type popups.
+  - No SAVE_VERSION impact — sort/filter/search state is transient UI state, same as before.
 
 ### Family Grouping — `getFamilyMembers()` (SETTLED — v0.18 fix)
 - Returns one entry per unique `dexId` within a family, preferring the `formName: null` row where one exists, but **including dexIds whose only database rows have a non-null `formName`** (gender-locked base species like Nidoran♂/♀, which have no null-form sibling)
@@ -651,10 +690,12 @@ The single `state.bag` is replaced with two separate inventories:
 - The "Observed Abilities" section on Species Detail was built from **currently-held individuals only** — releasing or evolving away the one individual with a given ability slot silently removed it from this display, even though `researchLog[dexId].abilitiesObserved` (used elsewhere to gate dex completeness) correctly remembers it forever.
 - Fixed: rebuilt to list every ability slot the species has (Ability 1, Ability 2 if present, Hidden Ability if present), each showing the real name if `abilitiesObserved` has it flagged, or **"Unknown"** (dimmed) if not — directly mirroring what `isDexPageComplete()` actually requires, which was previously invisible to the player (methods could show 100% tested while the page still wasn't "complete," with no explanation why). No SAVE_VERSION impact — reads existing data.
 
-### Persistent Gender-Observation Tracking (SETTLED — v0.36, NEW)
-- Same problem existed for the Gender line, except there was no persistent flag at all to begin with. New `recordGenderObserved(dexId, gender)`, mirroring `recordAbilityObserved()`, added at all 7 of its existing call sites (4 catch paths, evolution's `applySpeciesSwap`, Day Care hatch, load-time backfill sweep).
-- New persisted field: `researchLog[dexId].gendersObserved = {M: bool, F: bool}`. Gender line rebuilt the same way as the ability fix — Male/Female shown as "Seen"/"Unknown," only for genders the species can actually have (per `genderMalePct`); fully genderless species show nothing.
-- Part of the SAVE_VERSION 22 → 23 bump (see Versioning, shared with "Evolution Chain Visual — Unconfirmed Predecessor via Breeding"). Migration: `gendersObserved:{}` defaulted on every research record, best-effort backfill from currently-held individuals.
+### Gender Ratio Display (SETTLED — v0.36, revised v0.37)
+- **v0.36:** same problem existed for the Gender line as the ability fix above, except there was no persistent flag at all to begin with. New `recordGenderObserved(dexId, gender)`, mirroring `recordAbilityObserved()`, added at all 7 of its existing call sites (4 catch paths, evolution's `applySpeciesSwap`, Day Care hatch, load-time backfill sweep). New persisted field `researchLog[dexId].gendersObserved = {M: bool, F: bool}`, displayed as "Seen"/"Unknown."
+- **v0.37 — replaced with running counts and a percentage display.** `gendersObserved` changes shape to `{M: count, F: count}`; `recordGenderObserved()` increments instead of setting a flag. Once at least one individual of either gender has been recorded, Species Detail shows `Male: X% · Female: Y%`, computed as `Male% = round(M/(M+F)*100)`, `Female% = 100 - Male%` (always sums to 100, no decimals). If one gender has 0 recorded and the other has ≥1, the 0-count gender shows `0%` immediately, not "Unknown."
+- Stays combined across all forms per dexId (unchanged convention, matches the Abilities section), only for genders the species can actually have (per `genderMalePct`); fully genderless species show nothing.
+- Species with `genderMalePct: null` on every form (e.g. Meowstic, where gender is defined by which form you have rather than a per-individual roll) continue to skip this section entirely — pre-existing, correct exclusion, unaffected by this change.
+- Part of the SAVE_VERSION 23 → 24 bump (see Versioning). Migration: booleans convert to counts, best-effort backfill from currently-held individuals only (same limitation as the original v0.36 backfill — historical released/evolved-away individuals aren't recoverable).
 
 ### Evolution Doesn't Log New Species as Captured (SETTLED — v0.36 fix)
 - `applySpeciesSwap()` called `recordNewSpecies()` on evolution but never `recordCapture()`, despite `dexHistory` incrementing correctly — the "🎯 Captured" finding never fired on evolution, only "🆕 New Species." Fixed: added the missing `recordCapture(newEntry.dexId, p.species)` call. No SAVE_VERSION impact.
@@ -947,6 +988,7 @@ Two structural gaps existed once `use-move`/`in-party` became real, functional m
 - Species that already have a real predecessor row in the data (Pichu, Munchlax) are unaffected by this — that's the separate, pre-existing, already-correct mechanism.
 - No recursion: a revealed baby form (Pichu) is always treated as the true end of the line.
 - Part of the SAVE_VERSION 22 → 23 bump (see Versioning, shared with "Research & Pokédex — Persistent Gender-Observation Tracking"). Migration: `breedingTested:false` defaulted on every existing research record — no backfill possible, starts false for everyone going forward.
+- **Bug fixed v0.37:** the auto-skip condition documented above (`getEggGroups(dexId).length===0`) never actually applied to any real species, because the same `'No eggs'`/`'Undiscovered'` string mismatch (see "Compatibility — Full Egg-Group Rules") meant egg-group-less species still had a non-empty `getEggGroups()` result (`['No eggs']`, length 1) — so species like Mewtwo incorrectly rendered the unconfirmed-predecessor `?` placeholder despite being structurally unbreedable. Fixed alongside the breeding-block fix; the Families tab placeholder logic now also checks `isUndiscoveredOnly()`.
 
 ---
 
@@ -1457,9 +1499,12 @@ IVs/Nature are rolled at the moment of capture/hatch/creation — **not** when a
 - Applied **only** at true per-individual displays: party card, `showPokemonDetail` modal (including its standalone status line, now "💥 PERFECT IV" / "🦄 SHINY + PERFECT IV" as appropriate), Day Care parent-picker rows, both Dex list entry variants.
 - **Not** applied to species-level aggregate indicators (evolution chain nodes, Pokédex grid, Species Detail header) — those stay shiny-only via `hasLiveShiny(dexId)`, unchanged.
 
-### Perfect-IV Species-Cap Exemption (SETTLED — v0.31, NEW)
-- `checkSpeciesCap()`'s auto-release-on-catch-overflow check extended from `if(caught.isShiny) return;` to also exempt `isPerfectIV(caught)` — mirrors existing shiny behavior exactly.
-- The manual cap-lowering sweep (`onSpeciesCapChange`) gets the same exemption — perfect-IV individuals excluded from the release-eligible pool alongside shinies, regardless of how low the cap is set.
+### Perfect-IV Species-Cap Exemption (SETTLED — v0.31, NEW; REVERSED v0.37)
+- ~~`checkSpeciesCap()`'s auto-release-on-catch-overflow check extended from `if(caught.isShiny) return;` to also exempt `isPerfectIV(caught)` — mirrors existing shiny behavior exactly.~~
+- ~~The manual cap-lowering sweep (`onSpeciesCapChange`) gets the same exemption — perfect-IV individuals excluded from the release-eligible pool alongside shinies, regardless of how low the cap is set.~~
+- **v0.37 — exemption removed entirely.** Perfect-IV individuals now behave exactly like any normal individual for species-cap purposes: they count toward the per-species cap total, can trigger and receive Family IV Inheritance donation (see below), and can be released via either fallback path (batch-collect weakest-by-move-power, or manual cap-lower sweep) with no special protection. **Shiny exemption is untouched** — shinies remain fully exempt everywhere this section describes.
+- Confirm dialog text (see "Per-Species Catch Cap" above) updated: *"shiny/perfect-IV Pokémon excluded"* → *"shiny Pokémon excluded."*
+- Rationale: previously, a perfect-IV individual could never donate its IVs via Family IV Inheritance, since it short-circuited out of `checkSpeciesCap()` before reaching that logic — meaning a freshly-rolled perfect individual could never upgrade an existing weaker family member. Removing the exemption lets that donation actually happen.
 
 ### SAVE_VERSION — v0.31 (19 → 20)
 - Migration: every existing party/dex Pokémon gets `ivs` and `nature` rolled retroactively (single roll, not the 10× dex-complete advantage — that only applies going forward at creation time), then `recalcStats()` is run. `currentHP` is set to the new `maxHP` (full heal) since `maxHP` shifts as a result of the newly-applied IV/nature.
@@ -1470,6 +1515,7 @@ IVs/Nature are rolled at the moment of capture/hatch/creation — **not** when a
 - New nature-picker modal (layered like the move picker): lists all 25 `NATURES`, each labeled with its effect (e.g. "Adamant — +ATK/-DEF"). The individual's current nature is shown grayed out/disabled. Requires a confirmation step before committing.
 - On confirm: consumes 1 Nature Mint, sets `p.nature`, calls `recalcStats(p)`, logs it, refreshes the poke-modal.
 - No SAVE_VERSION impact (`p.nature` already exists since v0.31).
+- **Fixed v0.37 — accent theming + disabled-click messaging.** The button and its modal hardcoded `#9b59b6` (purple) in three spots instead of `var(--accent)` — a gap in Theming System's documented Accent scope (modal titles/borders), alongside the existing Map System exemption note. Also, the button previously used the native HTML `disabled` attribute when no Nature Mint was held, which silently blocks click events — clicking gave no feedback at all. Fixed: `disabled` attribute removed (visual dimming replicated manually via `opacity:0.4`, matching the global CSS default it previously inherited); clicking with 0 Nature Mints now opens a themed message modal reading **"Nature Mint Required — available in the Shop."** Behavior with ≥1 Nature Mint held is unchanged.
 
 ---
 

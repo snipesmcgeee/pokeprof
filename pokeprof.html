@@ -4950,6 +4950,11 @@ function evoArrowHtml(label){
 function evoArrowDownHtml(){
   return '<div style="display:flex;justify-content:center;margin:2px 0;"><div style="color:var(--main-text-secondary);font-size:12px;">↓</div></div>';
 }
+// v0.37 — down-arrow variant WITH a method label sitting just above the arrow, used per-branch
+// in the 2+ simultaneous branches stack below (see "Split Forms — Vertical Down-Arrow Layout").
+function evoArrowDownLabeledHtml(label){
+  return '<div style="display:flex;flex-direction:column;align-items:center;margin:2px 0;"><div style="font-size:10px;color:var(--main-text-muted);text-align:center;max-width:70px;">'+label+'</div><div style="color:var(--main-text-secondary);font-size:12px;">↓</div></div>';
+}
 // Root-based walk of EVO_TREE + single-target pokedex.js evolution edges. A root is any family
 // member with no incoming edge from another family member. Each root gets its own row (Nidoran
 // M/F -> 2 rows); a node with 2+ simultaneous confirmed branches renders as a vertical stack
@@ -5044,18 +5049,17 @@ function renderEvolutionChainVisual(famId,highlightDexId){
       if(isOfficial||(r&&isNonEvolutionConfirmed(r))) return html;
       return html+evoArrowHtml('?')+evoPlaceholderHtml();
     }
-    // v0.36 — 2+ simultaneous branches render as a vertical stack (down-arrow under the node,
-    // each branch on its own line-2 slot) instead of fanning out inline with '/'. Single-branch
-    // chains are unchanged.
+    // v0.37 — 2+ simultaneous branches: one parent sprite, then each branch as its own column
+    // (method label above a down-arrow, straight down to that branch's sprite/chain), arranged
+    // side by side in a horizontal wrapping row — not stacked one-per-line.
     if(relevant.length>1){
-      const branchRow=relevant.map(e=>{
+      const branchRows=relevant.map(e=>{
         const label=isEdgeConfirmed(e,r)?evoMethodLabel(e):'?';
-        return evoArrowHtml(label)+walk(e.to,e.toFormName);
+        return '<div style="display:flex;flex-direction:column;align-items:center;">'+evoArrowDownLabeledHtml(label)+walk(e.to,e.toFormName)+'</div>';
       }).join('');
       return '<div style="display:flex;flex-direction:column;align-items:center;">'
         +'<div style="display:flex;align-items:center;">'+html+'</div>'
-        +evoArrowDownHtml()
-        +'<div style="display:flex;flex-wrap:wrap;align-items:flex-start;gap:2px;">'+branchRow+'</div>'
+        +'<div style="display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:center;gap:6px;">'+branchRows+'</div>'
         +'</div>';
     }
     const branches=relevant.map(e=>{

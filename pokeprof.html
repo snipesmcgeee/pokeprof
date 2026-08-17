@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.37</title>
+<title>PokeProf v0.38</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -136,7 +136,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span style="font-size:11px;color:var(--main-text-muted);">v0.37</span></h1>
+  <h1>PokeProf <span style="font-size:11px;color:var(--main-text-muted);">v0.38</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">100.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -696,6 +696,7 @@ let state={
   trainerBag:{},
   gymProgress:{},
   speciesCap:6, // v0.26 — editable per-species catch cap (1-6)
+  speciesCapOverrides:{}, // v0.38 — per-species cap overrides {dexId:number}
   daycareSlots:{purchased:1,slots:[]}, // v0.26 — Day Care / Breeding
   researchLog:{}, pendingFindings:[],
   discoveredLocations:new Set(['palletTown']),
@@ -729,14 +730,15 @@ function makePokemon(sp,lv,gender,holder=null,dexId=null){
   const nature=rollNature();
   const maxHP=calcMaxHP(sp,lv,resolvedDexId,ivs.hp);
   const startExp=expToLevel(lv,growthRate);
-  const ability=assignAbility(entry);
+  const abilityRoll=assignAbility(entry);
   const p={
     id:state.dexIdCounter++, species:sp, pokedexId:resolvedDexId, level:lv, gender,
     currentHP:maxHP, maxHP, growthRate,
     exp:isNaN(startExp)?0:startExp,
     holder,
     isShiny:false,
-    ability:ability||null,
+    ability:abilityRoll.ability,
+    abilitySlot:abilityRoll.abilitySlot, // v0.38 — persistent identity, survives evolution (see applySpeciesSwap)
     friendship:0,
     nickname:null,
     evolveBlocked:false,
@@ -938,14 +940,30 @@ function advanceTravelPath(){
 }
 
 // ── ABILITY ASSIGNMENT ──
+// v0.38 — now returns {ability, abilitySlot} instead of just the name. abilitySlot is the
+// persistent identity ('ability1'|'ability2'|'hidden') — matches how the real games handle
+// evolution: an individual is tied to a fixed SLOT, not a fixed name, so the displayed name can
+// (and should) change on evolution while the slot stays the same. See applySpeciesSwap() and
+// resolveAbilityForSlot() below, and DESIGN.md "Ability Slot Tracking."
 function assignAbility(entry){
-  if(!entry) return null;
+  if(!entry) return {ability:null,abilitySlot:null};
   const roll=Math.random();
-  if(roll<0.45&&entry.ability1) return entry.ability1;
-  if(roll<0.90&&entry.ability2) return entry.ability2;
-  if(entry.hiddenAbility) return entry.hiddenAbility;
-  if(entry.ability1) return entry.ability1;
-  return null;
+  if(roll<0.45&&entry.ability1) return {ability:entry.ability1,abilitySlot:'ability1'};
+  if(roll<0.90&&entry.ability2) return {ability:entry.ability2,abilitySlot:'ability2'};
+  if(entry.hiddenAbility) return {ability:entry.hiddenAbility,abilitySlot:'hidden'};
+  if(entry.ability1) return {ability:entry.ability1,abilitySlot:'ability1'};
+  return {ability:null,abilitySlot:null};
+}
+// v0.38 — resolves the ability NAME for a persistent slot against a (possibly new, post-evolution)
+// species entry. Falls back to whatever slot the new species actually has if the individual's own
+// slot isn't populated there (rare edge case — e.g. an ability2-slot individual evolves into a
+// species with no ability2).
+function resolveAbilityForSlot(entry,slot){
+  if(!entry) return null;
+  if(slot==='ability1'&&entry.ability1) return entry.ability1;
+  if(slot==='ability2'&&entry.ability2) return entry.ability2;
+  if(slot==='hidden'&&entry.hiddenAbility) return entry.hiddenAbility;
+  return entry.ability1||entry.ability2||entry.hiddenAbility||null;
 }
 
 // ── EXP / LEVEL ──
@@ -2005,6 +2023,11 @@ function isSpeciesKnown(dexId){ return !!state.researchLog[dexId]; }
 function applySpeciesSwap(p,newEntry){
   const om=p.maxHP;
   p.species=newEntry.name; p.pokedexId=newEntry.dexId; p.formName=newEntry.formName||null;
+  // v0.38 fix — p.ability previously carried over unchanged from the pre-evolution species, which
+  // almost always has a disjoint ability pool from the new one, silently breaking ability tracking
+  // forever on any evolved species (see DESIGN.md "Ability Slot Tracking"). Re-resolve from the
+  // individual's persistent abilitySlot against the NEW species instead.
+  if(p.abilitySlot) p.ability=resolveAbilityForSlot(newEntry,p.abilitySlot);
   recalcStats(p); // v0.31 — recomputes maxHP AND p.stats together, using this Pokemon's existing ivs/nature
   p.currentHP=Math.min(p.maxHP,p.currentHP+(p.maxHP-om));
   if(!SPECIES[p.species]) SPECIES[p.species]=newEntry;
@@ -2399,6 +2422,19 @@ function applyEvolutionSilent(p){
 }
 
 // ── OFFLINE PROCESSING ──
+// v0.38 — shared rolling counter, same mechanic gameTick() uses for live play: advances
+// state._friendshipTick by `seconds` and fires +1 friendship (per currently-alive party member,
+// with the usual checkMethodRuleOut() call) at every 180-crossing. Lets offline processing mirror
+// live tick-for-tick except for granularity (10s/30s chunks here instead of 1 second at a time —
+// see DESIGN.md "Offline Friendship Tick Parity").
+function advanceFriendshipTicks(seconds){
+  if(seconds<=0) return;
+  state._friendshipTick=(state._friendshipTick||0)+seconds;
+  while(state._friendshipTick>=180){
+    state._friendshipTick-=180;
+    state.party.forEach(p=>{ if(p.currentHP>0){ p.friendship=(p.friendship||0)+1; checkMethodRuleOut(p.pokedexId,p.level,p.friendship); } });
+  }
+}
 function processOfflineTime(secsAway){
   if(secsAway<10) return null; // v0.26 — idle removed, research is always active; no missionActive gate needed
   const summary={encounters:0,catches:0,wins:0,income:0,evolutions:[],heals:0,shinies:0,gymWins:0,gymLosses:0,badgesEarned:0};
@@ -2407,22 +2443,31 @@ function processOfflineTime(secsAway){
   state.funds=Math.round((state.funds+income)*100)/100;
   summary.income=income;
 
-  // Apply offline friendship ticks
-  const friendshipTicks=Math.floor(secsAway/180);
-  if(friendshipTicks>0){
-    state.party.forEach(p=>{ if(p.currentHP>0){ p.friendship=(p.friendship||0)+friendshipTicks; checkMethodRuleOut(p.pokedexId,p.level,p.friendship); } });
-  }
+  // v0.38 fix — friendship previously applied as a single bulk pre-check here, gated ONCE by
+  // p.currentHP>0 evaluated before any offline simulation ran at all: a party member fainted at
+  // the moment the app closed got ZERO friendship for the entire offline gap, even the portions
+  // it would've been healed and alive — while a member healthy at close-time got full credit for
+  // the whole gap. Level, by contrast, was already correctly simulated throughout via the loop's
+  // per-iteration heal-checks. Fixed: friendship now advances inside the loop below, in lockstep
+  // with the same simulated time/HP-state progression everything else already uses — see
+  // advanceFriendshipTicks() above and DESIGN.md "Offline Friendship Tick Parity."
 
   let remaining=secsAway, nextIn=state.nextEncounterIn;
   // v0.33 — hard cap on iterations. Without this, a long offline gap combined with TurboMode's
   // 1-second interval could mean tens of thousands of loop iterations processed synchronously
   // the instant the app reopens — a real freeze risk, not hypothetical. Past the cap, remaining
-  // offline time simply stops simulating individual encounters; funds/friendship already accrue
-  // from secsAway directly elsewhere in this function, so nothing else is lost.
+  // offline time simply stops simulating individual encounters; funds already accrue from
+  // secsAway directly elsewhere in this function. Friendship for any leftover time (cap hit, or a
+  // final partial interval) is still folded in as a best-effort trailing chunk after the loop —
+  // see the advanceFriendshipTicks(remaining) call below.
   let offlineLoopIterations=0;
   const OFFLINE_LOOP_CAP=2000;
   while(remaining>=nextIn&&offlineLoopIterations<OFFLINE_LOOP_CAP){
     offlineLoopIterations++;
+    const consumed=nextIn; // v0.38 — elapsed seconds THIS iteration, before nextIn gets reassigned below
+    // v0.38 — fires before this iteration's heal/encounter resolution, mirroring live gameTick()'s
+    // own ordering (its friendship tick also runs before that tick's heal/encounter resolution).
+    advanceFriendshipTicks(consumed);
     remaining-=nextIn; nextIn=getEncounterInterval(false); summary.encounters++;
     evaluateWanderTarget(); // v0.33 — Wander re-routes during offline catch-up too, not just live play
     // v0.22 fix: checkLocationHeal() previously only ran in live gameTick(), never offline —
@@ -2519,6 +2564,10 @@ function processOfflineTime(secsAway){
     }
     advanceTravelPath();
   }
+  // v0.38 — trailing leftover time (loop exited via OFFLINE_LOOP_CAP, or a final partial
+  // interval under one nextIn) still gets folded into the friendship counter, using final HP
+  // state — same accepted best-effort tradeoff the encounter loop already has for this edge case.
+  if(remaining>0) advanceFriendshipTicks(remaining);
   state.nextEncounterIn=Math.max(1,nextIn-remaining);
   return summary;
 }
@@ -2693,22 +2742,21 @@ function rollFromTable(table){
   return null;
 }
 
-// v0.32 — walks EVO_TREE in both directions (fromDexId and toDexId edges) to build the full
-// connected-component set of dexIds for a family — e.g. every Eeveelution, regardless of branch,
-// counts as one pool. Used by Family IV Inheritance below. Falls back to [dexId] alone if
-// EVO_TREE is unavailable or this species has no evolution edges at all.
+// v0.32 — full family pool for Family IV Inheritance below (e.g. every Eeveelution, regardless
+// of branch, counts as one pool).
+// v0.38 fix — BUG: previously walked EVO_TREE edges only, but EVO_TREE contains just 27 rows
+// covering the special branching-evolution cases. Every ordinary single-path line (the large
+// majority of the dex — defined purely via the flat evolvesIntoId field in pokedex.js) was never
+// in EVO_TREE at all, so this returned just [dexId] for them — the donation pool was silently
+// always empty and every cap overflow fell straight to release, never IV-donation. Fixed: derive
+// family membership from getFamilyMembers(entry.familyId) instead — the same correct, data-driven
+// grouping the Family Chain display already uses. See DESIGN.md "Family IV Inheritance."
 function getFamilyDexIds(dexId){
-  if(typeof EVO_TREE==='undefined') return [dexId];
-  const visited=new Set([dexId]);
-  const queue=[dexId];
-  while(queue.length){
-    const cur=queue.shift();
-    EVO_TREE.forEach(e=>{
-      if(e.fromDexId===cur&&e.toDexId&&!visited.has(e.toDexId)){ visited.add(e.toDexId); queue.push(e.toDexId); }
-      if(e.toDexId===cur&&e.fromDexId&&!visited.has(e.fromDexId)){ visited.add(e.fromDexId); queue.push(e.fromDexId); }
-    });
-  }
-  return [...visited];
+  const entry=getPokemonEntry(dexId);
+  if(!entry||!entry.familyId) return [dexId];
+  const members=typeof getFamilyMembers!=='undefined'?getFamilyMembers(entry.familyId):[];
+  if(!members.length) return [dexId];
+  return members.map(m=>m.dexId);
 }
 // v0.32 — sum of all 6 IV stats (max 186). Used by Family IV Inheritance below.
 function ivTotal(p){
@@ -2728,6 +2776,26 @@ function movePowerTotal(p){
 function removePokemonFromBoxAndParty(id){
   state.dex=state.dex.filter(p=>p.id!==id);
   state.party=state.party.filter(p=>p.id!==id);
+}
+
+// v0.38 — this species' effective cap: the per-species override if one is set, else the global
+// state.speciesCap. Single source of truth for every cap check below (see "Per-Species Cap
+// Overrides").
+function getEffectiveSpeciesCap(dexId){
+  const ov=state.speciesCapOverrides&&state.speciesCapOverrides[dexId];
+  return (ov!=null)?ov:(state.speciesCap||6);
+}
+// v0.38 — box-only sweep for a single species down to `cap`: shiny/party exempt, earliest catch
+// kept, releases the newest excess. Shared by the global cap-lowering sweep and per-species
+// override lowering (see setSpeciesCapOverride() below). Returns the count released.
+function sweepSpeciesToCap(dexId,cap){
+  const list=state.dex.filter(p=>p.pokedexId===dexId&&!p.isShiny&&!p.holder);
+  if(list.length<=cap) return 0;
+  list.sort((a,b)=>a.id-b.id);
+  const toRelease=new Set(list.slice(cap).map(p=>p.id));
+  state.dex=state.dex.filter(p=>!toRelease.has(p.id));
+  state.party=state.party.filter(p=>!toRelease.has(p.id));
+  return toRelease.size;
 }
 
 // Per-species cap: flat max 6 non-shiny individuals, regardless of aide count. Shiny exempt.
@@ -2750,11 +2818,17 @@ function removePokemonFromBoxAndParty(id){
 // v0.37 — perfect-IV exemption removed (see DESIGN.md "Perfect-IV Species-Cap Exemption"). Perfect-IV
 // individuals now count toward the cap and can trigger/receive Family IV Inheritance donation just
 // like any normal individual — shiny exemption is untouched.
+// v0.38 — box-only enforcement: party (held) members are never counted toward the cap and can
+// never be an auto-release target, no matter how many are caught — a species can exceed the
+// nominal cap in total as long as the boxed portion alone stays at/under it. IV-donation
+// eligibility (recipient pool) is UNCHANGED — party members remain eligible recipients, since
+// that's a buff, not a removal. Also now respects per-species overrides via getEffectiveSpeciesCap().
 function checkSpeciesCap(individual){
   if(individual.isShiny) return; // shinies never released
-  const cap=state.speciesCap||6;
-  const liveNonShiny=state.dex.filter(p=>p.pokedexId===individual.pokedexId&&!p.isShiny);
-  if(liveNonShiny.length<=cap) return;
+  if(individual.holder) return; // v0.38 — party members are exempt from the cap entirely
+  const cap=getEffectiveSpeciesCap(individual.pokedexId);
+  const liveNonShinyBox=state.dex.filter(p=>p.pokedexId===individual.pokedexId&&!p.isShiny&&!p.holder);
+  if(liveNonShinyBox.length<=cap) return;
   const familyIds=getFamilyDexIds(individual.pokedexId);
   const pool=state.dex.filter(p=>p.id!==individual.id&&familyIds.includes(p.pokedexId));
   pool.sort((a,b)=>b.level-a.level);
@@ -2768,11 +2842,11 @@ function checkSpeciesCap(individual){
     addLog(getDisplayName(recipient)+' #'+recipient.id+' inherited superior IVs from the newly caught '+getDisplayName(individual)+'!','evolve');
     return;
   }
-  // No IV-donation recipient — release the weakest of the full same-species pool (liveNonShiny
-  // already includes `individual` itself, since both a fresh catch and a freshly-evolved
-  // individual are already present in state.dex by the time this runs).
-  let releaseTarget=liveNonShiny[0];
-  liveNonShiny.forEach(p=>{
+  // No IV-donation recipient — release the weakest of the full same-species BOXED pool
+  // (liveNonShinyBox already includes `individual` itself, since both a fresh catch and a
+  // freshly-evolved individual are already present in state.dex by the time this runs).
+  let releaseTarget=liveNonShinyBox[0];
+  liveNonShinyBox.forEach(p=>{
     const rp=movePowerTotal(releaseTarget), pp=movePowerTotal(p);
     if(pp<rp||(pp===rp&&p.id>releaseTarget.id)) releaseTarget=p;
   });
@@ -2780,10 +2854,11 @@ function checkSpeciesCap(individual){
   addLog('Released '+getDisplayName(releaseTarget)+' #'+releaseTarget.id+' — species cap reached ('+cap+' max).','info');
 }
 
-// v0.26 — dropdown handler for the editable per-species cap. Raising applies immediately (never
-// releases anything). Lowering shows a confirm dialog, then sweeps every species over the new
-// cap, releasing the newest excess and keeping the earliest catches — same order as the existing
-// catch-then-release overflow rule above. Shinies are always exempt from both the cap and sweep.
+// v0.26 — dropdown handler for the editable GLOBAL per-species cap. Raising applies immediately
+// (never releases anything). Lowering shows a confirm dialog, then sweeps every species over its
+// EFFECTIVE cap (override if set, else this new global value — v0.38), releasing the newest
+// excess and keeping the earliest catches. Shinies AND party members are always exempt from both
+// the cap and sweep (v0.38 — box-only, see checkSpeciesCap()).
 // v0.37 — perfect-IV exemption removed; perfect-IV individuals are now included in this sweep
 // like any normal individual (see DESIGN.md "Perfect-IV Species-Cap Exemption").
 function onSpeciesCapChange(selectEl){
@@ -2801,26 +2876,70 @@ function onSpeciesCapChange(selectEl){
     return;
   }
   state.speciesCap=newCap;
+  const dexIds=new Set(state.dex.filter(p=>!p.isShiny&&!p.holder).map(p=>p.pokedexId));
   let released=0;
-  const bySpecies={};
-  state.dex.forEach(p=>{
-    if(p.isShiny) return;
-    (bySpecies[p.pokedexId]=bySpecies[p.pokedexId]||[]).push(p);
-  });
-  const toRelease=new Set();
-  Object.values(bySpecies).forEach(list=>{
-    if(list.length<=newCap) return;
-    // Earliest caught kept — sort by id ascending (catch order), release the newest excess.
-    list.sort((a,b)=>a.id-b.id);
-    list.slice(newCap).forEach(p=>toRelease.add(p.id));
-  });
-  if(toRelease.size){
-    state.dex=state.dex.filter(p=>!toRelease.has(p.id));
-    state.party=state.party.filter(p=>!toRelease.has(p.id));
-    released=toRelease.size;
-  }
+  dexIds.forEach(dexId=>{ released+=sweepSpeciesToCap(dexId,getEffectiveSpeciesCap(dexId)); });
   addLog('Per-species cap lowered to '+newCap+' — '+released+' excess Pokémon released.','info');
   saveGame(); render();
+}
+
+// v0.38 — Per-Species Cap Overrides (NEW). Sets/clears state.speciesCapOverrides[dexId], range
+// 0-99, either direction relative to the global cap. rawValue==='' clears the override back to
+// the global default. Lowering the EFFECTIVE cap (including a clear that drops it) triggers the
+// same confirm-and-sweep behavior as the global dropdown — box-only, shiny-exempt, via the shared
+// sweepSpeciesToCap() helper. See DESIGN.md "Per-Species Cap Overrides."
+function setSpeciesCapOverride(dexId,rawValue){
+  dexId=Number(dexId);
+  if(!state.speciesCapOverrides) state.speciesCapOverrides={};
+  const oldEffective=getEffectiveSpeciesCap(dexId);
+  const trimmed=String(rawValue).trim();
+  let newVal=null;
+  if(trimmed!==''){
+    newVal=Math.max(0,Math.min(99,parseInt(trimmed)||0));
+  }
+  const newEffective=(newVal!=null)?newVal:(state.speciesCap||6);
+  if(newEffective<oldEffective){
+    const proceed=confirm('Are you sure you would like to change the cap for this species? Lowering it will result in any excess being dropped. (Earliest caught kept, shiny Pokémon excluded)');
+    if(!proceed){ renderDex(); return; }
+  }
+  if(newVal!=null) state.speciesCapOverrides[dexId]=newVal;
+  else delete state.speciesCapOverrides[dexId];
+  const released=sweepSpeciesToCap(dexId,newEffective);
+  const entry=getPokemonEntry(dexId);
+  addLog('Species cap for '+(entry?entry.name:'#'+dexId)+' set to '+newEffective+(released>0?' — '+released+' excess released.':'.'),'info');
+  saveGame(); renderDex();
+}
+// v0.38 — clears an override back to the global default, reusing setSpeciesCapOverride()'s
+// confirm-and-sweep logic (passing '' is equivalent to deleting it).
+function deleteSpeciesCapOverride(dexId){
+  dexId=Number(dexId);
+  if(!state.speciesCapOverrides||state.speciesCapOverrides[dexId]==null) return;
+  setSpeciesCapOverride(dexId,'');
+}
+// v0.38 — audit/bulk-edit modal listing every species with an active override, opened via the
+// "View All" button next to the per-species field on Species Detail.
+function showCapOverridesModal(){
+  const existing=document.getElementById('cap-overrides-modal'); if(existing) existing.remove();
+  const modal=document.createElement('div');
+  modal.id='cap-overrides-modal';
+  modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
+  const overrides=state.speciesCapOverrides||{};
+  const dexIds=Object.keys(overrides).map(Number).sort((a,b)=>a-b);
+  const rowsHtml=dexIds.length?dexIds.map(dexId=>{
+    const entry=getPokemonEntry(dexId);
+    const name=entry?entry.name:'#'+dexId;
+    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--main-card);">'
+      +'<div style="flex:1;font-size:11px;color:var(--main-text);">#'+dexId+' '+name+'</div>'
+      +'<input type="number" min="0" max="99" value="'+overrides[dexId]+'" style="width:52px;background:var(--main-bg);border:1px solid var(--main-border);border-radius:4px;padding:4px 6px;color:#fff;font-family:\'Courier New\',monospace;font-size:11px;" onchange="setSpeciesCapOverride('+dexId+',this.value);showCapOverridesModal();">'
+      +'<button onclick="deleteSpeciesCapOverride('+dexId+');showCapOverridesModal();" style="padding:4px 8px;font-size:11px;border-color:var(--c-danger);color:var(--c-danger);">✕</button>'
+      +'</div>';
+  }).join(''):'<div style="color:#555;font-size:11px;padding:12px 0;">No overrides set.</div>';
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:80vh;overflow-y:auto;">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><div style="color:var(--accent);font-size:13px;font-weight:bold;">Per-Species Cap Overrides</div><button onclick="document.getElementById(\'cap-overrides-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'
+    +rowsHtml
+    +'</div>';
+  modal.onclick=(e)=>{ if(e.target===modal) modal.remove(); };
+  document.body.appendChild(modal);
 }
 
 function getLeadPokemon(){
@@ -3883,6 +4002,111 @@ function buyItem(itemId, qty){
   // v0.33 — explicit trigger removed here; professorAutoTestEvolutions() now runs unconditionally
   // at the top of every gameTick() instead — one source of truth (see gameTick()).
   saveGame();
+  // v0.38 — party-only batch evolve prompt: fires only for evolve-stone/evolve-trade items, only
+  // if the party actually has an eligible individual right now (showBatchEvolveModal() no-ops
+  // silently otherwise, so this is safe to always call). See DESIGN.md "Party-Only Batch
+  // Evolution Prompt on Item Purchase."
+  if(item.effect==='evolve-stone'||item.effect==='evolve-trade'){
+    showBatchEvolveModal(itemId,actualQty);
+  }
+}
+
+// v0.38 — collects every PARTY (held) individual eligible for this item, across both evolution
+// paths (Path 1 single-target pokedex.js, Path 2 EVO_TREE branches), regardless of whether the
+// branch is already confirmed. Box is never considered here — see DESIGN.md. Excludes
+// evolveBlocked individuals and any nickname-locked to a different branch.
+function getPartyEligibleForItem(itemId){
+  const item=getItem(itemId);
+  if(!item) return [];
+  const itemName=item.name;
+  const results=[];
+  state.party.forEach(p=>{
+    if(p.evolveBlocked) return;
+    const entry=getPokemonEntry(p.pokedexId,p.formName);
+    const branches=[];
+    if(entry&&entry.evolveMethod==='use-item'&&entry.evolveItem===itemName&&entry.evolvesIntoId){
+      branches.push({toDexId:entry.evolvesIntoId,toFormName:null});
+    }
+    getEvolutions(p.pokedexId).filter(b=>b.evolveMethod==='use-item'&&b.evolveItem===itemId&&b.toDexId).forEach(b=>{
+      branches.push({toDexId:b.toDexId,toFormName:b.toFormName||null});
+    });
+    if(!branches.length) return;
+    const lock=getNicknameEvolveLock(p);
+    let eligibleBranches=branches;
+    if(lock) eligibleBranches=branches.filter(b=>b.toDexId===lock.toDexId&&(b.toFormName||null)===(lock.toFormName||null));
+    if(!eligibleBranches.length) return;
+    // One row per eligible individual — if multiple branches simultaneously qualify (rare, no
+    // nickname lock narrowing it down), the first is used; batch-evolve keeps a single
+    // branch-per-individual UX, matching the checkbox-list design.
+    results.push({p,branch:eligibleBranches[0]});
+  });
+  return results;
+}
+// v0.38 — party-only batch evolve modal: checkbox list capped by the quantity just purchased.
+// No-ops silently if there are zero eligible party individuals (purchase completes as before).
+function showBatchEvolveModal(itemId,maxQty){
+  const item=getItem(itemId); if(!item) return;
+  const eligible=getPartyEligibleForItem(itemId);
+  if(!eligible.length) return;
+  const existing=document.getElementById('batch-evolve-modal'); if(existing) existing.remove();
+  const modal=document.createElement('div');
+  modal.id='batch-evolve-modal';
+  modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
+  const rowsHtml=eligible.map(({p,branch})=>{
+    const toEntry=getPokemonEntry(branch.toDexId,branch.toFormName);
+    const toName=toEntry?(toEntry.name+(branch.toFormName?' ('+branch.toFormName+')':'')):'#'+branch.toDexId;
+    return '<label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--main-card);cursor:pointer;">'
+      +'<input type="checkbox" class="batch-evolve-check" data-catchid="'+p.id+'" data-intoid="'+branch.toDexId+'" data-form="'+(branch.toFormName||'')+'" onchange="updateBatchEvolveCount('+maxQty+')">'
+      +'<span style="flex:1;font-size:11px;color:var(--main-text);">'+getDisplayName(p)+' #'+p.id+' → '+toName+'</span>'
+      +'</label>';
+  }).join('');
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:80vh;overflow-y:auto;">'
+    +'<div style="color:var(--accent);font-size:13px;font-weight:bold;margin-bottom:6px;">Evolve with '+item.name+'?</div>'
+    +'<div id="batch-evolve-count" style="color:var(--main-text-secondary);font-size:10px;margin-bottom:8px;">0 / '+maxQty+' selected</div>'
+    +rowsHtml
+    +'<div style="display:flex;gap:8px;margin-top:12px;">'
+    +'<button onclick="document.getElementById(\'batch-evolve-modal\').remove()" style="flex:1;">Skip</button>'
+    +'<button onclick="confirmBatchEvolve(\''+itemId+'\','+maxQty+')" class="primary" style="flex:1;">Evolve Selected</button>'
+    +'</div></div>';
+  modal.onclick=(e)=>{ if(e.target===modal) modal.remove(); };
+  document.body.appendChild(modal);
+}
+// v0.38 — caps the live selection count at maxQty (unchecks the most-recently-checked box if the
+// player tries to select more than the purchased quantity), and updates the "N / maxQty" label.
+function updateBatchEvolveCount(maxQty){
+  const checks=[...document.querySelectorAll('.batch-evolve-check')];
+  const checked=checks.filter(c=>c.checked);
+  if(checked.length>maxQty){
+    checked[checked.length-1].checked=false;
+  }
+  const countEl=document.getElementById('batch-evolve-count');
+  if(countEl) countEl.textContent=[...document.querySelectorAll('.batch-evolve-check')].filter(c=>c.checked).length+' / '+maxQty+' selected';
+}
+// v0.38 — applies every checked selection: consumes one item per evolution, applies the species
+// swap, and unconditionally calls recordEvolution() — a safe no-op if this exact branch is
+// already confirmed, but ALSO confirms it if it wasn't yet (covers both the already-confirmed
+// case and the first-time-confirming case in one path, replacing the old auto-pick-highest-
+// level-BOX-individual default for whichever branches get confirmed via this purchase).
+function confirmBatchEvolve(itemId,maxQty){
+  const checks=[...document.querySelectorAll('.batch-evolve-check')].filter(c=>c.checked).slice(0,maxQty);
+  const item=getItem(itemId);
+  const itemName=item?item.name:itemId;
+  checks.forEach(c=>{
+    if((state.professorBag[itemId]||0)<=0) return;
+    const catchId=parseInt(c.dataset.catchid);
+    const intoId=parseInt(c.dataset.intoid);
+    const toFormName=c.dataset.form||null;
+    const p=state.dex.find(x=>x.id===catchId); if(!p) return;
+    const toEntry=getPokemonEntry(intoId,toFormName); if(!toEntry) return;
+    state.professorBag[itemId]--;
+    if(state.professorBag[itemId]<=0) delete state.professorBag[itemId];
+    const fromDexId=p.pokedexId, preLevel=p.level, old=getDisplayName(p);
+    recordEvolution(fromDexId,intoId,itemName,preLevel,toFormName);
+    applySpeciesSwap(p,toEntry);
+    addLog(old+' #'+p.id+' evolved into '+getDisplayName(p)+' using '+itemName+'!','evolve');
+  });
+  const modal=document.getElementById('batch-evolve-modal'); if(modal) modal.remove();
+  saveGame(); render();
 }
 
 // ── DAY CARE / BREEDING (v0.26, location moved v0.27) ──
@@ -3910,10 +4134,16 @@ function isUndiscoveredOnly(pokedexId){
   return groups.length>0&&groups.every(g=>g==='No eggs');
 }
 // Lowest-evolution root of a species' family — same root concept used by the Families Tab
-// (a family member with no incoming evolution edge). Most families have exactly one; for the
-// rare dual-root case (e.g. Nidoran M/F, which has no shared baby stage), if the given dexId is
-// itself a root it's returned as-is, otherwise the first root found is used as a best-effort
-// fallback (dual-root families are Undiscovered-group in practice and never reach breeding).
+// (a family member with no incoming evolution edge). Most families have exactly one.
+// v0.38 fix — dual-root families (e.g. Nidoran M/F, which have no shared baby stage) previously
+// always collapsed to whichever root happened to be first in the data, REGARDLESS of which root
+// the breeding pair actually descended from — the male-only line (Nidoran-M/Nidorino/Nidoking) can
+// never be the "mother" in a non-Ditto pairing, so this bug meant non-Ditto breeding within the
+// family could ONLY EVER produce Nidoran-F, and even a Ditto-paired EVOLVED male (Nidorino/
+// Nidoking) fell through to the same wrong fallback instead of respecting its own lineage. Fixed:
+// dual-root families are an explicit exception to "mother determines species" in the real games —
+// species determination is a random split among the family's roots, regardless of which
+// parent/gender/Ditto involvement produced the egg. See DESIGN.md "Result Species."
 function getFamilyRootDexId(dexId){
   const entry=getPokemonEntry(dexId);
   if(!entry||!entry.familyId) return dexId;
@@ -3926,8 +4156,8 @@ function getFamilyRootDexId(dexId){
     getEvolutions(m.dexId).forEach(b=>{ if(b.toDexId&&memberSet.has(b.toDexId)) hasIncoming.add(b.toDexId); });
   });
   const roots=members.filter(m=>!hasIncoming.has(m.dexId));
-  if(roots.some(r=>r.dexId===dexId)) return dexId;
-  return roots.length?roots[0].dexId:dexId;
+  if(roots.length<=1) return roots.length?roots[0].dexId:dexId;
+  return roots[Math.floor(Math.random()*roots.length)].dexId;
 }
 // Full egg-group compatibility check. Cross-family pairs ARE allowed if they share an egg group.
 function canBreedPair(pA,pB){
@@ -5082,7 +5312,11 @@ function renderEvolutionChainVisual(famId,highlightDexId){
   // v0.37 — Official Pokédex skips the unconfirmed-predecessor placeholder entirely; every root
   // renders with nothing before it, since Official mode has no breeding-tested gate at all.
   return roots.map(root=>{
-    const canBreed=!isOfficial&&getEggGroups(root.dexId).length>0&&!isUndiscoveredOnly(root.dexId);
+    // v0.38 fix — Ditto showed a permanently unresolvable "?" here: two Ditto can't pair
+    // (canBreedPair() blocks it) and Ditto paired with anything else always produces the OTHER
+    // parent's species, never Ditto itself — breedingTested for Ditto could never legitimately
+    // become true. Excluded here alongside the existing egg-group/undiscovered-only exclusions.
+    const canBreed=!isOfficial&&getEggGroups(root.dexId).length>0&&!isUndiscoveredOnly(root.dexId)&&!isDitto(root.dexId);
     const bred=isOfficial||!!(state.researchLog[root.dexId]&&state.researchLog[root.dexId].breedingTested);
     const preHtml=(canBreed&&!bred)?(evoPlaceholderHtml()+evoArrowHtml('?')):'';
     return '<div style="display:flex;align-items:flex-start;flex-wrap:wrap;gap:2px;margin:4px 0;">'+preHtml+walk(root.dexId,null)+'</div>';
@@ -5399,9 +5633,23 @@ function renderDexDetail(){
   const evoChainInner=entry&&entry.familyId?renderEvolutionChainVisual(entry.familyId,dexSelectedDexId):'';
   const evoChainHtml=evoChainInner?'<div onclick="familyChainNodeClick(event)" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--main-border);"><div style="color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Evolution Chain</div>'+evoChainInner+'</div>':'';
   const encounteredAtHtml=buildEncounteredAtHtml(dexSelectedDexId);
+  // v0.38 — Per-Species Cap Overrides field, at the bottom of Species Detail, above the
+  // caught-individuals list. Your Pokédex only (Official mode has no cap concept). See
+  // DESIGN.md "Per-Species Cap Overrides."
+  let capOverrideHtml='';
+  if(!isOfficial&&entry){
+    const effCap=getEffectiveSpeciesCap(dexSelectedDexId);
+    const hasOverride=!!(state.speciesCapOverrides&&state.speciesCapOverrides[dexSelectedDexId]!=null);
+    capOverrideHtml='<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--main-border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+      +'<div style="color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;">Species Cap</div>'
+      +'<input type="number" min="0" max="99" value="'+effCap+'" style="width:52px;background:var(--main-bg);border:1px solid var(--main-border);border-radius:4px;padding:4px 6px;color:#fff;font-family:\'Courier New\',monospace;font-size:11px;" onchange="setSpeciesCapOverride('+dexSelectedDexId+',this.value)">'
+      +(hasOverride?'<span style="color:#f4d03f;font-size:9px;">override</span>':'<span style="color:var(--main-text-muted);font-size:9px;">default</span>')
+      +'<button onclick="showCapOverridesModal()" style="margin-left:auto;padding:4px 8px;font-size:10px;">View All</button>'
+      +'</div>';
+  }
   const header=document.createElement('div');
   header.className='dex-entry';
-  header.innerHTML='<div style="display:flex;gap:12px;align-items:flex-start;"><img src="'+sprite+'" style="width:91px;height:91px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div style="color:#fff;font-size:14px;font-weight:bold;">#'+dexSelectedDexId+' '+(entry?entry.name:'???')+(entry&&entry.formName?'<span style="color:var(--main-text-secondary);font-size:11px;"> ('+entry.formName+')</span>':'')+((isOfficial?dexOfficialShinyPreview:hasLiveShiny(dexSelectedDexId))?'<span class="shiny-badge">✨</span>':'')+'</div><div style="color:var(--main-text-secondary);font-size:11px;margin-top:1px;">Dex #'+dexSelectedDexId+'</div>'+(entry&&entry.category?'<div style="color:var(--main-text-secondary);font-size:10px;margin-top:2px;">"'+entry.category+'"</div>':'')+'<div style="display:flex;gap:5px;margin-top:6px;">'+typeBadgeHtml(entry?entry.type1:null)+typeBadgeHtml(entry?entry.type2:null)+'</div><div style="color:var(--main-text-muted);font-size:10px;margin-top:5px;">'+(heightDisplay?'📏 '+heightDisplay:'')+(heightDisplay&&weightDisplay?' · ':'')+(weightDisplay?'⚖️ '+weightDisplay:'')+'</div></div></div>'+formTabHtml+(entry&&entry.flavorText?'<div style="color:#a0c0a0;font-size:11px;font-style:italic;margin-top:10px;padding-top:10px;border-top:1px solid var(--main-border);line-height:1.6;">'+entry.flavorText+'</div>':'')+'<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--main-border);"><div style="color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Base Stats</div>'+(entry?[{label:'HP',val:entry.baseHP,color:'#2ecc71'},{label:'ATK',val:entry.baseAtk,color:'#e74c3c'},{label:'DEF',val:entry.baseDef,color:'#f4d03f'},{label:'SpATK',val:entry.baseSpatk,color:'#9b59b6'},{label:'SpDEF',val:entry.baseSpdef,color:'#5dade2'},{label:'SPD',val:entry.baseSpd,color:'#2ecc71'}].map(s=>'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;"><span style="color:var(--main-text-muted);font-size:10px;width:40px;text-align:right;">'+s.label+'</span><span style="color:#fff;font-size:10px;width:28px;text-align:right;">'+(s.val||'?')+'</span><div style="flex:1;background:var(--main-bg);border-radius:2px;height:6px;overflow:hidden;"><div style="width:'+Math.min(100,Math.round(((s.val||0)/255)*100))+'%;height:100%;background:'+s.color+';border-radius:2px;"></div></div></div>').join(''):'<div style="color:#555;font-size:10px;">No stat data available.</div>')+(entry?'<div style="color:#f4d03f;font-size:10px;text-align:right;margin-top:4px;">BST: '+(entry.bst||'?')+'</div>':'')+'</div>'+evoChainHtml+abilityHtml+genderHtml+buildEvoMethodsHtml(dexSelectedDexId)+encounteredAtHtml;
+  header.innerHTML='<div style="display:flex;gap:12px;align-items:flex-start;"><img src="'+sprite+'" style="width:91px;height:91px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div style="color:#fff;font-size:14px;font-weight:bold;">#'+dexSelectedDexId+' '+(entry?entry.name:'???')+(entry&&entry.formName?'<span style="color:var(--main-text-secondary);font-size:11px;"> ('+entry.formName+')</span>':'')+((isOfficial?dexOfficialShinyPreview:hasLiveShiny(dexSelectedDexId))?'<span class="shiny-badge">✨</span>':'')+'</div><div style="color:var(--main-text-secondary);font-size:11px;margin-top:1px;">Dex #'+dexSelectedDexId+'</div>'+(entry&&entry.category?'<div style="color:var(--main-text-secondary);font-size:10px;margin-top:2px;">"'+entry.category+'"</div>':'')+'<div style="display:flex;gap:5px;margin-top:6px;">'+typeBadgeHtml(entry?entry.type1:null)+typeBadgeHtml(entry?entry.type2:null)+'</div><div style="color:var(--main-text-muted);font-size:10px;margin-top:5px;">'+(heightDisplay?'📏 '+heightDisplay:'')+(heightDisplay&&weightDisplay?' · ':'')+(weightDisplay?'⚖️ '+weightDisplay:'')+'</div></div></div>'+formTabHtml+(entry&&entry.flavorText?'<div style="color:#a0c0a0;font-size:11px;font-style:italic;margin-top:10px;padding-top:10px;border-top:1px solid var(--main-border);line-height:1.6;">'+entry.flavorText+'</div>':'')+'<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--main-border);"><div style="color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Base Stats</div>'+(entry?[{label:'HP',val:entry.baseHP,color:'#2ecc71'},{label:'ATK',val:entry.baseAtk,color:'#e74c3c'},{label:'DEF',val:entry.baseDef,color:'#f4d03f'},{label:'SpATK',val:entry.baseSpatk,color:'#9b59b6'},{label:'SpDEF',val:entry.baseSpdef,color:'#5dade2'},{label:'SPD',val:entry.baseSpd,color:'#2ecc71'}].map(s=>'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;"><span style="color:var(--main-text-muted);font-size:10px;width:40px;text-align:right;">'+s.label+'</span><span style="color:#fff;font-size:10px;width:28px;text-align:right;">'+(s.val||'?')+'</span><div style="flex:1;background:var(--main-bg);border-radius:2px;height:6px;overflow:hidden;"><div style="width:'+Math.min(100,Math.round(((s.val||0)/255)*100))+'%;height:100%;background:'+s.color+';border-radius:2px;"></div></div></div>').join(''):'<div style="color:#555;font-size:10px;">No stat data available.</div>')+(entry?'<div style="color:#f4d03f;font-size:10px;text-align:right;margin-top:4px;">BST: '+(entry.bst||'?')+'</div>':'')+'</div>'+evoChainHtml+abilityHtml+genderHtml+buildEvoMethodsHtml(dexSelectedDexId)+encounteredAtHtml+capOverrideHtml;
   c.appendChild(header);
   // v0.37 — Official Pokédex hides the caught-individuals list entirely (pure species-level
   // reference, decoupled from ownership) regardless of whether you happen to own any.
@@ -5802,7 +6050,17 @@ const SAVE_KEY='pokeprof_save';
 // backfill sweep from currently-held state.dex individuals (gated to pre-v24 loads only — see the
 // comment at that sweep below, since a count increment isn't safe to re-run on every load the way
 // the old boolean set was). Every other v0.37 change is a bug fix or UI/display-only.
-const SAVE_VERSION=24;
+// v0.38 — SAVE_VERSION 25 (24 -> 25): state.speciesCapOverrides ({dexId:number}, new — see
+// "Per-Species Cap Overrides") and p.abilitySlot ('ability1'|'ability2'|'hidden', new, on every
+// Pokemon object — see "Ability Slot Tracking"). Migration: speciesCapOverrides defaults to {};
+// abilitySlot is backfilled per-individual by matching current p.ability against the current
+// species' three ability fields, re-rolling fresh (via assignAbility(), against the CURRENT
+// species) where no match is found — the ability-loss-on-evolution bug's own existing mismatched
+// cases. Every other v0.38 change (map connection colors, box-only species cap, party-only
+// batch-evolve prompt, offline friendship parity, dual-root family breeding, Ditto
+// breeding-placeholder fix, Family IV Inheritance pool fix) is a bug fix or UI/logic-only, no
+// additional schema impact.
+const SAVE_VERSION=25;
 let saveTimer=0;
 
 function saveGame(){
@@ -5823,6 +6081,7 @@ function saveGame(){
         trainerBag:state.trainerBag||{},
         gymProgress:state.gymProgress||{},
         speciesCap:state.speciesCap||6,
+        speciesCapOverrides:state.speciesCapOverrides||{}, // v0.38
         daycareSlots:state.daycareSlots||{purchased:1,slots:[]},
         travelPath:state.travelPath||[], travelPathIndex:state.travelPathIndex||0,
         travelCyclesRemaining:state.travelCyclesRemaining||0,
@@ -5846,9 +6105,9 @@ function loadGame(){
     const data=JSON.parse(raw);
     if(!data) return false;
 
-    // ── SAVE_VERSION 23 MIGRATION ──
-    // Accepts v11-v22 saves and migrates them; rejects anything older.
-    if(data.version!==SAVE_VERSION&&data.version!==23&&data.version!==22&&data.version!==21&&data.version!==20&&data.version!==19&&data.version!==18&&data.version!==17&&data.version!==16&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
+    // ── SAVE_VERSION 25 MIGRATION ──
+    // Accepts v11-v24 saves and migrates them; rejects anything older.
+    if(data.version!==SAVE_VERSION&&data.version!==24&&data.version!==23&&data.version!==22&&data.version!==21&&data.version!==20&&data.version!==19&&data.version!==18&&data.version!==17&&data.version!==16&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
     const s=data.state;
 
     // Migrate inventory: v11 had a single `bag`; v12 splits to professorBag/trainerBag.
@@ -5889,6 +6148,7 @@ function loadGame(){
       professorBag, trainerBag,
       gymProgress:s.gymProgress??{},
       speciesCap:s.speciesCap??6,
+      speciesCapOverrides:s.speciesCapOverrides??{}, // v0.38
       daycareSlots:s.daycareSlots??{purchased:1,slots:[]},
       travelPath:s.travelPath??[], travelPathIndex:s.travelPathIndex??0,
       travelCyclesRemaining:s.travelCyclesRemaining??0,
@@ -5919,6 +6179,22 @@ function loadGame(){
       if(p.equippedMoves===undefined) p.equippedMoves=getDefaultEquippedMoves(getPokemonEntry(p.pokedexId)); // v0.23
       if(p.breeding===undefined) p.breeding=false; // v0.26
       if(p.formName===undefined) p.formName=null; // v0.33 — accurate for every pre-v0.33 save; no alt-form branch could ever have been applied before this fix existed
+      // v0.38 — abilitySlot backfill (see "Ability Slot Tracking"). Match current p.ability
+      // against the current species' three ability fields to recover which slot it actually is;
+      // where no match is found (the ability-loss-on-evolution bug's own mismatched cases — an
+      // individual whose stored ability doesn't exist anywhere on its current species), reroll a
+      // fresh ability+slot via assignAbility() against the CURRENT species instead of leaving it
+      // permanently stuck.
+      if(p.abilitySlot===undefined){
+        const curEntry=getPokemonEntry(p.pokedexId,p.formName);
+        if(curEntry&&p.ability&&curEntry.ability1===p.ability) p.abilitySlot='ability1';
+        else if(curEntry&&p.ability&&curEntry.ability2===p.ability) p.abilitySlot='ability2';
+        else if(curEntry&&p.ability&&curEntry.hiddenAbility===p.ability) p.abilitySlot='hidden';
+        else {
+          const fresh=assignAbility(curEntry);
+          p.ability=fresh.ability; p.abilitySlot=fresh.abilitySlot;
+        }
+      }
       // v0.31 — pre-existing individuals get ivs/nature rolled retroactively (single roll, not
       // the dex-complete 10× advantage — that's a creation-time-only bonus), then recalcStats()
       // populates p.stats and recomputes maxHP; currentHP is full-healed since maxHP just shifted.
@@ -6126,6 +6402,7 @@ if(!hasSave){
     professorBag:{}, trainerBag:{},
     gymProgress:{},
     speciesCap:6,
+    speciesCapOverrides:{}, // v0.38
     daycareSlots:{purchased:1,slots:[]},
     researchLog:{}, pendingFindings:[],
     discoveredLocations:initDiscovered,
@@ -6208,7 +6485,12 @@ function renderMap(){
       line.setAttribute('y1',nodeY(conn.fromLocationId));
       line.setAttribute('x2',nodeX(conn.toLocationId));
       line.setAttribute('y2',nodeY(conn.toLocationId));
-      line.setAttribute('stroke',conn.requiresItem?'#9b59b6':'#4a5a6a');
+      // v0.38 — gated (requiresItem) connections are now dynamically color-coded by live
+      // ownership instead of static purple: red until the required item is owned, green once it
+      // is. Same ownership check used elsewhere for gating (buildTravelPath(),
+      // getReachableDiscoveredLocations()). Re-evaluated every renderMap() call.
+      const gatedOwned=conn.requiresItem&&((state.trainerBag&&state.trainerBag[conn.requiresItem]&&state.trainerBag[conn.requiresItem]>0)||(state.trainerUnlocks&&state.trainerUnlocks[conn.requiresItem]));
+      line.setAttribute('stroke',conn.requiresItem?(gatedOwned?'#2ecc71':'#e63946'):'#4a5a6a');
       line.setAttribute('stroke-width','2');
       if(conn.requiresItem) line.setAttribute('stroke-dasharray','4,4');
       svg.appendChild(line);

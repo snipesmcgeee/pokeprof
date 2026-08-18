@@ -136,7 +136,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span style="font-size:11px;color:var(--main-text-muted);">v0.38</span></h1>
+  <h1>PokeProf <span style="font-size:11px;color:var(--main-text-muted);">v0.39</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">100.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -391,7 +391,8 @@ function themeSwatchButtonHtml(role,c){
   const cur=role==='main'?currentTheme.main:currentTheme.accent;
   const isSel=cur&&((cur.special&&cur.special===c.special)||(!cur.special&&!c.special&&cur.h===c.h&&cur.s===c.s));
   const bg=c.special==='black'?'#000':c.special==='white'?'#fff':themeHsl(c.h,c.s,c.pL);
-  const border=isSel?'border:3px solid var(--accent-light);':'border:2px solid #333;';
+  // v0.39 — standardized to the shared 2px accent-border selection style (was 3px accent-light).
+  const border=isSel?'border:2px solid var(--accent);':'border:2px solid #333;';
   return '<button onclick="pickThemePreset(\''+role+'\',\''+c.name+'\')" title="'+c.name+'" style="width:28px;height:28px;border-radius:5px;'+border+'background:'+bg+';padding:0;cursor:pointer;margin:2px;"></button>';
 }
 function pickThemePreset(role,colorName){
@@ -539,7 +540,7 @@ function buildRouteTable(locationId){
       if(!e.requiresItem) return true;
       return !!(state.trainerBag&&state.trainerBag[e.requiresItem]&&state.trainerBag[e.requiresItem]>0);
     })
-    .map(e=>({dexId:e.dexId,minLv:e.minLevel,maxLv:e.maxLevel,weight:e.encounterRate,method:getEncounterSubMethod(e.encounterMethod||'grass',e.requiresItem),requiresItem:e.requiresItem||null}));
+    .map(e=>({dexId:e.dexId,formName:e.formName||null,minLv:e.minLevel,maxLv:e.maxLevel,weight:e.encounterRate,method:getEncounterSubMethod(e.encounterMethod||'grass',e.requiresItem),requiresItem:e.requiresItem||null}));
 }
 
 // v0.26 — split from a single shared ENC_INTERVAL=30 into separate open/closed values.
@@ -712,10 +713,14 @@ let state={
 // dexId is optional — pass it whenever the caller already knows the exact database row
 // (e.g. from rollEncounter()). Never re-derive a known dexId from the species name string,
 // since some names (Nidoran M/F) map to multiple distinct rows.
-function makePokemon(sp,lv,gender,holder=null,dexId=null){
+// v0.39 — optional formName param (same additive-optional pattern as getPokemonEntry/getSpriteUrl/
+// calcMaxHP since v0.33): lets a WILD CATCH result in a form-variant individual for the first time.
+// Previously only applySpeciesSwap() (evolution) could ever set p.formName. Omitted (every
+// pre-v0.39 call site), behavior is unchanged.
+function makePokemon(sp,lv,gender,holder=null,dexId=null,formName=null){
   let entry=null;
   if(dexId){
-    entry=getPokemonEntry(dexId);
+    entry=getPokemonEntry(dexId,formName);
   }
   if(!entry&&typeof POKEDEX_DATA!=='undefined'){
     entry=POKEDEX_DATA.find(p=>p.name===sp&&p.formName===null&&p.growthRate);
@@ -725,14 +730,15 @@ function makePokemon(sp,lv,gender,holder=null,dexId=null){
   }
   if(!entry) entry=SPECIES[sp];
   const resolvedDexId=dexId||(entry?entry.dexId||entry.id:0);
+  const resolvedFormName=(entry&&entry.formName)||null; // authoritative — falls back to null if the requested form didn't resolve
   const growthRate=(entry&&entry.growthRate)||'mediumFast';
   const ivs=rollIVs(resolvedDexId);
   const nature=rollNature();
-  const maxHP=calcMaxHP(sp,lv,resolvedDexId,ivs.hp);
+  const maxHP=calcMaxHP(sp,lv,resolvedDexId,ivs.hp,resolvedFormName);
   const startExp=expToLevel(lv,growthRate);
   const abilityRoll=assignAbility(entry);
   const p={
-    id:state.dexIdCounter++, species:sp, pokedexId:resolvedDexId, level:lv, gender,
+    id:state.dexIdCounter++, species:sp, pokedexId:resolvedDexId, formName:resolvedFormName, level:lv, gender,
     currentHP:maxHP, maxHP, growthRate,
     exp:isNaN(startExp)?0:startExp,
     holder,
@@ -758,6 +764,13 @@ function getDisplayName(p){
   if(p&&p.nickname) return p.nickname;
   if(!p) return '';
   return p.formName?p.species+' ('+p.formName+')':p.species;
+}
+
+// v0.39 — same "Species (Form)" formatting as getDisplayName(), for the pre-catch wild `enc` object
+// rather than a caught individual (no nickname, no id — just species+formName from rollFromTable()).
+function getEncDisplayName(enc){
+  if(!enc) return '';
+  return enc.formName?enc.species+' ('+enc.formName+')':enc.species;
 }
 
 // ── SPRITES ──
@@ -2523,14 +2536,14 @@ function processOfflineTime(secsAway){
       // no ball consumed. (Unchanged by v0.30 — this logic already existed pre-v0.30; preserved
       // here exactly, just relocated above the new revive/potion parity block below.)
       if(Math.random()<(1/4096)){
-        const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId);
+        const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId,enc.formName||null);
         caught.isShiny=true;
         state.dex.push(caught); state.totalCatches++; state.totalSightings++;
         summary.catches++; summary.shinies=(summary.shinies||0)+1;
         state.dexHistory[caught.pokedexId]=(state.dexHistory[caught.pokedexId]||0)+1;
         recordAbilityObserved(caught.pokedexId,caught.ability);
         recordGenderObserved(caught.pokedexId,caught.gender);
-        const s_=getPokemonEntry(enc.pokedexId);
+        const s_=getPokemonEntry(enc.pokedexId,enc.formName||null);
         const exp=Math.floor(((s_?s_.baseExpYield:51)||51)*enc.level/7);
         giveExpSilent(lead,exp);
         recordCapture(caught.pokedexId,enc.species);
@@ -2590,7 +2603,7 @@ function runWildEncounterLoopSilent(lead,enc,summary,encLocKey,encDexKey){
     if(throwDecision){
       useItemFromBag(throwDecision.ballId,null);
       if(Math.random()<throwDecision.prob){
-        const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId);
+        const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId,enc.formName||null);
         state.dex.push(caught); state.totalCatches++; state.totalSightings++;
         summary.catches++;
         state.dexHistory[caught.pokedexId]=(state.dexHistory[caught.pokedexId]||0)+1;
@@ -2727,7 +2740,9 @@ function rollFromTable(table){
     r-=(e.weight||10);
     if(r<=0){
       const lv=Math.floor(Math.random()*(e.maxLv-e.minLv+1))+e.minLv;
-      const entry=getPokemonEntry(e.dexId);
+      // v0.39 — formName threaded through so a form-variant row (currently only Silph Tower's
+      // regional-form exceptions) resolves its own entry/name/stats instead of the base form's.
+      const entry=getPokemonEntry(e.dexId,e.formName||null);
       const name=entry?entry.name:'#'+e.dexId;
       const genderMalePct=entry?entry.genderMalePct:50;
       let gender='M';
@@ -2736,7 +2751,7 @@ function rollFromTable(table){
       else if(genderMalePct===100) gender='M';
       else gender=Math.random()*100<genderMalePct?'M':'F';
       // Always use parseInt to ensure numeric pokedexId for encounter log key integrity
-      return {species:name,level:lv,gender,pokedexId:parseInt(e.dexId),baseSpd:entry?entry.baseSpd||50:50};
+      return {species:name,formName:e.formName||null,level:lv,gender,pokedexId:parseInt(e.dexId),baseSpd:entry?entry.baseSpd||50:50};
     }
   }
   return null;
@@ -2976,13 +2991,13 @@ function resolveEncounterStep(){
   // Step 1: Shiny check — fires before anything else. Auto-catch, no ball needed.
   if(Math.random()<(1/4096)){
     const lead=getLeadPokemon(); if(!lead){ endMission(); return; }
-    const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId);
+    const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId,enc.formName||null);
     caught.isShiny=true;
     state.dex.push(caught); state.totalCatches++; state.totalSightings++;
     state.dexHistory[caught.pokedexId]=(state.dexHistory[caught.pokedexId]||0)+1;
     recordAbilityObserved(caught.pokedexId,caught.ability);
     recordGenderObserved(caught.pokedexId,caught.gender);
-    const s_=getPokemonEntry(enc.pokedexId);
+    const s_=getPokemonEntry(enc.pokedexId,enc.formName||null);
     const exp=Math.floor(((s_?s_.baseExpYield:51)||51)*enc.level/7);
     giveExp(lead,exp);
     recordCapture(caught.pokedexId,enc.species);
@@ -2990,7 +3005,7 @@ function resolveEncounterStep(){
     addLog('✨ SHINY '+getDisplayName(caught)+' caught automatically! ✨','evolve');
     document.getElementById('total-catches').textContent=state.totalCatches;
     document.getElementById('total-sightings').textContent=state.totalSightings;
-    document.getElementById('enc-body').textContent='✨ SHINY '+enc.species+' caught!';
+    document.getElementById('enc-body').textContent='✨ SHINY '+getEncDisplayName(enc)+' caught!';
     state.currentEncounter=null; advanceTravelPath(); saveGame(); return;
   }
 
@@ -3072,10 +3087,10 @@ function decideWildBallThrow(wildHP,wildMaxHP,speciesCatchRate,dexId,isThrowTurn
 // turn loop. Move assignment is literally pickDefaultMove(), same as a freshly-caught Pokemon
 // (one move, power 40) — see DESIGN.md "Wild Pokemon Move Assignment".
 function makeWildBattler(enc){
-  const entry=getPokemonEntry(enc.pokedexId);
-  const maxHP=calcMaxHP(enc.species,enc.level,enc.pokedexId);
+  const entry=getPokemonEntry(enc.pokedexId,enc.formName||null);
+  const maxHP=calcMaxHP(enc.species,enc.level,enc.pokedexId,0,enc.formName||null);
   return {
-    pokedexId:enc.pokedexId,level:enc.level,currentHP:maxHP,maxHP,
+    pokedexId:enc.pokedexId,formName:enc.formName||null,level:enc.level,currentHP:maxHP,maxHP,
     equippedMoves:[pickDefaultMove(entry)],
     catchRate:entry?entry.catchRate:null,
     baseExpYield:entry?entry.baseExpYield:51
@@ -3157,7 +3172,7 @@ function runWildEncounterLoop(lead,enc){
       giveExp(lead,exp);
       addLog('Won vs '+enc.species+' Lv'+enc.level+'! +'+exp+' EXP','win');
       state.currentEncounter=null; advanceTravelPath();
-      document.getElementById('enc-body').textContent='Won vs '+enc.species+' Lv'+enc.level+'.';
+      document.getElementById('enc-body').textContent='Won vs '+getEncDisplayName(enc)+' Lv'+enc.level+'.';
       saveGame();
       return;
     }
@@ -3171,7 +3186,7 @@ function runWildEncounterLoop(lead,enc){
 }
 
 function catchPokemon(lead,enc,isShiny){
-  const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId);
+  const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId,enc.formName||null);
   caught.isShiny=isShiny;
   state.dex.push(caught); state.totalCatches++; state.totalSightings++;
   state.dexHistory[caught.pokedexId]=(state.dexHistory[caught.pokedexId]||0)+1;
@@ -3179,7 +3194,7 @@ function catchPokemon(lead,enc,isShiny){
   recordGenderObserved(caught.pokedexId,caught.gender);
   if(isShiny) addLog('✨ SHINY '+getDisplayName(caught)+' caught automatically! ✨','evolve');
   logCaptureRarity(caught,true);
-  const s_=getPokemonEntry(enc.pokedexId);
+  const s_=getPokemonEntry(enc.pokedexId,enc.formName||null);
   const exp=Math.floor(((s_?s_.baseExpYield:51)||51)*enc.level/7);
   giveExp(lead,exp);
   recordCapture(caught.pokedexId,enc.species);
@@ -3201,7 +3216,7 @@ function catchPokemon(lead,enc,isShiny){
   // offline catches, Day Care hatching) never getting tested.
   state.currentEncounter=null;
   advanceTravelPath();
-  document.getElementById('enc-body').textContent='Caught '+enc.species+' Lv'+enc.level+(isShiny?' ✨ SHINY!':'!');
+  document.getElementById('enc-body').textContent='Caught '+getEncDisplayName(enc)+' Lv'+enc.level+(isShiny?' ✨ SHINY!':'!');
   saveGame();
 }
 
@@ -3268,7 +3283,7 @@ function gameTick(){
       recordNewSpecies(encDexKey,enc.species);
     }
     addLog('Wild '+enc.species+' appeared! Lv'+enc.level+' '+enc.gender,'info');
-    document.getElementById('enc-body').textContent='Wild '+enc.species+' Lv'+enc.level+' ('+enc.gender+') appeared!';
+    document.getElementById('enc-body').textContent='Wild '+getEncDisplayName(enc)+' Lv'+enc.level+' ('+enc.gender+') appeared!';
     state.totalSightings++;
     document.getElementById('total-sightings').textContent=state.totalSightings;
     render();
@@ -3457,7 +3472,10 @@ function renderDestList(){
       ?reachable.map(loc=>{
           const locData=typeof LOCATIONS!=='undefined'?getLocation(loc):null;
           const name=locData?locData.name:loc;
-          return '<button onclick="selectMissionDest(\''+loc+'\')" style="display:block;width:100%;margin-bottom:6px;padding:10px;text-align:left;border-color:var(--main-border);color:var(--main-text-secondary);">'+name+'</button>';
+          // v0.39 — universal selection highlight: 2px accent border on the chosen destination.
+          const isSel=state._missionDest===loc;
+          const selStyle=isSel?'border:2px solid var(--accent);color:var(--accent-light);':'border-color:var(--main-border);color:var(--main-text-secondary);';
+          return '<button onclick="selectMissionDest(\''+loc+'\')" style="display:block;width:100%;margin-bottom:6px;padding:10px;text-align:left;'+selStyle+'">'+name+'</button>';
         }).join('')
       : '<div style="color:#e67e22;font-size:11px;padding:8px 0;">No destinations reachable from here.</div>';
   }
@@ -3518,7 +3536,9 @@ function selectWanderMode(metric){
   const el=document.getElementById('method-prefs'); if(el) el.innerHTML='';
   const encBtn=document.getElementById('wander-select-btn-encounters');
   const catchBtn=document.getElementById('wander-select-btn-catches');
-  const selectedStyle='width:100%;padding:8px;margin-bottom:{{MB}};font-size:11px;border-color:var(--accent);color:var(--accent-light);';
+  // v0.39 — standardized selection highlight: explicit 2px accent border (was border-color only,
+  // relying on the button's default border-width, which was inconsistent with other modals).
+  const selectedStyle='width:100%;padding:8px;margin-bottom:{{MB}};font-size:11px;border:2px solid var(--accent);color:var(--accent-light);';
   const unselectedStyle='width:100%;padding:8px;margin-bottom:{{MB}};font-size:11px;border-color:var(--main-border);color:var(--main-text-secondary);';
   if(encBtn) encBtn.style.cssText=(metric==='encounters'?selectedStyle:unselectedStyle).replace('{{MB}}','4px');
   if(catchBtn) catchBtn.style.cssText=(metric==='catches'?selectedStyle:unselectedStyle).replace('{{MB}}','8px');
@@ -3694,6 +3714,8 @@ function selectMissionDest(locId){
   state._missionDest=locId;
   state._wanderSelected=false;
   state._wanderMetric=null;
+  // v0.39 — standardized to the shared 2px accent-border selection style (was a bespoke full
+  // inline style-swap); unselected state unchanged.
   const unselectedStyleEnc='width:100%;padding:8px;margin-bottom:4px;font-size:11px;border-color:var(--main-border);color:var(--main-text-secondary);';
   const unselectedStyleCatch='width:100%;padding:8px;margin-bottom:8px;font-size:11px;border-color:var(--main-border);color:var(--main-text-secondary);';
   const encBtn=document.getElementById('wander-select-btn-encounters');
@@ -3706,6 +3728,7 @@ function selectMissionDest(locId){
   const arrivalNote=(locId===DAYCARE_LOCATION_ID)?'manage breeding on arrival':'research on arrival';
   document.getElementById('mission-summary').textContent='Carl Oak → '+name+' ('+arrivalNote+')';
   document.getElementById('confirm-mission').disabled=false;
+  renderDestList(); // v0.39 — re-render so the picked destination's row shows the selection highlight
   renderMethodPrefs(locId);
 }
 
@@ -4422,11 +4445,16 @@ function daycareSpriteRowHtml(pA,pB,resultDexId,known){
     '</div>';
 }
 
-function daycarePickerRowHtml(p,onclickJs){
+// v0.39 — optional isSelected param adds the universal 2px accent-border selection highlight.
+// Parent A (step 1) never passes it, since picking a row immediately navigates to step 2 — nothing
+// persists to highlight there. Parent B (step 2) passes it, since the row stays visible alongside
+// the preview after being picked.
+function daycarePickerRowHtml(p,onclickJs,isSelected){
   const entry=getPokemonEntry(p.pokedexId);
   const genderLabel=p.gender?p.gender:(entry&&entry.genderMalePct==null?'—':'?');
   const sprite=getSpriteUrl(p.pokedexId,p.species,p.isShiny||false,p.formName);
-  return '<div onclick="'+onclickJs+'" style="display:flex;align-items:center;gap:8px;background:var(--main-bg);border-radius:4px;padding:6px 8px;margin-bottom:5px;cursor:pointer;">'+
+  const borderStyle=isSelected?'border:2px solid var(--accent);':'border:2px solid transparent;';
+  return '<div onclick="'+onclickJs+'" style="display:flex;align-items:center;gap:8px;background:var(--main-bg);border-radius:4px;padding:6px 8px;margin-bottom:5px;cursor:pointer;'+borderStyle+'">'+
     '<img src="'+sprite+'" style="width:32px;height:32px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'">'+
     '<div style="flex:1;"><div style="color:#fff;font-size:11px;">'+getDisplayName(p)+' #'+p.id+(getRarityBadge(p)?' '+getRarityBadge(p):'')+'</div>'+
     '<div style="color:var(--main-text-secondary);font-size:9px;">Lv'+p.level+' · '+genderLabel+' · '+(p.holder?'👤 held':'📦 box')+'</div></div></div>';
@@ -4463,7 +4491,7 @@ function renderDaycareModalStep2(){
   if(!pA){ renderDaycareModalStep1(); return; }
   const candidates=sortDaycareList(getDaycareEligiblePokemon().filter(p=>p.id!==pA.id&&canBreedPair(pA,p).ok));
   const rows=candidates.length
-    ?candidates.map(p=>daycarePickerRowHtml(p,'selectDaycareParentB('+p.id+')')).join('')
+    ?candidates.map(p=>daycarePickerRowHtml(p,'selectDaycareParentB('+p.id+')',p.id===daycareParentB)).join('')
     :'<div style="color:#555;font-size:11px;">No compatible partners.</div>';
   const pB=daycareParentB?state.dex.find(p=>p.id===daycareParentB):null;
   const previewHtml=pB?buildDaycarePreviewHtml(pA,pB):'';
@@ -5760,7 +5788,8 @@ function openDexTypePicker(kind){
   modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:1200;display:flex;align-items:center;justify-content:center;padding:16px;';
   const isSpecies=(dexView==='officialSpeciesList');
   const f=isSpecies?dexSpeciesFilters:dexCatchesFilters;
-  const swatches=Object.keys(TYPE_COLORS).map(t=>'<button onclick="pickDexFilterType(\''+kind+'\',\''+t+'\')" style="background:'+TYPE_COLORS[t]+';color:#fff;border:none;border-radius:4px;padding:8px 4px;font-size:10px;'+(f[kind]===t?'outline:2px solid #fff;':'')+'">'+t+'</button>').join('');
+  // v0.39 — standardized to the shared 2px accent-border selection style (was outline:2px solid #fff).
+  const swatches=Object.keys(TYPE_COLORS).map(t=>'<button onclick="pickDexFilterType(\''+kind+'\',\''+t+'\')" style="background:'+TYPE_COLORS[t]+';color:#fff;border-radius:4px;padding:8px 4px;font-size:10px;'+(f[kind]===t?'border:2px solid var(--accent);':'border:2px solid transparent;')+'">'+t+'</button>').join('');
   modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><div style="color:var(--accent);font-size:13px;font-weight:bold;">'+(kind==='type'?'Type':'Move Type')+'</div><button onclick="document.getElementById(\'dex-typepicker-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">'+swatches+'</div>'+(f[kind]?'<button onclick="pickDexFilterType(\''+kind+'\',null)" style="width:100%;margin-top:10px;font-size:11px;">Clear</button>':'')+'</div>';
   modal.onclick=(e)=>{ if(e.target===modal) modal.remove(); };
   document.body.appendChild(modal);
@@ -6380,7 +6409,154 @@ function init(){
   render();
 }
 
+// ── SILPH TOWER — GENERATION-THEMED FLOORS (v0.39) ──
+// Runtime-computed, NOT stored in Excel/encounters.js — generated fresh every load straight from
+// POKEDEX_DATA and pushed into the in-memory ENCOUNTERS array. Scoped ONLY to locationIds
+// silphCo..silphCo9F (floors 1-9); floors 10-11 unused. Never touches any other location's rows.
+const SILPH_GEN_RANGES=[
+  {floor:'silphCo',   min:1,   max:151},  // Gen 1
+  {floor:'silphCo2F', min:152, max:251},  // Gen 2
+  {floor:'silphCo3F', min:252, max:386},  // Gen 3
+  {floor:'silphCo4F', min:387, max:493},  // Gen 4
+  {floor:'silphCo5F', min:494, max:649},  // Gen 5
+  {floor:'silphCo6F', min:650, max:721},  // Gen 6
+  {floor:'silphCo7F', min:722, max:809},  // Gen 7
+  {floor:'silphCo8F', min:810, max:905},  // Gen 8
+  {floor:'silphCo9F', min:906, max:1025}, // Gen 9
+];
+// Regional-form exception: these prefixes get placed on their INTRODUCTION-gen floor instead of
+// their base dexId's floor. Prefix-matched (not a hardcoded species list) so it auto-applies to
+// any future regional form added to the dex.
+const SILPH_REGIONAL_FLOOR={'Alolan':'silphCo7F','Galarian':'silphCo8F','Hisuian':'silphCo8F','Paldean':'silphCo9F'};
+
+function silphBST(d){ return d.baseHP+d.baseAtk+d.baseDef+d.baseSpatk+d.baseSpdef+d.baseSpd; }
+
+// Max BST across every formName:null member of a familyId, dex-wide (not gen-limited) — e.g.
+// Eevee's family strength factors in Sylveon's BST even though Sylveon spawns on a different floor.
+function silphBuildFamilyMaxBST(){
+  const famMax={};
+  POKEDEX_DATA.forEach(d=>{
+    if(d.formName===null){
+      const b=silphBST(d);
+      if(!(d.familyId in famMax)||b>famMax[d.familyId]) famMax[d.familyId]=b;
+    }
+  });
+  return famMax;
+}
+
+// Level floor: the level the species' own incoming evolution required (if level-based).
+// Level ceiling: one below the level this species itself evolves at (if level-based), from
+// either the flat pokedex.js evolvesIntoId/evolveLevel field or an EVO_TREE branch.
+function silphLevelBounds(d){
+  let floor=null, ceiling=null;
+  POKEDEX_DATA.forEach(p=>{
+    if(p.evolvesIntoId===d.dexId&&p.evolveMethod==='level'&&p.evolveLevel!=null){
+      if(floor===null||p.evolveLevel>floor) floor=p.evolveLevel;
+    }
+  });
+  if(typeof EVO_TREE!=='undefined'){
+    EVO_TREE.forEach(e=>{
+      if(e.toDexId===d.dexId&&e.evolveMethod==='level'&&e.evolveLevel!=null){
+        if(floor===null||e.evolveLevel>floor) floor=e.evolveLevel;
+      }
+    });
+  }
+  if(d.evolveMethod==='level'&&d.evolveLevel!=null) ceiling=d.evolveLevel-1;
+  if(typeof EVO_TREE!=='undefined'){
+    EVO_TREE.forEach(e=>{
+      if(e.fromDexId===d.dexId&&e.evolveMethod==='level'&&e.evolveLevel!=null){
+        const c=e.evolveLevel-1;
+        if(ceiling===null||c<ceiling) ceiling=c;
+      }
+    });
+  }
+  return {floor,ceiling};
+}
+
+function silphCalcLevel(d){
+  const bst=silphBST(d);
+  let level=5+(bst-175)/505*70;
+  const {floor,ceiling}=silphLevelBounds(d);
+  if(floor!=null&&level<floor) level=floor;
+  if(ceiling!=null&&level>ceiling) level=ceiling;
+  level=Math.max(5,Math.min(100,Math.round(level)));
+  return level;
+}
+
+// Rarity formula — see DESIGN.md "Silph Tower" section for the full derivation/stress-test notes.
+function silphCalcRate(d,famMaxBST){
+  if(d.isMythical) return null; // resolved after totals are known — flat 1:3000
+  if(d.isLegendary) return null; // flat 1:1500
+  const bst=silphBST(d);
+  const fm=famMaxBST[d.familyId]||bst;
+  const stagePos=fm?bst/fm:1;
+  const strength=Math.min(fm/680,1);
+  const effStage=Math.pow(stagePos,0.5);
+  let rate=50-effStage*(strength*49);
+  const pulldown=Math.pow(strength,6);
+  rate=rate*(1-pulldown*1.228);
+  return Math.max(rate,0.01);
+}
+
+function generateSilphTowerEncounters(){
+  if(typeof POKEDEX_DATA==='undefined'||typeof ENCOUNTERS==='undefined') return;
+  const famMaxBST=silphBuildFamilyMaxBST();
+  SILPH_GEN_RANGES.forEach(range=>{
+    // Base pool: one row per dexId in range — prefer formName:null, else first row for that dexId
+    // (mirrors getPokemonEntry()'s fallback; required for form-only species like Nidoran M/F).
+    const pool=[];
+    for(let dexId=range.min;dexId<=range.max;dexId++){
+      const entries=POKEDEX_DATA.filter(d=>d.dexId===dexId);
+      if(!entries.length) continue;
+      const pick=entries.find(d=>d.formName===null)||entries[0];
+      pool.push(pick);
+    }
+    pool.forEach(d=>addSilphRow(d,range.floor,famMaxBST));
+  });
+  // Regional-form exceptions — separate pass, placed on their intro-gen floor regardless of range.
+  POKEDEX_DATA.forEach(d=>{
+    if(!d.formName) return;
+    const prefixMatch=Object.keys(SILPH_REGIONAL_FLOOR).find(p=>d.formName.indexOf(p)===0);
+    if(prefixMatch) addSilphRow(d,SILPH_REGIONAL_FLOOR[prefixMatch],famMaxBST);
+  });
+  // Resolve Legendary/Mythical flat tiers now that each floor's regular-tier total weight is known.
+  const floors=[...new Set(SILPH_GEN_RANGES.map(r=>r.floor).concat(Object.values(SILPH_REGIONAL_FLOOR)))];
+  floors.forEach(floor=>{
+    const rows=ENCOUNTERS.filter(e=>e._silphFloor===floor);
+    const regularTotal=rows.filter(e=>e.encounterRate!==null).reduce((s,e)=>s+e.encounterRate,0);
+    const nLeg=rows.filter(e=>e._silphLegendary).length;
+    const nMyth=rows.filter(e=>e._silphMythical).length;
+    const coeff=nLeg/1500+nMyth/3000;
+    const total=coeff<1?regularTotal/(1-coeff):regularTotal;
+    rows.forEach(e=>{
+      if(e._silphLegendary) e.encounterRate=Math.max(total/1500,0.0001);
+      if(e._silphMythical) e.encounterRate=Math.max(total/3000,0.0001);
+      delete e._silphLegendary; delete e._silphMythical; delete e._silphFloor;
+    });
+  });
+}
+
+function addSilphRow(d,floor,famMaxBST){
+  const rate=silphCalcRate(d,famMaxBST);
+  const level=silphCalcLevel(d);
+  ENCOUNTERS.push({
+    locationId:floor,
+    dexId:d.dexId,
+    formName:d.formName||null,
+    minLevel:level,
+    maxLevel:level,
+    encounterRate:rate, // null placeholder for Legendary/Mythical, resolved in a second pass
+    encounterMethod:'grass',
+    requiresItem:null,
+    _silphFloor:floor,
+    _silphLegendary:!!d.isLegendary,
+    _silphMythical:!!d.isMythical
+  });
+}
+
 // ── BOOT ──
+generateSilphTowerEncounters(); // v0.39 — must run before loadGame()/init() so encounter rolls
+                                 // (including any offline-time processing) see the Silph Tower rows.
 const hasSave=loadGame();
 if(!hasSave){
   const initDiscovered=new Set(['palletTown']);

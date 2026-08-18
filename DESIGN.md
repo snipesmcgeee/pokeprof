@@ -70,7 +70,7 @@ There is no survival element. Aides do not need food, sleep, or anything like th
 - The `<h1>` tag always shows the current version (e.g. `PokeProf v0.18`)
 - Increment the version on every deployed change
 - `SAVE_VERSION` in `pokeprof.html` must be incremented whenever `state` structure changes
-- Current save version: `25` (v0.38)
+- Current save version: `25` (v0.38, unchanged in v0.39 — neither the selection-highlight nor Silph Tower changes touch `state` structure; `ENCOUNTERS` is runtime-generated, never persisted)
 - **v0.20 requires SAVE_VERSION 13** due to: `nickname` field on Pokémon objects, `evolveBlocked` field on Pokémon objects, `researchLog[dexId].abilitiesObserved` field, and `researchLog[dexId].confirmedBranches` replacing singular `confirmedMethod`/`confirmedIntoId`. All four migrations run in a single combined pass on load from v12.
 - **v0.21 requires SAVE_VERSION 14** due to: fishing splitting into per-rod-tier sub-methods (`fish-old`/`fish-good`/`fish-super`) instead of a single `fish` method. Migration: any `state.locationMethodPrefs[locId]` entry containing the bare `'fish'` method (in `methods[]` or as a `weights` key) is dropped entirely for that location — it recalculates fresh defaults (all currently-unlocked methods/rod-tiers checked evenly) the next time that location is visited. No other v0.21 change requires a schema change.
 - **v0.22 stays on SAVE_VERSION 14** — no `state` schema changes in this batch (all 11 items are behavior/rendering fixes and additive read-only views).
@@ -1659,7 +1659,78 @@ Any species where two `EVO_TREE` branches share a `toDexId` but differ by `toFor
 
 ---
 
-## Things That Are Future Goals (Do Not Implement Yet)
+## Universal Selection Highlight (SETTLED — v0.39)
+
+Standardizes the visual "selected" state across every selectable-item modal where a selection persists on screen (list stays visible, confirmed via a separate action) — full modal audit done v0.39, see below for what's excluded and why. Same treatment for single-select and multi-select.
+
+**Standard:** 2–3px solid border in the accent color family (`var(--accent)` or `var(--accent-light)`, matched per-element to whichever the surrounding UI already uses for that element type — e.g. filled/dark backgrounds get the lighter variant for contrast), replacing whatever ad-hoc highlight (or lack of one) previously existed.
+
+**Added (previously no highlight):**
+- Mission destination picker (`renderDestList()`) — highlights the button matching `state._missionDest`; `selectMissionDest()` now calls `renderDestList()` after setting the destination so the highlight actually renders.
+- Daycare breeding Parent B picker (`renderDaycareModalStep2()`) — `daycarePickerRowHtml()` takes a new optional `isSelected` param; highlights the row matching `daycareParentB`. Parent A (step 1) intentionally does NOT pass this param — picking a row there immediately navigates to step 2, so nothing persists on screen to highlight.
+
+**Restyled (previously highlighted, inconsistent style):**
+- Dex Type/Move-Type filter swatches (`openDexTypePicker()`) — was `outline:2px solid #fff`, now the standard border.
+- Wander mode buttons (`selectWanderMode()`/`selectMissionDest()`) — was a full inline style-swap (border-color only, no explicit border-width, relying on the button's default) — now explicit `border:2px solid var(--accent)`.
+- Theme custom-color swatch picker (`themeSwatchButtonHtml()`) — was `3px solid var(--accent-light)`, now the standard 2px accent.
+
+**Explicitly out of scope:**
+- Nature picker, Move add/change picker, TM-quantity picker, evolution-branch resolution — all fire their action and close the modal immediately on click; no selected-but-unconfirmed state ever persists on screen, so there's nothing to highlight.
+- Map location node (SVG circle, map click handler) — structurally different (SVG `stroke`/`stroke-width`, not a CSS `border`) from every other case here; left with its existing gold-stroke treatment rather than forced into an ill-fitting spec.
+
+No `SAVE_VERSION` impact — purely presentational.
+
+---
+
+## Silph Tower — Generation-Themed Floors (SETTLED — v0.39)
+
+Floors 1–9 of the existing `silphCo`–`silphCo9F` locations (previously zero encounters defined) are populated at **runtime, not via Excel/converter** — `generateSilphTowerEncounters()` runs once at boot (top of `── BOOT ──`, before `loadGame()`) and pushes computed rows directly into the in-memory `ENCOUNTERS` array. Re-derived fresh every load from whatever `POKEDEX_DATA`/`EVO_TREE` currently contain; **zero data-pipeline involvement** — `converter.html` is untouched, `encounters.js`/Excel are untouched. Scoped strictly to `locationId` values `silphCo`–`silphCo9F`; never reads, modifies, or regenerates rows for any other location. Floors 10–11 (`silphCo10F`/`11F`) unused for now (reserved).
+
+**Floor → generation:** floor N = all species with `dexId` in gen N's national-dex range (Gen 1: 1–151, Gen 2: 152–251, Gen 3: 252–386, Gen 4: 387–493, Gen 5: 494–649, Gen 6: 650–721, Gen 7: 722–809, Gen 8: 810–905, Gen 9: 906–1025).
+
+**Species pool selection (per dexId):** prefer the `formName === null` row; if none exists, fall back to the first row for that `dexId`. Mirrors `getPokemonEntry()`'s existing fallback — required for form-only species like Nidoran M/F that have no null-form row at all. Confirmed via the full national dex (151/151 Gen 1, including both Nidoran).
+
+**Regional-form exception:** the true regional-form rows (Alolan/Galarian/Hisuian/Paldean — matched by `formName` prefix, NOT a hardcoded species list, so it auto-applies to any future regional form added to the dex; does NOT include Mega, Primal, or cosmetic/battle formes, which stay on their base dexId's floor via the normal rule) are placed on their *introduction*-generation floor instead of their base dexId's floor: Alolan → floor 7, Galarian & Hisuian → floor 8, Paldean → floor 9. **First-ever wild-spawnable form variants in the game** — previously regional forms were evolution-only, never a direct wild catch.
+
+**Level formula:**
+```
+level = 5 + (BST−175)/505 × 70
+```
+Clamped: floor = the level the species' own prior evolution stage evolved at (if the incoming evolution is level-based, checked against both the flat `pokedex.js` `evolvesIntoId`/`evolveLevel` field and `EVO_TREE` branches); ceiling = one below this species' own evolve-level (if it evolves by level, same dual check). Hard floor 5, hard cap 100.
+
+**Rarity formula (`encounterRate`):**
+```
+familyStrength = min(familyMaxBST / 680, 1)
+stagePos       = ownBST / familyMaxBST
+effStage       = stagePos^0.5
+baseRate       = 50 − effStage × (familyStrength × 49)
+pulldown       = familyStrength^6
+finalRate      = baseRate × (1 − pulldown × 1.228)
+```
+`familyMaxBST` = max BST across all `formName:null` members of the same `familyId`, dex-wide (not gen-limited — e.g. Eevee's family strength factors in Sylveon's BST even though Sylveon spawns on a different floor). Legendary = flat 1:1500 per species (not shared pool). Mythical = flat 1:3000 per species — both resolved in a second pass once each floor's regular-tier total weight is known. Stress-tested extensively against gen 1 (151 species, full sorted table) and gen 7 (106 species incl. Alolan forms) during design; confirmed via automated jsdom smoke test post-implementation (Dragonite ≈1:750–1:765 depending on float/summation-order — expected minor cross-language drift, not a defect; Mewtwo ≈1:1500, Mew ≈1:3000).
+
+**Row fields:** `encounterMethod: 'grass'` (matches these locations' existing `defaultEncounterMethod`), `requiresItem: null` (floors are already ungated in `connections.js`), `minLevel = maxLevel` = the computed level (flat).
+
+**Engine changes (formName-threading, additive/optional-param pattern matching v0.33):**
+- `buildRouteTable()` — now maps `formName: e.formName||null` (previously dropped).
+- `rollFromTable()` — resolves `getPokemonEntry(e.dexId, e.formName||null)`; returns `formName` on the encounter object.
+- `makePokemon()` — new optional `formName=null` param (6th positional arg); sets `p.formName`; threads into `calcMaxHP()`. **First time a wild catch (not just evolution) can produce a form-variant individual.**
+- `resolveEncounterStep()`'s live shiny-autocatch branch, `processOfflineTime()`'s offline shiny-autocatch branch, and `catchPokemon()` — all four `makePokemon(enc...)` call sites now pass `enc.formName||null`; `catchPokemon()`'s `baseExpYield` lookup also threaded.
+- `makeWildBattler()` — `calcMaxHP()` call and the returned ephemeral battler object both now carry `formName` (previously missing entirely — would have silently used base-form stats/typing in battle for a form-variant wild encounter).
+- New `getEncDisplayName(enc)` helper (same "Species (Form)" formatting as `getDisplayName()`, but for the pre-catch `enc` object which has no nickname/id) — wired into the 4 user-facing encounter messages (wild-appeared, caught, won-vs, shiny-caught).
+
+No `SAVE_VERSION` impact — `ENCOUNTERS` is never persisted to save state, it's rebuilt fresh every load.
+
+---
+
+## Bug Fixes (SETTLED — v0.39)
+
+- **Pre-existing data corruption found and fixed — `pokedex.js` dexId 659–784 (126 species, Bunnelby through Kommo-o) had every row's content (stats, category, flavor text, abilities, `isLegendary`/`isMythical` flags — everything except `name`/`dexId`) shifted +1 relative to its label.** E.g. the row labeled "Kommo-o" actually held Tapu Koko's real data (hence Kommo-o incorrectly showing `isLegendary:true`). Traced via a full dex-wide diff against an independent reference dataset (dexId 1–1025), confirming the corruption was fully contained to this one contiguous block — nothing else in the dex was affected. Root cause: a manual Excel paste misalignment, not a `converter.html`/`fetcher.html` bug (`fetcher.html`'s fetch loop was audited and confirmed to fetch each dexId independently and correctly). **Fixed** by re-fetching dexId 659–784 fresh and overwriting. Re-verified clean via the same dex-wide diff post-fix: 0 mismatches across the full national dex.
+- **Side effect of the above fix, discovered post-fix:** `fetcher.html` only ever produces one base-form row per species (alternate/regional/cosmetic forms are always hand-added, manual Excel rows). Re-fetching the 659–784 range collaterally wiped every manually-added alternate-form row that happened to be interleaved in that same Excel row range: Vivillon (all 18 patterns), Aegislash (Blade/Shield), Pumpkaboo/Gourgeist (4 sizes each), Zygarde (10%/50%/Complete), Oricorio (4 styles), Rockruff (Own Tempo), Lycanroc (3 forms), Wishiwashi (School/Solo), Minior (8 core colors), Mega Diancie, and Hisuian forms for Sliggoo/Goodra/Avalugg/Decidueye. Confirmed intentional/acceptable for now (not urgent) — see backlog below.
+
+---
+
+
 
 - ~~Manual/interactive trainer battle mode~~ — **resolved v0.29** (playback variant chosen — see "Watched Gym Battle — Aide Card Trigger"; true player-controlled move selection remains undone/not implemented).
 - Gauntlet-style sub-trainers within regular gyms (mainline-game precedent) — deferred from v0.25.
@@ -1682,3 +1753,4 @@ Any species where two `EVO_TREE` branches share a `toDexId` but differ by `toFor
 - **~~Duplicate `poke-ball` entry~~ — resolved v0.31.** Removed directly from `items.js` by Jack (second row had `shopTier:"lab"`, a tier no location used — was dormant, not actively harmful, but would have resurfaced as a duplicate shop listing the moment the `shopTier` string-comparison issue below got fixed or a `lab`-tier location was added).
 - **`formVariant` column** — every row is `null` except dexId 555 (Darmanitan), which has `formVariant:1`. Field is unreferenced anywhere in `pokeprof.html`. Not pruning yet — worth checking whether this is a breadcrumb of an intended Standard/Zen form-variant system before treating it as pure cruft. Tabled, no urgency.
 - **New item, v0.36:** `natureMint` needs to be added to the Items sheet (row: `natureMint | Nature Mint | consumable | Changes a Pokémon's Nature when used. | change-nature | | 100 | | full | TRUE | | TRUE | TRUE | FALSE | | Professor`) and the converter re-run. Sprite not yet sourced.
+- **Backlog, v0.39: full Pokédex regen + form-hunting pass.** `fetcher.html` has no concept of hand-added alternate-form rows — any range re-fetch silently drops alternate forms sitting in that Excel row range (confirmed v0.39, see Bug Fixes above). Planned: redo the full Pokédex tab from scratch via `converter.html`, then a dedicated pass to re-add every alternate form by hand. Not urgent; not blocking any current version.

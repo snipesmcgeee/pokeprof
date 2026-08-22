@@ -136,7 +136,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span style="font-size:11px;color:var(--main-text-muted);">v0.39.1</span></h1>
+  <h1>PokeProf <span style="font-size:11px;color:var(--main-text-muted);">v0.39.2</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">100.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -1346,21 +1346,22 @@ function buildEnemyTeam(trainerId,tier,gauntletOrder){
 // Grants a trainer's badge on first win only; regular gyms also grant 1 TM on first win
 // (Indigo Plateau grants no TM). Updates gymProgress (cosmetic tracking) on every win regardless
 // of whether the badge was already held.
-function awardGymWin(trainerId,tier){
-  if(!state.aides[0].gymProgress) state.aides[0].gymProgress={};
-  state.aides[0].gymProgress[trainerId]=Math.max(state.aides[0].gymProgress[trainerId]||0,tier);
+function awardGymWin(trainerId,tier,idx=0){
+  const aide=state.aides[idx];
+  if(!aide.gymProgress) aide.gymProgress={};
+  aide.gymProgress[trainerId]=Math.max(aide.gymProgress[trainerId]||0,tier);
   if(typeof TRAINERS_DATA==='undefined') return;
   const row=TRAINERS_DATA.find(t=>t.trainerId===trainerId&&t.badgeItemId);
   if(!row) return;
   const badgeId=row.badgeItemId;
   // v0.31 — badge-earning is separated from TM-granting so a rematch (badge already held) can
   // still award a TM. First win: tier+4 TMs. Rematch: flat 1 TM. Gauntlet (Indigo): never any TM.
-  const alreadyEarned=(state.aides[0].trainerBag[badgeId]||0)>0;
+  const alreadyEarned=(aide.trainerBag[badgeId]||0)>0;
   if(!alreadyEarned){
-    state.aides[0].trainerBag[badgeId]=(state.aides[0].trainerBag[badgeId]||0)+1;
+    aide.trainerBag[badgeId]=(aide.trainerBag[badgeId]||0)+1;
     const badgeItem=getItem(badgeId);
-    addLog('🎖 Badge earned: '+(badgeItem?badgeItem.name:badgeId)+'!','evolve');
-    addSignificantLog('🎖 Badge earned: '+(badgeItem?badgeItem.name:badgeId)+'!','evolve');
+    addLog('🎖 '+aide.name+' earned: '+(badgeItem?badgeItem.name:badgeId)+'!','evolve');
+    addSignificantLog('🎖 '+aide.name+' earned: '+(badgeItem?badgeItem.name:badgeId)+'!','evolve');
   }
   if(!row.isGauntlet){
     const tmAward=alreadyEarned?1:(tier+4);
@@ -1373,8 +1374,8 @@ function awardGymWin(trainerId,tier){
 // Auto-heal check fired before each battle INSTANCE (never mid-battle) — reuses the existing
 // no-waste/no-threshold potion logic, applied across the whole party since trainer battles are
 // multi-mon, pulling from professorBag exactly like every other auto-heal in the game.
-function healPartyBeforeGymBattle(){
-  state.aides[0].party.forEach(p=>{
+function healPartyBeforeGymBattle(idx=0){
+  state.aides[idx].party.forEach(p=>{
     const potionId=getWeakestEffectivePotion(p);
     if(potionId) useItemFromBag(potionId,p);
   });
@@ -1410,8 +1411,8 @@ function getWeakestAvailablePotionAny(pokemon){
   }
   return null;
 }
-function healPartyFullBeforeGauntletLeg(){
-  state.aides[0].party.forEach(p=>{
+function healPartyFullBeforeGauntletLeg(idx=0){
+  state.aides[idx].party.forEach(p=>{
     while(p.currentHP<p.maxHP){
       const potionId=getStrongestZeroWastePotion(p)||getWeakestAvailablePotionAny(p);
       if(!potionId) break;
@@ -1423,17 +1424,18 @@ function healPartyFullBeforeGauntletLeg(){
 // v0.32 — replaces the old pooled-total-to-every-survivor EXP award (see DESIGN.md "Per-KO EXP
 // Attribution"). Walks the battle log; for each enemy faint, the immediately preceding log
 // entry's attacker is the player Pokemon that landed that KO — awards that enemy's EXP to that
-// specific attacker (looked up in the real state.aides[0].party, so credit persists even if the attacker
+// specific attacker (looked up in the real aide's party, so credit persists even if the attacker
 // later faints in the same battle). giveExpFn is giveExp (live) or giveExpSilent (offline).
-function awardPerKOExp(result,enemyTeam,giveExpFn){
+function awardPerKOExp(result,enemyTeam,giveExpFn,idx=0){
   if(result.winner!=='player') return;
+  const aide=state.aides[idx];
   result.log.forEach((entry,i)=>{
     if(entry.faint===undefined) return;
     const enemy=enemyTeam.find(e=>e.id===entry.faint);
     if(!enemy) return; // a player faint, not an enemy — no EXP to award
     const prev=result.log[i-1];
     if(!prev||prev.attacker===undefined) return;
-    const attackerReal=state.aides[0].party.find(p=>p.id===prev.attacker);
+    const attackerReal=aide.party.find(p=>p.id===prev.attacker);
     if(!attackerReal) return;
     const entryData=getPokemonEntry(enemy.pokedexId);
     const exp=Math.floor(((entryData&&entryData.baseExpYield?entryData.baseExpYield:51)*enemy.level)/7);
@@ -1444,16 +1446,17 @@ function awardPerKOExp(result,enemyTeam,giveExpFn){
 // One battle instance: full player team vs. one enemy roster, single runTrainerBattle() call —
 // no mid-battle healing even if the enemy cycles through multiple Pokemon. v0.32 — EXP is now
 // awarded per-KO (see awardPerKOExp above), not pooled to every survivor.
-function runOneGymBattle(enemyTeam){
-  const playerTeam=state.aides[0].party.filter(p=>p.currentHP>0).map(p=>({id:p.id,pokedexId:p.pokedexId,level:p.level,currentHP:p.currentHP,maxHP:p.maxHP,stats:p.stats,equippedMoves:p.equippedMoves||[]}));
+function runOneGymBattle(enemyTeam,idx=0){
+  const aide=state.aides[idx];
+  const playerTeam=aide.party.filter(p=>p.currentHP>0).map(p=>({id:p.id,pokedexId:p.pokedexId,level:p.level,currentHP:p.currentHP,maxHP:p.maxHP,stats:p.stats,equippedMoves:p.equippedMoves||[]}));
   if(!playerTeam.length||!enemyTeam.length) return {winner:'enemy',log:[]};
   const result=runTrainerBattle(playerTeam,enemyTeam);
   // Write HP back to the real party objects — runTrainerBattle operates on copies.
   playerTeam.forEach(pt=>{
-    const real=state.aides[0].party.find(p=>p.id===pt.id);
+    const real=aide.party.find(p=>p.id===pt.id);
     if(real) real.currentHP=pt.currentHP;
   });
-  awardPerKOExp(result,enemyTeam,giveExp);
+  awardPerKOExp(result,enemyTeam,giveExp,idx);
   return result;
 }
 
@@ -1462,25 +1465,26 @@ function runOneGymBattle(enemyTeam){
 // v0.28 — see "Elite Four/Champion Gauntlet Bug Fix" in DESIGN.md) — heal-before-each-leg, no
 // heal mid-battle, and a loss at ANY leg resets the whole attempt back to leg 1, no partial
 // credit, matches the real Elite Four's no-heal rule.
-function runGymEncounter(trainerId,tier){
+function runGymEncounter(trainerId,tier,idx=0){
+  const aide=state.aides[idx];
   const isGauntlet=isIndigoTrainer(trainerId)&&(tier===9||tier===10);
-  const locData=typeof LOCATIONS!=='undefined'?getLocation(state.aides[0].currentLocation):null;
+  const locData=typeof LOCATIONS!=='undefined'?getLocation(aide.currentLocation):null;
   const gymName=locData?locData.name:trainerId;
 
   if(!isGauntlet){
-    healPartyBeforeGymBattle();
+    healPartyBeforeGymBattle(idx);
     const enemyTeam=buildEnemyTeam(trainerId,tier);
-    const result=runOneGymBattle(enemyTeam);
+    const result=runOneGymBattle(enemyTeam,idx);
     if(result.winner==='player'){
-      addLog('⚔ Defeated '+gymName+' (Tier '+tier+')!','win');
-      awardGymWin(trainerId,tier);
+      addLog('⚔ '+aide.name+' defeated '+gymName+' (Tier '+tier+')!','win');
+      awardGymWin(trainerId,tier,idx);
       document.getElementById('enc-body').textContent='Won gym battle at '+gymName+' (Tier '+tier+')!';
     } else {
-      addLog('⚔ Lost to '+gymName+' (Tier '+tier+'). Try again.','fail');
+      addLog('⚔ '+aide.name+' lost to '+gymName+' (Tier '+tier+'). Try again.','fail');
       document.getElementById('enc-body').textContent='Lost gym battle at '+gymName+'.';
     }
-    state.aides[0].currentEncounter=null;
-    advanceTravelPath();
+    aide.currentEncounter=null;
+    advanceTravelPath(idx);
     saveGame();
     return;
   }
@@ -1488,56 +1492,58 @@ function runGymEncounter(trainerId,tier){
   // Elite Four + Champion gauntlet — 5 legs as one unit. tier is 9 (first clear) or 10
   // (postgame rematch, v0.28) — both use the identical 5-leg structure, just different rosters.
   for(let leg=1;leg<=5;leg++){
-    healPartyFullBeforeGauntletLeg();
+    healPartyFullBeforeGauntletLeg(idx);
     const enemyTeam=buildEnemyTeam(trainerId,tier,leg);
-    const result=runOneGymBattle(enemyTeam);
+    const result=runOneGymBattle(enemyTeam,idx);
     if(result.winner!=='player'){
-      addLog('⚔ Lost the Elite Four/Champion gauntlet at leg '+leg+'/5 — attempt reset.','fail');
+      addLog('⚔ '+aide.name+' lost the Elite Four/Champion gauntlet at leg '+leg+'/5 — attempt reset.','fail');
       document.getElementById('enc-body').textContent='Lost the gauntlet at leg '+leg+'/5. Try again.';
-      state.aides[0].currentEncounter=null;
-      advanceTravelPath();
+      aide.currentEncounter=null;
+      advanceTravelPath(idx);
       saveGame();
       return;
     }
     addLog('⚔ Gauntlet leg '+leg+'/5 defeated!','win');
   }
   addLog('🏆 Elite Four and Champion defeated!','evolve');
-  awardGymWin(trainerId,tier);
+  awardGymWin(trainerId,tier,idx);
   document.getElementById('enc-body').textContent='🏆 Champion defeated at '+gymName+'!';
-  state.aides[0].currentEncounter=null;
-  advanceTravelPath();
+  aide.currentEncounter=null;
+  advanceTravelPath(idx);
   saveGame();
 }
 
 // v0.26 — silent variant of runOneGymBattle() for offline simulation: identical battle logic,
 // but uses giveExpSilent() instead of giveExp() to avoid per-battle log spam over a long away
 // period — consistent with how offline wild encounters already use giveExpSilent().
-function runOneGymBattleSilent(enemyTeam){
-  const playerTeam=state.aides[0].party.filter(p=>p.currentHP>0).map(p=>({id:p.id,pokedexId:p.pokedexId,level:p.level,currentHP:p.currentHP,maxHP:p.maxHP,stats:p.stats,equippedMoves:p.equippedMoves||[]}));
+function runOneGymBattleSilent(enemyTeam,idx=0){
+  const aide=state.aides[idx];
+  const playerTeam=aide.party.filter(p=>p.currentHP>0).map(p=>({id:p.id,pokedexId:p.pokedexId,level:p.level,currentHP:p.currentHP,maxHP:p.maxHP,stats:p.stats,equippedMoves:p.equippedMoves||[]}));
   if(!playerTeam.length||!enemyTeam.length) return {winner:'enemy',log:[]};
   const result=runTrainerBattle(playerTeam,enemyTeam);
   playerTeam.forEach(pt=>{
-    const real=state.aides[0].party.find(p=>p.id===pt.id);
+    const real=aide.party.find(p=>p.id===pt.id);
     if(real) real.currentHP=pt.currentHP;
   });
-  awardPerKOExp(result,enemyTeam,giveExpSilent);
+  awardPerKOExp(result,enemyTeam,giveExpSilent,idx);
   return result;
 }
 
 // v0.26 — silent equivalent of awardGymWin(): identical gating (first-win-only badge/TM,
 // gymProgress only rises with a genuinely new badge) — no addLog/renderBagDisplay calls.
 // Tallies into the offline summary's badgesEarned instead.
-function awardGymWinSilent(trainerId,tier,summary){
-  if(!state.aides[0].gymProgress) state.aides[0].gymProgress={};
-  state.aides[0].gymProgress[trainerId]=Math.max(state.aides[0].gymProgress[trainerId]||0,tier);
+function awardGymWinSilent(trainerId,tier,summary,idx=0){
+  const aide=state.aides[idx];
+  if(!aide.gymProgress) aide.gymProgress={};
+  aide.gymProgress[trainerId]=Math.max(aide.gymProgress[trainerId]||0,tier);
   if(typeof TRAINERS_DATA==='undefined') return;
   const row=TRAINERS_DATA.find(t=>t.trainerId===trainerId&&t.badgeItemId);
   if(!row) return;
   const badgeId=row.badgeItemId;
   // v0.31 — mirrors awardGymWin()'s tiered TM logic exactly (see there for rationale).
-  const alreadyEarned=(state.aides[0].trainerBag[badgeId]||0)>0;
+  const alreadyEarned=(aide.trainerBag[badgeId]||0)>0;
   if(!alreadyEarned){
-    state.aides[0].trainerBag[badgeId]=(state.aides[0].trainerBag[badgeId]||0)+1;
+    aide.trainerBag[badgeId]=(aide.trainerBag[badgeId]||0)+1;
     summary.badgesEarned=(summary.badgesEarned||0)+1;
   }
   if(!row.isGauntlet){
@@ -1548,22 +1554,22 @@ function awardGymWinSilent(trainerId,tier,summary){
 
 // v0.26 — offline gym battle simulation. Mirrors runGymEncounter()'s logic exactly (same
 // healPartyBeforeGymBattle/buildEnemyTeam/win-loss rules/gauntlet structure) but silent.
-function runGymEncounterSilent(trainerId,tier,summary){
+function runGymEncounterSilent(trainerId,tier,summary,idx=0){
   const isGauntlet=isIndigoTrainer(trainerId)&&(tier===9||tier===10);
   if(!isGauntlet){
-    healPartyBeforeGymBattle();
-    const result=runOneGymBattleSilent(buildEnemyTeam(trainerId,tier));
-    if(result.winner==='player'){ summary.gymWins++; awardGymWinSilent(trainerId,tier,summary); }
+    healPartyBeforeGymBattle(idx);
+    const result=runOneGymBattleSilent(buildEnemyTeam(trainerId,tier),idx);
+    if(result.winner==='player'){ summary.gymWins++; awardGymWinSilent(trainerId,tier,summary,idx); }
     else { summary.gymLosses++; }
     return;
   }
   for(let leg=1;leg<=5;leg++){
-    healPartyFullBeforeGauntletLeg();
-    const result=runOneGymBattleSilent(buildEnemyTeam(trainerId,tier,leg));
+    healPartyFullBeforeGauntletLeg(idx);
+    const result=runOneGymBattleSilent(buildEnemyTeam(trainerId,tier,leg),idx);
     if(result.winner!=='player'){ summary.gymLosses++; return; }
   }
   summary.gymWins++;
-  awardGymWinSilent(trainerId,tier,summary);
+  awardGymWinSilent(trainerId,tier,summary,idx);
 }
 
 // ── WATCHED GYM BATTLE — Aide Card Trigger (v0.29) ──
@@ -2451,9 +2457,26 @@ function advanceFriendshipTicks(seconds){
   state._friendshipTick=(state._friendshipTick||0)+seconds;
   while(state._friendshipTick>=180){
     state._friendshipTick-=180;
-    state.aides[0].party.forEach(p=>{ if(p.currentHP>0){ p.friendship=(p.friendship||0)+1; checkMethodRuleOut(p.pokedexId,p.level,p.friendship); } });
+    state.aides.forEach(aide=>{
+      aide.party.forEach(p=>{ if(p.currentHP>0){ p.friendship=(p.friendship||0)+1; checkMethodRuleOut(p.pokedexId,p.level,p.friendship); } });
+    });
   }
 }
+// v0.39.2 — module-level, not part of `state` (a missed rotation on reload is harmless, doesn't
+// need to persist). Shared between processOfflineTime() and gameTick()'s live collision handling
+// below, so "who goes first" alternates consistently across both the offline-catchup path and live
+// play, including TurboMode (which is really just gameTick()/this function running on a much
+// shorter interval — no separate code path of its own).
+let aidePriorityFlip=false;
+
+// v0.39.2 — now loops every aide, not just aides[0]. Each aide gets its own full simulation run
+// (own remaining/nextIn/OFFLINE_LOOP_CAP budget — not split between aides, since 2000 iterations
+// of plain object mutation per aide is still fast; the original Silph Tower slowdown was a
+// different, unrelated inefficiency). One shared `summary` aggregates both aides' results for the
+// single offline banner. Simulation order alternates via aidePriorityFlip, same toggle live
+// gameTick() uses — over many sessions neither aide is systematically simulated "first" (and
+// therefore, if a badge-tier gym fight would flip on RNG either way, neither is systematically
+// favored) more than the other.
 function processOfflineTime(secsAway){
   if(secsAway<10) return null; // v0.26 — idle removed, research is always active; no missionActive gate needed
   const summary={encounters:0,catches:0,wins:0,income:0,evolutions:[],heals:0,shinies:0,gymWins:0,gymLosses:0,badgesEarned:0};
@@ -2462,16 +2485,25 @@ function processOfflineTime(secsAway){
   state.funds=Math.round((state.funds+income)*100)/100;
   summary.income=income;
 
-  // v0.38 fix — friendship previously applied as a single bulk pre-check here, gated ONCE by
-  // p.currentHP>0 evaluated before any offline simulation ran at all: a party member fainted at
-  // the moment the app closed got ZERO friendship for the entire offline gap, even the portions
-  // it would've been healed and alive — while a member healthy at close-time got full credit for
-  // the whole gap. Level, by contrast, was already correctly simulated throughout via the loop's
-  // per-iteration heal-checks. Fixed: friendship now advances inside the loop below, in lockstep
-  // with the same simulated time/HP-state progression everything else already uses — see
-  // advanceFriendshipTicks() above and DESIGN.md "Offline Friendship Tick Parity."
+  aidePriorityFlip=!aidePriorityFlip;
+  const order=state.aides.map((_,i)=>i);
+  if(aidePriorityFlip) order.reverse();
+  order.forEach(idx=>processAideOfflineTime(idx,secsAway,summary));
 
-  let remaining=secsAway, nextIn=state.aides[0].nextEncounterIn;
+  return summary;
+}
+
+// v0.38 fix — friendship previously applied as a single bulk pre-check here, gated ONCE by
+// p.currentHP>0 evaluated before any offline simulation ran at all: a party member fainted at
+// the moment the app closed got ZERO friendship for the entire offline gap, even the portions
+// it would've been healed and alive — while a member healthy at close-time got full credit for
+// the whole gap. Level, by contrast, was already correctly simulated throughout via the loop's
+// per-iteration heal-checks. Fixed: friendship now advances inside the loop below, in lockstep
+// with the same simulated time/HP-state progression everything else already uses — see
+// advanceFriendshipTicks() above and DESIGN.md "Offline Friendship Tick Parity."
+function processAideOfflineTime(idx,secsAway,summary){
+  const aide=state.aides[idx];
+  let remaining=secsAway, nextIn=aide.nextEncounterIn;
   // v0.33 — hard cap on iterations. Without this, a long offline gap combined with TurboMode's
   // 1-second interval could mean tens of thousands of loop iterations processed synchronously
   // the instant the app reopens — a real freeze risk, not hypothetical. Past the cap, remaining
@@ -2488,34 +2520,34 @@ function processOfflineTime(secsAway){
     // own ordering (its friendship tick also runs before that tick's heal/encounter resolution).
     advanceFriendshipTicks(consumed);
     remaining-=nextIn; nextIn=getEncounterInterval(false); summary.encounters++;
-    evaluateWanderTarget(); // v0.33 — Wander re-routes during offline catch-up too, not just live play
+    evaluateWanderTarget(idx); // v0.33 — Wander re-routes during offline catch-up too, not just live play
     // v0.22 fix: checkLocationHeal() previously only ran in live gameTick(), never offline —
     // missions dwelling in/passing through a heals:true location took real damage offline
     // that they wouldn't take live. Mirrors live order: heal-check fires before the encounter.
     // Silent (no per-encounter log, consistent with offline's batched-summary design) — tallied.
     {
-      const locData=typeof LOCATIONS!=='undefined'?getLocation(state.aides[0].currentLocation):null;
+      const locData=typeof LOCATIONS!=='undefined'?getLocation(aide.currentLocation):null;
       if(locData&&(locData.heals==='TRUE'||locData.heals===true||locData.heals==='true')){
-        const needsHeal=state.aides[0].party.some(p=>p.currentHP<p.maxHP||p.currentHP<=0);
-        if(needsHeal){ state.aides[0].party.forEach(p=>{ p.currentHP=p.maxHP; }); summary.heals++; }
+        const needsHeal=aide.party.some(p=>p.currentHP<p.maxHP||p.currentHP<=0);
+        if(needsHeal){ aide.party.forEach(p=>{ p.currentHP=p.maxHP; }); summary.heals++; }
       }
     }
-    const enc=rollEncounter(); const lead=getLeadPokemon();
+    const enc=rollEncounter(idx); const lead=getLeadPokemon(idx);
     if(!lead){
       // v0.26 — mandatory auto-repeat (previously gated behind state.autoRepeat, now always-on),
       // matches live endMission()'s faint path: heal at lastHealLocation, then rebuild the travel
       // path back to whatever missionDestination was in progress and resume — it does NOT just
       // park research at the heal location, since that would silently abandon the mission.
-      const returnLocId=state.aides[0].lastHealLocation||state.aides[0].missionOrigin||'palletTown';
-      state.aides[0].party.forEach(p=>{ p.currentHP=p.maxHP; });
-      state.aides[0].currentLocation=returnLocId;
-      if(returnLocId===state.aides[0].missionDestination){
-        state.aides[0].travelPath=[]; state.aides[0].travelPathIndex=0; state.aides[0].travelCyclesRemaining=0;
+      const returnLocId=aide.lastHealLocation||aide.missionOrigin||'palletTown';
+      aide.party.forEach(p=>{ p.currentHP=p.maxHP; });
+      aide.currentLocation=returnLocId;
+      if(returnLocId===aide.missionDestination){
+        aide.travelPath=[]; aide.travelPathIndex=0; aide.travelCyclesRemaining=0;
       } else {
-        state.aides[0].travelPath=buildTravelPath(returnLocId,state.aides[0].missionDestination);
-        state.aides[0].travelPathIndex=0;
-        if(state.aides[0].travelPath.length>0){ arriveAtLocation(state.aides[0].travelPath[0]); }
-        else { state.aides[0].missionDestination=returnLocId; } // unreachable — fall back to researching here
+        aide.travelPath=buildTravelPath(returnLocId,aide.missionDestination);
+        aide.travelPathIndex=0;
+        if(aide.travelPath.length>0){ arriveAtLocation(aide.travelPath[0],aide); }
+        else { aide.missionDestination=returnLocId; } // unreachable — fall back to researching here
       }
       continue;
     }
@@ -2523,10 +2555,10 @@ function processOfflineTime(secsAway){
     // oversight — gym battles are full team-vs-team fights using the live turn-based engine,
     // unlike the wild-encounter offline path's simplified one-hit formula). Now routes through
     // the real battle engine silently (no per-instance log/DOM writes), tallied into summary.
-    if(enc&&enc.type==='gym'){ runGymEncounterSilent(enc.trainerId,enc.tier,summary); advanceTravelPath(); continue; }
+    if(enc&&enc.type==='gym'){ runGymEncounterSilent(enc.trainerId,enc.tier,summary,idx); advanceTravelPath(idx); continue; }
     if(enc){
       // Write seen to encounter log
-      const encLocKey=state.aides[0].currentLocation;
+      const encLocKey=aide.currentLocation;
       if(!state.locationEncounterLog[encLocKey]) state.locationEncounterLog[encLocKey]={};
       const encDexKey=parseInt(enc.pokedexId)||0;
       if(encDexKey){
@@ -2544,7 +2576,7 @@ function processOfflineTime(secsAway){
       if(Math.random()<(1/4096)){
         const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId);
         caught.isShiny=true;
-        state.aides[0].dex.push(caught); state.totalCatches++; state.totalSightings++;
+        aide.dex.push(caught); state.totalCatches++; state.totalSightings++;
         summary.catches++; summary.shinies=(summary.shinies||0)+1;
         state.dexHistory[caught.pokedexId]=(state.dexHistory[caught.pokedexId]||0)+1;
         recordAbilityObserved(caught.pokedexId,caught.ability);
@@ -2555,8 +2587,8 @@ function processOfflineTime(secsAway){
         recordCapture(caught.pokedexId,enc.species);
         logCaptureRarity(caught,false);
         if(encDexKey) state.locationEncounterLog[encLocKey][encDexKey].caught++;
-        checkSpeciesCap(caught);
-        advanceTravelPath();
+        checkSpeciesCap(caught,idx);
+        advanceTravelPath(idx);
         continue;
       }
 
@@ -2564,7 +2596,7 @@ function processOfflineTime(secsAway){
       // heal-location full-heal check above). Now matches live step order exactly: opportunistic
       // revive first, then uncapped potion healing, before ball/attack resolution.
       {
-        const fainted=state.aides[0].party.filter(p=>p.currentHP<=0).sort((a,b)=>a.level-b.level);
+        const fainted=aide.party.filter(p=>p.currentHP<=0).sort((a,b)=>a.level-b.level);
         for(const fp of fainted){
           if((state.professorBag['revive']||0)>0){ useItemFromBag('revive',fp); break; }
           if((state.professorBag['max-revive']||0)>0){ useItemFromBag('max-revive',fp); break; }
@@ -2579,29 +2611,29 @@ function processOfflineTime(secsAway){
       // v0.30 — routes through the same real turn-based engine as live, entirely silently
       // (no per-round log/DOM writes, tallied into summary instead) — see DESIGN.md
       // "Wild Encounter Turn Loop".
-      runWildEncounterLoopSilent(lead,enc,summary,encLocKey,encDexKey);
+      runWildEncounterLoopSilent(lead,enc,summary,encLocKey,encDexKey,idx);
     }
-    advanceTravelPath();
+    advanceTravelPath(idx);
   }
   // v0.38 — trailing leftover time (loop exited via OFFLINE_LOOP_CAP, or a final partial
   // interval under one nextIn) still gets folded into the friendship counter, using final HP
   // state — same accepted best-effort tradeoff the encounter loop already has for this edge case.
   if(remaining>0) advanceFriendshipTicks(remaining);
-  state.aides[0].nextEncounterIn=Math.max(1,nextIn-remaining);
-  return summary;
+  aide.nextEncounterIn=Math.max(1,nextIn-remaining);
 }
 
 // Silent equivalent of runWildEncounterLoop() — identical rules (real catch formula, ball-first
 // ordering, full-damage retaliation on a miss, speed-ordered attack exchange, HP floor while
 // balls remain), but no addLog/DOM writes; tallies into the offline summary instead, and writes
 // caught/EXP through the existing silent helpers (giveExpSilent, checkSpeciesCap).
-function runWildEncounterLoopSilent(lead,enc,summary,encLocKey,encDexKey){
+function runWildEncounterLoopSilent(lead,enc,summary,encLocKey,encDexKey,idx=0){
+  const aide=state.aides[idx];
   const wild=makeWildBattler(enc);
   const history={};
   const MAX_ROUNDS=1000;
 
   for(let round=0;round<MAX_ROUNDS;round++){
-    lead=getLeadPokemon();
+    lead=getLeadPokemon(idx);
     if(!lead) return; // caller's outer loop already handles the full-wipe case before calling in
     const hasBalls=getBallCount()>0;
     const throwDecision=hasBalls?decideWildBallThrow(wild.currentHP,wild.maxHP,wild.catchRate,enc.pokedexId,round%2===0):null;
@@ -2610,7 +2642,7 @@ function runWildEncounterLoopSilent(lead,enc,summary,encLocKey,encDexKey){
       useItemFromBag(throwDecision.ballId,null);
       if(Math.random()<throwDecision.prob){
         const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId);
-        state.aides[0].dex.push(caught); state.totalCatches++; state.totalSightings++;
+        aide.dex.push(caught); state.totalCatches++; state.totalSightings++;
         summary.catches++;
         state.dexHistory[caught.pokedexId]=(state.dexHistory[caught.pokedexId]||0)+1;
         recordAbilityObserved(caught.pokedexId,caught.ability);
@@ -2620,14 +2652,14 @@ function runWildEncounterLoopSilent(lead,enc,summary,encLocKey,encDexKey){
         recordCapture(caught.pokedexId,enc.species);
         logCaptureRarity(caught,false);
         if(encDexKey) state.locationEncounterLog[encLocKey][encDexKey].caught++;
-        checkSpeciesCap(caught);
+        checkSpeciesCap(caught,idx);
         return;
       }
       const move=wild.equippedMoves[0];
       const hit=move?applyCrit(calcBattleDamage(wild,lead,move)):{damage:1,isCrit:false};
       lead.currentHP=Math.max(0,lead.currentHP-hit.damage);
       if(lead.currentHP<=0){
-        const next=getLeadPokemon();
+        const next=getLeadPokemon(idx);
         if(!next) return; // full wipe — caller's outer loop handles relocation on its next cycle
       }
       continue;
@@ -2664,7 +2696,7 @@ function runWildEncounterLoopSilent(lead,enc,summary,encLocKey,encDexKey){
       return;
     }
     if(leadFainted){
-      const next=getLeadPokemon();
+      const next=getLeadPokemon(idx);
       if(!next) return; // full wipe — caller's outer loop handles relocation on its next cycle
     }
   }
@@ -2793,9 +2825,13 @@ function movePowerTotal(p){
 // filtered state.aides[0].dex; harmless for wild-catch releases (a fresh catch is never already in the
 // party), but evolution can now trigger a release (see below), and an evolved individual CAN be
 // a current party member — leaving state.aides[0].party unfiltered would orphan that slot.
+// v0.39.2 — operates across ALL aides' dex/party, not one. Finds whichever aide currently owns
+// this individual and removes it from that aide's own arrays specifically.
 function removePokemonFromBoxAndParty(id){
-  state.aides[0].dex=state.aides[0].dex.filter(p=>p.id!==id);
-  state.aides[0].party=state.aides[0].party.filter(p=>p.id!==id);
+  state.aides.forEach(aide=>{
+    aide.dex=aide.dex.filter(p=>p.id!==id);
+    aide.party=aide.party.filter(p=>p.id!==id);
+  });
 }
 
 // v0.38 — this species' effective cap: the per-species override if one is set, else the global
@@ -2808,13 +2844,17 @@ function getEffectiveSpeciesCap(dexId){
 // v0.38 — box-only sweep for a single species down to `cap`: shiny/party exempt, earliest catch
 // kept, releases the newest excess. Shared by the global cap-lowering sweep and per-species
 // override lowering (see setSpeciesCapOverride() below). Returns the count released.
+// v0.39.2 — pool is now every aide's box combined, per the cap's own "regardless of aide count"
+// design intent (see checkSpeciesCap below).
 function sweepSpeciesToCap(dexId,cap){
-  const list=state.aides[0].dex.filter(p=>p.pokedexId===dexId&&!p.isShiny&&!p.holder);
-  if(list.length<=cap) return 0;
-  list.sort((a,b)=>a.id-b.id);
-  const toRelease=new Set(list.slice(cap).map(p=>p.id));
-  state.aides[0].dex=state.aides[0].dex.filter(p=>!toRelease.has(p.id));
-  state.aides[0].party=state.aides[0].party.filter(p=>!toRelease.has(p.id));
+  const allBoxed=state.aides.flatMap(a=>a.dex.filter(p=>p.pokedexId===dexId&&!p.isShiny&&!p.holder));
+  if(allBoxed.length<=cap) return 0;
+  allBoxed.sort((a,b)=>a.id-b.id);
+  const toRelease=new Set(allBoxed.slice(cap).map(p=>p.id));
+  state.aides.forEach(aide=>{
+    aide.dex=aide.dex.filter(p=>!toRelease.has(p.id));
+    aide.party=aide.party.filter(p=>!toRelease.has(p.id));
+  });
   return toRelease.size;
 }
 
@@ -2843,14 +2883,18 @@ function sweepSpeciesToCap(dexId,cap){
 // nominal cap in total as long as the boxed portion alone stays at/under it. IV-donation
 // eligibility (recipient pool) is UNCHANGED — party members remain eligible recipients, since
 // that's a buff, not a removal. Also now respects per-species overrides via getEffectiveSpeciesCap().
-function checkSpeciesCap(individual){
+// v0.39.2 — the cap and its IV-donation recipient pool now span ALL aides' boxes/parties combined,
+// not a single aide — this is what the function's own long-standing doc comment ("regardless of
+// aide count") already specified as the intent, now actually implemented. A wild caught by Faraday
+// can donate IVs to (or trigger release of) an individual sitting in Carl Oak's box, and vice versa.
+function checkSpeciesCap(individual,idx=0){
   if(individual.isShiny) return; // shinies never released
   if(individual.holder) return; // v0.38 — party members are exempt from the cap entirely
   const cap=getEffectiveSpeciesCap(individual.pokedexId);
-  const liveNonShinyBox=state.aides[0].dex.filter(p=>p.pokedexId===individual.pokedexId&&!p.isShiny&&!p.holder);
+  const liveNonShinyBox=state.aides.flatMap(a=>a.dex.filter(p=>p.pokedexId===individual.pokedexId&&!p.isShiny&&!p.holder));
   if(liveNonShinyBox.length<=cap) return;
   const familyIds=getFamilyDexIds(individual.pokedexId);
-  const pool=state.aides[0].dex.filter(p=>p.id!==individual.id&&familyIds.includes(p.pokedexId));
+  const pool=state.aides.flatMap(a=>a.dex.filter(p=>p.id!==individual.id&&familyIds.includes(p.pokedexId)));
   pool.sort((a,b)=>b.level-a.level);
   const wildIV=ivTotal(individual);
   const recipient=pool.find(p=>ivTotal(p)<wildIV);
@@ -2864,7 +2908,7 @@ function checkSpeciesCap(individual){
   }
   // No IV-donation recipient — release the weakest of the full same-species BOXED pool
   // (liveNonShinyBox already includes `individual` itself, since both a fresh catch and a
-  // freshly-evolved individual are already present in state.aides[0].dex by the time this runs).
+  // freshly-evolved individual are already present in its owning aide's dex by the time this runs).
   let releaseTarget=liveNonShinyBox[0];
   liveNonShinyBox.forEach(p=>{
     const rp=movePowerTotal(releaseTarget), pp=movePowerTotal(p);
@@ -2999,7 +3043,7 @@ function resolveEncounterStep(idx=0){
 
   // v0.25 — Gym Battle encounters resolve through the trainer battle engine, not the wild
   // catch/fight flow below. Fully separate branch, everything after this is untouched.
-  if(enc.type==='gym'){ runGymEncounter(enc.trainerId,enc.tier); return; }
+  if(enc.type==='gym'){ runGymEncounter(enc.trainerId,enc.tier,idx); return; }
 
   // Step 1: Shiny check — fires before anything else. Auto-catch, no ball needed.
   if(Math.random()<(1/4096)){
@@ -3046,7 +3090,7 @@ function resolveEncounterStep(idx=0){
 
   // Step 4 (v0.30): the real turn-based wild encounter loop — replaces the old speed-check +
   // single ball-throw-or-fight model. See DESIGN.md "Wild Encounter Turn Loop".
-  runWildEncounterLoop(lead,enc);
+  runWildEncounterLoop(lead,enc,idx);
 }
 
 // ── WILD ENCOUNTER CATCH FORMULA (v0.30) ──
@@ -3117,14 +3161,15 @@ function makeWildBattler(enc){
 // above. Loop is provably bounded: attack rounds are capped by wild maxHP, ball rounds are capped
 // by ball inventory (each throw consumes one regardless of outcome) — MAX_ROUNDS is just a safety
 // backstop, never expected to bind in practice. See DESIGN.md "Wild Encounter Turn Loop".
-function runWildEncounterLoop(lead,enc){
+function runWildEncounterLoop(lead,enc,idx=0){
+  const aide=state.aides[idx];
   const wild=makeWildBattler(enc);
   const history={};
   const MAX_ROUNDS=1000;
 
   for(let round=0;round<MAX_ROUNDS;round++){
-    lead=getLeadPokemon();
-    if(!lead){ endMission(); return; }
+    lead=getLeadPokemon(idx);
+    if(!lead){ endMission('faint',idx); return; }
     const hasBalls=getBallCount()>0;
     const throwDecision=hasBalls?decideWildBallThrow(wild.currentHP,wild.maxHP,wild.catchRate,enc.pokedexId,round%2===0):null;
 
@@ -3133,7 +3178,7 @@ function runWildEncounterLoop(lead,enc){
       useItemFromBag(throwDecision.ballId,null);
       renderBagDisplay();
       if(Math.random()<throwDecision.prob){
-        catchPokemon(lead,enc,false);
+        catchPokemon(lead,enc,false,idx);
         return;
       }
       // Miss — wild retaliates at FULL calcBattleDamage (no more flat 25%-of-normal miss penalty).
@@ -3144,8 +3189,8 @@ function runWildEncounterLoop(lead,enc){
       document.getElementById('enc-body').textContent='Ball missed! '+getDisplayName(lead)+' at '+lead.currentHP+'/'+lead.maxHP+' HP';
       if(lead.currentHP<=0){
         addLog(getDisplayName(lead)+' #'+lead.id+' fainted!','faint');
-        const next=getLeadPokemon();
-        if(!next){ addLog('Your party was defeated by '+enc.species+'!','fail'); state.aides[0].currentEncounter=null; endMission(); return; }
+        const next=getLeadPokemon(idx);
+        if(!next){ addLog('Your party was defeated by '+enc.species+'!','fail'); aide.currentEncounter=null; endMission('faint',idx); return; }
         addLog(getDisplayName(next)+' #'+next.id+' was sent out!','info');
       }
       continue;
@@ -3184,24 +3229,25 @@ function runWildEncounterLoop(lead,enc){
       const exp=Math.floor(((wild.baseExpYield||51)*enc.level)/7);
       giveExp(lead,exp);
       addLog('Won vs '+enc.species+' Lv'+enc.level+'! +'+exp+' EXP','win');
-      state.aides[0].currentEncounter=null; advanceTravelPath();
+      aide.currentEncounter=null; advanceTravelPath(idx);
       document.getElementById('enc-body').textContent='Won vs '+enc.species+' Lv'+enc.level+'.';
       saveGame();
       return;
     }
     if(leadFainted){
       addLog(getDisplayName(lead)+' #'+lead.id+' fainted!','faint');
-      const next=getLeadPokemon();
-      if(!next){ addLog('Your party was defeated by '+enc.species+'!','fail'); state.aides[0].currentEncounter=null; endMission(); return; }
+      const next=getLeadPokemon(idx);
+      if(!next){ addLog('Your party was defeated by '+enc.species+'!','fail'); aide.currentEncounter=null; endMission('faint',idx); return; }
       addLog(getDisplayName(next)+' #'+next.id+' was sent out!','info');
     }
   }
 }
 
-function catchPokemon(lead,enc,isShiny){
+function catchPokemon(lead,enc,isShiny,idx=0){
+  const aide=state.aides[idx];
   const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId);
   caught.isShiny=isShiny;
-  state.aides[0].dex.push(caught); state.totalCatches++; state.totalSightings++;
+  aide.dex.push(caught); state.totalCatches++; state.totalSightings++;
   state.dexHistory[caught.pokedexId]=(state.dexHistory[caught.pokedexId]||0)+1;
   recordAbilityObserved(caught.pokedexId,caught.ability);
   recordGenderObserved(caught.pokedexId,caught.gender);
@@ -3215,20 +3261,20 @@ function catchPokemon(lead,enc,isShiny){
   document.getElementById('total-catches').textContent=state.totalCatches;
   document.getElementById('total-sightings').textContent=state.totalSightings;
   // Write caught to encounter log — {seen, caught} schema
-  if(!state.locationEncounterLog[state.aides[0].currentLocation]) state.locationEncounterLog[state.aides[0].currentLocation]={};
+  if(!state.locationEncounterLog[aide.currentLocation]) state.locationEncounterLog[aide.currentLocation]={};
   const lid=parseInt(caught.pokedexId);
   if(lid){
-    if(!state.locationEncounterLog[state.aides[0].currentLocation][lid]) state.locationEncounterLog[state.aides[0].currentLocation][lid]={seen:0,caught:0};
-    state.locationEncounterLog[state.aides[0].currentLocation][lid].caught++;
+    if(!state.locationEncounterLog[aide.currentLocation][lid]) state.locationEncounterLog[aide.currentLocation][lid]={seen:0,caught:0};
+    state.locationEncounterLog[aide.currentLocation][lid].caught++;
   }
   // Per-species cap: catch-then-release overflow non-shinies
-  checkSpeciesCap(caught);
+  checkSpeciesCap(caught,idx);
   // v0.33 — evolution testing trigger removed from here; professorAutoTestEvolutions() now runs
   // unconditionally at the top of every gameTick() instead (see there) — one source of truth,
   // fixes species whose first individual arrived via a path other than this one (shiny auto-catch,
   // offline catches, Day Care hatching) never getting tested.
-  state.aides[0].currentEncounter=null;
-  advanceTravelPath();
+  aide.currentEncounter=null;
+  advanceTravelPath(idx);
   document.getElementById('enc-body').textContent='Caught '+enc.species+' Lv'+enc.level+(isShiny?' ✨ SHINY!':'!');
   saveGame();
 }
@@ -3255,12 +3301,19 @@ function incomeTick(){
 // conditional early-return renders — render() is idempotent, so this is strictly simpler and
 // correctly reflects every aide's state in one pass.
 //
-// v0.39.1 KNOWN UNRESOLVED GAP: the wild/gym encounter display (#enc-body, the single shared
-// encounter modal) is not aide-scoped — if two aides both roll a new encounter in the same tick,
-// whichever aide's processAideTick() runs second overwrites the first's modal text. There's no
-// per-aide encounter queue or dual-modal design yet. This needs an actual UX decision (does a
-// second aide's encounter wait? get its own modal? auto-resolve silently while the player is
-// looking at the first?) — flagging rather than silently picking one.
+// v0.39.2 — RESOLVED the v0.39.1 simultaneous-encounter gap: alternating collision priority.
+// "Colliding" = an aide has no in-progress encounter and is about to roll a brand-new one this
+// tick (nextEncounterIn<=0). If 2+ aides collide in the same tick, they're processed in
+// alternating order — first collision Carl-first, next collision Faraday-first, flipping every
+// time a genuine collision occurs (not every tick — a tick where only one aide happens to hit an
+// encounter always processes in fixed aides[] order, nothing to alternate). Whichever aide
+// processes second in a colliding tick still has its #enc-body text overwritten by the one that
+// went first — this makes WHO wins that overwrite fair over time rather than always Carl, but
+// doesn't give both a simultaneous encounter its own display; that's still a real product
+// decision if it's ever worth two aides never stepping on each other's modal at all. Shares
+// aidePriorityFlip with processOfflineTime() (see there) so the same fairness applies whether
+// play is live, backgrounded, or TurboMode — TurboMode is this same function/loop running on a
+// shorter interval, not a separate code path.
 function gameTick(){
   // v0.33 — both run unconditionally, every tick, before any per-aide processing below. Evolution
   // testing: replaces the old event-triggered design (buy item / catch new species) which missed
@@ -3277,7 +3330,14 @@ function gameTick(){
       aide.party.forEach(p=>{ if(p.currentHP>0){ p.friendship=(p.friendship||0)+1; checkMethodRuleOut(p.pokedexId,p.level,p.friendship); } });
     });
   }
-  state.aides.forEach((aide,idx)=>{
+
+  const colliding=state.aides.filter(a=>!a.currentEncounter&&a.nextEncounterIn<=0);
+  let order=state.aides.map((_,i)=>i);
+  if(colliding.length>=2){
+    aidePriorityFlip=!aidePriorityFlip;
+    if(aidePriorityFlip) order=order.slice().reverse();
+  }
+  order.forEach(idx=>{
     evaluateWanderTarget(idx); // no-ops immediately if this aide's wanderMode is false
     processAideTick(idx);
   });
@@ -5025,8 +5085,14 @@ function renderParty(){
 // getShopItems()'s tierOrder (confirmed dormant — see the pre-existing "duplicate poke-ball,
 // shopTier:lab" bug history). Rather than risk touching the shared shop-rendering system for this
 // one narrow, one-time special purchase, it gets its own dedicated button + flow here.
+// v0.39.2 — gated to Pallet Town, per Jack's request. Checking currentLocation directly for now
+// (not shopTier) — Pallet Town's existing shopTier:'basic' already drives its normal field shop,
+// and shopTier is a single value, not a list, so setting it to a Lab-specific tier would silently
+// remove that basic shop. Flagged separately; trivial to swap to a shopTier check once resolved.
 function buildHireAideButtonHtml(){
   if(state.aides.length>1) return ''; // already hired — max 1 ever
+  const anyAideAtLab=state.aides.some(a=>a.currentLocation==='palletTown');
+  if(!anyAideAtLab) return '';
   const item=getItem('aide-hire-2');
   const price=item?item.shopPrice:100;
   return '<div style="padding:10px 12px;text-align:center;">'

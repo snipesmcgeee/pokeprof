@@ -136,7 +136,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span style="font-size:11px;color:var(--main-text-muted);">v0.39</span></h1>
+  <h1>PokeProf <span style="font-size:11px;color:var(--main-text-muted);">v0.39.1</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">100.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -167,19 +167,8 @@
       <span id="prof-bag-summary-text" style="color:var(--main-text-secondary);font-size:10px;letter-spacing:0.5px;"></span>
       <button onclick="showBagModal()" style="flex-shrink:0;padding:5px 12px;font-size:10px;border-color:#f4d03f;color:#f4d03f;">🎒 Bag</button>
     </div>
-    <div id="aide-info">
-      <div class="aide-name">🧑‍🔬 Carl Oak</div>
-      <div id="aide-party-sprites-row"></div>
-      <div class="aide-location" id="aide-location">📍 Pallet Town — Researching</div>
-      <button id="skip-encounter-btn" onclick="skipToNextEncounter()" style="display:none;margin-top:6px;font-size:10px;padding:5px 10px;border-color:var(--main-border);color:var(--main-text-secondary);">⏭ Skip to Encounter x50</button>
-      <button id="battle-gym-btn" style="display:none;margin-top:6px;font-size:10px;padding:5px 10px;border-color:var(--accent);color:var(--accent-light);">⚔ Battle Gym</button>
-      <div id="badge-cap-display" style="font-size:10px;color:#f4d03f;margin-top:2px;"></div>
-      <div id="bag-display" style="display:none;"></div>
-    </div>
-    <div id="party-list"></div>
+    <div id="aide-roster"></div>
     <div id="controls">
-      <button id="btn-start" onclick="startMission()">▶ Start Mission</button>
-      <button id="btn-recall" onclick="recallMission()">⏹ Recall</button>
       <div style="display:flex;align-items:center;gap:6px;">
         <span style="color:var(--main-text-secondary);font-size:10px;">Catches: <span id="total-catches">0</span></span>
         <span style="color:var(--main-text-secondary);font-size:10px;">Seen: <span id="total-sightings">0</span></span>
@@ -495,9 +484,11 @@ const BADGE_SPRITE_MAP={
   'earth-badge':BADGE_SPRITE_BASE+'8.png'
 };
 // Builds the inline badge sprite/emoji HTML for every badge currently held in trainerBag.
-function buildBadgeSpritesHtml(){
+// v0.39.1 — accepts a trainerBag directly (an aide's own inventory) instead of reading the old
+// global state.aides[0].trainerBag, which no longer exists. Every call site now passes aide.trainerBag.
+function buildBadgeSpritesHtml(trainerBag){
   if(typeof ITEMS_DATA==='undefined') return '';
-  const held=Object.entries(state.trainerBag||{}).filter(([id,qty])=>qty>0).map(([id])=>id)
+  const held=Object.entries(trainerBag||{}).filter(([id,qty])=>qty>0).map(([id])=>id)
     .filter(id=>{ const it=getItem(id); return it&&it.itemCategory==='badge'; });
   if(!held.length) return '';
   const icons=held.map(id=>{
@@ -538,15 +529,15 @@ function buildRouteTable(locationId){
     .filter(e=>e.locationId===locationId)
     .filter(e=>{
       if(!e.requiresItem) return true;
-      return !!(state.trainerBag&&state.trainerBag[e.requiresItem]&&state.trainerBag[e.requiresItem]>0);
+      return !!(state.aides[0].trainerBag&&state.aides[0].trainerBag[e.requiresItem]&&state.aides[0].trainerBag[e.requiresItem]>0);
     })
-    .map(e=>({dexId:e.dexId,formName:e.formName||null,minLv:e.minLevel,maxLv:e.maxLevel,weight:e.encounterRate,method:getEncounterSubMethod(e.encounterMethod||'grass',e.requiresItem),requiresItem:e.requiresItem||null}));
+    .map(e=>({dexId:e.dexId,minLv:e.minLevel,maxLv:e.maxLevel,weight:e.encounterRate,method:getEncounterSubMethod(e.encounterMethod||'grass',e.requiresItem),requiresItem:e.requiresItem||null}));
 }
 
 // v0.26 — split from a single shared ENC_INTERVAL=30 into separate open/closed values.
 // OPEN drives all live/foreground countdown resets; CLOSED drives only processOfflineTime()'s
 // cycle-counting loop. The first offline cycle after backgrounding still honors whatever was
-// left on the live countdown (state.nextEncounterIn) — only cycles after that use CLOSED.
+// left on the live countdown (state.aides[0].nextEncounterIn) — only cycles after that use CLOSED.
 const ENC_INTERVAL_OPEN = 10;
 const ENC_INTERVAL_CLOSED = 30;
 const FRIENDSHIP_THRESHOLD = 220;
@@ -581,7 +572,7 @@ function getItem(itemId){
 
 // v0.32 — "AdminMode" cheat code. Purely live-derived, nothing persisted: true whenever Catch #1
 // (id===1, the literal first-ever catch) is currently nicknamed "AdminMode" (case-insensitive,
-// trimmed). Checks the full state.dex (not just state.party) since Catch #1 may be boxed rather
+// trimmed). Checks the full state.aides[0].dex (not just state.aides[0].party) since Catch #1 may be boxed rather
 // than on the active team. Renaming it away or releasing Catch #1 deactivates this on the very
 // next check — nothing extra needed.
 // v0.33 fix — evolution-proofing: this previously also required pokedexId===19 (Rattata). Since
@@ -590,17 +581,17 @@ function getItem(itemId){
 // Catch #1 evolved into Raticate — species identity was being used where catch-order identity
 // was the actual intent. Fix: drop the pokedexId check entirely, key only on id===1.
 function isAdminModeActive(){
-  return state.dex.some(p=>p.id===1&&(p.nickname||'').trim().toLowerCase()==='adminmode');
+  return state.aides[0].dex.some(p=>p.id===1&&(p.nickname||'').trim().toLowerCase()==='adminmode');
 }
 
 // v0.33 — "TurboMode" cheat code, same pattern as AdminMode: Catch #1, by permanent catch-order
 // id (not species), nicknamed "TurboMode". When active, ENC_INTERVAL_OPEN/ENC_INTERVAL_CLOSED
 // both effectively drop to 1 second — see getEncounterInterval() below.
 function isTurboModeActive(){
-  return state.dex.some(p=>p.id===1&&(p.nickname||'').trim().toLowerCase()==='turbomode');
+  return state.aides[0].dex.some(p=>p.id===1&&(p.nickname||'').trim().toLowerCase()==='turbomode');
 }
 // v0.33 — returns the effective encounter interval, respecting TurboMode. Every site that sets
-// state.nextEncounterIn reads through this instead of the raw ENC_INTERVAL_OPEN/CLOSED constants.
+// state.aides[0].nextEncounterIn reads through this instead of the raw ENC_INTERVAL_OPEN/CLOSED constants.
 function getEncounterInterval(isOpen){
   if(isTurboModeActive()) return 1;
   return isOpen?ENC_INTERVAL_OPEN:ENC_INTERVAL_CLOSED;
@@ -682,20 +673,36 @@ function useItemFromBag(itemId, pokemon){
 }
 
 // ── STATE ──
+// v0.39.1 — Aide Roster & Hiring. Aide-owned fields (party/dex/inventory/location/mission/travel/
+// gym progress) now live per-entry in state.aides[], not as singular root-state fields. Carl Oak is
+// aides[0] — not special-cased separately from a hired aide. Everything remaining on root `state`
+// is genuinely Professor-level/global: funds, dexIdCounter (must stay ONE shared counter across
+// aides or p.id uniqueness breaks), the unified log, research/discovery records, species cap policy,
+// the daycare facility, and freeSkipsRemaining. See DESIGN.md "Aide Roster & Hiring" for the full
+// per-field scope reasoning.
+function makeAide(id,name,emoji,startLocation){
+  return {
+    id, name, emoji,
+    party:[], dex:[],
+    currentLocation:startLocation,
+    missionDestination:startLocation, missionBehavior:'research',
+    missionOrigin:startLocation, missionElapsed:0,
+    currentEncounter:null, nextEncounterIn:ENC_INTERVAL_OPEN, // plain constant, not getEncounterInterval() — makeAide() is called while state itself is still being constructed (module-level placeholder), so state doesn't exist yet to read TurboMode from. Harmless in practice: TurboMode requires an already-nicknamed Pokemon, which can't exist yet at a fresh aide's creation moment anyway.
+    travelPath:[], travelPathIndex:0, travelCyclesRemaining:0,
+    trainerBag:{},
+    gymProgress:{},
+    lastHealLocation:startLocation,
+    wanderMode:false, wanderMetric:'encounters' // v0.33/v0.35, per-aide — each aide independently wanders or not
+  };
+}
+
 let state={
   funds:100.00, totalCatches:0, totalSightings:0,
-  missionElapsed:0, nextEncounterIn:ENC_INTERVAL_OPEN, // module-level default only — cannot call getEncounterInterval() here, state doesn't exist yet during its own initializer
   incomeAccumulator:0,
-  party:[], dex:[], dexIdCounter:1, currentEncounter:null, log:[],
-  // v0.26 — idle removed: destination defaults to the starting location itself, so research
-  // begins immediately at Pallet Town rather than silently "traveling toward Route 1" with no
-  // dispatch ever having happened.
-  missionDestination:'palletTown', missionBehavior:'research',
-  missionOrigin:'palletTown', currentLocation:'palletTown',
-  travelPath:[], travelPathIndex:0, travelCyclesRemaining:0,
+  dexIdCounter:1, log:[],
+  aides:[makeAide('carl-oak','Carl Oak','🧑\u200d🔬','palletTown')],
+  activeAideIndex:0, // v0.39.1 — which aide's section the Party/roster screen currently has expanded by default; each aide's own UI otherwise renders independently regardless of this
   professorBag:{},
-  trainerBag:{},
-  gymProgress:{},
   speciesCap:6, // v0.26 — editable per-species catch cap (1-6)
   speciesCapOverrides:{}, // v0.38 — per-species cap overrides {dexId:number}
   daycareSlots:{purchased:1,slots:[]}, // v0.26 — Day Care / Breeding
@@ -703,7 +710,6 @@ let state={
   discoveredLocations:new Set(['palletTown']),
   locationEncounterLog:{},
   locationMethodPrefs:{},
-  lastHealLocation:'palletTown',
   dexHistory:{},
   freeSkipsRemaining:50
 };
@@ -713,14 +719,10 @@ let state={
 // dexId is optional — pass it whenever the caller already knows the exact database row
 // (e.g. from rollEncounter()). Never re-derive a known dexId from the species name string,
 // since some names (Nidoran M/F) map to multiple distinct rows.
-// v0.39 — optional formName param (same additive-optional pattern as getPokemonEntry/getSpriteUrl/
-// calcMaxHP since v0.33): lets a WILD CATCH result in a form-variant individual for the first time.
-// Previously only applySpeciesSwap() (evolution) could ever set p.formName. Omitted (every
-// pre-v0.39 call site), behavior is unchanged.
-function makePokemon(sp,lv,gender,holder=null,dexId=null,formName=null){
+function makePokemon(sp,lv,gender,holder=null,dexId=null){
   let entry=null;
   if(dexId){
-    entry=getPokemonEntry(dexId,formName);
+    entry=getPokemonEntry(dexId);
   }
   if(!entry&&typeof POKEDEX_DATA!=='undefined'){
     entry=POKEDEX_DATA.find(p=>p.name===sp&&p.formName===null&&p.growthRate);
@@ -730,15 +732,14 @@ function makePokemon(sp,lv,gender,holder=null,dexId=null,formName=null){
   }
   if(!entry) entry=SPECIES[sp];
   const resolvedDexId=dexId||(entry?entry.dexId||entry.id:0);
-  const resolvedFormName=(entry&&entry.formName)||null; // authoritative — falls back to null if the requested form didn't resolve
   const growthRate=(entry&&entry.growthRate)||'mediumFast';
   const ivs=rollIVs(resolvedDexId);
   const nature=rollNature();
-  const maxHP=calcMaxHP(sp,lv,resolvedDexId,ivs.hp,resolvedFormName);
+  const maxHP=calcMaxHP(sp,lv,resolvedDexId,ivs.hp);
   const startExp=expToLevel(lv,growthRate);
   const abilityRoll=assignAbility(entry);
   const p={
-    id:state.dexIdCounter++, species:sp, pokedexId:resolvedDexId, formName:resolvedFormName, level:lv, gender,
+    id:state.dexIdCounter++, species:sp, pokedexId:resolvedDexId, level:lv, gender,
     currentHP:maxHP, maxHP, growthRate,
     exp:isNaN(startExp)?0:startExp,
     holder,
@@ -766,13 +767,6 @@ function getDisplayName(p){
   return p.formName?p.species+' ('+p.formName+')':p.species;
 }
 
-// v0.39 — same "Species (Form)" formatting as getDisplayName(), for the pre-catch wild `enc` object
-// rather than a caught individual (no nickname, no id — just species+formName from rollFromTable()).
-function getEncDisplayName(enc){
-  if(!enc) return '';
-  return enc.formName?enc.species+' ('+enc.formName+')':enc.species;
-}
-
 // ── SPRITES ──
 const SPRITE_BASE='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon';
 // v0.33 — optional formName param so a form-variant individual's actual sprite resolves,
@@ -789,13 +783,13 @@ function getSpriteUrl(dexId,name,isShiny=false,formName=null){
 // v0.23 — reflects a CURRENTLY HELD shiny only, purely derived from live state (no new field,
 // no SAVE_VERSION impact). Badge disappears automatically if released or evolved past.
 function hasLiveShiny(dexId){
-  return state.dex.some(p=>p.pokedexId===dexId&&p.isShiny);
+  return state.aides[0].dex.some(p=>p.pokedexId===dexId&&p.isShiny);
 }
 
 // ── PARTY SORT ──
 // Lowest level leads; fainted go to back; ties preserved by inertia.
-function sortParty(){
-  state.party.sort((a,b)=>{
+function sortParty(aide=state.aides[0]){
+  aide.party.sort((a,b)=>{
     const aFainted=a.currentHP<=0?1:0;
     const bFainted=b.currentHP<=0?1:0;
     if(aFainted!==bFainted) return aFainted-bFainted;
@@ -816,7 +810,7 @@ function buildTravelPath(fromId,toId){
         // Must be a discovered location
         if(!state.discoveredLocations.has(c.toLocationId)) return false;
         if(!c.requiresItem) return true;
-        return (state.trainerBag&&state.trainerBag[c.requiresItem]&&state.trainerBag[c.requiresItem]>0)||
+        return (state.aides[0].trainerBag&&state.aides[0].trainerBag[c.requiresItem]&&state.aides[0].trainerBag[c.requiresItem]>0)||
                (state.trainerUnlocks&&state.trainerUnlocks[c.requiresItem]);
       });
       for(const conn of available){
@@ -872,7 +866,7 @@ function getReachableDiscoveredLocations(fromId){
       // actually be dispatched to. Matching buildTravelPath()'s gate exactly fixes the mismatch.
       if(!state.discoveredLocations.has(c.toLocationId)) return false;
       if(!c.requiresItem) return true;
-      return (state.trainerBag&&state.trainerBag[c.requiresItem]&&state.trainerBag[c.requiresItem]>0)||
+      return (state.aides[0].trainerBag&&state.aides[0].trainerBag[c.requiresItem]&&state.aides[0].trainerBag[c.requiresItem]>0)||
              (state.trainerUnlocks&&state.trainerUnlocks[c.requiresItem]);
     });
     for(const conn of available){
@@ -886,25 +880,25 @@ function getReachableDiscoveredLocations(fromId){
   return reachable;
 }
 
-function arriveAtLocation(locId){
-  state.currentLocation=locId;
+function arriveAtLocation(locId,aide=state.aides[0]){
+  aide.currentLocation=locId;
   const locData=typeof LOCATIONS!=='undefined'?getLocation(locId):null;
   const locName=locData?locData.name:locId;
-  addLog('📍 Carl Oak arrived at '+locName+'!','info');
+  addLog('📍 '+aide.name+' arrived at '+locName+'!','info');
 
   // Update lastHealLocation and heal party only at locations with heals:true
   if(locData&&(locData.heals==='TRUE'||locData.heals===true||locData.heals==='true')){
-    state.lastHealLocation=locId;
-    const needsHeal=state.party.some(p=>p.currentHP<p.maxHP||p.currentHP<=0);
+    aide.lastHealLocation=locId;
+    const needsHeal=aide.party.some(p=>p.currentHP<p.maxHP||p.currentHP<=0);
     if(needsHeal){
-      state.party.forEach(p=>{ p.currentHP=p.maxHP; });
+      aide.party.forEach(p=>{ p.currentHP=p.maxHP; });
       addLog('🏥 Party healed at '+locName+'!','info');
     }
   }
 
   // travelTime = encounter-cycles to pass through this location as a waypoint
   const cycles=locData&&locData.travelTime?parseInt(locData.travelTime):1;
-  state.travelCyclesRemaining=Math.max(1,cycles);
+  aide.travelCyclesRemaining=Math.max(1,cycles);
 
   // Discover ALL adjacent locations regardless of requiresItem
   if(typeof CONNECTIONS_DATA!=='undefined'){
@@ -922,32 +916,33 @@ function arriveAtLocation(locId){
   if(document.getElementById('panel-map').classList.contains('active')) renderMap();
 }
 
-function advanceTravelPath(){
-  if(!state.travelPath||state.travelPath.length===0) return;
+function advanceTravelPath(idx=0){
+  const aide=state.aides[idx];
+  if(!aide.travelPath||aide.travelPath.length===0) return;
   // v0.34 — travelPathIndex===-1 means a Wander redirect's departure dwell is in progress (see
   // evaluateWanderTarget()): the aide is still physically at its old location, paying that
   // location's own travelTime before the newly queued path actually begins. Counts down exactly
   // like any other waypoint dwell; once it hits 0, the redirect becomes official (missionDestination
   // updates to the queued path's real target) and the first real step of the journey begins.
-  if(state.travelPathIndex===-1){
-    state.travelCyclesRemaining--;
-    if(state.travelCyclesRemaining<=0){
-      state.travelPathIndex=0;
-      state.missionDestination=state.travelPath[state.travelPath.length-1];
-      arriveAtLocation(state.travelPath[0]);
+  if(aide.travelPathIndex===-1){
+    aide.travelCyclesRemaining--;
+    if(aide.travelCyclesRemaining<=0){
+      aide.travelPathIndex=0;
+      aide.missionDestination=aide.travelPath[aide.travelPath.length-1];
+      arriveAtLocation(aide.travelPath[0],aide);
     }
     return;
   }
-  if(state.travelPathIndex>=state.travelPath.length) return;
-  state.travelCyclesRemaining--;
-  if(state.travelCyclesRemaining<=0){
-    state.travelPathIndex++;
-    if(state.travelPathIndex<state.travelPath.length){
-      arriveAtLocation(state.travelPath[state.travelPathIndex]);
+  if(aide.travelPathIndex>=aide.travelPath.length) return;
+  aide.travelCyclesRemaining--;
+  if(aide.travelCyclesRemaining<=0){
+    aide.travelPathIndex++;
+    if(aide.travelPathIndex<aide.travelPath.length){
+      arriveAtLocation(aide.travelPath[aide.travelPathIndex],aide);
     } else {
-      state.currentLocation=state.missionDestination;
-      const locData=typeof LOCATIONS!=='undefined'?getLocation(state.missionDestination):null;
-      addLog('🏁 Carl Oak reached '+(locData?locData.name:state.missionDestination)+'!','info');
+      aide.currentLocation=aide.missionDestination;
+      const locData=typeof LOCATIONS!=='undefined'?getLocation(aide.missionDestination):null;
+      addLog('🏁 '+aide.name+' reached '+(locData?locData.name:aide.missionDestination)+'!','info');
     }
   }
 }
@@ -1261,21 +1256,25 @@ function getChampionBadgeId(){
   const row=TRAINERS_DATA.find(t=>t.isGauntlet&&t.badgeItemId);
   return row?row.badgeItemId:null;
 }
-function hasChampionBadge(){
+// v0.39.1 — each now accepts an optional trainerBag param (defaults to state.aides[0].trainerBag,
+// exactly matching pre-v0.39.1 single-aide behavior for every existing call site unmodified). Not
+// yet actually wired to per-aide gym progress anywhere — that's still pending — but the functions
+// themselves are ready for it.
+function hasChampionBadge(trainerBag=state.aides[0].trainerBag){
   const id=getChampionBadgeId();
-  return !!(id&&state.trainerBag[id]>0);
+  return !!(id&&trainerBag[id]>0);
 }
 // Counts distinct regular-gym badges held (excludes the Champion badge even if somehow present).
-function countRegularBadges(){
+function countRegularBadges(trainerBag=state.aides[0].trainerBag){
   if(typeof TRAINERS_DATA==='undefined') return 0;
   const champId=getChampionBadgeId();
   const regularBadgeIds=[...new Set(TRAINERS_DATA.filter(t=>!t.isGauntlet&&t.badgeItemId).map(t=>t.badgeItemId))];
-  return regularBadgeIds.filter(id=>id!==champId&&state.trainerBag[id]>0).length;
+  return regularBadgeIds.filter(id=>id!==champId&&trainerBag[id]>0).length;
 }
 // v0.33 — cap = 100 once Champion is beaten, else 15 + (regular badges × 10). Range 15-100
 // (was 10-100 through v0.32). Progression: 15,25,35,...,95, then 100 on Champion.
-function getLevelCap(){
-  return hasChampionBadge()?100:15+countRegularBadges()*10;
+function getLevelCap(trainerBag=state.aides[0].trainerBag){
+  return hasChampionBadge(trainerBag)?100:15+countRegularBadges(trainerBag)*10;
 }
 function isIndigoTrainer(trainerId){
   return typeof TRAINERS_DATA!=='undefined'&&TRAINERS_DATA.some(t=>t.trainerId===trainerId&&t.isGauntlet);
@@ -1283,13 +1282,13 @@ function isIndigoTrainer(trainerId){
 // Forced tier — never player-selectable. Regular gyms clamp at 8 until Champion is beaten,
 // then jump to 10 everywhere (tier 9 is Indigo-exclusive, never appears on a regular gym).
 // Returns null if the trainer isn't accessible yet (Indigo Plateau, <8 regular badges).
-function getForcedTier(trainerId){
-  if(hasChampionBadge()) return 10;
-  if(isIndigoTrainer(trainerId)) return countRegularBadges()>=8?9:null;
-  return Math.min(countRegularBadges()+1,8);
+function getForcedTier(trainerId,trainerBag=state.aides[0].trainerBag){
+  if(hasChampionBadge(trainerBag)) return 10;
+  if(isIndigoTrainer(trainerId)) return countRegularBadges(trainerBag)>=8?9:null;
+  return Math.min(countRegularBadges(trainerBag)+1,8);
 }
-function isGymAccessible(trainerId){
-  if(isIndigoTrainer(trainerId)) return countRegularBadges()>=8;
+function isGymAccessible(trainerId,trainerBag=state.aides[0].trainerBag){
+  if(isIndigoTrainer(trainerId)) return countRegularBadges(trainerBag)>=8;
   return true;
 }
 // v0.29 — eligibility for the mission-modal/offline weighted "Gym Battle" method specifically
@@ -1298,12 +1297,12 @@ function isGymAccessible(trainerId){
 // tier 9 is never reachable through this path at all, regardless of badge status; tier 9 is
 // always watched-only via the aide-card "Battle Gym" button. Does NOT gate the watched button
 // itself — that's always available whenever isGymAccessible() is true, no badge required.
-function isGymGrindEligible(trainerId){
-  if(isIndigoTrainer(trainerId)) return hasChampionBadge();
+function isGymGrindEligible(trainerId,trainerBag=state.aides[0].trainerBag){
+  if(isIndigoTrainer(trainerId)) return hasChampionBadge(trainerBag);
   if(typeof TRAINERS_DATA==='undefined') return false;
   const row=TRAINERS_DATA.find(t=>t.trainerId===trainerId&&t.badgeItemId);
   if(!row) return false;
-  return (state.trainerBag[row.badgeItemId]||0)>0;
+  return (trainerBag[row.badgeItemId]||0)>0;
 }
 // All distinct trainerIds with at least one Trainers row at this location.
 function getGymTrainerIdsAtLocation(locId){
@@ -1348,17 +1347,17 @@ function buildEnemyTeam(trainerId,tier,gauntletOrder){
 // (Indigo Plateau grants no TM). Updates gymProgress (cosmetic tracking) on every win regardless
 // of whether the badge was already held.
 function awardGymWin(trainerId,tier){
-  if(!state.gymProgress) state.gymProgress={};
-  state.gymProgress[trainerId]=Math.max(state.gymProgress[trainerId]||0,tier);
+  if(!state.aides[0].gymProgress) state.aides[0].gymProgress={};
+  state.aides[0].gymProgress[trainerId]=Math.max(state.aides[0].gymProgress[trainerId]||0,tier);
   if(typeof TRAINERS_DATA==='undefined') return;
   const row=TRAINERS_DATA.find(t=>t.trainerId===trainerId&&t.badgeItemId);
   if(!row) return;
   const badgeId=row.badgeItemId;
   // v0.31 — badge-earning is separated from TM-granting so a rematch (badge already held) can
   // still award a TM. First win: tier+4 TMs. Rematch: flat 1 TM. Gauntlet (Indigo): never any TM.
-  const alreadyEarned=(state.trainerBag[badgeId]||0)>0;
+  const alreadyEarned=(state.aides[0].trainerBag[badgeId]||0)>0;
   if(!alreadyEarned){
-    state.trainerBag[badgeId]=(state.trainerBag[badgeId]||0)+1;
+    state.aides[0].trainerBag[badgeId]=(state.aides[0].trainerBag[badgeId]||0)+1;
     const badgeItem=getItem(badgeId);
     addLog('🎖 Badge earned: '+(badgeItem?badgeItem.name:badgeId)+'!','evolve');
     addSignificantLog('🎖 Badge earned: '+(badgeItem?badgeItem.name:badgeId)+'!','evolve');
@@ -1375,7 +1374,7 @@ function awardGymWin(trainerId,tier){
 // no-waste/no-threshold potion logic, applied across the whole party since trainer battles are
 // multi-mon, pulling from professorBag exactly like every other auto-heal in the game.
 function healPartyBeforeGymBattle(){
-  state.party.forEach(p=>{
+  state.aides[0].party.forEach(p=>{
     const potionId=getWeakestEffectivePotion(p);
     if(potionId) useItemFromBag(potionId,p);
   });
@@ -1412,7 +1411,7 @@ function getWeakestAvailablePotionAny(pokemon){
   return null;
 }
 function healPartyFullBeforeGauntletLeg(){
-  state.party.forEach(p=>{
+  state.aides[0].party.forEach(p=>{
     while(p.currentHP<p.maxHP){
       const potionId=getStrongestZeroWastePotion(p)||getWeakestAvailablePotionAny(p);
       if(!potionId) break;
@@ -1424,7 +1423,7 @@ function healPartyFullBeforeGauntletLeg(){
 // v0.32 — replaces the old pooled-total-to-every-survivor EXP award (see DESIGN.md "Per-KO EXP
 // Attribution"). Walks the battle log; for each enemy faint, the immediately preceding log
 // entry's attacker is the player Pokemon that landed that KO — awards that enemy's EXP to that
-// specific attacker (looked up in the real state.party, so credit persists even if the attacker
+// specific attacker (looked up in the real state.aides[0].party, so credit persists even if the attacker
 // later faints in the same battle). giveExpFn is giveExp (live) or giveExpSilent (offline).
 function awardPerKOExp(result,enemyTeam,giveExpFn){
   if(result.winner!=='player') return;
@@ -1434,7 +1433,7 @@ function awardPerKOExp(result,enemyTeam,giveExpFn){
     if(!enemy) return; // a player faint, not an enemy — no EXP to award
     const prev=result.log[i-1];
     if(!prev||prev.attacker===undefined) return;
-    const attackerReal=state.party.find(p=>p.id===prev.attacker);
+    const attackerReal=state.aides[0].party.find(p=>p.id===prev.attacker);
     if(!attackerReal) return;
     const entryData=getPokemonEntry(enemy.pokedexId);
     const exp=Math.floor(((entryData&&entryData.baseExpYield?entryData.baseExpYield:51)*enemy.level)/7);
@@ -1446,12 +1445,12 @@ function awardPerKOExp(result,enemyTeam,giveExpFn){
 // no mid-battle healing even if the enemy cycles through multiple Pokemon. v0.32 — EXP is now
 // awarded per-KO (see awardPerKOExp above), not pooled to every survivor.
 function runOneGymBattle(enemyTeam){
-  const playerTeam=state.party.filter(p=>p.currentHP>0).map(p=>({id:p.id,pokedexId:p.pokedexId,level:p.level,currentHP:p.currentHP,maxHP:p.maxHP,stats:p.stats,equippedMoves:p.equippedMoves||[]}));
+  const playerTeam=state.aides[0].party.filter(p=>p.currentHP>0).map(p=>({id:p.id,pokedexId:p.pokedexId,level:p.level,currentHP:p.currentHP,maxHP:p.maxHP,stats:p.stats,equippedMoves:p.equippedMoves||[]}));
   if(!playerTeam.length||!enemyTeam.length) return {winner:'enemy',log:[]};
   const result=runTrainerBattle(playerTeam,enemyTeam);
   // Write HP back to the real party objects — runTrainerBattle operates on copies.
   playerTeam.forEach(pt=>{
-    const real=state.party.find(p=>p.id===pt.id);
+    const real=state.aides[0].party.find(p=>p.id===pt.id);
     if(real) real.currentHP=pt.currentHP;
   });
   awardPerKOExp(result,enemyTeam,giveExp);
@@ -1465,7 +1464,7 @@ function runOneGymBattle(enemyTeam){
 // credit, matches the real Elite Four's no-heal rule.
 function runGymEncounter(trainerId,tier){
   const isGauntlet=isIndigoTrainer(trainerId)&&(tier===9||tier===10);
-  const locData=typeof LOCATIONS!=='undefined'?getLocation(state.currentLocation):null;
+  const locData=typeof LOCATIONS!=='undefined'?getLocation(state.aides[0].currentLocation):null;
   const gymName=locData?locData.name:trainerId;
 
   if(!isGauntlet){
@@ -1480,7 +1479,7 @@ function runGymEncounter(trainerId,tier){
       addLog('⚔ Lost to '+gymName+' (Tier '+tier+'). Try again.','fail');
       document.getElementById('enc-body').textContent='Lost gym battle at '+gymName+'.';
     }
-    state.currentEncounter=null;
+    state.aides[0].currentEncounter=null;
     advanceTravelPath();
     saveGame();
     return;
@@ -1495,7 +1494,7 @@ function runGymEncounter(trainerId,tier){
     if(result.winner!=='player'){
       addLog('⚔ Lost the Elite Four/Champion gauntlet at leg '+leg+'/5 — attempt reset.','fail');
       document.getElementById('enc-body').textContent='Lost the gauntlet at leg '+leg+'/5. Try again.';
-      state.currentEncounter=null;
+      state.aides[0].currentEncounter=null;
       advanceTravelPath();
       saveGame();
       return;
@@ -1505,7 +1504,7 @@ function runGymEncounter(trainerId,tier){
   addLog('🏆 Elite Four and Champion defeated!','evolve');
   awardGymWin(trainerId,tier);
   document.getElementById('enc-body').textContent='🏆 Champion defeated at '+gymName+'!';
-  state.currentEncounter=null;
+  state.aides[0].currentEncounter=null;
   advanceTravelPath();
   saveGame();
 }
@@ -1514,11 +1513,11 @@ function runGymEncounter(trainerId,tier){
 // but uses giveExpSilent() instead of giveExp() to avoid per-battle log spam over a long away
 // period — consistent with how offline wild encounters already use giveExpSilent().
 function runOneGymBattleSilent(enemyTeam){
-  const playerTeam=state.party.filter(p=>p.currentHP>0).map(p=>({id:p.id,pokedexId:p.pokedexId,level:p.level,currentHP:p.currentHP,maxHP:p.maxHP,stats:p.stats,equippedMoves:p.equippedMoves||[]}));
+  const playerTeam=state.aides[0].party.filter(p=>p.currentHP>0).map(p=>({id:p.id,pokedexId:p.pokedexId,level:p.level,currentHP:p.currentHP,maxHP:p.maxHP,stats:p.stats,equippedMoves:p.equippedMoves||[]}));
   if(!playerTeam.length||!enemyTeam.length) return {winner:'enemy',log:[]};
   const result=runTrainerBattle(playerTeam,enemyTeam);
   playerTeam.forEach(pt=>{
-    const real=state.party.find(p=>p.id===pt.id);
+    const real=state.aides[0].party.find(p=>p.id===pt.id);
     if(real) real.currentHP=pt.currentHP;
   });
   awardPerKOExp(result,enemyTeam,giveExpSilent);
@@ -1529,16 +1528,16 @@ function runOneGymBattleSilent(enemyTeam){
 // gymProgress only rises with a genuinely new badge) — no addLog/renderBagDisplay calls.
 // Tallies into the offline summary's badgesEarned instead.
 function awardGymWinSilent(trainerId,tier,summary){
-  if(!state.gymProgress) state.gymProgress={};
-  state.gymProgress[trainerId]=Math.max(state.gymProgress[trainerId]||0,tier);
+  if(!state.aides[0].gymProgress) state.aides[0].gymProgress={};
+  state.aides[0].gymProgress[trainerId]=Math.max(state.aides[0].gymProgress[trainerId]||0,tier);
   if(typeof TRAINERS_DATA==='undefined') return;
   const row=TRAINERS_DATA.find(t=>t.trainerId===trainerId&&t.badgeItemId);
   if(!row) return;
   const badgeId=row.badgeItemId;
   // v0.31 — mirrors awardGymWin()'s tiered TM logic exactly (see there for rationale).
-  const alreadyEarned=(state.trainerBag[badgeId]||0)>0;
+  const alreadyEarned=(state.aides[0].trainerBag[badgeId]||0)>0;
   if(!alreadyEarned){
-    state.trainerBag[badgeId]=(state.trainerBag[badgeId]||0)+1;
+    state.aides[0].trainerBag[badgeId]=(state.aides[0].trainerBag[badgeId]||0)+1;
     summary.badgesEarned=(summary.badgesEarned||0)+1;
   }
   if(!row.isGauntlet){
@@ -1603,28 +1602,35 @@ function getTrainerPortraitHtml(trainerName){
 // nothing survives an app close mid-battle, no SAVE_VERSION impact).
 let watchedBattle=null; // {trainerId,tier,isGauntlet,leg}
 
-// Called from updateLocation() every tick — shows/hides the aide-card button based on whether
-// the aide is AT (not just passing through) a gym location right now. No badge/readiness gate —
-// always available per the settled design, unlike the mission-modal grind path above.
-function updateBattleGymButton(){
-  const btn=document.getElementById('battle-gym-btn');
+// Called from updateAideLocationDisplay() every tick — shows/hides that aide's gym-battle button
+// based on whether THAT aide is AT (not just passing through) a gym location right now. No
+// badge/readiness gate — always available per the settled design, unlike the mission-modal grind
+// path above.
+// v0.39.1 KNOWN LIMITATION: the button itself is now correctly per-aide (shows for whichever aide
+// is actually at a gym), but startWatchedGymBattle()'s actual battle execution (showTeamOrderModal
+// onward) still operates on state.aides[0]'s party specifically — not yet threaded through to use
+// the triggering aide's own party. Safe (no crash) but wrong for a second aide: clicking Faraday's
+// gym button would currently run the battle with Carl Oak's team. Flagged, not yet fixed.
+function updateBattleGymButton(idx=0){
+  const aide=state.aides[idx];
+  const btn=document.getElementById('battle-gym-btn-'+idx);
   if(!btn) return;
-  const atDest=state.currentLocation===state.missionDestination;
-  const trainerIds=atDest?getGymTrainerIdsAtLocation(state.currentLocation).filter(isGymAccessible):[];
+  const atDest=aide.currentLocation===aide.missionDestination;
+  const trainerIds=atDest?getGymTrainerIdsAtLocation(aide.currentLocation).filter(id=>isGymAccessible(id,aide.trainerBag)):[];
   if(trainerIds.length&&!watchedBattle){
     btn.style.display='inline-block';
-    btn.onclick=()=>startWatchedGymBattle(trainerIds[0]);
+    btn.onclick=()=>startWatchedGymBattle(trainerIds[0],idx);
   } else {
     btn.style.display='none';
   }
 }
 
-function startWatchedGymBattle(trainerId){
+function startWatchedGymBattle(trainerId,aideIndex=0){
   if(watchedBattle) return; // already mid-flow
-  const tier=getForcedTier(trainerId);
+  const tier=getForcedTier(trainerId,state.aides[aideIndex].trainerBag);
   if(tier==null) return;
   const isGauntlet=isIndigoTrainer(trainerId)&&(tier===9||tier===10);
-  watchedBattle={trainerId,tier,isGauntlet,leg:1};
+  watchedBattle={trainerId,tier,isGauntlet,leg:1,aideIndex};
   showTeamOrderModal();
 }
 
@@ -1641,7 +1647,7 @@ function showTeamOrderModal(){
 function renderTeamOrderModal(){
   const modal=document.getElementById('teamorder-modal'); if(!modal||!watchedBattle) return;
   const legNote=watchedBattle.isGauntlet?(' · Leg '+watchedBattle.leg+'/5'):'';
-  const rows=state.party.map(p=>{
+  const rows=state.aides[0].party.map(p=>{
     const sprite=getSpriteUrl(p.pokedexId,p.species,p.isShiny||false,p.formName);
     const fainted=p.currentHP<=0;
     return '<div class="teamorder-row" data-id="'+p.id+'" style="display:flex;align-items:center;gap:8px;background:var(--main-bg);border-radius:4px;padding:6px 8px;margin-bottom:5px;opacity:'+(fainted?'0.5':'1')+';touch-action:none;user-select:none;">'+
@@ -1702,9 +1708,9 @@ function enableDragReorder(container){
 function confirmTeamOrder(){
   const list=document.getElementById('teamorder-list'); if(!list) return;
   const ids=[...list.querySelectorAll('.teamorder-row')].map(r=>parseInt(r.getAttribute('data-id')));
-  const byId={}; state.party.forEach(p=>byId[p.id]=p);
+  const byId={}; state.aides[0].party.forEach(p=>byId[p.id]=p);
   const reordered=ids.map(id=>byId[id]).filter(Boolean);
-  state.party.length=0; reordered.forEach(p=>state.party.push(p));
+  state.aides[0].party.length=0; reordered.forEach(p=>state.aides[0].party.push(p));
   const modal=document.getElementById('teamorder-modal'); if(modal) modal.remove();
   runWatchedBattleLeg();
 }
@@ -1720,7 +1726,7 @@ function runWatchedBattleLeg(){
   const enemyTeam=buildEnemyTeam(watchedBattle.trainerId,watchedBattle.tier,watchedBattle.isGauntlet?watchedBattle.leg:undefined);
   // Snapshot BEFORE the battle mutates currentHP — used only to drive the playback's starting
   // HP bars; the actual outcome is untouched by anything here.
-  const playerSnapshot=state.party.filter(p=>p.currentHP>0).map(p=>({id:p.id,pokedexId:p.pokedexId,formName:p.formName||null,level:p.level,maxHP:p.maxHP,startHP:p.currentHP,isShiny:p.isShiny||false}));
+  const playerSnapshot=state.aides[0].party.filter(p=>p.currentHP>0).map(p=>({id:p.id,pokedexId:p.pokedexId,formName:p.formName||null,level:p.level,maxHP:p.maxHP,startHP:p.currentHP,isShiny:p.isShiny||false}));
   if(!playerSnapshot.length||!enemyTeam.length){ finishWatchedBattle({winner:'enemy',log:[]}); return; }
   const result=runOneGymBattle(enemyTeam);
   showBattleScreen(playerSnapshot,enemyTeam,result);
@@ -1836,7 +1842,7 @@ function finishWatchedBattle(result){
     showTeamOrderModal(); // reorder + auto-heal before the next leg
     return;
   }
-  const locData=typeof LOCATIONS!=='undefined'?getLocation(state.currentLocation):null;
+  const locData=typeof LOCATIONS!=='undefined'?getLocation(state.aides[0].currentLocation):null;
   const gymName=locData?locData.name:watchedBattle.trainerId;
   if(watchedBattle.isGauntlet){
     addLog('🏆 Elite Four and Champion defeated!','evolve');
@@ -1879,7 +1885,7 @@ function hasQualifyingMove(p,evolveItem,evolveLevel){
 function hasPartyMate(requiredDexId){
   const id=parseInt(requiredDexId);
   if(!id) return false;
-  return state.party.some(pm=>pm.pokedexId===id);
+  return state.aides[0].party.some(pm=>pm.pokedexId===id);
 }
 // Does this species have ANY use-move/in-party branch defined at all — single-target
 // (pokedex.js) or branching (EVO_TREE)? Used for the structural rule-out check in getResearch().
@@ -2135,7 +2141,7 @@ function professorAutoTestEvolutions(){
         // v0.36 — also excludes any individual nickname-locked to a DIFFERENT branch than this one
         // (see getNicknameEvolveLock()); a lock stays eligible for the one branch matching its own lock.
         // Highest level wins; ties broken by array order.
-        const candidates=state.dex.filter(p=>{
+        const candidates=state.aides[0].dex.filter(p=>{
           if(p.pokedexId!==dexId||p.holder||p.evolveBlocked) return false;
           const lock=getNicknameEvolveLock(p);
           if(lock&&(lock.toDexId!==br.toDexId||(lock.toFormName||null)!==br.toFormName)) return false;
@@ -2170,7 +2176,7 @@ function professorAutoTestEvolutions(){
 // branch, same as before this param existed.
 function applyItemEvolution(catchId,intoId,toFormName){
   toFormName=toFormName||null;
-  const p=state.dex.find(x=>x.id===catchId); if(!p) return;
+  const p=state.aides[0].dex.find(x=>x.id===catchId); if(!p) return;
   if(p.evolveBlocked){ addLog('Evolution is blocked for this Pokémon.','fail'); return; }
   // v0.36 — nickname exclusivity lock: refuse a manual evolve attempt that doesn't match this
   // individual's lock, same style as the evolveBlocked refusal above.
@@ -2445,7 +2451,7 @@ function advanceFriendshipTicks(seconds){
   state._friendshipTick=(state._friendshipTick||0)+seconds;
   while(state._friendshipTick>=180){
     state._friendshipTick-=180;
-    state.party.forEach(p=>{ if(p.currentHP>0){ p.friendship=(p.friendship||0)+1; checkMethodRuleOut(p.pokedexId,p.level,p.friendship); } });
+    state.aides[0].party.forEach(p=>{ if(p.currentHP>0){ p.friendship=(p.friendship||0)+1; checkMethodRuleOut(p.pokedexId,p.level,p.friendship); } });
   }
 }
 function processOfflineTime(secsAway){
@@ -2465,7 +2471,7 @@ function processOfflineTime(secsAway){
   // with the same simulated time/HP-state progression everything else already uses — see
   // advanceFriendshipTicks() above and DESIGN.md "Offline Friendship Tick Parity."
 
-  let remaining=secsAway, nextIn=state.nextEncounterIn;
+  let remaining=secsAway, nextIn=state.aides[0].nextEncounterIn;
   // v0.33 — hard cap on iterations. Without this, a long offline gap combined with TurboMode's
   // 1-second interval could mean tens of thousands of loop iterations processed synchronously
   // the instant the app reopens — a real freeze risk, not hypothetical. Past the cap, remaining
@@ -2488,10 +2494,10 @@ function processOfflineTime(secsAway){
     // that they wouldn't take live. Mirrors live order: heal-check fires before the encounter.
     // Silent (no per-encounter log, consistent with offline's batched-summary design) — tallied.
     {
-      const locData=typeof LOCATIONS!=='undefined'?getLocation(state.currentLocation):null;
+      const locData=typeof LOCATIONS!=='undefined'?getLocation(state.aides[0].currentLocation):null;
       if(locData&&(locData.heals==='TRUE'||locData.heals===true||locData.heals==='true')){
-        const needsHeal=state.party.some(p=>p.currentHP<p.maxHP||p.currentHP<=0);
-        if(needsHeal){ state.party.forEach(p=>{ p.currentHP=p.maxHP; }); summary.heals++; }
+        const needsHeal=state.aides[0].party.some(p=>p.currentHP<p.maxHP||p.currentHP<=0);
+        if(needsHeal){ state.aides[0].party.forEach(p=>{ p.currentHP=p.maxHP; }); summary.heals++; }
       }
     }
     const enc=rollEncounter(); const lead=getLeadPokemon();
@@ -2500,16 +2506,16 @@ function processOfflineTime(secsAway){
       // matches live endMission()'s faint path: heal at lastHealLocation, then rebuild the travel
       // path back to whatever missionDestination was in progress and resume — it does NOT just
       // park research at the heal location, since that would silently abandon the mission.
-      const returnLocId=state.lastHealLocation||state.missionOrigin||'palletTown';
-      state.party.forEach(p=>{ p.currentHP=p.maxHP; });
-      state.currentLocation=returnLocId;
-      if(returnLocId===state.missionDestination){
-        state.travelPath=[]; state.travelPathIndex=0; state.travelCyclesRemaining=0;
+      const returnLocId=state.aides[0].lastHealLocation||state.aides[0].missionOrigin||'palletTown';
+      state.aides[0].party.forEach(p=>{ p.currentHP=p.maxHP; });
+      state.aides[0].currentLocation=returnLocId;
+      if(returnLocId===state.aides[0].missionDestination){
+        state.aides[0].travelPath=[]; state.aides[0].travelPathIndex=0; state.aides[0].travelCyclesRemaining=0;
       } else {
-        state.travelPath=buildTravelPath(returnLocId,state.missionDestination);
-        state.travelPathIndex=0;
-        if(state.travelPath.length>0){ arriveAtLocation(state.travelPath[0]); }
-        else { state.missionDestination=returnLocId; } // unreachable — fall back to researching here
+        state.aides[0].travelPath=buildTravelPath(returnLocId,state.aides[0].missionDestination);
+        state.aides[0].travelPathIndex=0;
+        if(state.aides[0].travelPath.length>0){ arriveAtLocation(state.aides[0].travelPath[0]); }
+        else { state.aides[0].missionDestination=returnLocId; } // unreachable — fall back to researching here
       }
       continue;
     }
@@ -2520,7 +2526,7 @@ function processOfflineTime(secsAway){
     if(enc&&enc.type==='gym'){ runGymEncounterSilent(enc.trainerId,enc.tier,summary); advanceTravelPath(); continue; }
     if(enc){
       // Write seen to encounter log
-      const encLocKey=state.currentLocation;
+      const encLocKey=state.aides[0].currentLocation;
       if(!state.locationEncounterLog[encLocKey]) state.locationEncounterLog[encLocKey]={};
       const encDexKey=parseInt(enc.pokedexId)||0;
       if(encDexKey){
@@ -2536,14 +2542,14 @@ function processOfflineTime(secsAway){
       // no ball consumed. (Unchanged by v0.30 — this logic already existed pre-v0.30; preserved
       // here exactly, just relocated above the new revive/potion parity block below.)
       if(Math.random()<(1/4096)){
-        const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId,enc.formName||null);
+        const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId);
         caught.isShiny=true;
-        state.dex.push(caught); state.totalCatches++; state.totalSightings++;
+        state.aides[0].dex.push(caught); state.totalCatches++; state.totalSightings++;
         summary.catches++; summary.shinies=(summary.shinies||0)+1;
         state.dexHistory[caught.pokedexId]=(state.dexHistory[caught.pokedexId]||0)+1;
         recordAbilityObserved(caught.pokedexId,caught.ability);
         recordGenderObserved(caught.pokedexId,caught.gender);
-        const s_=getPokemonEntry(enc.pokedexId,enc.formName||null);
+        const s_=getPokemonEntry(enc.pokedexId);
         const exp=Math.floor(((s_?s_.baseExpYield:51)||51)*enc.level/7);
         giveExpSilent(lead,exp);
         recordCapture(caught.pokedexId,enc.species);
@@ -2558,7 +2564,7 @@ function processOfflineTime(secsAway){
       // heal-location full-heal check above). Now matches live step order exactly: opportunistic
       // revive first, then uncapped potion healing, before ball/attack resolution.
       {
-        const fainted=state.party.filter(p=>p.currentHP<=0).sort((a,b)=>a.level-b.level);
+        const fainted=state.aides[0].party.filter(p=>p.currentHP<=0).sort((a,b)=>a.level-b.level);
         for(const fp of fainted){
           if((state.professorBag['revive']||0)>0){ useItemFromBag('revive',fp); break; }
           if((state.professorBag['max-revive']||0)>0){ useItemFromBag('max-revive',fp); break; }
@@ -2581,7 +2587,7 @@ function processOfflineTime(secsAway){
   // interval under one nextIn) still gets folded into the friendship counter, using final HP
   // state — same accepted best-effort tradeoff the encounter loop already has for this edge case.
   if(remaining>0) advanceFriendshipTicks(remaining);
-  state.nextEncounterIn=Math.max(1,nextIn-remaining);
+  state.aides[0].nextEncounterIn=Math.max(1,nextIn-remaining);
   return summary;
 }
 
@@ -2603,8 +2609,8 @@ function runWildEncounterLoopSilent(lead,enc,summary,encLocKey,encDexKey){
     if(throwDecision){
       useItemFromBag(throwDecision.ballId,null);
       if(Math.random()<throwDecision.prob){
-        const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId,enc.formName||null);
-        state.dex.push(caught); state.totalCatches++; state.totalSightings++;
+        const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId);
+        state.aides[0].dex.push(caught); state.totalCatches++; state.totalSightings++;
         summary.catches++;
         state.dexHistory[caught.pokedexId]=(state.dexHistory[caught.pokedexId]||0)+1;
         recordAbilityObserved(caught.pokedexId,caught.ability);
@@ -2683,13 +2689,14 @@ function showOfflineBanner(secsAway,summary){
 // Two-stage: pick method (by location role), then pick species within that method's table.
 // Passthrough waypoints use defaultEncounterMethod from locations data.
 // Destination uses state.locationMethodPrefs[locId] (or defaultEncounterMethod if no pref set).
-function rollEncounter(){
-  const locId=state.currentLocation;
+function rollEncounter(idx=0){
+  const aide=state.aides[idx];
+  const locId=aide.currentLocation;
   const table=buildRouteTable(locId);
-  const atDest=locId===state.missionDestination;
+  const atDest=locId===aide.missionDestination;
   // v0.29 — this is the weighted/offline grind path; only reachable once a gym's badge is
   // already earned (or, for Indigo, once the Champion badge is earned — tier 9 excluded).
-  const gymTrainerIds=atDest?getGymTrainerIdsAtLocation(locId).filter(t=>isGymAccessible(t)&&isGymGrindEligible(t)):[];
+  const gymTrainerIds=atDest?getGymTrainerIdsAtLocation(locId).filter(t=>isGymAccessible(t,aide.trainerBag)&&isGymGrindEligible(t,aide.trainerBag)):[];
 
   if(!table.length&&!gymTrainerIds.length) return null;
 
@@ -2703,7 +2710,7 @@ function rollEncounter(){
 
   if(method==='gym'){
     const trainerId=gymTrainerIds[0]; // v0.25 — one gym per location; first match wins if ever >1
-    const tier=trainerId?getForcedTier(trainerId):null;
+    const tier=trainerId?getForcedTier(trainerId,aide.trainerBag):null;
     if(!trainerId||tier==null) return null;
     return {type:'gym',trainerId,tier};
   }
@@ -2740,9 +2747,7 @@ function rollFromTable(table){
     r-=(e.weight||10);
     if(r<=0){
       const lv=Math.floor(Math.random()*(e.maxLv-e.minLv+1))+e.minLv;
-      // v0.39 — formName threaded through so a form-variant row (currently only Silph Tower's
-      // regional-form exceptions) resolves its own entry/name/stats instead of the base form's.
-      const entry=getPokemonEntry(e.dexId,e.formName||null);
+      const entry=getPokemonEntry(e.dexId);
       const name=entry?entry.name:'#'+e.dexId;
       const genderMalePct=entry?entry.genderMalePct:50;
       let gender='M';
@@ -2751,7 +2756,7 @@ function rollFromTable(table){
       else if(genderMalePct===100) gender='M';
       else gender=Math.random()*100<genderMalePct?'M':'F';
       // Always use parseInt to ensure numeric pokedexId for encounter log key integrity
-      return {species:name,formName:e.formName||null,level:lv,gender,pokedexId:parseInt(e.dexId),baseSpd:entry?entry.baseSpd||50:50};
+      return {species:name,level:lv,gender,pokedexId:parseInt(e.dexId),baseSpd:entry?entry.baseSpd||50:50};
     }
   }
   return null;
@@ -2785,12 +2790,12 @@ function movePowerTotal(p){
 }
 // Removes a Pokemon from the box and, if currently fielded, its party slot too — shared by
 // every release path in checkSpeciesCap() below. v0.35 — previously each release path only
-// filtered state.dex; harmless for wild-catch releases (a fresh catch is never already in the
+// filtered state.aides[0].dex; harmless for wild-catch releases (a fresh catch is never already in the
 // party), but evolution can now trigger a release (see below), and an evolved individual CAN be
-// a current party member — leaving state.party unfiltered would orphan that slot.
+// a current party member — leaving state.aides[0].party unfiltered would orphan that slot.
 function removePokemonFromBoxAndParty(id){
-  state.dex=state.dex.filter(p=>p.id!==id);
-  state.party=state.party.filter(p=>p.id!==id);
+  state.aides[0].dex=state.aides[0].dex.filter(p=>p.id!==id);
+  state.aides[0].party=state.aides[0].party.filter(p=>p.id!==id);
 }
 
 // v0.38 — this species' effective cap: the per-species override if one is set, else the global
@@ -2804,12 +2809,12 @@ function getEffectiveSpeciesCap(dexId){
 // kept, releases the newest excess. Shared by the global cap-lowering sweep and per-species
 // override lowering (see setSpeciesCapOverride() below). Returns the count released.
 function sweepSpeciesToCap(dexId,cap){
-  const list=state.dex.filter(p=>p.pokedexId===dexId&&!p.isShiny&&!p.holder);
+  const list=state.aides[0].dex.filter(p=>p.pokedexId===dexId&&!p.isShiny&&!p.holder);
   if(list.length<=cap) return 0;
   list.sort((a,b)=>a.id-b.id);
   const toRelease=new Set(list.slice(cap).map(p=>p.id));
-  state.dex=state.dex.filter(p=>!toRelease.has(p.id));
-  state.party=state.party.filter(p=>!toRelease.has(p.id));
+  state.aides[0].dex=state.aides[0].dex.filter(p=>!toRelease.has(p.id));
+  state.aides[0].party=state.aides[0].party.filter(p=>!toRelease.has(p.id));
   return toRelease.size;
 }
 
@@ -2842,10 +2847,10 @@ function checkSpeciesCap(individual){
   if(individual.isShiny) return; // shinies never released
   if(individual.holder) return; // v0.38 — party members are exempt from the cap entirely
   const cap=getEffectiveSpeciesCap(individual.pokedexId);
-  const liveNonShinyBox=state.dex.filter(p=>p.pokedexId===individual.pokedexId&&!p.isShiny&&!p.holder);
+  const liveNonShinyBox=state.aides[0].dex.filter(p=>p.pokedexId===individual.pokedexId&&!p.isShiny&&!p.holder);
   if(liveNonShinyBox.length<=cap) return;
   const familyIds=getFamilyDexIds(individual.pokedexId);
-  const pool=state.dex.filter(p=>p.id!==individual.id&&familyIds.includes(p.pokedexId));
+  const pool=state.aides[0].dex.filter(p=>p.id!==individual.id&&familyIds.includes(p.pokedexId));
   pool.sort((a,b)=>b.level-a.level);
   const wildIV=ivTotal(individual);
   const recipient=pool.find(p=>ivTotal(p)<wildIV);
@@ -2859,7 +2864,7 @@ function checkSpeciesCap(individual){
   }
   // No IV-donation recipient — release the weakest of the full same-species BOXED pool
   // (liveNonShinyBox already includes `individual` itself, since both a fresh catch and a
-  // freshly-evolved individual are already present in state.dex by the time this runs).
+  // freshly-evolved individual are already present in state.aides[0].dex by the time this runs).
   let releaseTarget=liveNonShinyBox[0];
   liveNonShinyBox.forEach(p=>{
     const rp=movePowerTotal(releaseTarget), pp=movePowerTotal(p);
@@ -2891,7 +2896,7 @@ function onSpeciesCapChange(selectEl){
     return;
   }
   state.speciesCap=newCap;
-  const dexIds=new Set(state.dex.filter(p=>!p.isShiny&&!p.holder).map(p=>p.pokedexId));
+  const dexIds=new Set(state.aides[0].dex.filter(p=>!p.isShiny&&!p.holder).map(p=>p.pokedexId));
   let released=0;
   dexIds.forEach(dexId=>{ released+=sweepSpeciesToCap(dexId,getEffectiveSpeciesCap(dexId)); });
   addLog('Per-species cap lowered to '+newCap+' — '+released+' excess Pokémon released.','info');
@@ -2957,9 +2962,9 @@ function showCapOverridesModal(){
   document.body.appendChild(modal);
 }
 
-function getLeadPokemon(){
-  sortParty();
-  return state.party.find(p=>p.currentHP>0)||null;
+function getLeadPokemon(idx=0){
+  sortParty(state.aides[idx]);
+  return state.aides[idx].party.find(p=>p.currentHP>0)||null;
 }
 
 // v0.26 — replaces the old missionActive-based "idle" gate for Start Mission and party edits.
@@ -2968,21 +2973,29 @@ function isHealLocation(locId){
   return !!(loc&&(loc.heals==='TRUE'||loc.heals===true||loc.heals==='true'));
 }
 
-function checkLocationHeal(){
-  if(watchedBattle) return; // v0.32 — suppress passive free-heal while a gym/gauntlet encounter is in progress
-  const locData=typeof LOCATIONS!=='undefined'?getLocation(state.currentLocation):null;
+function checkLocationHeal(idx=0){
+  if(watchedBattle) return; // v0.32 — suppress passive free-heal while a gym/gauntlet encounter is in progress. v0.39.1 NOTE: global suppression during ANY aide's watched battle, not just this one — minor, not yet refined.
+  const aide=state.aides[idx];
+  const locData=typeof LOCATIONS!=='undefined'?getLocation(aide.currentLocation):null;
   if(locData&&(locData.heals==='TRUE'||locData.heals===true||locData.heals==='true')){
-    const needsHeal=state.party.some(p=>p.currentHP<p.maxHP||p.currentHP<=0);
+    const needsHeal=aide.party.some(p=>p.currentHP<p.maxHP||p.currentHP<=0);
     if(needsHeal){
-      state.party.forEach(p=>{ p.currentHP=p.maxHP; });
+      aide.party.forEach(p=>{ p.currentHP=p.maxHP; });
       addLog('🏥 Party fully healed at '+locData.name+'!','info');
     }
   }
 }
 
 // ── COMBAT ──
-function resolveEncounterStep(){
-  const enc=state.currentEncounter; if(!enc) return;
+// v0.39.1 — accepts an aide index. NOTE: fully threaded for its own logic (shiny auto-catch,
+// revive/potion triage) and getLeadPokemon(idx), but runGymEncounter()/runWildEncounterLoop() below
+// are each large, separate battle-engine functions that have NOT yet been converted internally —
+// they still operate on state.aides[0] regardless of idx passed in. Known, bounded limitation:
+// works correctly for idx=0 (Carl Oak); a second aide's gym/wild battles would currently resolve
+// against Carl Oak's party instead of their own. Flagged, not silently swallowed.
+function resolveEncounterStep(idx=0){
+  const aide=state.aides[idx];
+  const enc=aide.currentEncounter; if(!enc) return;
 
   // v0.25 — Gym Battle encounters resolve through the trainer battle engine, not the wild
   // catch/fight flow below. Fully separate branch, everything after this is untouched.
@@ -2990,14 +3003,14 @@ function resolveEncounterStep(){
 
   // Step 1: Shiny check — fires before anything else. Auto-catch, no ball needed.
   if(Math.random()<(1/4096)){
-    const lead=getLeadPokemon(); if(!lead){ endMission(); return; }
-    const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId,enc.formName||null);
+    const lead=getLeadPokemon(idx); if(!lead){ endMission('faint',idx); return; }
+    const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId);
     caught.isShiny=true;
-    state.dex.push(caught); state.totalCatches++; state.totalSightings++;
+    aide.dex.push(caught); state.totalCatches++; state.totalSightings++;
     state.dexHistory[caught.pokedexId]=(state.dexHistory[caught.pokedexId]||0)+1;
     recordAbilityObserved(caught.pokedexId,caught.ability);
     recordGenderObserved(caught.pokedexId,caught.gender);
-    const s_=getPokemonEntry(enc.pokedexId,enc.formName||null);
+    const s_=getPokemonEntry(enc.pokedexId);
     const exp=Math.floor(((s_?s_.baseExpYield:51)||51)*enc.level/7);
     giveExp(lead,exp);
     recordCapture(caught.pokedexId,enc.species);
@@ -3005,17 +3018,17 @@ function resolveEncounterStep(){
     addLog('✨ SHINY '+getDisplayName(caught)+' caught automatically! ✨','evolve');
     document.getElementById('total-catches').textContent=state.totalCatches;
     document.getElementById('total-sightings').textContent=state.totalSightings;
-    document.getElementById('enc-body').textContent='✨ SHINY '+getEncDisplayName(enc)+' caught!';
-    state.currentEncounter=null; advanceTravelPath(); saveGame(); return;
+    document.getElementById('enc-body').textContent='✨ SHINY '+enc.species+' caught!';
+    aide.currentEncounter=null; advanceTravelPath(idx); saveGame(); return;
   }
 
-  const lead=getLeadPokemon(); if(!lead){ endMission(); return; }
+  const lead=getLeadPokemon(idx); if(!lead){ endMission('faint',idx); return; }
 
   // Step 2: Opportunistic revive — any fainted party member, any time a Revive is available
   // (v0.22 fix: previously gated on lead.currentHP<=0, which getLeadPokemon() already guarantees
   // is never true — that gate made this block permanently dead code. Now fires independent of lead.)
   {
-    const fainted=state.party.filter(p=>p.currentHP<=0).sort((a,b)=>a.level-b.level);
+    const fainted=aide.party.filter(p=>p.currentHP<=0).sort((a,b)=>a.level-b.level);
     for(const fp of fainted){
       if((state.professorBag['revive']||0)>0){ useItemFromBag('revive',fp); break; }
       if((state.professorBag['max-revive']||0)>0){ useItemFromBag('max-revive',fp); break; }
@@ -3087,10 +3100,10 @@ function decideWildBallThrow(wildHP,wildMaxHP,speciesCatchRate,dexId,isThrowTurn
 // turn loop. Move assignment is literally pickDefaultMove(), same as a freshly-caught Pokemon
 // (one move, power 40) — see DESIGN.md "Wild Pokemon Move Assignment".
 function makeWildBattler(enc){
-  const entry=getPokemonEntry(enc.pokedexId,enc.formName||null);
-  const maxHP=calcMaxHP(enc.species,enc.level,enc.pokedexId,0,enc.formName||null);
+  const entry=getPokemonEntry(enc.pokedexId);
+  const maxHP=calcMaxHP(enc.species,enc.level,enc.pokedexId);
   return {
-    pokedexId:enc.pokedexId,formName:enc.formName||null,level:enc.level,currentHP:maxHP,maxHP,
+    pokedexId:enc.pokedexId,level:enc.level,currentHP:maxHP,maxHP,
     equippedMoves:[pickDefaultMove(entry)],
     catchRate:entry?entry.catchRate:null,
     baseExpYield:entry?entry.baseExpYield:51
@@ -3132,7 +3145,7 @@ function runWildEncounterLoop(lead,enc){
       if(lead.currentHP<=0){
         addLog(getDisplayName(lead)+' #'+lead.id+' fainted!','faint');
         const next=getLeadPokemon();
-        if(!next){ addLog('Your party was defeated by '+enc.species+'!','fail'); state.currentEncounter=null; endMission(); return; }
+        if(!next){ addLog('Your party was defeated by '+enc.species+'!','fail'); state.aides[0].currentEncounter=null; endMission(); return; }
         addLog(getDisplayName(next)+' #'+next.id+' was sent out!','info');
       }
       continue;
@@ -3171,30 +3184,30 @@ function runWildEncounterLoop(lead,enc){
       const exp=Math.floor(((wild.baseExpYield||51)*enc.level)/7);
       giveExp(lead,exp);
       addLog('Won vs '+enc.species+' Lv'+enc.level+'! +'+exp+' EXP','win');
-      state.currentEncounter=null; advanceTravelPath();
-      document.getElementById('enc-body').textContent='Won vs '+getEncDisplayName(enc)+' Lv'+enc.level+'.';
+      state.aides[0].currentEncounter=null; advanceTravelPath();
+      document.getElementById('enc-body').textContent='Won vs '+enc.species+' Lv'+enc.level+'.';
       saveGame();
       return;
     }
     if(leadFainted){
       addLog(getDisplayName(lead)+' #'+lead.id+' fainted!','faint');
       const next=getLeadPokemon();
-      if(!next){ addLog('Your party was defeated by '+enc.species+'!','fail'); state.currentEncounter=null; endMission(); return; }
+      if(!next){ addLog('Your party was defeated by '+enc.species+'!','fail'); state.aides[0].currentEncounter=null; endMission(); return; }
       addLog(getDisplayName(next)+' #'+next.id+' was sent out!','info');
     }
   }
 }
 
 function catchPokemon(lead,enc,isShiny){
-  const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId,enc.formName||null);
+  const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId);
   caught.isShiny=isShiny;
-  state.dex.push(caught); state.totalCatches++; state.totalSightings++;
+  state.aides[0].dex.push(caught); state.totalCatches++; state.totalSightings++;
   state.dexHistory[caught.pokedexId]=(state.dexHistory[caught.pokedexId]||0)+1;
   recordAbilityObserved(caught.pokedexId,caught.ability);
   recordGenderObserved(caught.pokedexId,caught.gender);
   if(isShiny) addLog('✨ SHINY '+getDisplayName(caught)+' caught automatically! ✨','evolve');
   logCaptureRarity(caught,true);
-  const s_=getPokemonEntry(enc.pokedexId,enc.formName||null);
+  const s_=getPokemonEntry(enc.pokedexId);
   const exp=Math.floor(((s_?s_.baseExpYield:51)||51)*enc.level/7);
   giveExp(lead,exp);
   recordCapture(caught.pokedexId,enc.species);
@@ -3202,11 +3215,11 @@ function catchPokemon(lead,enc,isShiny){
   document.getElementById('total-catches').textContent=state.totalCatches;
   document.getElementById('total-sightings').textContent=state.totalSightings;
   // Write caught to encounter log — {seen, caught} schema
-  if(!state.locationEncounterLog[state.currentLocation]) state.locationEncounterLog[state.currentLocation]={};
+  if(!state.locationEncounterLog[state.aides[0].currentLocation]) state.locationEncounterLog[state.aides[0].currentLocation]={};
   const lid=parseInt(caught.pokedexId);
   if(lid){
-    if(!state.locationEncounterLog[state.currentLocation][lid]) state.locationEncounterLog[state.currentLocation][lid]={seen:0,caught:0};
-    state.locationEncounterLog[state.currentLocation][lid].caught++;
+    if(!state.locationEncounterLog[state.aides[0].currentLocation][lid]) state.locationEncounterLog[state.aides[0].currentLocation][lid]={seen:0,caught:0};
+    state.locationEncounterLog[state.aides[0].currentLocation][lid].caught++;
   }
   // Per-species cap: catch-then-release overflow non-shinies
   checkSpeciesCap(caught);
@@ -3214,9 +3227,9 @@ function catchPokemon(lead,enc,isShiny){
   // unconditionally at the top of every gameTick() instead (see there) — one source of truth,
   // fixes species whose first individual arrived via a path other than this one (shiny auto-catch,
   // offline catches, Day Care hatching) never getting tested.
-  state.currentEncounter=null;
+  state.aides[0].currentEncounter=null;
   advanceTravelPath();
-  document.getElementById('enc-body').textContent='Caught '+getEncDisplayName(enc)+' Lv'+enc.level+(isShiny?' ✨ SHINY!':'!');
+  document.getElementById('enc-body').textContent='Caught '+enc.species+' Lv'+enc.level+(isShiny?' ✨ SHINY!':'!');
   saveGame();
 }
 
@@ -3235,47 +3248,70 @@ function incomeTick(){
 }
 
 // ── GAME TICK ──
+// v0.39.1 — gameTick() now loops every aide via processAideTick(idx), the actual "true parallel"
+// simulation core. Global/shared-once-per-tick logic (evolution testing, income, friendship — all
+// genuinely Professor/global-scoped per DESIGN.md) stays outside the loop. render() is called once
+// at the end regardless of what happened to any individual aide, rather than the old pattern of
+// conditional early-return renders — render() is idempotent, so this is strictly simpler and
+// correctly reflects every aide's state in one pass.
+//
+// v0.39.1 KNOWN UNRESOLVED GAP: the wild/gym encounter display (#enc-body, the single shared
+// encounter modal) is not aide-scoped — if two aides both roll a new encounter in the same tick,
+// whichever aide's processAideTick() runs second overwrites the first's modal text. There's no
+// per-aide encounter queue or dual-modal design yet. This needs an actual UX decision (does a
+// second aide's encounter wait? get its own modal? auto-resolve silently while the player is
+// looking at the first?) — flagging rather than silently picking one.
 function gameTick(){
-  // v0.33 — both run unconditionally, every tick, before any early return below. Evolution
+  // v0.33 — both run unconditionally, every tick, before any per-aide processing below. Evolution
   // testing: replaces the old event-triggered design (buy item / catch new species) which missed
   // three other catch-creation paths and Day Care hatching entirely — see professorAutoTestEvolutions().
-  // Wander: no-ops immediately if state.wanderMode is false — see evaluateWanderTarget().
   professorAutoTestEvolutions();
-  evaluateWanderTarget();
   incomeTick();
-  // v0.26 — idle removed: research runs continuously wherever the Aide is, so friendship ticks
-  // and the encounter loop below both always run — no more missionActive gate.
+  // v0.26 — idle removed: research runs continuously wherever an Aide is, so friendship ticks
+  // and each aide's encounter loop both always run — no more missionActive gate. Friendship is a
+  // single shared timer (not per-aide) that, when it fires, ticks every aide's party together.
   state._friendshipTick=(state._friendshipTick||0)+1;
   if(state._friendshipTick>=180){
     state._friendshipTick=0;
-    state.party.forEach(p=>{ if(p.currentHP>0){ p.friendship=(p.friendship||0)+1; checkMethodRuleOut(p.pokedexId,p.level,p.friendship); } });
+    state.aides.forEach(aide=>{
+      aide.party.forEach(p=>{ if(p.currentHP>0){ p.friendship=(p.friendship||0)+1; checkMethodRuleOut(p.pokedexId,p.level,p.friendship); } });
+    });
   }
-  state.missionElapsed++; state.nextEncounterIn--;
-  if(state.currentEncounter){ resolveEncounterStep(); render(); return; }
-  if(state.nextEncounterIn<=0){
-    checkLocationHeal();
-    state.currentEncounter=rollEncounter(); state.nextEncounterIn=getEncounterInterval(true);
-    if(!state.currentEncounter){
-      advanceTravelPath();
-      state.nextEncounterIn=getEncounterInterval(true); updateLocation(); return;
+  state.aides.forEach((aide,idx)=>{
+    evaluateWanderTarget(idx); // no-ops immediately if this aide's wanderMode is false
+    processAideTick(idx);
+  });
+  render();
+}
+
+function processAideTick(idx){
+  const aide=state.aides[idx];
+  aide.missionElapsed++; aide.nextEncounterIn--;
+  if(aide.currentEncounter){ resolveEncounterStep(idx); return; }
+  if(aide.nextEncounterIn<=0){
+    checkLocationHeal(idx);
+    aide.currentEncounter=rollEncounter(idx); aide.nextEncounterIn=getEncounterInterval(true);
+    if(!aide.currentEncounter){
+      advanceTravelPath(idx);
+      aide.nextEncounterIn=getEncounterInterval(true);
+      return;
     }
-    const enc=state.currentEncounter;
+    const enc=aide.currentEncounter;
     if(enc.type==='gym'){
       // v0.25 — Gym Battle encounters skip the wild species-sighting log entirely (no dexId
       // to record against); just announce the battle. resolveEncounterStep() handles it next tick.
-      const locData=typeof LOCATIONS!=='undefined'?getLocation(state.currentLocation):null;
+      const locData=typeof LOCATIONS!=='undefined'?getLocation(aide.currentLocation):null;
       const gymName=locData?locData.name:enc.trainerId;
       addLog('⚔ Gym Battle triggered at '+gymName+' (Tier '+enc.tier+')!','info');
       document.getElementById('enc-body').textContent='⚔ Gym Battle at '+gymName+' (Tier '+enc.tier+')!';
-      render();
       return;
     }
     // Write seen to encounter log — always use parseInt for numeric key
-    if(!state.locationEncounterLog[state.currentLocation]) state.locationEncounterLog[state.currentLocation]={};
+    if(!state.locationEncounterLog[aide.currentLocation]) state.locationEncounterLog[aide.currentLocation]={};
     const encDexKey=parseInt(enc.pokedexId)||0;
     if(encDexKey){
-      if(!state.locationEncounterLog[state.currentLocation][encDexKey]) state.locationEncounterLog[state.currentLocation][encDexKey]={seen:0,caught:0};
-      state.locationEncounterLog[state.currentLocation][encDexKey].seen++;
+      if(!state.locationEncounterLog[aide.currentLocation][encDexKey]) state.locationEncounterLog[aide.currentLocation][encDexKey]={seen:0,caught:0};
+      state.locationEncounterLog[aide.currentLocation][encDexKey].seen++;
       // v0.24 — fires here, at encounter generation, regardless of catch outcome (fixes the bug
       // where fleeing/losing an encounter never populated researchLog, so the Pokédex grid never
       // showed a silhouette for anything only ever seen, not caught).
@@ -3283,17 +3319,24 @@ function gameTick(){
       recordNewSpecies(encDexKey,enc.species);
     }
     addLog('Wild '+enc.species+' appeared! Lv'+enc.level+' '+enc.gender,'info');
-    document.getElementById('enc-body').textContent='Wild '+getEncDisplayName(enc)+' Lv'+enc.level+' ('+enc.gender+') appeared!';
+    document.getElementById('enc-body').textContent='Wild '+enc.species+' Lv'+enc.level+' ('+enc.gender+') appeared!';
     state.totalSightings++;
     document.getElementById('total-sightings').textContent=state.totalSightings;
-    render();
-  } else { updateLocation(); renderParty(); }
+  }
 }
 
 // ── MISSION ──
-function startMission(){
-  if(!isHealLocation(state.currentLocation)){ addLog('Can only start a new mission from a healing location!','fail'); return; }
-  if(!state.party.find(p=>p.currentHP>0)){ addLog('No conscious Pokémon!','fail'); return; }
+// v0.39.1 — startMission(idx) is now called per-aide from that aide's own Party/roster section
+// (see renderAideSectionHtml's "Send on Mission" button), replacing the old single global
+// #btn-start entry point. Sets missionModalAideIndex so every function in the mission-modal family
+// below (showMissionModal/renderDestList/selectMissionDest/confirmMission/etc.) operates on the
+// correct aide without each of them needing their own idx parameter threaded through individually.
+let missionModalAideIndex=0;
+function startMission(idx=0){
+  missionModalAideIndex=idx;
+  const aide=state.aides[idx];
+  if(!isHealLocation(aide.currentLocation)){ addLog('Can only start a new mission from a healing location!','fail'); return; }
+  if(!aide.party.find(p=>p.currentHP>0)){ addLog('No conscious Pokémon!','fail'); return; }
   showMissionModal();
 }
 
@@ -3367,8 +3410,9 @@ function computeLocationMetric(locId,metric){
 // locations can never ping-pong the aide. A redirect only fires when the current waypoint's own
 // count climbs high enough that some other already-known eligible location becomes STRICTLY
 // lower (ties among eligible locations keep the current target, avoiding churn).
-function evaluateWanderTarget(){
-  if(!state.wanderMode) return;
+function evaluateWanderTarget(idx=0){
+  const aide=state.aides[idx];
+  if(!aide.wanderMode) return;
   // v0.34 fix — only re-evaluate while stably at the current destination, never mid-journey.
   // "Stable" means travelPathIndex has reached (or passed) the end of travelPath — NOT
   // travelPath.length===0, since advanceTravelPath() never resets travelPath after a normal
@@ -3378,38 +3422,38 @@ function evaluateWanderTarget(){
   // passed through would climb in ranking the longer the aide dwelled there, eventually becoming
   // the new "best" target and letting Wander redirect to the aide's own current spot, which used
   // to zero out travelCyclesRemaining outright: a free, instant "arrival" with no travel time paid.
-  const tp=state.travelPath||[];
-  if(state.travelPathIndex<tp.length) return;
-  const currentLoc=state.currentLocation||'palletTown';
+  const tp=aide.travelPath||[];
+  if(aide.travelPathIndex<tp.length) return;
+  const currentLoc=aide.currentLocation||'palletTown';
   const reachable=getReachableDiscoveredLocations(currentLoc).filter(locId=>buildRouteTable(locId).length>0);
   if(!reachable.length) return; // nothing reachable can ever have an encounter — nothing to do
-  const metric=state.wanderMetric||'encounters'; // v0.35 — 'encounters'|'catches', set at dispatch
-  const currentIsEligible=reachable.includes(state.missionDestination);
-  let best=currentIsEligible?state.missionDestination:reachable[0];
+  const metric=aide.wanderMetric||'encounters'; // v0.35 — 'encounters'|'catches', set at dispatch
+  const currentIsEligible=reachable.includes(aide.missionDestination);
+  let best=currentIsEligible?aide.missionDestination:reachable[0];
   let bestCount=computeLocationMetric(best,metric);
   reachable.forEach(locId=>{
     const c=computeLocationMetric(locId,metric);
     if(c<bestCount){ best=locId; bestCount=c; }
   });
-  if(best===state.missionDestination) return; // current target still eligible and lowest (or tied) — no redirect
+  if(best===aide.missionDestination) return; // current target still eligible and lowest (or tied) — no redirect
   const path=buildTravelPath(currentLoc,best);
   if(!path.length) return; // unreachable by an actual walkable path — leave destination as-is
   // v0.34 fix — the current location is about to stop being the destination, so it must be
   // *departed* like any other waypoint: pay its own travelTime as a dwell cost before the new
   // path's first real step begins. travelPathIndex=-1 is a sentinel meaning "departure dwell in
   // progress, haven't started the queued path yet" — advanceTravelPath() below counts it down
-  // exactly like any other waypoint dwell. state.missionDestination is intentionally NOT updated
+  // exactly like any other waypoint dwell. aide.missionDestination is intentionally NOT updated
   // yet, so research continues normally at the current location for the whole departure dwell,
   // exactly like every other occupied waypoint already behaves — only once departure completes
   // does the new target become official and the real journey begin.
   const locData=typeof LOCATIONS!=='undefined'?getLocation(currentLoc):null;
   const cycles=locData&&locData.travelTime?parseInt(locData.travelTime):1;
-  state.travelCyclesRemaining=Math.max(1,cycles);
-  state.travelPath=path;
-  state.travelPathIndex=-1;
+  aide.travelCyclesRemaining=Math.max(1,cycles);
+  aide.travelPath=path;
+  aide.travelPathIndex=-1;
   const destLocData=typeof LOCATIONS!=='undefined'?getLocation(best):null;
   const metricLabel=metric==='catches'?'lowest-catch':'lowest-encounter'; // v0.35
-  addLog('🧭 Carl Oak changes course — new '+metricLabel+' destination: '+(destLocData?destLocData.name:best)+'.','info');
+  addLog('🧭 '+aide.name+' changes course — new '+metricLabel+' destination: '+(destLocData?destLocData.name:best)+'.','info');
 }
 
 function destSortButtonHtml(field,label){
@@ -3431,7 +3475,7 @@ function setMissionSort(field){
 // Re-renders only the destination list + sort buttons — leaves any in-progress
 // destination selection / method prefs / shop panel untouched.
 function renderDestList(){
-  const currentLoc=state.currentLocation||'palletTown';
+  const currentLoc=state.aides[missionModalAideIndex].currentLocation||'palletTown';
   let reachable=getReachableDiscoveredLocations(currentLoc);
   // v0.28 — while sorted by Encounters specifically, hide locations with zero wild encounter
   // table rows (buildRouteTable().length===0) — these can never contribute a nonzero encounter
@@ -3488,7 +3532,7 @@ function showMissionModal(){
   if(existing) existing.remove();
   missionSortField=null;
   missionSortDir='asc';
-  const currentLoc=state.currentLocation||'palletTown';
+  const currentLoc=state.aides[missionModalAideIndex].currentLocation||'palletTown';
   const modal=document.createElement('div');
   modal.id='mission-modal';
   modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
@@ -3511,13 +3555,13 @@ function showMissionModal(){
 }
 
 // v0.33 — picks the current lowest-encounter reachable location as the mission target and marks
-// the dispatch as Wander mode; confirmMission() sets state.wanderMode=true on actual dispatch.
+// the dispatch as Wander mode; confirmMission() sets state.aides[missionModalAideIndex].wanderMode=true on actual dispatch.
 // v0.33 fix — same encounter-capable filter as evaluateWanderTarget(): a location with zero
 // possible wild encounters (e.g. Pallet Town) is never a useful initial Wander pick either.
 // v0.35 — metric param ('encounters'|'catches') selects which of the two Wander buttons was
-// pressed; stored in state._wanderMetric so confirmMission() can carry it into state.wanderMetric.
+// pressed; stored in state._wanderMetric so confirmMission() can carry it into state.aides[missionModalAideIndex].wanderMetric.
 function selectWanderMode(metric){
-  const currentLoc=state.currentLocation||'palletTown';
+  const currentLoc=state.aides[missionModalAideIndex].currentLocation||'palletTown';
   const reachable=getReachableDiscoveredLocations(currentLoc).filter(locId=>buildRouteTable(locId).length>0);
   if(!reachable.length){ addLog('No reachable destinations with possible encounters for Wander mode.','fail'); return; }
   let best=reachable[0], bestCount=computeLocationMetric(reachable[0],metric);
@@ -3550,7 +3594,7 @@ function selectWanderMode(metric){
 function buildShopItemRowHtml(item){
   const itemDef=getItem(item.itemId);
   const isTrainer=itemDef&&itemDef.bagType&&itemDef.bagType.toLowerCase()==='trainer';
-  const bagQty=(isTrainer?state.trainerBag:state.professorBag)[item.itemId]||0;
+  const bagQty=(isTrainer?state.aides[missionModalAideIndex].trainerBag:state.professorBag)[item.itemId]||0;
   const displayPrice=isAdminModeActive()?0:item.shopPrice; // v0.32 — AdminMode cheat code
   return '<div style="margin-bottom:8px;background:var(--main-bg);border-radius:4px;padding:8px;">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">'
@@ -3569,8 +3613,8 @@ function shopHeaderHtml(){
     +'<div style="color:#f4d03f;font-size:11px;font-weight:bold;">$<span id="shop-funds-display">'+state.funds.toFixed(2)+'</span></div>'
     +'</div>';
 }
-function selectShopCategory(catKey){ missionShopCategory=catKey; renderShopSection(state.currentLocation); }
-function shopCategoryBack(){ missionShopCategory=null; renderShopSection(state.currentLocation); }
+function selectShopCategory(catKey){ missionShopCategory=catKey; renderShopSection(state.aides[missionModalAideIndex].currentLocation); }
+function shopCategoryBack(){ missionShopCategory=null; renderShopSection(state.aides[missionModalAideIndex].currentLocation); }
 // Re-renders the shop area in place — called on modal open and every category tile/back click.
 function renderShopSection(locId){
   const container=document.getElementById('shop-section-container'); if(!container) return;
@@ -3752,7 +3796,7 @@ function renderMethodPrefs(locId){
   const lockedMethods=new Set();
   allEncs.forEach(e=>{
     const m=getEncounterSubMethod(e.encounterMethod||'grass',e.requiresItem);
-    if(e.requiresItem&&!(state.trainerBag[e.requiresItem]>0)) lockedMethods.add(m);
+    if(e.requiresItem&&!(state.aides[missionModalAideIndex].trainerBag[e.requiresItem]>0)) lockedMethods.add(m);
   });
   // Available (non-locked) methods
   const availMethods=allMethods.filter(m=>!lockedMethods.has(m));
@@ -3847,38 +3891,38 @@ function confirmMission(){
   if(!state._missionDest) return;
   const modal=document.getElementById('mission-modal');
   if(modal) modal.remove();
-  state.missionBehavior='research';
-  state.missionDestination=state._missionDest||'route1';
-  state.missionOrigin=state.currentLocation||'palletTown';
-  state.wanderMode=!!state._wanderSelected; // v0.33 — Wander mode, mutually exclusive with a fixed manual pick
-  state.wanderMetric=state._wanderSelected?(state._wanderMetric||'encounters'):state.wanderMetric; // v0.35
+  state.aides[missionModalAideIndex].missionBehavior='research';
+  state.aides[missionModalAideIndex].missionDestination=state._missionDest||'route1';
+  state.aides[missionModalAideIndex].missionOrigin=state.aides[missionModalAideIndex].currentLocation||'palletTown';
+  state.aides[missionModalAideIndex].wanderMode=!!state._wanderSelected; // v0.33 — Wander mode, mutually exclusive with a fixed manual pick
+  state.aides[missionModalAideIndex].wanderMetric=state._wanderSelected?(state._wanderMetric||'encounters'):state.aides[missionModalAideIndex].wanderMetric; // v0.35
   // v0.26 — dispatching to your CURRENT location (now a valid choice — see
   // getReachableDiscoveredLocations) needs 0 travel, but buildTravelPath() only ever returns a
   // path when it finds an edge leading back to the start, which an empty/same-location "path"
   // never does. Special-case it here rather than treating an empty path as an error.
-  if(state.missionOrigin===state.missionDestination){
-    state.travelPath=[]; state.travelPathIndex=0; state.travelCyclesRemaining=0;
+  if(state.aides[missionModalAideIndex].missionOrigin===state.aides[missionModalAideIndex].missionDestination){
+    state.aides[missionModalAideIndex].travelPath=[]; state.aides[missionModalAideIndex].travelPathIndex=0; state.aides[missionModalAideIndex].travelCyclesRemaining=0;
   } else {
-    state.travelPath=buildTravelPath(state.missionOrigin,state.missionDestination);
-    if(state.travelPath.length===0){
+    state.aides[missionModalAideIndex].travelPath=buildTravelPath(state.aides[missionModalAideIndex].missionOrigin,state.aides[missionModalAideIndex].missionDestination);
+    if(state.aides[missionModalAideIndex].travelPath.length===0){
       addLog('⚠ Cannot reach that destination — missing required item.','fail');
       return;
     }
-    sortParty();
-    state.travelPathIndex=0;
-    arriveAtLocation(state.travelPath[0]);
+    sortParty(state.aides[missionModalAideIndex]);
+    state.aides[missionModalAideIndex].travelPathIndex=0;
+    arriveAtLocation(state.aides[missionModalAideIndex].travelPath[0],state.aides[missionModalAideIndex]);
   }
-  state.nextEncounterIn=getEncounterInterval(true);
-  const locData=typeof LOCATIONS!=='undefined'?getLocation(state.missionDestination):null;
+  state.aides[missionModalAideIndex].nextEncounterIn=getEncounterInterval(true);
+  const locData=typeof LOCATIONS!=='undefined'?getLocation(state.aides[missionModalAideIndex].missionDestination):null;
   // v0.27 — Daycare gets a distinct dispatch message (see selectMissionDest for the modal-preview equivalent).
-  const arrivalNote=(state.missionDestination===DAYCARE_LOCATION_ID)?'manage breeding on arrival':'research on arrival';
-  addLog('Carl Oak dispatched to '+(locData?locData.name:state.missionDestination)+' ('+arrivalNote+').','info');
+  const arrivalNote=(state.aides[missionModalAideIndex].missionDestination===DAYCARE_LOCATION_ID)?'manage breeding on arrival':'research on arrival';
+  addLog(state.aides[missionModalAideIndex].name+' dispatched to '+(locData?locData.name:state.aides[missionModalAideIndex].missionDestination)+' ('+arrivalNote+').','info');
   state.pendingFindings=[];
-  updateLocation(); render();
+  updateAllAideLocations(); render();
 }
 
-function recallMission(){
-  endMission('recall');
+function recallMission(idx=0){
+  endMission('recall',idx);
 }
 
 // Unified mission end — handles both recall and faint. Always relocates to lastHealLocation
@@ -3890,73 +3934,85 @@ function recallMission(){
 //   auto-continuing toward the old destination, so the player can freely redirect from there
 //   (e.g. to prep a team for a gym battle at the location they just recalled to).
 // Always calls showFindingsReport().
-function endMission(reason='faint'){
-  state.currentEncounter=null;
-  if(reason==='recall'){ state.wanderMode=false; state.wanderMetric=null; } // v0.33/v0.35 — Wander is per-mission, cleared on recall like missionDestination
-  const returnLocId=state.lastHealLocation||state.missionOrigin||'palletTown';
+// v0.39.1 — accepts an aide index (defaults to 0, matching pre-v0.39.1 single-aide behavior for
+// every call site that doesn't yet pass one explicitly — e.g. the fainted-party auto-recall path
+// inside battle resolution hasn't been threaded through yet, so it still always targets aides[0]).
+function endMission(reason='faint',idx=0){
+  const aide=state.aides[idx];
+  aide.currentEncounter=null;
+  if(reason==='recall'){ aide.wanderMode=false; aide.wanderMetric=null; } // v0.33/v0.35 — Wander is per-mission, cleared on recall like missionDestination
+  const returnLocId=aide.lastHealLocation||aide.missionOrigin||'palletTown';
   const originLoc=typeof LOCATIONS!=='undefined'?getLocation(returnLocId):null;
   const originName=originLoc?originLoc.name:returnLocId;
-  const msg=reason==='recall'?'Carl Oak recalled to '+originName+'.':'All fainted — Carl Oak returned to '+originName+'.';
+  const msg=reason==='recall'?(aide.name+' recalled to '+originName+'.'):('All fainted — '+aide.name+' returned to '+originName+'.');
   document.getElementById('enc-body').textContent=msg;
   addLog(msg,reason==='recall'?'info':'faint');
-  state.currentLocation=returnLocId;
+  aide.currentLocation=returnLocId;
   if(isHealLocation(returnLocId)){
-    const needsHeal=state.party.some(p=>p.currentHP<p.maxHP||p.currentHP<=0);
+    const needsHeal=aide.party.some(p=>p.currentHP<p.maxHP||p.currentHP<=0);
     if(needsHeal){
-      state.party.forEach(p=>{ p.currentHP=p.maxHP; });
+      aide.party.forEach(p=>{ p.currentHP=p.maxHP; });
       addLog('🏥 Party fully healed at '+originName+'!','info');
     }
   }
   if(reason==='faint'){
-    if(returnLocId===state.missionDestination){
-      state.travelPath=[]; state.travelPathIndex=0; state.travelCyclesRemaining=0;
+    if(returnLocId===aide.missionDestination){
+      aide.travelPath=[]; aide.travelPathIndex=0; aide.travelCyclesRemaining=0;
     } else {
-      state.travelPath=buildTravelPath(returnLocId,state.missionDestination);
-      state.travelPathIndex=0;
-      if(state.travelPath.length>0){ arriveAtLocation(state.travelPath[0]); }
-      else { state.missionDestination=returnLocId; } // unreachable — fall back to researching here
+      aide.travelPath=buildTravelPath(returnLocId,aide.missionDestination);
+      aide.travelPathIndex=0;
+      if(aide.travelPath.length>0){ arriveAtLocation(aide.travelPath[0],aide); }
+      else { aide.missionDestination=returnLocId; } // unreachable — fall back to researching here
     }
   } else {
-    state.missionDestination=returnLocId;
-    state.travelPath=[]; state.travelPathIndex=0; state.travelCyclesRemaining=0;
+    aide.missionDestination=returnLocId;
+    aide.travelPath=[]; aide.travelPathIndex=0; aide.travelCyclesRemaining=0;
   }
-  state.nextEncounterIn=getEncounterInterval(true);
+  aide.nextEncounterIn=getEncounterInterval(true);
   showFindingsReport();
-  updateLocation(); render(); saveGame();
+  updateAllAideLocations(); render(); saveGame();
 }
 
 // v0.28 — total encounter-cycles remaining until reaching the final destination, not just the
 // current waypoint: current waypoint's remaining cycles + the full travelTime of every waypoint
 // still ahead in travelPath, excluding the destination's own travelTime (consistent with the
 // settled travelTime rule — a destination's own travel time never delays arrival there).
-function computeTotalEncLeftToDestination(){
-  let total=state.travelCyclesRemaining||0;
-  if(state.travelPath&&state.travelPath.length){
-    for(let i=state.travelPathIndex+1;i<state.travelPath.length-1;i++){
-      const locData=typeof LOCATIONS!=='undefined'?getLocation(state.travelPath[i]):null;
+function computeTotalEncLeftToDestination(aide=state.aides[0]){
+  let total=aide.travelCyclesRemaining||0;
+  if(aide.travelPath&&aide.travelPath.length){
+    for(let i=aide.travelPathIndex+1;i<aide.travelPath.length-1;i++){
+      const locData=typeof LOCATIONS!=='undefined'?getLocation(aide.travelPath[i]):null;
       total+=Math.max(1,locData&&locData.travelTime?parseInt(locData.travelTime):1);
     }
   }
   return total;
 }
 
-function updateLocation(){
-  const el=document.getElementById('aide-location');
-  // v0.26 — idle removed: always the "active" branch below, no more Idle text state.
-  const m=Math.floor(state.nextEncounterIn/60), s=state.nextEncounterIn%60;
-  const curLocData=typeof LOCATIONS!=='undefined'?getLocation(state.currentLocation):null;
-  const curLocName=curLocData?curLocData.name:(state.currentLocation||'Route 1');
-  const destLocData=typeof LOCATIONS!=='undefined'?getLocation(state.missionDestination):null;
-  const destLocName=destLocData?destLocData.name:state.missionDestination;
-  const atDest=state.currentLocation===state.missionDestination;
+// v0.39.1 — replaces the old singular updateLocation(). Loops every aide, updating that aide's own
+// location text / skip button / start-recall enablement / gym-battle-button within their own
+// collapsible section. No-ops cleanly for a collapsed aide (its per-aide elements don't exist in
+// the DOM until expanded — see renderAideSectionHtml).
+function updateAllAideLocations(){
+  state.aides.forEach((aide,idx)=>updateAideLocationDisplay(idx));
+}
+function updateAideLocationDisplay(idx){
+  const aide=state.aides[idx];
+  const el=document.getElementById('aide-location-'+idx);
+  if(!el) return; // collapsed — this aide's detail elements aren't in the DOM right now
+  const m=Math.floor(aide.nextEncounterIn/60), s=aide.nextEncounterIn%60;
+  const curLocData=typeof LOCATIONS!=='undefined'?getLocation(aide.currentLocation):null;
+  const curLocName=curLocData?curLocData.name:(aide.currentLocation||'Route 1');
+  const destLocData=typeof LOCATIONS!=='undefined'?getLocation(aide.missionDestination):null;
+  const destLocName=destLocData?destLocData.name:aide.missionDestination;
+  const atDest=aide.currentLocation===aide.missionDestination;
   if(atDest){
     el.textContent='📍 '+curLocName+' — Researching · Next: '+m+':'+s.toString().padStart(2,'0');
   } else {
-    el.textContent='📍 '+curLocName+' (→ '+destLocName+', '+computeTotalEncLeftToDestination()+' enc left) · Next: '+m+':'+s.toString().padStart(2,'0');
+    el.textContent='📍 '+curLocName+' (→ '+destLocName+', '+computeTotalEncLeftToDestination(aide)+' enc left) · Next: '+m+':'+s.toString().padStart(2,'0');
   }
-  // v0.24 — onboarding free-skip button: now visible any time skips remain (research is
-  // continuous as of v0.26, so there's no missionActive check left to gate on).
-  const skipBtn=document.getElementById('skip-encounter-btn');
+  // v0.24 — onboarding free-skip: a single shared pool (state.freeSkipsRemaining is global), but
+  // the button itself is per-aide since it applies to whichever aide's encounter timer it resets.
+  const skipBtn=document.getElementById('skip-encounter-btn-'+idx);
   if(skipBtn){
     if((state.freeSkipsRemaining||0)>0){
       skipBtn.style.display='inline-block';
@@ -3965,23 +4021,21 @@ function updateLocation(){
       skipBtn.style.display='none';
     }
   }
-  // v0.26 — Start Mission is gated on being at a heal location (isHealLocation), replacing the
-  // old missionActive-based disable. Recall has no gate — always available.
-  const startBtn=document.getElementById('btn-start');
-  if(startBtn) startBtn.disabled=!isHealLocation(state.currentLocation);
-  const recallBtn=document.getElementById('btn-recall');
+  const startBtn=document.getElementById('btn-start-'+idx);
+  if(startBtn) startBtn.disabled=!isHealLocation(aide.currentLocation);
+  const recallBtn=document.getElementById('btn-recall-'+idx);
   if(recallBtn) recallBtn.disabled=false;
-  updateBattleGymButton(); // v0.29 — shows/hides the watched-battle trigger for the current location
+  updateBattleGymButton(idx); // v0.29 — shows/hides the watched-battle trigger for this aide's location
 }
 
 // v0.24 — onboarding free-skip: bypasses the ENC_INTERVAL_OPEN wait for a single encounter.
 // Ball cost and catch odds are unaffected — only the wait is skipped. Consumes exactly 1 skip
 // from a one-time, never-refilling pool (state.freeSkipsRemaining), set to 50 on new saves only.
-function skipToNextEncounter(){
+function skipToNextEncounter(idx=0){
   if((state.freeSkipsRemaining||0)<=0) return;
   state.freeSkipsRemaining--;
-  state.nextEncounterIn=0;
-  updateLocation();
+  state.aides[idx].nextEncounterIn=0;
+  updateAllAideLocations();
   saveGame();
 }
 
@@ -4007,7 +4061,7 @@ function buyItem(itemId, qty){
 
   // Route to correct inventory by bagType
   const isTrainerItem=item.bagType&&item.bagType.toLowerCase()==='trainer';
-  const targetBag=isTrainerItem?state.trainerBag:state.professorBag;
+  const targetBag=isTrainerItem?state.aides[0].trainerBag:state.professorBag;
   if(!targetBag) return;
   targetBag[itemId]=(targetBag[itemId]||0)+actualQty;
 
@@ -4043,7 +4097,7 @@ function getPartyEligibleForItem(itemId){
   if(!item) return [];
   const itemName=item.name;
   const results=[];
-  state.party.forEach(p=>{
+  state.aides[0].party.forEach(p=>{
     if(p.evolveBlocked) return;
     const entry=getPokemonEntry(p.pokedexId,p.formName);
     const branches=[];
@@ -4119,7 +4173,7 @@ function confirmBatchEvolve(itemId,maxQty){
     const catchId=parseInt(c.dataset.catchid);
     const intoId=parseInt(c.dataset.intoid);
     const toFormName=c.dataset.form||null;
-    const p=state.dex.find(x=>x.id===catchId); if(!p) return;
+    const p=state.aides[0].dex.find(x=>x.id===catchId); if(!p) return;
     const toEntry=getPokemonEntry(intoId,toFormName); if(!toEntry) return;
     state.professorBag[itemId]--;
     if(state.professorBag[itemId]<=0) delete state.professorBag[itemId];
@@ -4244,10 +4298,10 @@ function purchaseDaycareSlot(){
 // Drop-off/collect both require the Aide to physically be at the Day Care — incubation itself runs
 // indefinitely in the background regardless of where the Aide is sent afterward.
 function assignDaycarePair(slotIndex,idA,idB){
-  if(state.currentLocation!==DAYCARE_LOCATION_ID){ addLog('The Aide must be at the Day Care to drop off a pair.','fail'); return; }
+  if(state.aides[0].currentLocation!==DAYCARE_LOCATION_ID){ addLog('The Aide must be at the Day Care to drop off a pair.','fail'); return; }
   ensureDaycareSlots();
   if(state.daycareSlots.slots[slotIndex]){ addLog('That slot is already occupied.','fail'); return; }
-  const pA=state.dex.find(p=>p.id===idA), pB=state.dex.find(p=>p.id===idB);
+  const pA=state.aides[0].dex.find(p=>p.id===idA), pB=state.aides[0].dex.find(p=>p.id===idB);
   if(!pA||!pB) return;
   const check=canBreedPair(pA,pB);
   if(!check.ok){ addLog('Cannot pair: '+check.reason,'fail'); return; }
@@ -4255,7 +4309,7 @@ function assignDaycarePair(slotIndex,idA,idB){
   const hatchMinutes=getHatchMinutes(resultDexId);
   // Unassign from party if held — can't be out with the Aide and breeding at the same time.
   [pA,pB].forEach(p=>{
-    if(p.holder){ p.holder=null; state.party=state.party.filter(x=>x.id!==p.id); }
+    if(p.holder){ p.holder=null; state.aides[0].party=state.aides[0].party.filter(x=>x.id!==p.id); }
     p.breeding=true;
   });
   state.daycareSlots.slots[slotIndex]={parentAId:idA,parentBId:idB,resultDexId,nextReadyAt:Date.now()+hatchMinutes*60000,eggsQueued:0};
@@ -4281,7 +4335,7 @@ function updateDaycareQueue(slotIndex){
 // pipeline (per-species cap release still applies per-egg). The slot is NOT cleared — the pair
 // stays assigned and keeps breeding automatically until manually pulled via releaseDaycarePair().
 function collectDaycareSlot(slotIndex){
-  if(state.currentLocation!==DAYCARE_LOCATION_ID){ addLog('The Aide must be at the Day Care to collect.','fail'); return; }
+  if(state.aides[0].currentLocation!==DAYCARE_LOCATION_ID){ addLog('The Aide must be at the Day Care to collect.','fail'); return; }
   ensureDaycareSlots();
   const rec=state.daycareSlots.slots[slotIndex];
   if(!rec){ return; }
@@ -4305,7 +4359,7 @@ function collectDaycareSlot(slotIndex){
     // Pokemon object (and thus no shiny flag) exists until this makePokemon() call. A batch
     // collection rolls independently per egg, all at the moment of collection.
     if(Math.random()<(1/4096)) baby.isShiny=true;
-    state.dex.push(baby);
+    state.aides[0].dex.push(baby);
     state.dexHistory[baby.pokedexId]=(state.dexHistory[baby.pokedexId]||0)+1;
     recordAbilityObserved(baby.pokedexId,baby.ability);
     recordGenderObserved(baby.pokedexId,baby.gender);
@@ -4327,7 +4381,7 @@ function collectDaycareSlot(slotIndex){
     checkSpeciesCap(baby);
     // checkSpeciesCap() may release this individual (or an older one at cap) right back out —
     // check whether THIS baby survived it to tally an accurate kept-vs-released split.
-    if(state.dex.find(p=>p.id===baby.id)) kept++; else released++;
+    if(state.aides[0].dex.find(p=>p.id===baby.id)) kept++; else released++;
   }
   rec.eggsQueued=0;
   // v0.37 — batch summary enriched with non-zero tallies instead of per-egg Full-log lines.
@@ -4348,7 +4402,7 @@ function releaseDaycarePair(slotIndex){
   const queued=rec.eggsQueued||0;
   const warn=queued>0?' You will forfeit '+queued+' uncollected egg'+(queued>1?'s':'')+'.':'';
   if(!confirm('Pull this pair from the Day Care without hatching?'+warn+' They\'ll be returned to your box.')) return;
-  const pA=state.dex.find(p=>p.id===rec.parentAId), pB=state.dex.find(p=>p.id===rec.parentBId);
+  const pA=state.aides[0].dex.find(p=>p.id===rec.parentAId), pB=state.aides[0].dex.find(p=>p.id===rec.parentBId);
   [pA,pB].forEach(p=>{ if(p) p.breeding=false; });
   state.daycareSlots.slots[slotIndex]=null;
   saveGame(); render(); showMapDetail(DAYCARE_LOCATION_ID);
@@ -4356,9 +4410,9 @@ function releaseDaycarePair(slotIndex){
 // Builds the Day Care section HTML for showMapDetail() — Pokemon Daycare location only (v0.27).
 function buildDaycareHtml(){
   ensureDaycareSlots();
-  const isCurrent=state.currentLocation===DAYCARE_LOCATION_ID;
+  const isCurrent=state.aides[0].currentLocation===DAYCARE_LOCATION_ID;
   const seenDexIds=new Set();
-  state.dex.forEach(p=>{ if(p.pokedexId) seenDexIds.add(p.pokedexId); });
+  state.aides[0].dex.forEach(p=>{ if(p.pokedexId) seenDexIds.add(p.pokedexId); });
   Object.keys(state.dexHistory).forEach(id=>seenDexIds.add(parseInt(id)));
   let html='<div style="color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin:10px 0 6px;">🥚 Day Care</div>';
   for(let i=0;i<state.daycareSlots.purchased;i++){
@@ -4377,7 +4431,7 @@ function buildDaycareHtml(){
       const remainingMs=Math.max(0,rec.nextReadyAt-Date.now());
       const remainingMin=Math.floor(remainingMs/60000), remainingSec=Math.floor((remainingMs%60000)/1000);
       const queued=rec.eggsQueued||0;
-      const slotPA=state.dex.find(p=>p.id===rec.parentAId), slotPB=state.dex.find(p=>p.id===rec.parentBId);
+      const slotPA=state.aides[0].dex.find(p=>p.id===rec.parentAId), slotPB=state.aides[0].dex.find(p=>p.id===rec.parentBId);
       const slotSpriteRow=(slotPA&&slotPB)?daycareSpriteRowHtml(slotPA,slotPB,rec.resultDexId,known):'';
       html+='<div style="color:var(--main-text);font-size:11px;margin-bottom:4px;">Slot '+(i+1)+' — → '+resultLabel+'</div>'+
         slotSpriteRow+
@@ -4399,7 +4453,7 @@ function buildDaycareHtml(){
 }
 // Every owned Pokémon not currently reserved by another Day Care slot — party or box both eligible.
 function getDaycareEligiblePokemon(){
-  return state.dex.filter(p=>!p.breeding);
+  return state.aides[0].dex.filter(p=>!p.breeding);
 }
 // ── DAY CARE PAIR PICKER (v0.28) — two-step sprite-row picker, replaces the old <select> dropdowns.
 // Step 1: pick Parent A from every eligible Pokémon (sprite-row list, same style as All Catches).
@@ -4487,13 +4541,13 @@ function selectDaycareParentA(id){
 }
 function renderDaycareModalStep2(){
   const modal=document.getElementById('daycare-modal'); if(!modal) return;
-  const pA=state.dex.find(p=>p.id===daycareParentA);
+  const pA=state.aides[0].dex.find(p=>p.id===daycareParentA);
   if(!pA){ renderDaycareModalStep1(); return; }
   const candidates=sortDaycareList(getDaycareEligiblePokemon().filter(p=>p.id!==pA.id&&canBreedPair(pA,p).ok));
   const rows=candidates.length
     ?candidates.map(p=>daycarePickerRowHtml(p,'selectDaycareParentB('+p.id+')',p.id===daycareParentB)).join('')
     :'<div style="color:#555;font-size:11px;">No compatible partners.</div>';
-  const pB=daycareParentB?state.dex.find(p=>p.id===daycareParentB):null;
+  const pB=daycareParentB?state.aides[0].dex.find(p=>p.id===daycareParentB):null;
   const previewHtml=pB?buildDaycarePreviewHtml(pA,pB):'';
   modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;max-height:85vh;overflow-y:auto;">'+
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><div style="color:var(--accent);font-size:13px;font-weight:bold;">Day Care — Slot '+(daycareModalSlot+1)+' · Parent B</div><button onclick="document.getElementById(\'daycare-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'+
@@ -4508,7 +4562,7 @@ function buildDaycarePreviewHtml(pA,pB){
   const resultDexId=getBreedResultDexId(pA,pB);
   const resultEntry=getPokemonEntry(resultDexId);
   const seenDexIds=new Set();
-  state.dex.forEach(p=>{ if(p.pokedexId) seenDexIds.add(p.pokedexId); });
+  state.aides[0].dex.forEach(p=>{ if(p.pokedexId) seenDexIds.add(p.pokedexId); });
   Object.keys(state.dexHistory).forEach(id=>seenDexIds.add(parseInt(id)));
   const known=seenDexIds.has(resultDexId);
   const label=known?(resultEntry?resultEntry.name:'?'):'?';
@@ -4527,23 +4581,23 @@ function confirmDaycareAssignFromModal(){
 
 // ── POKEMON MANAGEMENT ──
 function assignToAide(catchId){
-  const p=state.dex.find(x=>x.id===catchId); if(!p) return;
-  if(!isHealLocation(state.currentLocation)){ addLog('Can only change party at a healing location!','fail'); return; }
+  const p=state.aides[0].dex.find(x=>x.id===catchId); if(!p) return;
+  if(!isHealLocation(state.aides[0].currentLocation)){ addLog('Can only change party at a healing location!','fail'); return; }
   if(p.breeding){ addLog(getDisplayName(p)+' #'+p.id+' is at the Day Care!','fail'); return; }
-  if(state.party.length>=6){ addLog('Party is full (6 max)!','fail'); return; }
+  if(state.aides[0].party.length>=6){ addLog('Party is full (6 max)!','fail'); return; }
   if(p.level>getLevelCap()){ addLog(getDisplayName(p)+' #'+p.id+' is above the level cap (Lv'+getLevelCap()+') — cannot assign until more badges are earned.','fail'); return; }
   p.holder='Carl Oak';
-  state.party.push(p);
+  state.aides[0].party.push(p);
   addLog(getDisplayName(p)+' #'+p.id+' assigned to Carl Oak.','info');
   saveGame(); render();
   const m=document.getElementById('poke-modal'); if(m) m.remove();
 }
 
 function unassignPokemon(catchId){
-  const p=state.dex.find(x=>x.id===catchId); if(!p) return;
-  if(!isHealLocation(state.currentLocation)){ addLog('Can only change party at a healing location!','fail'); return; }
+  const p=state.aides[0].dex.find(x=>x.id===catchId); if(!p) return;
+  if(!isHealLocation(state.aides[0].currentLocation)){ addLog('Can only change party at a healing location!','fail'); return; }
   p.holder=null;
-  state.party=state.party.filter(x=>x.id!==catchId);
+  state.aides[0].party=state.aides[0].party.filter(x=>x.id!==catchId);
   addLog(getDisplayName(p)+' #'+p.id+' unassigned.','info');
   saveGame(); render();
   const m=document.getElementById('poke-modal'); if(m) m.remove();
@@ -4551,7 +4605,7 @@ function unassignPokemon(catchId){
 
 function revivePokemon(catchId){
   if(state.funds<20){ addLog('Not enough funds to revive!','fail'); return; }
-  const p=state.dex.find(x=>x.id===catchId); if(!p) return;
+  const p=state.aides[0].dex.find(x=>x.id===catchId); if(!p) return;
   state.funds=Math.round((state.funds-20)*100)/100;
   p.currentHP=p.maxHP;
   saveGame(); render();
@@ -4588,7 +4642,7 @@ function buildStatTableHtml(p){
     +'</div>';
 }
 function showPokemonDetail(catchId){
-  const p=state.dex.find(x=>x.id===catchId); if(!p) return;
+  const p=state.aides[0].dex.find(x=>x.id===catchId); if(!p) return;
   // v0.34 fix — formName was previously omitted here, so type badges/height/weight always showed
   // the base form's data (getPokemonEntry() prefers the null-form row when none is specified) even
   // for a form-variant individual, despite the stat table below correctly resolving the true form.
@@ -4666,7 +4720,7 @@ function showPokemonDetail(catchId){
 // v0.20 — nickname editing, poke-modal only. 30-char cap enforced via maxlength attribute.
 // Submitting empty/whitespace-only input clears the nickname back to the species name.
 function saveNickname(catchId){
-  const p=state.dex.find(x=>x.id===catchId); if(!p) return;
+  const p=state.aides[0].dex.find(x=>x.id===catchId); if(!p) return;
   const input=document.getElementById('nickname-input'); if(!input) return;
   const val=input.value.trim();
   p.nickname=val?val.slice(0,30):null;
@@ -4687,7 +4741,7 @@ function natureEffectLabel(natureName){
 // now fires on every click regardless of Nature Mint count. With 0 held, shows a themed message
 // modal instead of silently no-op'ing, matching the shell/border style used by every other modal.
 function openNaturePicker(catchId){
-  const p=state.dex.find(x=>x.id===catchId); if(!p) return;
+  const p=state.aides[0].dex.find(x=>x.id===catchId); if(!p) return;
   if((state.professorBag['natureMint']||0)<1){ showNatureMintRequiredModal(); return; }
   const existing=document.getElementById('nature-modal'); if(existing) existing.remove();
   const modal=document.createElement('div');
@@ -4712,7 +4766,7 @@ function showNatureMintRequiredModal(){
   document.body.appendChild(modal);
 }
 function confirmNatureChange(catchId,natureName){
-  const p=state.dex.find(x=>x.id===catchId); if(!p) return;
+  const p=state.aides[0].dex.find(x=>x.id===catchId); if(!p) return;
   if(!confirm('Change Nature to '+natureName+' ('+natureEffectLabel(natureName)+')? Uses 1 Nature Mint.')) return;
   if((state.professorBag['natureMint']||0)<1){ addLog('No Nature Mint in Professor\'s bag!','fail'); return; }
   state.professorBag['natureMint']--;
@@ -4728,7 +4782,7 @@ function confirmNatureChange(catchId,natureName){
 
 // v0.20 — per-individual evolution block toggle. Blocks both level-up and item-based evolution.
 function toggleEvolveBlock(catchId,checked){
-  const p=state.dex.find(x=>x.id===catchId); if(!p) return;
+  const p=state.aides[0].dex.find(x=>x.id===catchId); if(!p) return;
   p.evolveBlocked=!!checked;
   saveGame();
   showPokemonDetail(catchId);
@@ -4770,7 +4824,7 @@ function getMoveSlotsHtml(p,compact){
 // Opens the per-slot action modal: Upgrade/Change for a filled slot, or the Add picker for an
 // empty one. Layered above poke-modal (higher z-index) so poke-modal stays open behind it.
 function openMoveSlot(catchId,slotIndex){
-  const p=state.dex.find(x=>x.id===catchId); if(!p) return;
+  const p=state.aides[0].dex.find(x=>x.id===catchId); if(!p) return;
   const entry=getPokemonEntry(p.pokedexId,p.formName); if(!entry) return;
   const slot=(p.equippedMoves||[])[slotIndex];
   const tmCount=getTMCount();
@@ -4819,7 +4873,7 @@ function showMoveChangeOptions(catchId,slotIndex){
 // Lists every available (type,category) slot from the species' pool, excluding whatever's
 // already equipped in this Pokemon's OTHER slots (no duplicate type+category combos).
 function buildMovePickerHtml(catchId,slotIndex,mode){
-  const p=state.dex.find(x=>x.id===catchId); if(!p) return '';
+  const p=state.aides[0].dex.find(x=>x.id===catchId); if(!p) return '';
   const entry=getPokemonEntry(p.pokedexId,p.formName); if(!entry) return '';
   const tmCount=getTMCount();
   const excluded=new Set(getEquippedMoveKeys(p,slotIndex));
@@ -4837,7 +4891,7 @@ function buildMovePickerHtml(catchId,slotIndex,mode){
 // Spends 1 TM (state.professorBag — TM's bagType is Professor, matching the Items sheet row)
 // and applies the requested action. Re-renders poke-modal in place so the player sees the result.
 function confirmMoveAction(catchId,slotIndex,mode,type,category,qty){
-  const p=state.dex.find(x=>x.id===catchId); if(!p) return;
+  const p=state.aides[0].dex.find(x=>x.id===catchId); if(!p) return;
   const entry=getPokemonEntry(p.pokedexId,p.formName); if(!entry) return;
   if(getTMCount()<1){ addLog('Need 1 TM.','fail'); return; }
   if(!p.equippedMoves) p.equippedMoves=[null,null,null,null];
@@ -4927,7 +4981,7 @@ function showBagModal(){
   // Badges are excluded from the aide section — they render as sprites on the aide name line
   // instead (see buildBadgeSpritesHtml), same convention the old #aide-bag-items list used.
   const profSection=buildBagSectionHtml('🔬 Professor',state.professorBag,null);
-  const aideSection=buildBagSectionHtml('🧑\u200d🔬 Carl Oak',state.trainerBag,['badge']);
+  const aideSection=buildBagSectionHtml('🧑\u200d🔬 Carl Oak',state.aides[0].trainerBag,['badge']);
   modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:85vh;overflow-y:auto;">'+
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:var(--accent);font-size:13px;font-weight:bold;">🎒 Bag</div><button onclick="document.getElementById(\'bag-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'+
     profSection+aideSection+
@@ -4940,13 +4994,127 @@ function showBagModal(){
 function render(){
   renderParty();
   renderDex();
-  updateLocation();
+  updateAllAideLocations();
+}
+
+// v0.39.1 — transient UI-only collapse state, NOT part of `state` (doesn't persist across reloads,
+// same pattern as dexView/dexMode). Empty Set = every aide starts expanded.
+let collapsedAides=new Set();
+function toggleAideCollapse(idx){
+  if(collapsedAides.has(idx)) collapsedAides.delete(idx); else collapsedAides.add(idx);
+  renderParty();
 }
 
 function renderParty(){
-  const c=document.getElementById('party-list'); c.innerHTML='';
-  let spritesHtml='<div class="aide-party-sprites">';
-  state.party.forEach(p=>{
+  const container=document.getElementById('aide-roster');
+  if(!container) return;
+  container.innerHTML=state.aides.map((aide,idx)=>renderAideSectionHtml(aide,idx)).join('')
+    +buildHireAideButtonHtml();
+  state.aides.forEach((aide,idx)=>{
+    renderAidePartySprites(aide,idx); // always — collapsed sections must still show party, per spec
+    if(!collapsedAides.has(idx)) renderAidePartyDetail(aide,idx);
+    updateAideLocationDisplay(idx);
+  });
+  renderBagDisplay();
+}
+
+// v0.39.1 — Hire Second Aide. Max 1 ever, enforced here (state.aides.length===1 check) since no
+// existing item pattern enforces a hard one-time-only purchase cap — this is new logic, not reused
+// from elsewhere. Deliberately NOT routed through the generic shop/buyItem() UI: shopTier:'lab' is
+// referenced in code comments elsewhere but was never actually wired to any location or to
+// getShopItems()'s tierOrder (confirmed dormant — see the pre-existing "duplicate poke-ball,
+// shopTier:lab" bug history). Rather than risk touching the shared shop-rendering system for this
+// one narrow, one-time special purchase, it gets its own dedicated button + flow here.
+function buildHireAideButtonHtml(){
+  if(state.aides.length>1) return ''; // already hired — max 1 ever
+  const item=getItem('aide-hire-2');
+  const price=item?item.shopPrice:100;
+  return '<div style="padding:10px 12px;text-align:center;">'
+    +'<button onclick="hireAide()" style="padding:8px 16px;font-size:11px;border-color:var(--accent);color:var(--accent-light);">🧑\u200d🔬 Hire Second Aide — $'+price+'</button>'
+    +'</div>';
+}
+
+function hireAide(){
+  if(state.aides.length>1){ addLog('Already hired your second aide.','fail'); return; }
+  const item=getItem('aide-hire-2');
+  const price=item?item.shopPrice:100;
+  if(state.funds<price){ addLog('Not enough funds to hire a second aide!','fail'); return; }
+  showAideEmojiPicker();
+}
+
+// v0.39.1 — fixed palette: gender-presentation × skin-tone head emoji, ~9-12 options per DESIGN.md.
+const AIDE_EMOJI_PALETTE=['👨🏻','👨🏽','👨🏿','👩🏻','👩🏽','👩🏿','🧑🏻','🧑🏽','🧑🏿'];
+function showAideEmojiPicker(){
+  const existing=document.getElementById('aide-emoji-modal'); if(existing) existing.remove();
+  const modal=document.createElement('div');
+  modal.id='aide-emoji-modal';
+  modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
+  const swatches=AIDE_EMOJI_PALETTE.map(e=>'<button onclick="confirmHireAide(\''+e+'\')" style="font-size:28px;padding:10px;border-color:var(--main-border);">'+e+'</button>').join('');
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:var(--accent);font-size:13px;font-weight:bold;">Choose M. Faraday\'s Icon</div><button onclick="document.getElementById(\'aide-emoji-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'
+    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">'+swatches+'</div>'
+    +'</div>';
+  modal.onclick=(e)=>{ if(e.target===modal) modal.remove(); };
+  document.body.appendChild(modal);
+}
+
+function confirmHireAide(emoji){
+  if(state.aides.length>1) return; // safety re-check — cap already enforced in hireAide(), guards against a stale/double-clicked modal
+  const item=getItem('aide-hire-2');
+  const price=item?item.shopPrice:100;
+  if(state.funds<price){ addLog('Not enough funds to hire a second aide!','fail'); return; }
+  state.funds=Math.round((state.funds-price)*100)/100;
+  const faraday=makeAide('faraday','M. Faraday',emoji,'palletTown');
+  state.aides.push(faraday);
+  const modal=document.getElementById('aide-emoji-modal'); if(modal) modal.remove();
+  addLog(emoji+' M. Faraday hired! Assign Pokémon from your box to get them started.','evolve');
+  document.getElementById('funds-display').textContent=state.funds.toFixed(2);
+  render();
+  saveGame();
+}
+
+// v0.39.1 — header (emoji/name/badges/collapse toggle) is identical whether collapsed or expanded,
+// per the explicit requirement that collapse never hides name/party/badges. Only the detailed party
+// cards + location + mission controls are collapse-gated.
+function renderAideSectionHtml(aide,idx){
+  const collapsed=collapsedAides.has(idx);
+  const badgesHtml=buildBadgeSpritesHtml(aide.trainerBag);
+  const header='<div class="aide-section-header" onclick="toggleAideCollapse('+idx+')" style="cursor:pointer;display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--main-panel);border-bottom:1px solid var(--main-card);">'
+    +'<span style="font-size:16px;">'+aide.emoji+'</span>'
+    +'<span class="aide-name" style="color:var(--accent);font-size:13px;flex:1;">'+aide.name+badgesHtml+'</span>'
+    +'<span style="color:var(--main-text-secondary);font-size:11px;">'+(collapsed?'▸':'▾')+'</span>'
+    +'</div>';
+  const spritesRow='<div id="aide-party-sprites-row-'+idx+'" style="padding:4px 12px;"></div>';
+  if(collapsed){
+    return '<div class="aide-section collapsed" id="aide-section-'+idx+'">'+header+spritesRow+'</div>';
+  }
+  const bodyTop='<div id="aide-info-'+idx+'">'
+    +'<div class="aide-location" id="aide-location-'+idx+'"></div>'
+    +'<button id="skip-encounter-btn-'+idx+'" onclick="skipToNextEncounter('+idx+')" style="display:none;margin:6px 12px 0;font-size:10px;padding:5px 10px;border-color:var(--main-border);color:var(--main-text-secondary);">⏭ Skip to Encounter x50</button>'
+    +'<button id="battle-gym-btn-'+idx+'" style="display:none;margin:6px 12px 0;font-size:10px;padding:5px 10px;border-color:var(--accent);color:var(--accent-light);">⚔ Battle Gym</button>'
+    +'</div>';
+  const partyList='<div id="party-list-'+idx+'"></div>';
+  const controls='<div class="aide-controls" style="display:flex;gap:6px;padding:8px 12px;flex-wrap:wrap;">'
+    +'<button id="btn-start-'+idx+'" onclick="startMission('+idx+')">▶ Send on Mission</button>'
+    +'<button id="btn-recall-'+idx+'" onclick="recallMission('+idx+')">⏹ Recall</button>'
+    +'</div>';
+  return '<div class="aide-section expanded" id="aide-section-'+idx+'">'+header+spritesRow+bodyTop+partyList+controls+'</div>';
+}
+
+function renderAidePartySprites(aide,idx){
+  const spritesRow=document.getElementById('aide-party-sprites-row-'+idx);
+  if(!spritesRow) return;
+  spritesRow.innerHTML='<div class="aide-party-sprites">'+aide.party.map(p=>{
+    const spriteUrl=getSpriteUrl(p.pokedexId,p.species,p.isShiny||false,p.formName);
+    const fainted=p.currentHP<=0;
+    return '<img src="'+spriteUrl+'" class="aide-sprite-mini" style="opacity:'+(fainted?'0.3':'1')+';image-rendering:pixelated;" onerror="this.style.display=\'none\'">';
+  }).join('')+'</div>';
+}
+
+function renderAidePartyDetail(aide,idx){
+  const c=document.getElementById('party-list-'+idx); if(!c) return;
+  c.innerHTML='';
+  aide.party.forEach(p=>{
     const hpPct=Math.max(0,(p.currentHP/p.maxHP)*100);
     const hpColor=hpPct>50?'#2ecc71':hpPct>20?'#f4d03f':'#e74c3c';
     const s=SPECIES[p.species+'|'+(p.formName||'')]||SPECIES[p.species];
@@ -4958,17 +5126,10 @@ function renderParty(){
     const d=document.createElement('div');
     d.className='party-slot'+(fainted?' fainted':'');
     const spriteUrl=getSpriteUrl(p.pokedexId,p.species,p.isShiny||false,p.formName);
-    spritesHtml+='<img src="'+spriteUrl+'" class="aide-sprite-mini" style="opacity:'+(fainted?'0.3':'1')+';image-rendering:pixelated;" onerror="this.style.display=\'none\'">';
     d.innerHTML='<div style="display:flex;align-items:flex-start;gap:8px;"><img src="'+spriteUrl+'" class="party-sprite" onerror="this.style.display=\'none\'"><div style="flex:1;"><div class="poke-name">'+(fainted?'💀 ':'')+getDisplayName(p)+' #'+p.id+(getRarityBadge(p)?'<span class="shiny-badge">'+getRarityBadge(p)+'</span>':'')+'</div><div class="poke-level">Lv '+p.level+' · '+p.gender+(p.ability?' · '+p.ability:'')+'</div><div style="color:var(--main-text-muted);font-size:10px;">❤ '+(p.friendship||0)+' friendship</div><div class="hp-bar-wrap"><div class="hp-bar" style="width:'+hpPct+'%;background:'+hpColor+';"></div></div><div class="hp-text">HP: '+p.currentHP+'/'+p.maxHP+'</div><div class="exp-bar-wrap"><div class="exp-bar" style="width:'+ePct+'%;"></div></div></div></div>'+getMoveSlotsHtml(p,true);
     d.onclick=()=>showPokemonDetail(p.id);
     c.appendChild(d);
   });
-  spritesHtml+='</div>';
-  const nameEl=document.querySelector('#aide-info .aide-name');
-  if(nameEl) nameEl.innerHTML='🧑‍🔬 Carl Oak'+buildBadgeSpritesHtml();
-  const spritesRow=document.getElementById('aide-party-sprites-row');
-  if(spritesRow) spritesRow.innerHTML=spritesHtml;
-  renderBagDisplay();
 }
 
 // ── DEX STATE ──
@@ -5012,7 +5173,7 @@ function loadDexNav(){
 })();
 
 function renderDex(){
-  document.getElementById('dex-count').textContent=state.dex.length;
+  document.getElementById('dex-count').textContent=state.aides[0].dex.length;
   document.getElementById('dex-count-detail').textContent=state.totalCatches;
   document.getElementById('dex-encounters-count').textContent=state.totalSightings;
   const knownDexIds=Object.keys(state.dexHistory);
@@ -5224,7 +5385,7 @@ function renderEvolutionChainVisual(famId,highlightDexId){
   if(!allMembers.length) return '';
   const memberSet=new Set(allMembers.map(m=>m.dexId));
   const seenDexIds=new Set();
-  state.dex.forEach(p=>{ if(p.pokedexId) seenDexIds.add(p.pokedexId); });
+  state.aides[0].dex.forEach(p=>{ if(p.pokedexId) seenDexIds.add(p.pokedexId); });
   Object.keys(state.dexHistory).forEach(id=>{ seenDexIds.add(parseInt(id)); });
   const edges=[];
   allMembers.forEach(m=>{
@@ -5405,7 +5566,7 @@ function renderDexFamilies(){
     seenFamilies=new Set(POKEDEX_DATA.filter(x=>x.familyId).map(x=>x.familyId));
   } else {
     const seenDexIds=new Set();
-    state.dex.forEach(p=>{ if(p.pokedexId) seenDexIds.add(p.pokedexId); });
+    state.aides[0].dex.forEach(p=>{ if(p.pokedexId) seenDexIds.add(p.pokedexId); });
     Object.keys(state.dexHistory).forEach(id=>{ seenDexIds.add(parseInt(id)); });
     seenFamilies=new Set();
     seenDexIds.forEach(dexId=>{ const e=getPokemonEntry(dexId); if(e&&e.familyId) seenFamilies.add(e.familyId); });
@@ -5421,7 +5582,7 @@ function renderDexFamilies(){
       speciesDisplay=allMembers.length+'/'+allMembers.length;
       totalEverCaught=null; // not applicable — no ownership data in Official mode
     } else {
-      const liveInFamily=state.dex.filter(p=>p.pokedexId&&POKEDEX_DATA.find(x=>x.dexId===p.pokedexId&&x.familyId===famId));
+      const liveInFamily=state.aides[0].dex.filter(p=>p.pokedexId&&POKEDEX_DATA.find(x=>x.dexId===p.pokedexId&&x.familyId===famId));
       speciesSeen=new Set(liveInFamily.map(p=>p.pokedexId));
       Object.keys(state.dexHistory).forEach(id=>{
         const dexId=parseInt(id);
@@ -5455,13 +5616,13 @@ function renderDexSpecies(){
   if(isOfficial){
     visibleMembers=allMembers;
   } else {
-    const seenDexIds=new Set(state.dex.map(p=>p.pokedexId));
+    const seenDexIds=new Set(state.aides[0].dex.map(p=>p.pokedexId));
     Object.keys(state.dexHistory).forEach(id=>{ seenDexIds.add(parseInt(id)); });
     visibleMembers=allMembers.filter(m=>seenDexIds.has(m.dexId));
   }
   if(!visibleMembers.length){ c.innerHTML='<div style="color:#555;padding:12px;font-size:11px;">No species encountered yet.</div>'; return; }
   visibleMembers.forEach(entry=>{
-    const liveCount=state.dex.filter(p=>p.pokedexId===entry.dexId).length;
+    const liveCount=state.aides[0].dex.filter(p=>p.pokedexId===entry.dexId).length;
     const historyCount=state.dexHistory[entry.dexId]||0;
     const totalEver=Math.max(historyCount,liveCount);
     const sprite=getSpriteUrl(entry.dexId,entry.name,isOfficial&&dexOfficialShinyPreview);
@@ -5593,8 +5754,8 @@ function renderDexDetail(){
   const entry=getPokemonEntry(dexSelectedDexId,dexSelectedFormName);
   // v0.36 — caught-individuals list now filters to the selected form tab, not every individual
   // sharing this dexId regardless of form.
-  const caughtOfSpecies=state.dex.filter(p=>p.pokedexId===dexSelectedDexId&&(p.formName||null)===(dexSelectedFormName||null));
-  const allCaughtOfDexId=state.dex.filter(p=>p.pokedexId===dexSelectedDexId);
+  const caughtOfSpecies=state.aides[0].dex.filter(p=>p.pokedexId===dexSelectedDexId&&(p.formName||null)===(dexSelectedFormName||null));
+  const allCaughtOfDexId=state.aides[0].dex.filter(p=>p.pokedexId===dexSelectedDexId);
   if(!entry&&!allCaughtOfDexId.length){ c.innerHTML='<div style="color:#555;padding:12px;font-size:11px;">No data found.</div>'; return; }
   // v0.37 — Official Pokédex always shows the real sprite (never gated by seen/caught status);
   // the Shiny toggle forces the shiny palette. Your Pokédex is unaffected — unchanged behavior.
@@ -5837,7 +5998,7 @@ function matchesCatchesSearch(p,q){
 // each entry now shows both of the individual's actual FORM type(s) as colored badges.
 function renderDexViewAll(){
   const c=document.getElementById('dex-list'); c.innerHTML='';
-  let entries=state.dex.filter(p=>matchesCatchesFilters(p,dexCatchesFilters)&&matchesCatchesSearch(p,dexCatchesSearch));
+  let entries=state.aides[0].dex.filter(p=>matchesCatchesFilters(p,dexCatchesFilters)&&matchesCatchesSearch(p,dexCatchesSearch));
   const sort=dexCatchesSort;
   if(sort==='id') entries.sort((a,b)=>a.id-b.id);
   else if(sort==='dexid') entries.sort((a,b)=>(a.pokedexId||0)-(b.pokedexId||0));
@@ -6039,7 +6200,7 @@ const SAVE_KEY='pokeprof_save';
 // would incorrectly fire a fresh "🎯 Captured" finding, since those fields are undefined for
 // anything researched before v0.24.
 // v0.25 — SAVE_VERSION 17: badges now live in trainerBag (existing container, no schema
-// change needed there); new state.gymProgress={} tracks highest tier reached per trainerId
+// change needed there); new state.aides[0].gymProgress={} tracks highest tier reached per trainerId
 // (cosmetic only). Migration below backfills gymProgress:{} for any pre-v0.25 save.
 // v0.26 — SAVE_VERSION 18: state.daycareSlots (Day Care/Breeding, new — {purchased,slots[]}),
 // state.speciesCap (editable per-species cap, new — defaults to 6), and a one-time cleanup pass
@@ -6059,13 +6220,13 @@ const SAVE_KEY='pokeprof_save';
 // pre-v0.31 individual (single roll, not the dex-complete 10× advantage — that only applies going
 // forward at creation time), then runs recalcStats() and full-heals currentHP to the new maxHP.
 // v0.33 — SAVE_VERSION 21: p.formName (string|null) added to every Pokemon object (see
-// "Same-DexId Branching Form Evolutions"); state.wanderMode (boolean, default false, see
+// "Same-DexId Branching Form Evolutions"); state.aides[0].wanderMode (boolean, default false, see
 // "Wander Mode"); state.significantLog (array, default [], see "Log Tab Full/Condensed").
 // Also: any confirmedBranches/testedMethods entry for an item with a real matching EVO_TREE/
 // single-target branch is reset, since old saves can't distinguish a legitimately-earned
 // confirmation from a phantom one under the pre-v0.33 rule (see "Professor Auto-Test Loop").
 // Entries for items correctly ruled out (no matching branch at all) are left untouched.
-// v0.35 — SAVE_VERSION 22: state.wanderMetric ('encounters'|'catches', default 'encounters', see
+// v0.35 — SAVE_VERSION 22: state.aides[0].wanderMetric ('encounters'|'catches', default 'encounters', see
 // "Wander Mode") added — tracks which metric an active Wander session re-routes by. All other
 // v0.35 changes (evolution-chain dedup, migration-gating fix, species-cap-on-evolution, theming)
 // are bug fixes or UI/display-only, no additional schema impact.
@@ -6076,7 +6237,7 @@ const SAVE_KEY='pokeprof_save';
 // v0.37 — SAVE_VERSION 24 (23 -> 24): researchLog[dexId].gendersObserved changes shape from
 // boolean flags ({M:true,F:true}) to running counts ({M:0,F:0}) — see "Gender Ratio Display".
 // Migration: any pre-v24 boolean-shaped value is discarded, then re-derived via a one-time
-// backfill sweep from currently-held state.dex individuals (gated to pre-v24 loads only — see the
+// backfill sweep from currently-held state.aides[0].dex individuals (gated to pre-v24 loads only — see the
 // comment at that sweep below, since a count increment isn't safe to re-run on every load the way
 // the old boolean set was). Every other v0.37 change is a bug fix or UI/display-only.
 // v0.38 — SAVE_VERSION 25 (24 -> 25): state.speciesCapOverrides ({dexId:number}, new — see
@@ -6089,7 +6250,7 @@ const SAVE_KEY='pokeprof_save';
 // batch-evolve prompt, offline friendship parity, dual-root family breeding, Ditto
 // breeding-placeholder fix, Family IV Inheritance pool fix) is a bug fix or UI/logic-only, no
 // additional schema impact.
-const SAVE_VERSION=25;
+const SAVE_VERSION=26;
 let saveTimer=0;
 
 function saveGame(){
@@ -6099,28 +6260,21 @@ function saveGame(){
       version:SAVE_VERSION, savedAt:Date.now(),
       state:{
         funds:state.funds, totalCatches:state.totalCatches, totalSightings:state.totalSightings,
-        missionElapsed:state.missionElapsed,
-        nextEncounterIn:state.nextEncounterIn, incomeAccumulator:state.incomeAccumulator,
+        incomeAccumulator:state.incomeAccumulator,
         dexIdCounter:state.dexIdCounter,
-        currentEncounter:null, party:state.party, dex:state.dex,
+        aides:state.aides.map(aide=>({...aide,currentEncounter:null})), // v0.39.1 — real per-aide array, not flattened to aides[0]. currentEncounter cleared same as the old single-aide save always did (never persisted mid-encounter).
+        activeAideIndex:state.activeAideIndex||0,
         log:state.log.slice(0,50), researchLog:state.researchLog,
-        missionDestination:state.missionDestination, missionBehavior:state.missionBehavior,
-        missionOrigin:state.missionOrigin, currentLocation:state.currentLocation,
         professorBag:state.professorBag||{},
-        trainerBag:state.trainerBag||{},
-        gymProgress:state.gymProgress||{},
         speciesCap:state.speciesCap||6,
         speciesCapOverrides:state.speciesCapOverrides||{}, // v0.38
         daycareSlots:state.daycareSlots||{purchased:1,slots:[]},
-        travelPath:state.travelPath||[], travelPathIndex:state.travelPathIndex||0,
-        travelCyclesRemaining:state.travelCyclesRemaining||0,
         discoveredLocations:[...state.discoveredLocations],
         locationEncounterLog:state.locationEncounterLog||{},
         locationMethodPrefs:state.locationMethodPrefs||{},
-        lastHealLocation:state.lastHealLocation||'palletTown',
         dexHistory:state.dexHistory||{},
         freeSkipsRemaining:state.freeSkipsRemaining||0,
-        wanderMode:!!state.wanderMode, wanderMetric:state.wanderMetric||'encounters', significantLog:(state.significantLog||[]).slice(0,50) // v0.33/v0.35
+        significantLog:(state.significantLog||[]).slice(0,50) // v0.33/v0.35
       }
     }));
     setSaveIndicator('✔ Saved','saving');
@@ -6134,14 +6288,22 @@ function loadGame(){
     const data=JSON.parse(raw);
     if(!data) return false;
 
-    // ── SAVE_VERSION 25 MIGRATION ──
-    // Accepts v11-v24 saves and migrates them; rejects anything older.
-    if(data.version!==SAVE_VERSION&&data.version!==24&&data.version!==23&&data.version!==22&&data.version!==21&&data.version!==20&&data.version!==19&&data.version!==18&&data.version!==17&&data.version!==16&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
+    // ── SAVE_VERSION 26 MIGRATION ──
+    // Accepts v11-v25 saves and migrates them; rejects anything older.
+    if(data.version!==SAVE_VERSION&&data.version!==25&&data.version!==24&&data.version!==23&&data.version!==22&&data.version!==21&&data.version!==20&&data.version!==19&&data.version!==18&&data.version!==17&&data.version!==16&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
     const s=data.state;
+    // v0.39.1 — aide-owned fields (party/dex/trainerBag/currentLocation/mission-and-travel/
+    // gymProgress/lastHealLocation/wanderMode) now live in state.aides[]. A pre-v26 save has them
+    // as flat singular fields on `s` directly; a v26+ save has them on `s.aides[0]` already. Source
+    // from whichever is present so every migration below (which all reference the OLD flat
+    // `state.party`/`state.dex`-style names) keeps working completely unmodified — the actual
+    // wrap into state.aides[] happens once, at the end of this function, after all the historical
+    // migrations below have already run against these temporary flat fields.
+    const src0=(s.aides&&s.aides[0])||s;
 
     // Migrate inventory: v11 had a single `bag`; v12 splits to professorBag/trainerBag.
     let professorBag=s.professorBag||{};
-    let trainerBag=s.trainerBag||{};
+    let trainerBag=src0.trainerBag||{};
     if(s.bag&&Object.keys(s.bag).length&&!s.professorBag){
       Object.entries(s.bag).forEach(([itemId,qty])=>{
         const item=typeof ITEMS_DATA!=='undefined'?ITEMS_DATA.find(i=>i.itemId===itemId):null;
@@ -6167,27 +6329,27 @@ function loadGame(){
 
     Object.assign(state,{
       funds:s.funds??5, totalCatches:s.totalCatches??0, totalSightings:s.totalSightings??0,
-      missionElapsed:s.missionElapsed??0,
-      nextEncounterIn:s.nextEncounterIn??ENC_INTERVAL_OPEN, incomeAccumulator:s.incomeAccumulator??0,
+      missionElapsed:src0.missionElapsed??0,
+      nextEncounterIn:src0.nextEncounterIn??ENC_INTERVAL_OPEN, incomeAccumulator:s.incomeAccumulator??0,
       dexIdCounter:s.dexIdCounter??1,
-      currentEncounter:null, party:s.party??[], dex:s.dex??[], log:s.log??[],
+      currentEncounter:null, party:src0.party??[], dex:src0.dex??[], log:s.log??[],
       researchLog:s.researchLog??{}, pendingFindings:[],
-      missionDestination:s.missionDestination??'route1', missionBehavior:s.missionBehavior??'research',
-      missionOrigin:s.missionOrigin??'palletTown', currentLocation:s.currentLocation??'palletTown',
+      missionDestination:src0.missionDestination??'route1', missionBehavior:src0.missionBehavior??'research',
+      missionOrigin:src0.missionOrigin??'palletTown', currentLocation:src0.currentLocation??'palletTown',
       professorBag, trainerBag,
-      gymProgress:s.gymProgress??{},
+      gymProgress:src0.gymProgress??{},
       speciesCap:s.speciesCap??6,
       speciesCapOverrides:s.speciesCapOverrides??{}, // v0.38
       daycareSlots:s.daycareSlots??{purchased:1,slots:[]},
-      travelPath:s.travelPath??[], travelPathIndex:s.travelPathIndex??0,
-      travelCyclesRemaining:s.travelCyclesRemaining??0,
+      travelPath:src0.travelPath??[], travelPathIndex:src0.travelPathIndex??0,
+      travelCyclesRemaining:src0.travelCyclesRemaining??0,
       discoveredLocations:new Set(s.discoveredLocations??['palletTown','route1']),
       locationEncounterLog:migratedLog,
       locationMethodPrefs:s.locationMethodPrefs??{},
-      lastHealLocation:s.lastHealLocation??'palletTown',
+      lastHealLocation:src0.lastHealLocation??'palletTown',
       dexHistory:s.dexHistory??{},
       freeSkipsRemaining:s.freeSkipsRemaining??0,
-      wanderMode:s.wanderMode??false, wanderMetric:s.wanderMetric??'encounters', significantLog:s.significantLog??[] // v0.33/v0.35
+      wanderMode:src0.wanderMode??false, wanderMetric:src0.wanderMetric??'encounters', significantLog:s.significantLog??[] // v0.33/v0.35
     });
     // v0.26 migration — idle removed: a pre-v0.26 save that was sitting Idle (old
     // missionActive===false) may have a stale missionDestination left over from a previous
@@ -6365,6 +6527,34 @@ function loadGame(){
         if(r.confirmedBranches) r.confirmedBranches=r.confirmedBranches.filter(b=>!realItemNames.has(b.method));
       });
     }
+    // v0.39.1 — final step: wrap the (still-flat, just-migrated-by-everything-above) trainer-owned
+    // fields into state.aides[0]. Everything above this line operated on the old flat field names
+    // completely unmodified, on purpose — safest way to avoid touching 15+ historical migrations'
+    // delicate internal logic. Any additional aides beyond index 0 (i.e. a save that already had
+    // Faraday hired, v26+) never went through the above migrations at all — they're copied through
+    // as-is, since they only ever existed in the new per-aide format to begin with.
+    {
+      const carlAide=makeAide('carl-oak',(s.aides&&s.aides[0]&&s.aides[0].name)||'Carl Oak',(s.aides&&s.aides[0]&&s.aides[0].emoji)||'🧑\u200d🔬',state.currentLocation);
+      Object.assign(carlAide,{
+        party:state.party, dex:state.dex, trainerBag:state.trainerBag,
+        currentLocation:state.currentLocation,
+        missionDestination:state.missionDestination, missionBehavior:state.missionBehavior,
+        missionOrigin:state.missionOrigin, missionElapsed:state.missionElapsed,
+        currentEncounter:state.currentEncounter, nextEncounterIn:state.nextEncounterIn,
+        travelPath:state.travelPath, travelPathIndex:state.travelPathIndex,
+        travelCyclesRemaining:state.travelCyclesRemaining,
+        gymProgress:state.gymProgress, lastHealLocation:state.lastHealLocation,
+        wanderMode:state.wanderMode, wanderMetric:state.wanderMetric
+      });
+      const otherAides=(s.aides||[]).slice(1); // any aide beyond Carl Oak, copied through verbatim
+      state.aides=[carlAide,...otherAides];
+      state.activeAideIndex=0;
+      delete state.party; delete state.dex; delete state.trainerBag; delete state.currentLocation;
+      delete state.missionDestination; delete state.missionBehavior; delete state.missionOrigin;
+      delete state.missionElapsed; delete state.currentEncounter; delete state.nextEncounterIn;
+      delete state.travelPath; delete state.travelPathIndex; delete state.travelCyclesRemaining;
+      delete state.gymProgress; delete state.lastHealLocation; delete state.wanderMode; delete state.wanderMetric;
+    }
     const secsAway=Math.floor((Date.now()-data.savedAt)/1000);
     let offSum=null;
     if(secsAway>10) offSum=processOfflineTime(secsAway); // v0.26 — research is always active, no missionWasActive gate needed
@@ -6373,8 +6563,11 @@ function loadGame(){
     document.getElementById('funds-display').textContent=state.funds.toFixed(2);
     document.getElementById('total-catches').textContent=state.totalCatches;
     document.getElementById('total-sightings').textContent=state.totalSightings;
-    document.getElementById('btn-recall').disabled=false;
-    document.getElementById('btn-start').disabled=!isHealLocation(state.currentLocation);
+    // v0.39.1 — old singular #btn-start/#btn-recall no longer exist (renderParty() now builds
+    // per-aide #btn-start-{idx}/#btn-recall-{idx} buttons instead). updateAllAideLocations()
+    // enables/disables every aide's own buttons correctly; the caller (BOOT) calls the heavier
+    // full render() itself right after loadGame() returns true, so this stays lightweight.
+    updateAllAideLocations();
     const t=new Date(data.savedAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
     setSaveIndicator('⬤ Loaded ('+t+')','saving');
     setTimeout(()=>setSaveIndicator('⬤ Auto-save on',''),3000);
@@ -6400,8 +6593,9 @@ function setSaveIndicator(msg,cls){
 function autoSaveTick(){ saveTimer++; if(saveTimer>=30){ saveTimer=0; saveGame(); } }
 
 function init(){
-  const s=makePokemon('Rattata',5,Math.random()<0.5?'M':'F','Carl Oak');
-  state.party.push(s); state.dex.push(s);
+  const carl=state.aides[0];
+  const s=makePokemon('Rattata',5,Math.random()<0.5?'M':'F',carl.name);
+  carl.party.push(s); carl.dex.push(s);
   state.dexHistory[s.pokedexId]=(state.dexHistory[s.pokedexId]||0)+1;
   recordNewSpecies(s.pokedexId,'Rattata');
   recordSighting(s.pokedexId,5);
@@ -6409,154 +6603,7 @@ function init(){
   render();
 }
 
-// ── SILPH TOWER — GENERATION-THEMED FLOORS (v0.39) ──
-// Runtime-computed, NOT stored in Excel/encounters.js — generated fresh every load straight from
-// POKEDEX_DATA and pushed into the in-memory ENCOUNTERS array. Scoped ONLY to locationIds
-// silphCo..silphCo9F (floors 1-9); floors 10-11 unused. Never touches any other location's rows.
-const SILPH_GEN_RANGES=[
-  {floor:'silphCo',   min:1,   max:151},  // Gen 1
-  {floor:'silphCo2F', min:152, max:251},  // Gen 2
-  {floor:'silphCo3F', min:252, max:386},  // Gen 3
-  {floor:'silphCo4F', min:387, max:493},  // Gen 4
-  {floor:'silphCo5F', min:494, max:649},  // Gen 5
-  {floor:'silphCo6F', min:650, max:721},  // Gen 6
-  {floor:'silphCo7F', min:722, max:809},  // Gen 7
-  {floor:'silphCo8F', min:810, max:905},  // Gen 8
-  {floor:'silphCo9F', min:906, max:1025}, // Gen 9
-];
-// Regional-form exception: these prefixes get placed on their INTRODUCTION-gen floor instead of
-// their base dexId's floor. Prefix-matched (not a hardcoded species list) so it auto-applies to
-// any future regional form added to the dex.
-const SILPH_REGIONAL_FLOOR={'Alolan':'silphCo7F','Galarian':'silphCo8F','Hisuian':'silphCo8F','Paldean':'silphCo9F'};
-
-function silphBST(d){ return d.baseHP+d.baseAtk+d.baseDef+d.baseSpatk+d.baseSpdef+d.baseSpd; }
-
-// Max BST across every formName:null member of a familyId, dex-wide (not gen-limited) — e.g.
-// Eevee's family strength factors in Sylveon's BST even though Sylveon spawns on a different floor.
-function silphBuildFamilyMaxBST(){
-  const famMax={};
-  POKEDEX_DATA.forEach(d=>{
-    if(d.formName===null){
-      const b=silphBST(d);
-      if(!(d.familyId in famMax)||b>famMax[d.familyId]) famMax[d.familyId]=b;
-    }
-  });
-  return famMax;
-}
-
-// Level floor: the level the species' own incoming evolution required (if level-based).
-// Level ceiling: one below the level this species itself evolves at (if level-based), from
-// either the flat pokedex.js evolvesIntoId/evolveLevel field or an EVO_TREE branch.
-function silphLevelBounds(d){
-  let floor=null, ceiling=null;
-  POKEDEX_DATA.forEach(p=>{
-    if(p.evolvesIntoId===d.dexId&&p.evolveMethod==='level'&&p.evolveLevel!=null){
-      if(floor===null||p.evolveLevel>floor) floor=p.evolveLevel;
-    }
-  });
-  if(typeof EVO_TREE!=='undefined'){
-    EVO_TREE.forEach(e=>{
-      if(e.toDexId===d.dexId&&e.evolveMethod==='level'&&e.evolveLevel!=null){
-        if(floor===null||e.evolveLevel>floor) floor=e.evolveLevel;
-      }
-    });
-  }
-  if(d.evolveMethod==='level'&&d.evolveLevel!=null) ceiling=d.evolveLevel-1;
-  if(typeof EVO_TREE!=='undefined'){
-    EVO_TREE.forEach(e=>{
-      if(e.fromDexId===d.dexId&&e.evolveMethod==='level'&&e.evolveLevel!=null){
-        const c=e.evolveLevel-1;
-        if(ceiling===null||c<ceiling) ceiling=c;
-      }
-    });
-  }
-  return {floor,ceiling};
-}
-
-function silphCalcLevel(d){
-  const bst=silphBST(d);
-  let level=5+(bst-175)/505*70;
-  const {floor,ceiling}=silphLevelBounds(d);
-  if(floor!=null&&level<floor) level=floor;
-  if(ceiling!=null&&level>ceiling) level=ceiling;
-  level=Math.max(5,Math.min(100,Math.round(level)));
-  return level;
-}
-
-// Rarity formula — see DESIGN.md "Silph Tower" section for the full derivation/stress-test notes.
-function silphCalcRate(d,famMaxBST){
-  if(d.isMythical) return null; // resolved after totals are known — flat 1:3000
-  if(d.isLegendary) return null; // flat 1:1500
-  const bst=silphBST(d);
-  const fm=famMaxBST[d.familyId]||bst;
-  const stagePos=fm?bst/fm:1;
-  const strength=Math.min(fm/680,1);
-  const effStage=Math.pow(stagePos,0.5);
-  let rate=50-effStage*(strength*49);
-  const pulldown=Math.pow(strength,6);
-  rate=rate*(1-pulldown*1.228);
-  return Math.max(rate,0.01);
-}
-
-function generateSilphTowerEncounters(){
-  if(typeof POKEDEX_DATA==='undefined'||typeof ENCOUNTERS==='undefined') return;
-  const famMaxBST=silphBuildFamilyMaxBST();
-  SILPH_GEN_RANGES.forEach(range=>{
-    // Base pool: one row per dexId in range — prefer formName:null, else first row for that dexId
-    // (mirrors getPokemonEntry()'s fallback; required for form-only species like Nidoran M/F).
-    const pool=[];
-    for(let dexId=range.min;dexId<=range.max;dexId++){
-      const entries=POKEDEX_DATA.filter(d=>d.dexId===dexId);
-      if(!entries.length) continue;
-      const pick=entries.find(d=>d.formName===null)||entries[0];
-      pool.push(pick);
-    }
-    pool.forEach(d=>addSilphRow(d,range.floor,famMaxBST));
-  });
-  // Regional-form exceptions — separate pass, placed on their intro-gen floor regardless of range.
-  POKEDEX_DATA.forEach(d=>{
-    if(!d.formName) return;
-    const prefixMatch=Object.keys(SILPH_REGIONAL_FLOOR).find(p=>d.formName.indexOf(p)===0);
-    if(prefixMatch) addSilphRow(d,SILPH_REGIONAL_FLOOR[prefixMatch],famMaxBST);
-  });
-  // Resolve Legendary/Mythical flat tiers now that each floor's regular-tier total weight is known.
-  const floors=[...new Set(SILPH_GEN_RANGES.map(r=>r.floor).concat(Object.values(SILPH_REGIONAL_FLOOR)))];
-  floors.forEach(floor=>{
-    const rows=ENCOUNTERS.filter(e=>e._silphFloor===floor);
-    const regularTotal=rows.filter(e=>e.encounterRate!==null).reduce((s,e)=>s+e.encounterRate,0);
-    const nLeg=rows.filter(e=>e._silphLegendary).length;
-    const nMyth=rows.filter(e=>e._silphMythical).length;
-    const coeff=nLeg/1500+nMyth/3000;
-    const total=coeff<1?regularTotal/(1-coeff):regularTotal;
-    rows.forEach(e=>{
-      if(e._silphLegendary) e.encounterRate=Math.max(total/1500,0.0001);
-      if(e._silphMythical) e.encounterRate=Math.max(total/3000,0.0001);
-      delete e._silphLegendary; delete e._silphMythical; delete e._silphFloor;
-    });
-  });
-}
-
-function addSilphRow(d,floor,famMaxBST){
-  const rate=silphCalcRate(d,famMaxBST);
-  const level=silphCalcLevel(d);
-  ENCOUNTERS.push({
-    locationId:floor,
-    dexId:d.dexId,
-    formName:d.formName||null,
-    minLevel:level,
-    maxLevel:level,
-    encounterRate:rate, // null placeholder for Legendary/Mythical, resolved in a second pass
-    encounterMethod:'grass',
-    requiresItem:null,
-    _silphFloor:floor,
-    _silphLegendary:!!d.isLegendary,
-    _silphMythical:!!d.isMythical
-  });
-}
-
 // ── BOOT ──
-generateSilphTowerEncounters(); // v0.39 — must run before loadGame()/init() so encounter rolls
-                                 // (including any offline-time processing) see the Silph Tower rows.
 const hasSave=loadGame();
 if(!hasSave){
   const initDiscovered=new Set(['palletTown']);
@@ -6569,14 +6616,11 @@ if(!hasSave){
   }
   state={
     funds:100.00, totalCatches:0, totalSightings:0,
-    missionElapsed:0, nextEncounterIn:getEncounterInterval(true),
     incomeAccumulator:0,
-    party:[], dex:[], dexIdCounter:1, currentEncounter:null, log:[],
-    missionDestination:'palletTown', missionBehavior:'research',
-    missionOrigin:'palletTown', currentLocation:'palletTown',
-    travelPath:[], travelPathIndex:0, travelCyclesRemaining:0,
-    professorBag:{}, trainerBag:{},
-    gymProgress:{},
+    dexIdCounter:1, log:[],
+    aides:[makeAide('carl-oak','Carl Oak','🧑\u200d🔬','palletTown')],
+    activeAideIndex:0,
+    professorBag:{},
     speciesCap:6,
     speciesCapOverrides:{}, // v0.38
     daycareSlots:{purchased:1,slots:[]},
@@ -6584,10 +6628,9 @@ if(!hasSave){
     discoveredLocations:initDiscovered,
     locationEncounterLog:{},
     locationMethodPrefs:{},
-    lastHealLocation:'palletTown',
     dexHistory:{},
     freeSkipsRemaining:50, // v0.24 — onboarding-only, brand new saves get 50 free encounter skips
-    wanderMode:false, wanderMetric:'encounters', significantLog:[] // v0.33/v0.35
+    significantLog:[] // v0.35 — global, paired with `log`
   };
   init();
   setSaveIndicator('⬤ New game','');
@@ -6665,7 +6708,10 @@ function renderMap(){
       // ownership instead of static purple: red until the required item is owned, green once it
       // is. Same ownership check used elsewhere for gating (buildTravelPath(),
       // getReachableDiscoveredLocations()). Re-evaluated every renderMap() call.
-      const gatedOwned=conn.requiresItem&&((state.trainerBag&&state.trainerBag[conn.requiresItem]&&state.trainerBag[conn.requiresItem]>0)||(state.trainerUnlocks&&state.trainerUnlocks[conn.requiresItem]));
+      // v0.39.1 — gated connection ownership now checks ANY aide's inventory (most permissive/
+      // informative reading of "is this path walkable" for a shared map view — a connection an
+      // aide could use is shown green even if a different aide is the one currently near it).
+      const gatedOwned=conn.requiresItem&&(state.aides.some(a=>a.trainerBag&&a.trainerBag[conn.requiresItem]>0)||(state.trainerUnlocks&&state.trainerUnlocks[conn.requiresItem]));
       line.setAttribute('stroke',conn.requiresItem?(gatedOwned?'#2ecc71':'#e63946'):'#4a5a6a');
       line.setAttribute('stroke-width','2');
       if(conn.requiresItem) line.setAttribute('stroke-dasharray','4,4');
@@ -6677,7 +6723,10 @@ function renderMap(){
     const locData=getLocation(locId);
     const c=getMapNodeStyle(locData);
     const x=nodeX(locId), y=nodeY(locId);
-    const isCurrent=state.currentLocation===locId;
+    // v0.39.1 — every aide currently at this node, not just Carl Oak. Order matches state.aides
+    // (Carl Oak first, hire order after), consistent with the fixed roster order elsewhere.
+    const aidesHere=state.aides.filter(a=>a.currentLocation===locId);
+    const isCurrent=aidesHere.length>0;
     const isSelected=mapSelectedLoc===locId;
 
     const g=document.createElementNS('http://www.w3.org/2000/svg','g');
@@ -6693,13 +6742,17 @@ function renderMap(){
     circle.setAttribute('stroke-width',isSelected?'3':'2');
     g.appendChild(circle);
 
-    if(isCurrent){
-      const carl=document.createElementNS('http://www.w3.org/2000/svg','text');
-      carl.setAttribute('x',x); carl.setAttribute('y',y+5);
-      carl.setAttribute('text-anchor','middle'); carl.setAttribute('font-size','12');
-      carl.textContent='🧑';
-      g.appendChild(carl);
-    }
+    // v0.39.1 — one marker per aide at this node, using that aide's own emoji (not a hardcoded
+    // 🧑). Multiple aides at the same node fan out via a small fixed pixel offset rather than
+    // stacking — generalizes cleanly to 3+ aides without needing a redesign later.
+    aidesHere.forEach((aide,i)=>{
+      const offset=aidesHere.length>1?(i-(aidesHere.length-1)/2)*8:0;
+      const marker=document.createElementNS('http://www.w3.org/2000/svg','text');
+      marker.setAttribute('x',x+offset); marker.setAttribute('y',y+5);
+      marker.setAttribute('text-anchor','middle'); marker.setAttribute('font-size','12');
+      marker.textContent=aide.emoji;
+      g.appendChild(marker);
+    });
 
     const text=document.createElementNS('http://www.w3.org/2000/svg','text');
     // v0.22: stagger label y-offset by column parity to reduce adjacent-column overlap.
@@ -6768,9 +6821,10 @@ function showMapDetail(locId){
 
   const heals=locData&&(locData.heals===true||locData.heals==='TRUE'||locData.heals==='true');
   const shop=locData&&locData.shopTier;
-  const isCurrent=state.currentLocation===locId;
+  const aidesHere=state.aides.filter(a=>a.currentLocation===locId);
+  const hereLabel=aidesHere.length?('📍 '+aidesHere.map(a=>a.emoji+' '+a.name).join(', ')+' here'):'';
 
-  content.innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;"><div><div style="color:var(--main-text);font-size:13px;font-weight:bold;">'+locName+'</div><div style="color:var(--main-text-muted);font-size:10px;">'+(locData?locData.region||'Kanto':'Kanto')+'</div></div><div style="text-align:right;font-size:10px;">'+(isCurrent?'<span style="color:#f4d03f;">📍 Carl is here</span><br>':'')+(heals?'<span style="color:#2ecc71;">🏥 Heals party</span><br>':'')+(shop?'<span style="color:#f4d03f;">🛒 Shop: '+shop+'</span>':'')+'</div></div>'+
+  content.innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;"><div><div style="color:var(--main-text);font-size:13px;font-weight:bold;">'+locName+'</div><div style="color:var(--main-text-muted);font-size:10px;">'+(locData?locData.region||'Kanto':'Kanto')+'</div></div><div style="text-align:right;font-size:10px;">'+(hereLabel?'<span style="color:#f4d03f;">'+hereLabel+'</span><br>':'')+(heals?'<span style="color:#2ecc71;">🏥 Heals party</span><br>':'')+(shop?'<span style="color:#f4d03f;">🛒 Shop: '+shop+'</span>':'')+'</div></div>'+
     (locId===DAYCARE_LOCATION_ID?buildDaycareHtml():'')+encHtml;
 
   detail.style.display='block';

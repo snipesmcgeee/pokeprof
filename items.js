@@ -1316,6 +1316,24 @@ const ITEMS_DATA = [
     "usableInBattle": false,
     "sprite": null,
     "bagType": "Professor"
+  },
+  {
+    "itemId": "aide-hire-2",
+    "name": "Hire Second Aide",
+    "itemCategory": "aide-hire",
+    "description": "Hires a second field aide (M. Faraday) to research independently alongside your first. One-time purchase.",
+    "effect": "hire-aide",
+    "effectValue": null,
+    "shopPrice": 100,
+    "sellPrice": null,
+    "shopTier": null,
+    "isConsumable": true,
+    "catchRateModifier": null,
+    "requiresTarget": false,
+    "usableInField": false,
+    "usableInBattle": false,
+    "sprite": null,
+    "bagType": "Professor"
   }
 ];
 

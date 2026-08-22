@@ -70,7 +70,7 @@ There is no survival element. Aides do not need food, sleep, or anything like th
 - The `<h1>` tag always shows the current version (e.g. `PokeProf v0.18`)
 - Increment the version on every deployed change
 - `SAVE_VERSION` in `pokeprof.html` must be incremented whenever `state` structure changes
-- Current save version: `25` (v0.38, unchanged in v0.39 — neither the selection-highlight nor Silph Tower changes touch `state` structure; `ENCOUNTERS` is runtime-generated, never persisted)
+- Current save version: `26` (v0.39.1) — bumped for the `state.aides[]` restructure (Carl Oak's singular `party`/`trainerBag`/`currentLocation`/mission-and-travel fields wrapped into `aides[0]` on migration). v0.38→v0.39 made no schema change (Silph Tower was fully reverted in v0.39.1 anyway, and was itself runtime-only/non-persisted).
 - **v0.20 requires SAVE_VERSION 13** due to: `nickname` field on Pokémon objects, `evolveBlocked` field on Pokémon objects, `researchLog[dexId].abilitiesObserved` field, and `researchLog[dexId].confirmedBranches` replacing singular `confirmedMethod`/`confirmedIntoId`. All four migrations run in a single combined pass on load from v12.
 - **v0.21 requires SAVE_VERSION 14** due to: fishing splitting into per-rod-tier sub-methods (`fish-old`/`fish-good`/`fish-super`) instead of a single `fish` method. Migration: any `state.locationMethodPrefs[locId]` entry containing the bare `'fish'` method (in `methods[]` or as a `weights` key) is dropped entirely for that location — it recalculates fresh defaults (all currently-unlocked methods/rod-tiers checked evenly) the next time that location is visited. No other v0.21 change requires a schema change.
 - **v0.22 stays on SAVE_VERSION 14** — no `state` schema changes in this batch (all 11 items are behavior/rendering fixes and additive read-only views).
@@ -1682,44 +1682,7 @@ No `SAVE_VERSION` impact — purely presentational.
 
 ---
 
-## Silph Tower — Generation-Themed Floors (SETTLED — v0.39)
-
-Floors 1–9 of the existing `silphCo`–`silphCo9F` locations (previously zero encounters defined) are populated at **runtime, not via Excel/converter** — `generateSilphTowerEncounters()` runs once at boot (top of `── BOOT ──`, before `loadGame()`) and pushes computed rows directly into the in-memory `ENCOUNTERS` array. Re-derived fresh every load from whatever `POKEDEX_DATA`/`EVO_TREE` currently contain; **zero data-pipeline involvement** — `converter.html` is untouched, `encounters.js`/Excel are untouched. Scoped strictly to `locationId` values `silphCo`–`silphCo9F`; never reads, modifies, or regenerates rows for any other location. Floors 10–11 (`silphCo10F`/`11F`) unused for now (reserved).
-
-**Floor → generation:** floor N = all species with `dexId` in gen N's national-dex range (Gen 1: 1–151, Gen 2: 152–251, Gen 3: 252–386, Gen 4: 387–493, Gen 5: 494–649, Gen 6: 650–721, Gen 7: 722–809, Gen 8: 810–905, Gen 9: 906–1025).
-
-**Species pool selection (per dexId):** prefer the `formName === null` row; if none exists, fall back to the first row for that `dexId`. Mirrors `getPokemonEntry()`'s existing fallback — required for form-only species like Nidoran M/F that have no null-form row at all. Confirmed via the full national dex (151/151 Gen 1, including both Nidoran).
-
-**Regional-form exception:** the true regional-form rows (Alolan/Galarian/Hisuian/Paldean — matched by `formName` prefix, NOT a hardcoded species list, so it auto-applies to any future regional form added to the dex; does NOT include Mega, Primal, or cosmetic/battle formes, which stay on their base dexId's floor via the normal rule) are placed on their *introduction*-generation floor instead of their base dexId's floor: Alolan → floor 7, Galarian & Hisuian → floor 8, Paldean → floor 9. **First-ever wild-spawnable form variants in the game** — previously regional forms were evolution-only, never a direct wild catch.
-
-**Level formula:**
-```
-level = 5 + (BST−175)/505 × 70
-```
-Clamped: floor = the level the species' own prior evolution stage evolved at (if the incoming evolution is level-based, checked against both the flat `pokedex.js` `evolvesIntoId`/`evolveLevel` field and `EVO_TREE` branches); ceiling = one below this species' own evolve-level (if it evolves by level, same dual check). Hard floor 5, hard cap 100.
-
-**Rarity formula (`encounterRate`):**
-```
-familyStrength = min(familyMaxBST / 680, 1)
-stagePos       = ownBST / familyMaxBST
-effStage       = stagePos^0.5
-baseRate       = 50 − effStage × (familyStrength × 49)
-pulldown       = familyStrength^6
-finalRate      = baseRate × (1 − pulldown × 1.228)
-```
-`familyMaxBST` = max BST across all `formName:null` members of the same `familyId`, dex-wide (not gen-limited — e.g. Eevee's family strength factors in Sylveon's BST even though Sylveon spawns on a different floor). Legendary = flat 1:1500 per species (not shared pool). Mythical = flat 1:3000 per species — both resolved in a second pass once each floor's regular-tier total weight is known. Stress-tested extensively against gen 1 (151 species, full sorted table) and gen 7 (106 species incl. Alolan forms) during design; confirmed via automated jsdom smoke test post-implementation (Dragonite ≈1:750–1:765 depending on float/summation-order — expected minor cross-language drift, not a defect; Mewtwo ≈1:1500, Mew ≈1:3000).
-
-**Row fields:** `encounterMethod: 'grass'` (matches these locations' existing `defaultEncounterMethod`), `requiresItem: null` (floors are already ungated in `connections.js`), `minLevel = maxLevel` = the computed level (flat).
-
-**Engine changes (formName-threading, additive/optional-param pattern matching v0.33):**
-- `buildRouteTable()` — now maps `formName: e.formName||null` (previously dropped).
-- `rollFromTable()` — resolves `getPokemonEntry(e.dexId, e.formName||null)`; returns `formName` on the encounter object.
-- `makePokemon()` — new optional `formName=null` param (6th positional arg); sets `p.formName`; threads into `calcMaxHP()`. **First time a wild catch (not just evolution) can produce a form-variant individual.**
-- `resolveEncounterStep()`'s live shiny-autocatch branch, `processOfflineTime()`'s offline shiny-autocatch branch, and `catchPokemon()` — all four `makePokemon(enc...)` call sites now pass `enc.formName||null`; `catchPokemon()`'s `baseExpYield` lookup also threaded.
-- `makeWildBattler()` — `calcMaxHP()` call and the returned ephemeral battler object both now carry `formName` (previously missing entirely — would have silently used base-form stats/typing in battle for a form-variant wild encounter).
-- New `getEncDisplayName(enc)` helper (same "Species (Form)" formatting as `getDisplayName()`, but for the pre-catch `enc` object which has no nickname/id) — wired into the 4 user-facing encounter messages (wild-appeared, caught, won-vs, shiny-caught).
-
-No `SAVE_VERSION` impact — `ENCOUNTERS` is never persisted to save state, it's rebuilt fresh every load.
+*Generation-themed Silph Tower encounter floors were built and shipped in v0.39, then fully reverted in v0.39.1 due to a boot-time performance regression (~560ms added at every page load, worse on mobile) — not pursuing this approach again without a fundamentally different implementation.*
 
 ---
 
@@ -1730,9 +1693,61 @@ No `SAVE_VERSION` impact — `ENCOUNTERS` is never persisted to save state, it's
 
 ---
 
+## Aide Roster & Hiring (SETTLED — v0.39.1)
 
+Introduces a second aide, purchasable once. Restructures aide-owned state from singular fields into a `state.aides[]` array — **true parallel play**: two aides can be at different locations, on different missions, rolling encounters independently and simultaneously, every tick. This is a real architecture change, not a UI-only addition.
 
-- ~~Manual/interactive trainer battle mode~~ — **resolved v0.29** (playback variant chosen — see "Watched Gym Battle — Aide Card Trigger"; true player-controlled move selection remains undone/not implemented).
+### Scope decision (confirmed)
+Two aides run **fully in parallel** (not a "one active at a time" roster). Cost: `gameTick()`/`rollEncounter()`/`processOfflineTime()`'s per-tick simulation work now runs once per aide, so it scales linearly with aide count — permanent and compounding for any future 3rd+ aide, unlike the Silph Tower regression (which was a one-off fixable inefficiency, not an inherent cost of the feature). Accepted as the correct tradeoff for true parallel play.
+
+### `state.aides[]` structure
+Carl Oak is migrated into slot 0 (not special-cased separately from the new hire). Each aide entry owns:
+- `id`, `name`, `emoji`
+- `party` (was `state.party`)
+- `trainerBag` (was `state.trainerBag` — **badges live here too**, as `itemCategory:'badge'` entries; no separate badge field needed, confirmed against `items.js`)
+- `currentLocation` (was `state.currentLocation`)
+- `missionDestination`, `currentEncounter`, `nextEncounterIn`, travel-path state (was `state.missionDestination`/`state.currentEncounter`/`state.nextEncounterIn`/etc.)
+
+**Stays global/shared (Professor-owned, unaffected):** Pokédex/species-seen/caught records, `state.funds`, Professor-side inventory (`state.professorBag`). Only party/inventory(+badges)/location/mission/travel state moves into `aides[]`.
+
+**`SAVE_VERSION` bump required**, with a migration: existing saves' singular `state.party`/`state.trainerBag`/`state.currentLocation`/etc. get wrapped into `state.aides[0]` (Carl Oak, name/emoji preserved as `"Carl Oak"`/🧑‍🔬 — his existing emoji, not drawn from the new hire palette) on first load post-upgrade.
+
+### Hiring
+- New Lab shop item, Professor-side purchase (`professorBag`), **$100**, `itemCategory` new value (e.g. `aide-hire`), **max 1 purchasable ever**. Precedent for a hard purchase cap needs establishing during implementation — no existing item currently enforces "buy once only," this will be new logic, not a reuse of an existing pattern.
+- Purchasing immediately creates the second aide: fixed name **"M. Faraday"** (not player-editable), blank-slate `party: []` (player assigns from box manually — no starter given, unlike Carl Oak's `Rattata` at game init), blank `trainerBag` (starts with zero badges/items, same as a fresh aide would), starting `currentLocation: 'palletTown'`.
+- At purchase time, player picks Faraday's `emoji` from a fixed palette grid: gender-presentation × skin-tone head emoji (e.g. 👨🏻👨🏽👨🏿👩🏻👩🏽👩🏿🧑🏻🧑🏽🧑🏿 — ~9-12 options). This picker is Faraday-specific; Carl Oak's emoji is not reassignable through it.
+
+### Map
+Each aide renders its own emoji marker at its own `currentLocation`. Same-location collision: small fixed pixel offset (e.g. ~8px left/right of the node's true position) rather than a stacked counter-badge — chosen because it generalizes cleanly to 3+ aides at one node (fan out further) without needing a redesign later.
+
+### Party/roster screen
+Per-aide collapsible sections. **Fixed order, not reorderable:** Carl Oak always first (slot 0), Faraday second, any future aide appended after in hire order. Collapsed state still shows name, party, and badges — collapse is purely visual density control, never hides status info. Start/Recall mission control requires expanding that aide's section (not exposed in the collapsed view).
+
+### Mission assignment
+No shared/global mission modal entry point anymore. Each aide's section in the Party/roster screen gets its own "Send on Mission" button, opening the existing mission-destination flow scoped to that specific aide (destination picker, confirm, etc. — same flow as today, just invoked per-aide instead of globally).
+
+### Explicitly out of scope for v0.39.1
+- Firing/releasing an aide once hired
+- Reordering aides
+- More than 2 aides (though the array structure and map-offset mechanic are both designed to extend cleanly to a 3rd+ if that's ever revisited)
+
+### Implementation notes — deviations from the original spec above, and known limitations (SHIPPED)
+
+- **Hiring is NOT routed through the location-based shop system.** `shopTier:'lab'` is referenced in pre-existing code comments but was never actually wired to any location or to `getShopItems()`'s `tierOrder` (confirmed dormant — same root cause as the earlier "duplicate poke-ball, shopTier:lab" bug history entry). Rather than risk touching the shared shop-rendering system for one narrow, one-time special purchase, hiring gets its own dedicated "🧑‍🔬 Hire Second Aide — $100" button directly in the Party/roster screen (shown only while `state.aides.length===1`), wired to `hireAide()`/`showAideEmojiPicker()`/`confirmHireAide()`. The `aide-hire-2` item still exists in `items.js` (itemCategory `aide-hire`, `shopPrice:100`, `bagType:'Professor'`) for data-consistency/documentation, but its `shopPrice` is read for display only — the purchase itself bypasses `buyItem()` entirely.
+- **`aide-hire-2` was added directly to the local `items.js` file, not via Excel/`converter.html`.** Per the project's standing Excel/code split, this needs the equivalent row added to the real Excel Items sheet, or it will be silently lost the next time `items.js` is regenerated. Same category of outstanding task as the existing `natureMint` entry in "Outstanding Data Tasks" below.
+- **Deep battle-engine internals are NOT yet aide-parameterized.** `runWildEncounterLoop()` and `runGymEncounter()` (and their `*Silent()` offline-processing counterparts) still operate on `state.aides[0]` internally regardless of which aide's encounter triggered them. Everything upstream of them (`resolveEncounterStep(idx)`, `rollEncounter(idx)`, `getLeadPokemon(idx)`, `checkLocationHeal(idx)`, `advanceTravelPath(idx)`, `evaluateWanderTarget(idx)`, `gameTick()`'s per-aide loop) is fully threaded and tested. **Practical effect:** Carl Oak's battles/catches resolve correctly and independently; a second aide's wild encounters currently still resolve using Carl Oak's party/battle state internally. This did not crash in testing (bounded, not silent data corruption) but is a real gap before second-aide combat is trustworthy.
+- **Simultaneous-encounter UX is an unresolved design question, not a bug.** The wild/gym encounter modal (`#enc-body`) is a single shared DOM element. If two aides both roll a new encounter in the same tick, whichever aide's `processAideTick()` runs second overwrites the first's modal text. No per-aide encounter queue or dual-modal design exists yet — needs an actual product decision (does a second encounter wait? get its own modal? auto-resolve silently while the player is looking at the first?) before this is safe to rely on with two active aides.
+- **`watchedBattle`** (the full-screen watched-battle flow, gym or gauntlet) stays a single global variable with a `aideIndex` field added, rather than becoming a per-aide array — deliberate: the player can only watch one battle at a time regardless of aide count, so blocking a second aide's gym-trigger button while one is in progress is correct behavior, not a limitation.
+- **Two bugs found and fixed during implementation, not part of the original design but worth recording:** (1) `saveGame()` initially still wrote the pre-v26 flat single-aide shape even after `state.aides[]` existed — would have silently discarded any hired aide's entire save on every autosave; found via an actual save→reload round-trip test, not just "does gameTick throw." (2) `loadGame()`'s tail section referenced the old singular `#btn-start`/`#btn-recall` DOM elements (removed during the Party-tab HTML restructure), throwing and getting silently swallowed by `loadGame()`'s own try/catch — meaning a fully valid, correctly-migrated save would still report "load failed" to the player. Both fixed and covered by regression tests (`test_roundtrip.js`).
+- **Verification:** 59 automated assertions across 7 jsdom-based test scripts (fresh boot, full mission flow, 500+200-tick dual-aide `gameTick()` stress test, full save→reload round-trip with 2 aides, map rendering with both aides at the same location, full hire-flow, and a complete realistic session — hire, assign a party member, dispatch on a mission, 300 ticks, save, reload, confirm both aides' independent progress survived).
+
+---
+
+*Generation-themed Silph Tower encounter floors were built and shipped in v0.39, then fully reverted in this version (v0.39.1) due to a boot-time performance regression (~560ms added at every page load, worse on mobile) — not pursuing this approach again without a fundamentally different implementation.*
+
+---
+
+## Things That Are Future Goals (Do Not Implement Yet) — **resolved v0.29** (playback variant chosen — see "Watched Gym Battle — Aide Card Trigger"; true player-controlled move selection remains undone/not implemented).
 - Gauntlet-style sub-trainers within regular gyms (mainline-game precedent) — deferred from v0.25.
 - Trainer innate abilities / type affinities
 - New trainer recruitment mechanics

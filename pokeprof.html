@@ -142,7 +142,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span style="font-size:11px;color:var(--main-text-muted);">v0.39.2</span></h1>
+  <h1>PokeProf <span style="font-size:11px;color:var(--main-text-muted);">v0.39.3</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">100.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -578,7 +578,7 @@ function getItem(itemId){
 
 // v0.32 — "AdminMode" cheat code. Purely live-derived, nothing persisted: true whenever Catch #1
 // (id===1, the literal first-ever catch) is currently nicknamed "AdminMode" (case-insensitive,
-// trimmed). Checks the full state.aides[0].dex (not just state.aides[0].party) since Catch #1 may be boxed rather
+// trimmed). Checks the full state.dex (not just state.aides[0].party) since Catch #1 may be boxed rather
 // than on the active team. Renaming it away or releasing Catch #1 deactivates this on the very
 // next check — nothing extra needed.
 // v0.33 fix — evolution-proofing: this previously also required pokedexId===19 (Rattata). Since
@@ -587,14 +587,14 @@ function getItem(itemId){
 // Catch #1 evolved into Raticate — species identity was being used where catch-order identity
 // was the actual intent. Fix: drop the pokedexId check entirely, key only on id===1.
 function isAdminModeActive(){
-  return state.aides[0].dex.some(p=>p.id===1&&(p.nickname||'').trim().toLowerCase()==='adminmode');
+  return state.dex.some(p=>p.id===1&&(p.nickname||'').trim().toLowerCase()==='adminmode');
 }
 
 // v0.33 — "TurboMode" cheat code, same pattern as AdminMode: Catch #1, by permanent catch-order
 // id (not species), nicknamed "TurboMode". When active, ENC_INTERVAL_OPEN/ENC_INTERVAL_CLOSED
 // both effectively drop to 1 second — see getEncounterInterval() below.
 function isTurboModeActive(){
-  return state.aides[0].dex.some(p=>p.id===1&&(p.nickname||'').trim().toLowerCase()==='turbomode');
+  return state.dex.some(p=>p.id===1&&(p.nickname||'').trim().toLowerCase()==='turbomode');
 }
 // v0.33 — returns the effective encounter interval, respecting TurboMode. Every site that sets
 // state.aides[0].nextEncounterIn reads through this instead of the raw ENC_INTERVAL_OPEN/CLOSED constants.
@@ -689,7 +689,7 @@ function useItemFromBag(itemId, pokemon){
 function makeAide(id,name,emoji,startLocation){
   return {
     id, name, emoji,
-    party:[], dex:[],
+    party:[], // v0.39.3 — dex/box is NOT per-aide (see state.dex below); only the active party is
     currentLocation:startLocation,
     missionDestination:startLocation, missionBehavior:'research',
     missionOrigin:startLocation, missionElapsed:0,
@@ -702,10 +702,16 @@ function makeAide(id,name,emoji,startLocation){
   };
 }
 
+// v0.39.3 — dex was per-aide in v0.39.1/v0.39.2; corrected here to a single shared box across all
+// aides (Professor-managed storage, same "shared ledger" framing Jack applied to the log). This
+// was the actual root cause of "can't add Pokemon to Faraday's party": the box-browsing UI, breeding,
+// and cheat-code detection all only ever looked at aides[0]'s dex, so anything Faraday caught
+// himself was invisible and unassignable. See DESIGN.md "Aide Roster & Hiring" for the corrected
+// field-ownership table.
 let state={
   funds:100.00, totalCatches:0, totalSightings:0,
   incomeAccumulator:0,
-  dexIdCounter:1, log:[],
+  dexIdCounter:1, log:[], dex:[],
   aides:[makeAide('carl-oak','Carl Oak','🧑\u200d🔬','palletTown')],
   activeAideIndex:0, // v0.39.1 — which aide's section the Party/roster screen currently has expanded by default; each aide's own UI otherwise renders independently regardless of this
   professorBag:{},
@@ -789,7 +795,7 @@ function getSpriteUrl(dexId,name,isShiny=false,formName=null){
 // v0.23 — reflects a CURRENTLY HELD shiny only, purely derived from live state (no new field,
 // no SAVE_VERSION impact). Badge disappears automatically if released or evolved past.
 function hasLiveShiny(dexId){
-  return state.aides[0].dex.some(p=>p.pokedexId===dexId&&p.isShiny);
+  return state.dex.some(p=>p.pokedexId===dexId&&p.isShiny);
 }
 
 // ── PARTY SORT ──
@@ -2153,7 +2159,7 @@ function professorAutoTestEvolutions(){
         // v0.36 — also excludes any individual nickname-locked to a DIFFERENT branch than this one
         // (see getNicknameEvolveLock()); a lock stays eligible for the one branch matching its own lock.
         // Highest level wins; ties broken by array order.
-        const candidates=state.aides[0].dex.filter(p=>{
+        const candidates=state.dex.filter(p=>{
           if(p.pokedexId!==dexId||p.holder||p.evolveBlocked) return false;
           const lock=getNicknameEvolveLock(p);
           if(lock&&(lock.toDexId!==br.toDexId||(lock.toFormName||null)!==br.toFormName)) return false;
@@ -2188,7 +2194,7 @@ function professorAutoTestEvolutions(){
 // branch, same as before this param existed.
 function applyItemEvolution(catchId,intoId,toFormName){
   toFormName=toFormName||null;
-  const p=state.aides[0].dex.find(x=>x.id===catchId); if(!p) return;
+  const p=state.dex.find(x=>x.id===catchId); if(!p) return;
   if(p.evolveBlocked){ addLog('Evolution is blocked for this Pokémon.','fail'); return; }
   // v0.36 — nickname exclusivity lock: refuse a manual evolve attempt that doesn't match this
   // individual's lock, same style as the evolveBlocked refusal above.
@@ -2582,7 +2588,7 @@ function processAideOfflineTime(idx,secsAway,summary){
       if(Math.random()<(1/4096)){
         const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId);
         caught.isShiny=true;
-        aide.dex.push(caught); state.totalCatches++; state.totalSightings++;
+        state.dex.push(caught); state.totalCatches++; state.totalSightings++;
         summary.catches++; summary.shinies=(summary.shinies||0)+1;
         state.dexHistory[caught.pokedexId]=(state.dexHistory[caught.pokedexId]||0)+1;
         recordAbilityObserved(caught.pokedexId,caught.ability);
@@ -2648,7 +2654,7 @@ function runWildEncounterLoopSilent(lead,enc,summary,encLocKey,encDexKey,idx=0){
       useItemFromBag(throwDecision.ballId,null);
       if(Math.random()<throwDecision.prob){
         const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId);
-        aide.dex.push(caught); state.totalCatches++; state.totalSightings++;
+        state.dex.push(caught); state.totalCatches++; state.totalSightings++;
         summary.catches++;
         state.dexHistory[caught.pokedexId]=(state.dexHistory[caught.pokedexId]||0)+1;
         recordAbilityObserved(caught.pokedexId,caught.ability);
@@ -2828,14 +2834,14 @@ function movePowerTotal(p){
 }
 // Removes a Pokemon from the box and, if currently fielded, its party slot too — shared by
 // every release path in checkSpeciesCap() below. v0.35 — previously each release path only
-// filtered state.aides[0].dex; harmless for wild-catch releases (a fresh catch is never already in the
+// filtered state.dex; harmless for wild-catch releases (a fresh catch is never already in the
 // party), but evolution can now trigger a release (see below), and an evolved individual CAN be
 // a current party member — leaving state.aides[0].party unfiltered would orphan that slot.
 // v0.39.2 — operates across ALL aides' dex/party, not one. Finds whichever aide currently owns
 // this individual and removes it from that aide's own arrays specifically.
 function removePokemonFromBoxAndParty(id){
   state.aides.forEach(aide=>{
-    aide.dex=aide.dex.filter(p=>p.id!==id);
+    state.dex=state.dex.filter(p=>p.id!==id);
     aide.party=aide.party.filter(p=>p.id!==id);
   });
 }
@@ -2858,7 +2864,7 @@ function sweepSpeciesToCap(dexId,cap){
   allBoxed.sort((a,b)=>a.id-b.id);
   const toRelease=new Set(allBoxed.slice(cap).map(p=>p.id));
   state.aides.forEach(aide=>{
-    aide.dex=aide.dex.filter(p=>!toRelease.has(p.id));
+    state.dex=state.dex.filter(p=>!toRelease.has(p.id));
     aide.party=aide.party.filter(p=>!toRelease.has(p.id));
   });
   return toRelease.size;
@@ -2946,7 +2952,7 @@ function onSpeciesCapChange(selectEl){
     return;
   }
   state.speciesCap=newCap;
-  const dexIds=new Set(state.aides[0].dex.filter(p=>!p.isShiny&&!p.holder).map(p=>p.pokedexId));
+  const dexIds=new Set(state.dex.filter(p=>!p.isShiny&&!p.holder).map(p=>p.pokedexId));
   let released=0;
   dexIds.forEach(dexId=>{ released+=sweepSpeciesToCap(dexId,getEffectiveSpeciesCap(dexId)); });
   addLog('Per-species cap lowered to '+newCap+' — '+released+' excess Pokémon released.','info');
@@ -3056,7 +3062,7 @@ function resolveEncounterStep(idx=0){
     const lead=getLeadPokemon(idx); if(!lead){ endMission('faint',idx); return; }
     const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId);
     caught.isShiny=true;
-    aide.dex.push(caught); state.totalCatches++; state.totalSightings++;
+    state.dex.push(caught); state.totalCatches++; state.totalSightings++;
     state.dexHistory[caught.pokedexId]=(state.dexHistory[caught.pokedexId]||0)+1;
     recordAbilityObserved(caught.pokedexId,caught.ability);
     recordGenderObserved(caught.pokedexId,caught.gender);
@@ -3253,7 +3259,7 @@ function catchPokemon(lead,enc,isShiny,idx=0){
   const aide=state.aides[idx];
   const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId);
   caught.isShiny=isShiny;
-  aide.dex.push(caught); state.totalCatches++; state.totalSightings++;
+  state.dex.push(caught); state.totalCatches++; state.totalSightings++;
   state.dexHistory[caught.pokedexId]=(state.dexHistory[caught.pokedexId]||0)+1;
   recordAbilityObserved(caught.pokedexId,caught.ability);
   recordGenderObserved(caught.pokedexId,caught.gender);
@@ -4239,7 +4245,7 @@ function confirmBatchEvolve(itemId,maxQty){
     const catchId=parseInt(c.dataset.catchid);
     const intoId=parseInt(c.dataset.intoid);
     const toFormName=c.dataset.form||null;
-    const p=state.aides[0].dex.find(x=>x.id===catchId); if(!p) return;
+    const p=state.dex.find(x=>x.id===catchId); if(!p) return;
     const toEntry=getPokemonEntry(intoId,toFormName); if(!toEntry) return;
     state.professorBag[itemId]--;
     if(state.professorBag[itemId]<=0) delete state.professorBag[itemId];
@@ -4367,7 +4373,7 @@ function assignDaycarePair(slotIndex,idA,idB){
   if(state.aides[0].currentLocation!==DAYCARE_LOCATION_ID){ addLog('The Aide must be at the Day Care to drop off a pair.','fail'); return; }
   ensureDaycareSlots();
   if(state.daycareSlots.slots[slotIndex]){ addLog('That slot is already occupied.','fail'); return; }
-  const pA=state.aides[0].dex.find(p=>p.id===idA), pB=state.aides[0].dex.find(p=>p.id===idB);
+  const pA=state.dex.find(p=>p.id===idA), pB=state.dex.find(p=>p.id===idB);
   if(!pA||!pB) return;
   const check=canBreedPair(pA,pB);
   if(!check.ok){ addLog('Cannot pair: '+check.reason,'fail'); return; }
@@ -4425,7 +4431,7 @@ function collectDaycareSlot(slotIndex){
     // Pokemon object (and thus no shiny flag) exists until this makePokemon() call. A batch
     // collection rolls independently per egg, all at the moment of collection.
     if(Math.random()<(1/4096)) baby.isShiny=true;
-    state.aides[0].dex.push(baby);
+    state.dex.push(baby);
     state.dexHistory[baby.pokedexId]=(state.dexHistory[baby.pokedexId]||0)+1;
     recordAbilityObserved(baby.pokedexId,baby.ability);
     recordGenderObserved(baby.pokedexId,baby.gender);
@@ -4447,7 +4453,7 @@ function collectDaycareSlot(slotIndex){
     checkSpeciesCap(baby);
     // checkSpeciesCap() may release this individual (or an older one at cap) right back out —
     // check whether THIS baby survived it to tally an accurate kept-vs-released split.
-    if(state.aides[0].dex.find(p=>p.id===baby.id)) kept++; else released++;
+    if(state.dex.find(p=>p.id===baby.id)) kept++; else released++;
   }
   rec.eggsQueued=0;
   // v0.37 — batch summary enriched with non-zero tallies instead of per-egg Full-log lines.
@@ -4468,7 +4474,7 @@ function releaseDaycarePair(slotIndex){
   const queued=rec.eggsQueued||0;
   const warn=queued>0?' You will forfeit '+queued+' uncollected egg'+(queued>1?'s':'')+'.':'';
   if(!confirm('Pull this pair from the Day Care without hatching?'+warn+' They\'ll be returned to your box.')) return;
-  const pA=state.aides[0].dex.find(p=>p.id===rec.parentAId), pB=state.aides[0].dex.find(p=>p.id===rec.parentBId);
+  const pA=state.dex.find(p=>p.id===rec.parentAId), pB=state.dex.find(p=>p.id===rec.parentBId);
   [pA,pB].forEach(p=>{ if(p) p.breeding=false; });
   state.daycareSlots.slots[slotIndex]=null;
   saveGame(); render(); showMapDetail(DAYCARE_LOCATION_ID);
@@ -4478,7 +4484,7 @@ function buildDaycareHtml(){
   ensureDaycareSlots();
   const isCurrent=state.aides[0].currentLocation===DAYCARE_LOCATION_ID;
   const seenDexIds=new Set();
-  state.aides[0].dex.forEach(p=>{ if(p.pokedexId) seenDexIds.add(p.pokedexId); });
+  state.dex.forEach(p=>{ if(p.pokedexId) seenDexIds.add(p.pokedexId); });
   Object.keys(state.dexHistory).forEach(id=>seenDexIds.add(parseInt(id)));
   let html='<div style="color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin:10px 0 6px;">🥚 Day Care</div>';
   for(let i=0;i<state.daycareSlots.purchased;i++){
@@ -4497,7 +4503,7 @@ function buildDaycareHtml(){
       const remainingMs=Math.max(0,rec.nextReadyAt-Date.now());
       const remainingMin=Math.floor(remainingMs/60000), remainingSec=Math.floor((remainingMs%60000)/1000);
       const queued=rec.eggsQueued||0;
-      const slotPA=state.aides[0].dex.find(p=>p.id===rec.parentAId), slotPB=state.aides[0].dex.find(p=>p.id===rec.parentBId);
+      const slotPA=state.dex.find(p=>p.id===rec.parentAId), slotPB=state.dex.find(p=>p.id===rec.parentBId);
       const slotSpriteRow=(slotPA&&slotPB)?daycareSpriteRowHtml(slotPA,slotPB,rec.resultDexId,known):'';
       html+='<div style="color:var(--main-text);font-size:11px;margin-bottom:4px;">Slot '+(i+1)+' — → '+resultLabel+'</div>'+
         slotSpriteRow+
@@ -4519,7 +4525,7 @@ function buildDaycareHtml(){
 }
 // Every owned Pokémon not currently reserved by another Day Care slot — party or box both eligible.
 function getDaycareEligiblePokemon(){
-  return state.aides[0].dex.filter(p=>!p.breeding);
+  return state.dex.filter(p=>!p.breeding);
 }
 // ── DAY CARE PAIR PICKER (v0.28) — two-step sprite-row picker, replaces the old <select> dropdowns.
 // Step 1: pick Parent A from every eligible Pokémon (sprite-row list, same style as All Catches).
@@ -4607,13 +4613,13 @@ function selectDaycareParentA(id){
 }
 function renderDaycareModalStep2(){
   const modal=document.getElementById('daycare-modal'); if(!modal) return;
-  const pA=state.aides[0].dex.find(p=>p.id===daycareParentA);
+  const pA=state.dex.find(p=>p.id===daycareParentA);
   if(!pA){ renderDaycareModalStep1(); return; }
   const candidates=sortDaycareList(getDaycareEligiblePokemon().filter(p=>p.id!==pA.id&&canBreedPair(pA,p).ok));
   const rows=candidates.length
     ?candidates.map(p=>daycarePickerRowHtml(p,'selectDaycareParentB('+p.id+')',p.id===daycareParentB)).join('')
     :'<div style="color:#555;font-size:11px;">No compatible partners.</div>';
-  const pB=daycareParentB?state.aides[0].dex.find(p=>p.id===daycareParentB):null;
+  const pB=daycareParentB?state.dex.find(p=>p.id===daycareParentB):null;
   const previewHtml=pB?buildDaycarePreviewHtml(pA,pB):'';
   modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;max-height:85vh;overflow-y:auto;">'+
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><div style="color:var(--accent);font-size:13px;font-weight:bold;">Day Care — Slot '+(daycareModalSlot+1)+' · Parent B</div><button onclick="document.getElementById(\'daycare-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'+
@@ -4628,7 +4634,7 @@ function buildDaycarePreviewHtml(pA,pB){
   const resultDexId=getBreedResultDexId(pA,pB);
   const resultEntry=getPokemonEntry(resultDexId);
   const seenDexIds=new Set();
-  state.aides[0].dex.forEach(p=>{ if(p.pokedexId) seenDexIds.add(p.pokedexId); });
+  state.dex.forEach(p=>{ if(p.pokedexId) seenDexIds.add(p.pokedexId); });
   Object.keys(state.dexHistory).forEach(id=>seenDexIds.add(parseInt(id)));
   const known=seenDexIds.has(resultDexId);
   const label=known?(resultEntry?resultEntry.name:'?'):'?';
@@ -4646,24 +4652,32 @@ function confirmDaycareAssignFromModal(){
 }
 
 // ── POKEMON MANAGEMENT ──
-function assignToAide(catchId){
-  const p=state.aides[0].dex.find(x=>x.id===catchId); if(!p) return;
-  if(!isHealLocation(state.aides[0].currentLocation)){ addLog('Can only change party at a healing location!','fail'); return; }
+// v0.39.3 — accepts a target aide index (defaults to 0/Carl Oak for backward compat with any
+// existing call site that doesn't pass one). The heal-location gate checks the RECEIVING aide's
+// own location, not always Carl Oak's — you manage a party at wherever that aide currently is.
+function assignToAide(catchId,idx=0){
+  const aide=state.aides[idx]; if(!aide) return;
+  const p=state.dex.find(x=>x.id===catchId); if(!p) return;
+  if(!isHealLocation(aide.currentLocation)){ addLog('Can only change party at a healing location!','fail'); return; }
   if(p.breeding){ addLog(getDisplayName(p)+' #'+p.id+' is at the Day Care!','fail'); return; }
-  if(state.aides[0].party.length>=6){ addLog('Party is full (6 max)!','fail'); return; }
-  if(p.level>getLevelCap()){ addLog(getDisplayName(p)+' #'+p.id+' is above the level cap (Lv'+getLevelCap()+') — cannot assign until more badges are earned.','fail'); return; }
-  p.holder='Carl Oak';
-  state.aides[0].party.push(p);
-  addLog(getDisplayName(p)+' #'+p.id+' assigned to Carl Oak.','info');
+  if(aide.party.length>=6){ addLog(aide.name+"'s party is full (6 max)!",'fail'); return; }
+  if(p.level>getLevelCap(aide.trainerBag)){ addLog(getDisplayName(p)+' #'+p.id+' is above '+aide.name+"'s level cap (Lv"+getLevelCap(aide.trainerBag)+') — cannot assign until more badges are earned.','fail'); return; }
+  p.holder=aide.name;
+  aide.party.push(p);
+  addLog(getDisplayName(p)+' #'+p.id+' assigned to '+aide.name+'.','info');
   saveGame(); render();
   const m=document.getElementById('poke-modal'); if(m) m.remove();
 }
 
+// v0.39.3 — finds WHICHEVER aide currently holds this Pokemon (could be either), rather than
+// assuming Carl Oak. The heal-location gate checks that specific aide's own location.
 function unassignPokemon(catchId){
-  const p=state.aides[0].dex.find(x=>x.id===catchId); if(!p) return;
-  if(!isHealLocation(state.aides[0].currentLocation)){ addLog('Can only change party at a healing location!','fail'); return; }
+  const p=state.dex.find(x=>x.id===catchId); if(!p) return;
+  const owner=state.aides.find(a=>a.party.some(x=>x.id===catchId));
+  if(!owner) return;
+  if(!isHealLocation(owner.currentLocation)){ addLog('Can only change party at a healing location!','fail'); return; }
   p.holder=null;
-  state.aides[0].party=state.aides[0].party.filter(x=>x.id!==catchId);
+  owner.party=owner.party.filter(x=>x.id!==catchId);
   addLog(getDisplayName(p)+' #'+p.id+' unassigned.','info');
   saveGame(); render();
   const m=document.getElementById('poke-modal'); if(m) m.remove();
@@ -4671,7 +4685,7 @@ function unassignPokemon(catchId){
 
 function revivePokemon(catchId){
   if(state.funds<20){ addLog('Not enough funds to revive!','fail'); return; }
-  const p=state.aides[0].dex.find(x=>x.id===catchId); if(!p) return;
+  const p=state.dex.find(x=>x.id===catchId); if(!p) return;
   state.funds=Math.round((state.funds-20)*100)/100;
   p.currentHP=p.maxHP;
   saveGame(); render();
@@ -4708,7 +4722,7 @@ function buildStatTableHtml(p){
     +'</div>';
 }
 function showPokemonDetail(catchId){
-  const p=state.aides[0].dex.find(x=>x.id===catchId); if(!p) return;
+  const p=state.dex.find(x=>x.id===catchId); if(!p) return;
   // v0.34 fix — formName was previously omitted here, so type badges/height/weight always showed
   // the base form's data (getPokemonEntry() prefers the null-form row when none is specified) even
   // for a form-variant individual, despite the stat table below correctly resolving the true form.
@@ -4778,7 +4792,10 @@ function showPokemonDetail(catchId){
     +badgeHtml
     +'</div>'
     +nicknameHtml+evolveBlockHtml+movesHtml
-    +'<div style="display:flex;gap:8px;flex-wrap:wrap;">'+((!p.holder)?'<button onclick="assignToAide('+p.id+')" class="primary" style="flex:1;">+ Party</button>':'')+(p.holder?'<button onclick="unassignPokemon('+p.id+')" style="flex:1;">− Remove</button>':'')+(p.currentHP<=0?'<button onclick="revivePokemon('+p.id+')" style="flex:1;border-color:#f4d03f;color:#f4d03f;">💊 Revive ($20)</button>':'')+evolveBtnHtml+'<button onclick="document.getElementById(\'poke-modal\').remove()" style="flex:1;">Close</button></div></div>';
+    // v0.39.3 — one "+ Name" assign button per aide (was a single hardcoded "+ Party" that always
+    // went to Carl Oak, and only ever searched Carl Oak's box in the first place — see
+    // assignToAide()). With 2+ aides, each gets its own button so the player picks which party.
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;">'+((!p.holder)?state.aides.map((a,ai)=>'<button onclick="assignToAide('+p.id+','+ai+')" class="primary" style="flex:1;">+ '+a.name+'</button>').join(''):'')+(p.holder?'<button onclick="unassignPokemon('+p.id+')" style="flex:1;">− Remove</button>':'')+(p.currentHP<=0?'<button onclick="revivePokemon('+p.id+')" style="flex:1;border-color:#f4d03f;color:#f4d03f;">💊 Revive ($20)</button>':'')+evolveBtnHtml+'<button onclick="document.getElementById(\'poke-modal\').remove()" style="flex:1;">Close</button></div></div>';
   modal.onclick=(e)=>{ if(e.target===modal) modal.remove(); };
   document.body.appendChild(modal);
 }
@@ -4786,7 +4803,7 @@ function showPokemonDetail(catchId){
 // v0.20 — nickname editing, poke-modal only. 30-char cap enforced via maxlength attribute.
 // Submitting empty/whitespace-only input clears the nickname back to the species name.
 function saveNickname(catchId){
-  const p=state.aides[0].dex.find(x=>x.id===catchId); if(!p) return;
+  const p=state.dex.find(x=>x.id===catchId); if(!p) return;
   const input=document.getElementById('nickname-input'); if(!input) return;
   const val=input.value.trim();
   p.nickname=val?val.slice(0,30):null;
@@ -4807,7 +4824,7 @@ function natureEffectLabel(natureName){
 // now fires on every click regardless of Nature Mint count. With 0 held, shows a themed message
 // modal instead of silently no-op'ing, matching the shell/border style used by every other modal.
 function openNaturePicker(catchId){
-  const p=state.aides[0].dex.find(x=>x.id===catchId); if(!p) return;
+  const p=state.dex.find(x=>x.id===catchId); if(!p) return;
   if((state.professorBag['natureMint']||0)<1){ showNatureMintRequiredModal(); return; }
   const existing=document.getElementById('nature-modal'); if(existing) existing.remove();
   const modal=document.createElement('div');
@@ -4832,7 +4849,7 @@ function showNatureMintRequiredModal(){
   document.body.appendChild(modal);
 }
 function confirmNatureChange(catchId,natureName){
-  const p=state.aides[0].dex.find(x=>x.id===catchId); if(!p) return;
+  const p=state.dex.find(x=>x.id===catchId); if(!p) return;
   if(!confirm('Change Nature to '+natureName+' ('+natureEffectLabel(natureName)+')? Uses 1 Nature Mint.')) return;
   if((state.professorBag['natureMint']||0)<1){ addLog('No Nature Mint in Professor\'s bag!','fail'); return; }
   state.professorBag['natureMint']--;
@@ -4848,7 +4865,7 @@ function confirmNatureChange(catchId,natureName){
 
 // v0.20 — per-individual evolution block toggle. Blocks both level-up and item-based evolution.
 function toggleEvolveBlock(catchId,checked){
-  const p=state.aides[0].dex.find(x=>x.id===catchId); if(!p) return;
+  const p=state.dex.find(x=>x.id===catchId); if(!p) return;
   p.evolveBlocked=!!checked;
   saveGame();
   showPokemonDetail(catchId);
@@ -4890,7 +4907,7 @@ function getMoveSlotsHtml(p,compact){
 // Opens the per-slot action modal: Upgrade/Change for a filled slot, or the Add picker for an
 // empty one. Layered above poke-modal (higher z-index) so poke-modal stays open behind it.
 function openMoveSlot(catchId,slotIndex){
-  const p=state.aides[0].dex.find(x=>x.id===catchId); if(!p) return;
+  const p=state.dex.find(x=>x.id===catchId); if(!p) return;
   const entry=getPokemonEntry(p.pokedexId,p.formName); if(!entry) return;
   const slot=(p.equippedMoves||[])[slotIndex];
   const tmCount=getTMCount();
@@ -4939,7 +4956,7 @@ function showMoveChangeOptions(catchId,slotIndex){
 // Lists every available (type,category) slot from the species' pool, excluding whatever's
 // already equipped in this Pokemon's OTHER slots (no duplicate type+category combos).
 function buildMovePickerHtml(catchId,slotIndex,mode){
-  const p=state.aides[0].dex.find(x=>x.id===catchId); if(!p) return '';
+  const p=state.dex.find(x=>x.id===catchId); if(!p) return '';
   const entry=getPokemonEntry(p.pokedexId,p.formName); if(!entry) return '';
   const tmCount=getTMCount();
   const excluded=new Set(getEquippedMoveKeys(p,slotIndex));
@@ -4957,7 +4974,7 @@ function buildMovePickerHtml(catchId,slotIndex,mode){
 // Spends 1 TM (state.professorBag — TM's bagType is Professor, matching the Items sheet row)
 // and applies the requested action. Re-renders poke-modal in place so the player sees the result.
 function confirmMoveAction(catchId,slotIndex,mode,type,category,qty){
-  const p=state.aides[0].dex.find(x=>x.id===catchId); if(!p) return;
+  const p=state.dex.find(x=>x.id===catchId); if(!p) return;
   const entry=getPokemonEntry(p.pokedexId,p.formName); if(!entry) return;
   if(getTMCount()<1){ addLog('Need 1 TM.','fail'); return; }
   if(!p.equippedMoves) p.equippedMoves=[null,null,null,null];
@@ -5245,7 +5262,7 @@ function loadDexNav(){
 })();
 
 function renderDex(){
-  document.getElementById('dex-count').textContent=state.aides[0].dex.length;
+  document.getElementById('dex-count').textContent=state.dex.length;
   document.getElementById('dex-count-detail').textContent=state.totalCatches;
   document.getElementById('dex-encounters-count').textContent=state.totalSightings;
   const knownDexIds=Object.keys(state.dexHistory);
@@ -5457,7 +5474,7 @@ function renderEvolutionChainVisual(famId,highlightDexId){
   if(!allMembers.length) return '';
   const memberSet=new Set(allMembers.map(m=>m.dexId));
   const seenDexIds=new Set();
-  state.aides[0].dex.forEach(p=>{ if(p.pokedexId) seenDexIds.add(p.pokedexId); });
+  state.dex.forEach(p=>{ if(p.pokedexId) seenDexIds.add(p.pokedexId); });
   Object.keys(state.dexHistory).forEach(id=>{ seenDexIds.add(parseInt(id)); });
   const edges=[];
   allMembers.forEach(m=>{
@@ -5638,7 +5655,7 @@ function renderDexFamilies(){
     seenFamilies=new Set(POKEDEX_DATA.filter(x=>x.familyId).map(x=>x.familyId));
   } else {
     const seenDexIds=new Set();
-    state.aides[0].dex.forEach(p=>{ if(p.pokedexId) seenDexIds.add(p.pokedexId); });
+    state.dex.forEach(p=>{ if(p.pokedexId) seenDexIds.add(p.pokedexId); });
     Object.keys(state.dexHistory).forEach(id=>{ seenDexIds.add(parseInt(id)); });
     seenFamilies=new Set();
     seenDexIds.forEach(dexId=>{ const e=getPokemonEntry(dexId); if(e&&e.familyId) seenFamilies.add(e.familyId); });
@@ -5654,7 +5671,7 @@ function renderDexFamilies(){
       speciesDisplay=allMembers.length+'/'+allMembers.length;
       totalEverCaught=null; // not applicable — no ownership data in Official mode
     } else {
-      const liveInFamily=state.aides[0].dex.filter(p=>p.pokedexId&&POKEDEX_DATA.find(x=>x.dexId===p.pokedexId&&x.familyId===famId));
+      const liveInFamily=state.dex.filter(p=>p.pokedexId&&POKEDEX_DATA.find(x=>x.dexId===p.pokedexId&&x.familyId===famId));
       speciesSeen=new Set(liveInFamily.map(p=>p.pokedexId));
       Object.keys(state.dexHistory).forEach(id=>{
         const dexId=parseInt(id);
@@ -5688,13 +5705,13 @@ function renderDexSpecies(){
   if(isOfficial){
     visibleMembers=allMembers;
   } else {
-    const seenDexIds=new Set(state.aides[0].dex.map(p=>p.pokedexId));
+    const seenDexIds=new Set(state.dex.map(p=>p.pokedexId));
     Object.keys(state.dexHistory).forEach(id=>{ seenDexIds.add(parseInt(id)); });
     visibleMembers=allMembers.filter(m=>seenDexIds.has(m.dexId));
   }
   if(!visibleMembers.length){ c.innerHTML='<div style="color:#555;padding:12px;font-size:11px;">No species encountered yet.</div>'; return; }
   visibleMembers.forEach(entry=>{
-    const liveCount=state.aides[0].dex.filter(p=>p.pokedexId===entry.dexId).length;
+    const liveCount=state.dex.filter(p=>p.pokedexId===entry.dexId).length;
     const historyCount=state.dexHistory[entry.dexId]||0;
     const totalEver=Math.max(historyCount,liveCount);
     const sprite=getSpriteUrl(entry.dexId,entry.name,isOfficial&&dexOfficialShinyPreview);
@@ -5826,8 +5843,8 @@ function renderDexDetail(){
   const entry=getPokemonEntry(dexSelectedDexId,dexSelectedFormName);
   // v0.36 — caught-individuals list now filters to the selected form tab, not every individual
   // sharing this dexId regardless of form.
-  const caughtOfSpecies=state.aides[0].dex.filter(p=>p.pokedexId===dexSelectedDexId&&(p.formName||null)===(dexSelectedFormName||null));
-  const allCaughtOfDexId=state.aides[0].dex.filter(p=>p.pokedexId===dexSelectedDexId);
+  const caughtOfSpecies=state.dex.filter(p=>p.pokedexId===dexSelectedDexId&&(p.formName||null)===(dexSelectedFormName||null));
+  const allCaughtOfDexId=state.dex.filter(p=>p.pokedexId===dexSelectedDexId);
   if(!entry&&!allCaughtOfDexId.length){ c.innerHTML='<div style="color:#555;padding:12px;font-size:11px;">No data found.</div>'; return; }
   // v0.37 — Official Pokédex always shows the real sprite (never gated by seen/caught status);
   // the Shiny toggle forces the shiny palette. Your Pokédex is unaffected — unchanged behavior.
@@ -6070,7 +6087,7 @@ function matchesCatchesSearch(p,q){
 // each entry now shows both of the individual's actual FORM type(s) as colored badges.
 function renderDexViewAll(){
   const c=document.getElementById('dex-list'); c.innerHTML='';
-  let entries=state.aides[0].dex.filter(p=>matchesCatchesFilters(p,dexCatchesFilters)&&matchesCatchesSearch(p,dexCatchesSearch));
+  let entries=state.dex.filter(p=>matchesCatchesFilters(p,dexCatchesFilters)&&matchesCatchesSearch(p,dexCatchesSearch));
   const sort=dexCatchesSort;
   if(sort==='id') entries.sort((a,b)=>a.id-b.id);
   else if(sort==='dexid') entries.sort((a,b)=>(a.pokedexId||0)-(b.pokedexId||0));
@@ -6309,7 +6326,7 @@ const SAVE_KEY='pokeprof_save';
 // v0.37 — SAVE_VERSION 24 (23 -> 24): researchLog[dexId].gendersObserved changes shape from
 // boolean flags ({M:true,F:true}) to running counts ({M:0,F:0}) — see "Gender Ratio Display".
 // Migration: any pre-v24 boolean-shaped value is discarded, then re-derived via a one-time
-// backfill sweep from currently-held state.aides[0].dex individuals (gated to pre-v24 loads only — see the
+// backfill sweep from currently-held state.dex individuals (gated to pre-v24 loads only — see the
 // comment at that sweep below, since a count increment isn't safe to re-run on every load the way
 // the old boolean set was). Every other v0.37 change is a bug fix or UI/display-only.
 // v0.38 — SAVE_VERSION 25 (24 -> 25): state.speciesCapOverrides ({dexId:number}, new — see
@@ -6322,7 +6339,7 @@ const SAVE_KEY='pokeprof_save';
 // batch-evolve prompt, offline friendship parity, dual-root family breeding, Ditto
 // breeding-placeholder fix, Family IV Inheritance pool fix) is a bug fix or UI/logic-only, no
 // additional schema impact.
-const SAVE_VERSION=26;
+const SAVE_VERSION=27;
 let saveTimer=0;
 
 function saveGame(){
@@ -6333,7 +6350,7 @@ function saveGame(){
       state:{
         funds:state.funds, totalCatches:state.totalCatches, totalSightings:state.totalSightings,
         incomeAccumulator:state.incomeAccumulator,
-        dexIdCounter:state.dexIdCounter,
+        dexIdCounter:state.dexIdCounter, dex:state.dex, // v0.39.3 — shared box, not nested per-aide
         aides:state.aides.map(aide=>({...aide,currentEncounter:null})), // v0.39.1 — real per-aide array, not flattened to aides[0]. currentEncounter cleared same as the old single-aide save always did (never persisted mid-encounter).
         activeAideIndex:state.activeAideIndex||0,
         log:state.log.slice(0,50), researchLog:state.researchLog,
@@ -6360,9 +6377,9 @@ function loadGame(){
     const data=JSON.parse(raw);
     if(!data) return false;
 
-    // ── SAVE_VERSION 26 MIGRATION ──
-    // Accepts v11-v25 saves and migrates them; rejects anything older.
-    if(data.version!==SAVE_VERSION&&data.version!==25&&data.version!==24&&data.version!==23&&data.version!==22&&data.version!==21&&data.version!==20&&data.version!==19&&data.version!==18&&data.version!==17&&data.version!==16&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
+    // ── SAVE_VERSION 27 MIGRATION ──
+    // Accepts v11-v26 saves and migrates them; rejects anything older.
+    if(data.version!==SAVE_VERSION&&data.version!==26&&data.version!==25&&data.version!==24&&data.version!==23&&data.version!==22&&data.version!==21&&data.version!==20&&data.version!==19&&data.version!==18&&data.version!==17&&data.version!==16&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
     const s=data.state;
     // v0.39.1 — aide-owned fields (party/dex/trainerBag/currentLocation/mission-and-travel/
     // gymProgress/lastHealLocation/wanderMode) now live in state.aides[]. A pre-v26 save has them
@@ -6404,7 +6421,13 @@ function loadGame(){
       missionElapsed:src0.missionElapsed??0,
       nextEncounterIn:src0.nextEncounterIn??ENC_INTERVAL_OPEN, incomeAccumulator:s.incomeAccumulator??0,
       dexIdCounter:s.dexIdCounter??1,
-      currentEncounter:null, party:src0.party??[], dex:src0.dex??[], log:s.log??[],
+      currentEncounter:null, party:src0.party??[],
+      // v0.39.3 — dex/box correction: was per-aide in v26-v39.2 saves. Merge EVERY aide's existing
+      // dex array (not just aides[0]'s) into the new shared state.dex — otherwise a save where
+      // Faraday already caught something would silently lose those individuals on migration.
+      // Pre-v26 saves never had per-aide dex at all, so fall back to the old flat top-level s.dex.
+      dex:(s.aides&&s.aides.length)?s.aides.flatMap(a=>a.dex||[]):(s.dex??[]),
+      log:s.log??[],
       researchLog:s.researchLog??{}, pendingFindings:[],
       missionDestination:src0.missionDestination??'route1', missionBehavior:src0.missionBehavior??'research',
       missionOrigin:src0.missionOrigin??'palletTown', currentLocation:src0.currentLocation??'palletTown',
@@ -6605,10 +6628,13 @@ function loadGame(){
     // delicate internal logic. Any additional aides beyond index 0 (i.e. a save that already had
     // Faraday hired, v26+) never went through the above migrations at all — they're copied through
     // as-is, since they only ever existed in the new per-aide format to begin with.
+    // v0.39.3 — dex is NOT part of this wrap: it's already been correctly merged into the shared
+    // state.dex above (from every aide's pre-existing dex, not just Carl Oak's) and stays a
+    // top-level field, not nested onto any aide object.
     {
       const carlAide=makeAide('carl-oak',(s.aides&&s.aides[0]&&s.aides[0].name)||'Carl Oak',(s.aides&&s.aides[0]&&s.aides[0].emoji)||'🧑\u200d🔬',state.currentLocation);
       Object.assign(carlAide,{
-        party:state.party, dex:state.dex, trainerBag:state.trainerBag,
+        party:state.party, trainerBag:state.trainerBag,
         currentLocation:state.currentLocation,
         missionDestination:state.missionDestination, missionBehavior:state.missionBehavior,
         missionOrigin:state.missionOrigin, missionElapsed:state.missionElapsed,
@@ -6618,10 +6644,12 @@ function loadGame(){
         gymProgress:state.gymProgress, lastHealLocation:state.lastHealLocation,
         wanderMode:state.wanderMode, wanderMetric:state.wanderMetric
       });
-      const otherAides=(s.aides||[]).slice(1); // any aide beyond Carl Oak, copied through verbatim
+      // any aide beyond Carl Oak, copied through verbatim — except a stray leftover `dex` field
+      // from a pre-v39.3 save, which no longer belongs on an aide object at all (see above).
+      const otherAides=(s.aides||[]).slice(1).map(a=>{ const {dex,...rest}=a; return rest; });
       state.aides=[carlAide,...otherAides];
       state.activeAideIndex=0;
-      delete state.party; delete state.dex; delete state.trainerBag; delete state.currentLocation;
+      delete state.party; delete state.trainerBag; delete state.currentLocation;
       delete state.missionDestination; delete state.missionBehavior; delete state.missionOrigin;
       delete state.missionElapsed; delete state.currentEncounter; delete state.nextEncounterIn;
       delete state.travelPath; delete state.travelPathIndex; delete state.travelCyclesRemaining;
@@ -6667,7 +6695,7 @@ function autoSaveTick(){ saveTimer++; if(saveTimer>=30){ saveTimer=0; saveGame()
 function init(){
   const carl=state.aides[0];
   const s=makePokemon('Rattata',5,Math.random()<0.5?'M':'F',carl.name);
-  carl.party.push(s); carl.dex.push(s);
+  carl.party.push(s); state.dex.push(s);
   state.dexHistory[s.pokedexId]=(state.dexHistory[s.pokedexId]||0)+1;
   recordNewSpecies(s.pokedexId,'Rattata');
   recordSighting(s.pokedexId,5);
@@ -6689,7 +6717,7 @@ if(!hasSave){
   state={
     funds:100.00, totalCatches:0, totalSightings:0,
     incomeAccumulator:0,
-    dexIdCounter:1, log:[],
+    dexIdCounter:1, log:[], dex:[],
     aides:[makeAide('carl-oak','Carl Oak','🧑\u200d🔬','palletTown')],
     activeAideIndex:0,
     professorBag:{},

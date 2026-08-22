@@ -70,7 +70,13 @@
   #aide-info .aide-name { color:var(--accent); font-size:14px; margin-bottom:3px; }
   #aide-info .aide-location { color:var(--main-text-secondary); font-size:11px; }
 
-  #party-list { overflow-y:auto; flex:1; padding:8px; background:var(--main-panel); }
+  /* v0.39.2 fix — #aide-roster is the per-aide collapsible container that replaced the old
+     singular #aide-info/#party-list pair (see renderParty()). It never got this scroll/flex rule
+     when the HTML was restructured, so — combined with .panel's own overflow:hidden above —
+     anything inside it (including the per-aide "Send on Mission" button, which sits after the
+     party list within each aide's expanded section) was silently clipped and unreachable. This
+     is what "can't scroll Carl's party" / "can't change mission" both actually were. */
+  #aide-roster { overflow-y:auto; flex:1; padding:8px; background:var(--main-panel); }
   .party-slot { background:var(--main-card); border:1px solid var(--main-border); border-radius:6px; padding:10px; margin-bottom:8px; }
   .party-slot.fainted { opacity:0.5; border-color:var(--c-danger); }
   .party-slot .poke-name { font-size:13px; color:var(--main-text); margin-bottom:3px; }

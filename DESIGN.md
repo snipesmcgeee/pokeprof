@@ -70,7 +70,7 @@ There is no survival element. Aides do not need food, sleep, or anything like th
 - The `<h1>` tag always shows the current version (e.g. `PokeProf v0.18`)
 - Increment the version on every deployed change
 - `SAVE_VERSION` in `pokeprof.html` must be incremented whenever `state` structure changes
-- Current save version: `27` (bumped in v0.39.1 for the `state.aides[]` restructure — Carl Oak's singular `party`/`trainerBag`/`currentLocation`/mission-and-travel fields wrapped into `aides[0]` on migration; unchanged in v0.39.2, battle-engine/logic fixes only; bumped again in v0.39.3 to move `dex` back OUT of `aides[]` into a shared `state.dex` — see "Aide Roster & Hiring"; unchanged in v0.39.4 (a critical load-logic bug fix, no schema change) and v0.39.5 (a comprehensive Carl-Oak-hardcoding audit and fix pass, all logic-only)). v0.38→v0.39 made no schema change (Silph Tower was fully reverted in v0.39.1 anyway, and was itself runtime-only/non-persisted).
+- Current save version: `28` (bumped in v0.39.1 for the `state.aides[]` restructure — Carl Oak's singular `party`/`trainerBag`/`currentLocation`/mission-and-travel fields wrapped into `aides[0]` on migration; unchanged in v0.39.2, battle-engine/logic fixes only; bumped again in v0.39.3 to move `dex` back OUT of `aides[]` into a shared `state.dex` — see "Aide Roster & Hiring"; unchanged in v0.39.4/v0.39.5/v0.39.6, all logic-only fixes; bumped again in v0.40 for two new persisted fields, `state.avoidCappedSpecies` and per-aide `expShareActive`). v0.38→v0.39 made no schema change (Silph Tower was fully reverted in v0.39.1 anyway, and was itself runtime-only/non-persisted).
 - **v0.20 requires SAVE_VERSION 13** due to: `nickname` field on Pokémon objects, `evolveBlocked` field on Pokémon objects, `researchLog[dexId].abilitiesObserved` field, and `researchLog[dexId].confirmedBranches` replacing singular `confirmedMethod`/`confirmedIntoId`. All four migrations run in a single combined pass on load from v12.
 - **v0.21 requires SAVE_VERSION 14** due to: fishing splitting into per-rod-tier sub-methods (`fish-old`/`fish-good`/`fish-super`) instead of a single `fish` method. Migration: any `state.locationMethodPrefs[locId]` entry containing the bare `'fish'` method (in `methods[]` or as a `weights` key) is dropped entirely for that location — it recalculates fresh defaults (all currently-unlocked methods/rod-tiers checked evenly) the next time that location is visited. No other v0.21 change requires a schema change.
 - **v0.22 stays on SAVE_VERSION 14** — no `state` schema changes in this batch (all 11 items are behavior/rendering fixes and additive read-only views).
@@ -1794,7 +1794,91 @@ No `SAVE_VERSION` change — this was a load-logic bug, not a schema change; `sa
 
 ---
 
-## Things That Are Future Goals (Do Not Implement Yet) — **resolved v0.29** (playback variant chosen — see "Watched Gym Battle — Aide Card Trigger"; true player-controlled move selection remains undone/not implemented).
+## v0.40 — Shipped
+
+All seven items implemented and verified. `SAVE_VERSION` bumped 27→28 (two new persisted fields: `state.avoidCappedSpecies`, per-aide `expShareActive`). Below is the original settled spec for each item; implementation notes and real bugs found along the way follow after.
+
+### Implementation notes — deviations, real bugs found, and things worth knowing
+
+- **#3 confirmation dialog uses the native browser `confirm()`, not a custom styled modal.** Originally told Jack it would be a custom modal; found the sibling feature (lowering the global species cap, `onSpeciesCapChange()`) already uses a plain native `confirm()` for this exact class of decision, so matched that existing convention instead of introducing a one-off pattern.
+- **#1 (Daycare) surfaced a second, real bug along the way, not something asked for.** `assignDaycarePair()`'s party-unassignment logic (dropping off a breeding pair) always removed the parent from `state.aides[0].party` specifically, regardless of which aide actually held it. If Faraday held one of the parents, the old code correctly cleared `p.holder` but silently failed to remove it from Faraday's *real* party array (since it only ever checked Carl Oak's) — leaving a Pokémon simultaneously marked "breeding" and still sitting in an active party. Fixed alongside the location-gate fix, by looking up the real owning aide via `p.holder`, same pattern used for `hasPartyMate()`/`unassignPokemon()` in earlier work.
+- **#2 (EXP Share) item price: $100, confirmed by Jack.**
+- **#2 implementation:** new `distributeExp(pokemon, amount, idx, silent)` wrapper is now the single entry point every EXP-awarding call site goes through (7 call sites converted: 3 live, 3 offline/silent, plus `awardPerKOExp()` for gym battles — which changed from taking a function reference to a `silent` boolean so gym EXP also respects the toggle). `giveExp()`/`giveExpSilent()` themselves are unchanged; the wrapper just calls them multiple times per the split. Formula uses `Math.floor()` at each step (a few fractional EXP points can be lost to rounding in the split — standard tradeoff, matches how real Exp Share implementations work too).
+- **#6 (cheat code) required extending `makePokemon()`** with a new optional trailing `formName` parameter (defaults to `null`, so all ~15+ pre-existing call sites are unaffected) — it never supported spawning a specific form before this, and `p.formName` was never even set on the returned object (existing individuals just relied on it being `undefined`, treated as falsy everywhere it's checked). Needed so the cheat's form picker can actually produce the chosen form, not always the default.
+- **#4 (idle gym battles) — `isGymGrindEligible()` is kept as a distinct named function** even though it's now byte-for-byte identical to `isGymAccessible()`, in case a future reason to differentiate grind-eligibility from watched-accessibility comes up. `rollEncounter()`'s `atDest` variable was removed entirely — gym eligibility and method-selection no longer care whether the current location is the final mission destination or merely a waypoint being passed through.
+- **Verification:** 176 automated assertions across 26 jsdom-based test scripts — all pre-existing suites re-verified passing after every change, plus 9 new dedicated v0.40 test files. Notably includes a 4000-tick end-to-end stress test proving a badge can be earned through purely idle wandering with zero manual gym triggers (not just a unit-level check that the eligibility function returns true), and a cheat-code test confirming the "nothing happens until a form is chosen" safety guarantee by explicitly canceling the picker and verifying the original individual survives untouched.
+
+### Original settled spec
+
+
+
+### 1. Faraday can access the Daycare
+
+The facility (`state.daycareSlots`) is already global/shared — no per-aide state exists there at all, confirmed by Jack ("the daycare seems to only access the box anyway"). The gap is purely that the *management functions* (breeding-pair selection, egg pickup, etc.) are still hardcoded to `state.aides[0]` from the v0.39.1-era deferral (see "Things That Are Future Goals" below, to be removed once this ships). Fix: wherever these functions currently check "is Carl Oak at `DAYCARE_LOCATION_ID`" to decide whether to show breeding controls, check whichever aide is actually there instead. **Confirmed no dual-presence handling needed** — both aides can be at the Daycare simultaneously with zero conflict, since nothing about the feature is aide-scoped once you're past the "who unlocked the UI" gate.
+
+### 2. EXP Share item
+
+New item, `bagType: "Trainer"` (per-aide — each aide needs their own copy), one-time purchase (not consumed, `isConsumable: false`), persistent per-aide toggle once owned.
+
+**Formula:** whoever actually earns the EXP (won a fight, made a catch) gets 50%. The other 50% splits evenly across every *other* party member of that same aide, fainted or not. Solo party (nobody to split with) → the battler just gets the full normal amount, nothing is lost. A recipient already at that aide's level cap still accrues the EXP normally (existing `giveExp`/`giveExpSilent` level-up logic already handles "can't level past cap" — no special case needed, this falls out for free).
+
+**Implementation:** new per-aide boolean field (e.g. `aide.expShareActive`, default `false`) on the `makeAide()` shape. `giveExp()`/`giveExpSilent()` need to check the owning aide's flag and, when active, distribute per the formula above instead of awarding 100% to a single Pokémon — every one of the 7 existing call sites already threads an `idx` (see the v0.39.5 audit), so the aide context is already available everywhere this needs it.
+
+**UI:** a button directly next to each aide's row of 6 party sprites (same location as the mini sprite row shown even when collapsed). Reads `Exp Share: ON` (styled `border-color:var(--accent);color:var(--accent);`, matching the Change Nature button) or `Exp Share: OFF` (styled `border-color:#555;color:#777;`, matching the Reset button). Only rendered once that aide's `trainerBag` actually contains the item — no button shown for an aide who hasn't bought it yet, consistent with how badge sprites only show once earned.
+
+### 3. Ball-avoid toggle for capped species
+
+Global (not per-aide) — lives next to the existing species-cap setting. When ON: a wild encounter of a species already at its effective cap (respecting per-species overrides via `getEffectiveSpeciesCap()`) still resolves as a normal fight for EXP — the aide just never attempts a catch. Shiny individuals are entirely unaffected regardless of the toggle, since shiny catches are a separate auto-catch check that fires *before* the normal ball-throw decision logic is ever reached — nothing to special-case there.
+
+**Confirmation on enable:** toggling this ON (not OFF — no downside to warn about there) shows a modal, not a native browser confirm, reading:
+
+> Are you sure you would like to restrict capture attempts to Pokémon underneath the species cap?
+>
+> Income rate is based on how many total catches you have made.
+>
+> Stronger IVs are passed down to existing Pokémon upon release.
+
+Canceling leaves the toggle off; confirming commits it.
+
+### 4. Gym battles available passively/idly at current tier
+
+Two changes, both confirmed buildable against the existing architecture without new plumbing:
+
+- **`isGymGrindEligible()` currently requires the badge already be held** before the passive/idle encounter-roll system will ever pick "gym" as a method — meaning today, idle gym-grinding only ever works as a *rematch* mechanic, never a first attempt. This is specifically what's blocking "earn all badges and Elite Four while idle." Fix: relax `isGymGrindEligible()` to match `isGymAccessible()` exactly (same rule the manual watched-battle button already uses) — Elite Four/Champion stays correctly locked until 8 regular badges either way, since that's enforced by `isGymAccessible()` itself, untouched by this change.
+- **Waypoints (locations passed through en route, not the final mission destination) currently skip the weighted method-selection system entirely** — they just use the location's flat `defaultEncounterMethod` string, bypassing `pickMethodForLocation()` (which already correctly treats `'gym'` as one weighted option among grass/fish/etc., competing via `state.locationMethodPrefs[locId]`) entirely. Fix: extend waypoint handling to use the same method-selection path a destination already gets. This means gym becomes available while genuinely passing through a gym city, not just upon arrival — naturally rate-limited by the same ~10-second encounter cadence as everything else, not spammy.
+
+**Side effect worth documenting, not something asked for but falls out of the fix:** waypoints will also start respecting any `locationMethodPrefs` configured for that location, where today they ignore it entirely in favor of the flat default. This reads as more-consistent-and-correct behavior rather than a regression.
+
+### 5. "Select Pokémon to Release" on the species detail page
+
+New button directly beneath the existing per-species cap override control. Opens a modal with checkboxes for every **boxed** (non-held, `!p.holder`) individual of that exact species+form currently in `state.dex` — held/active party members excluded from the list entirely (confirmed: box-only, for safety). Shinies included and selectable (confirmed: player's explicit choice, not auto-protected the way cap-overflow release protects them). A "Release Selected" action triggers a confirmation prompt before anything is actually removed (irreversible action). Confirmed removal reuses the existing `removePokemonFromBoxAndParty(id)` mechanism per selected individual.
+
+### 6. New cheat code — `CheatN` nickname triggers a release-and-replace
+
+Hooked into `saveNickname(catchId)`, checked *before* the literal nickname is applied: if the trimmed input matches `/^cheat(\d+)$/i` (case-insensitive — `"cheat26"`, `"CHEAT26"`, `"Cheat26"` all valid) and the captured number is a real `dexId`:
+
+1. If that `dexId` has more than one form in `POKEDEX_DATA`, show a picker modal listing **every** raw form (unfiltered — no Mega/cosmetic exclusion, confirmed "all raw forms, however many"). Nothing is released or created until a form is chosen; canceling the modal leaves the original individual and its nickname-in-progress completely untouched.
+2. Single-form species skip the picker and proceed directly.
+3. Once the form is resolved (immediately, or via the picker): release the original individual (same mechanism as #5 above), generate a replacement at the chosen `dexId`/form via `makePokemon()` **at the same level** as the one just released. The replacement takes the same held/boxed status as the original — if it was in an aide's active party, the replacement takes that exact slot with that aide as holder; if boxed, it goes straight into the box.
+
+If the captured number doesn't correspond to a real `dexId`, no special behavior fires — the input just applies as a literal nickname, same as today (silent fallback, not an error state).
+
+### 7. Pokédex-wide Perfect IV / Unicorn indicators
+
+Reuses the *exact* existing convention from `getRarityBadge()` (the per-individual badge already used on party cards, the detail modal, and the Day Care picker) rather than inventing new emoji: 💥 for Perfect IV (all 6 IVs at 31, via the existing `isPerfectIV()` helper), 🦄 for Unicorn (shiny AND perfect IV on the *same* individual). Two new species-level aggregate functions, mirroring `hasLiveShiny()`'s existing "any live individual of this species" pattern exactly:
+
+```
+hasLivePerfectIV(dexId) — state.dex.some(p => p.pokedexId===dexId && isPerfectIV(p))
+hasLiveUnicorn(dexId)   — state.dex.some(p => p.pokedexId===dexId && p.isShiny && isPerfectIV(p))
+```
+
+**Suppression rule, confirmed:** unicorn supersedes, it doesn't stack. Check unicorn first — if true, show only 🦄. Otherwise check shiny and perfect-IV independently and show whichever apply (either, both, or neither), alongside the existing ✨/🔬 convention already in place.
+
+**Scope, confirmed "all dex pages" — applies everywhere the shiny badge currently appears, all three existing sites:** the Pokédex grid cells (`renderDexPokedexGrid()`), the evolution-chain nodes (`evoNodeHtml()`), and the species detail page header. Official Pokédex mode is unaffected — it already uses a decoupled "preview" concept (`dexOfficialShinyPreview`) rather than real ownership, and Perfect IV/Unicorn have no equivalent "official" concept to preview.
+
+---
+
+ (playback variant chosen — see "Watched Gym Battle — Aide Card Trigger"; true player-controlled move selection remains undone/not implemented).
 - Gauntlet-style sub-trainers within regular gyms (mainline-game precedent) — deferred from v0.25.
 - Trainer innate abilities / type affinities
 - New trainer recruitment mechanics
@@ -1805,7 +1889,7 @@ No `SAVE_VERSION` change — this was a load-logic bug, not a schema change; `sa
 - `swarm` encounter method — future-proofing only; mechanic undefined (possible time/rotation-based active swarm). Not implemented.
 - `honey` encounter method — future-proofing only; would require `requiresItem: honey`-type item placed on a tree, possibly with a wait/return timer. Not implemented.
 - **New, v0.39.2: `hasLab` boolean field on location data** (Pallet Town specifically), so the Hire Second Aide button can gate on a real Lab shop tier concept instead of a hardcoded `currentLocation==='palletTown'` check — without displacing Pallet Town's existing `shopTier:'basic'` field shop, since `shopTier` is single-value. Confirmed by Jack as a real idea worth doing eventually, not urgent.
-- **New, v0.39.2: aide-aware Daycare/breeding, Pokédex rendering, and nickname/nature/move-editing.** Currently all still hardcoded to `aides[0]` (default-param fallback) — Jack confirmed fine to defer, to be revisited later.
+- **New, v0.39.2: aide-aware Pokédex rendering, and nickname/nature/move-editing.** Currently all still hardcoded to `aides[0]` (default-param fallback) — Jack confirmed fine to defer, to be revisited later. *(Daycare/breeding specifically resolved v0.40 — see above.)*
 
 ---
 

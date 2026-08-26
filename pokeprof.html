@@ -142,7 +142,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span style="font-size:11px;color:var(--main-text-muted);">v0.39.6</span></h1>
+  <h1>PokeProf <span style="font-size:11px;color:var(--main-text-muted);">v0.40</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">100.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -219,6 +219,7 @@
         <option value="1">1</option><option value="2">2</option><option value="3">3</option>
         <option value="4">4</option><option value="5">5</option><option value="6">6</option>
       </select>
+      <button id="avoid-cap-toggle-btn" onclick="onAvoidCappedSpeciesToggleClick()" style="padding:5px 10px;font-size:10px;"></button>
     </div>
     <div id="dex-toptabs" style="display:none;background:var(--main-card);border-bottom:1px solid var(--main-border);flex-shrink:0;">
       <button class="tab-btn" id="dextab-pokedex" onclick="dexSwitchTab('pokedex')">Pokédex</button>
@@ -703,7 +704,8 @@ function makeAide(id,name,emoji,startLocation){
     trainerBag:{},
     gymProgress:{},
     lastHealLocation:startLocation,
-    wanderMode:false, wanderMetric:'encounters' // v0.33/v0.35, per-aide — each aide independently wanders or not
+    wanderMode:false, wanderMetric:'encounters', // v0.33/v0.35, per-aide — each aide independently wanders or not
+    expShareActive:false // v0.40 — per-aide EXP Share toggle, only meaningful once the item is owned
   };
 }
 
@@ -721,6 +723,7 @@ let state={
   activeAideIndex:0, // v0.39.1 — which aide's section the Party/roster screen currently has expanded by default; each aide's own UI otherwise renders independently regardless of this
   professorBag:{},
   speciesCap:6, // v0.26 — editable per-species catch cap (1-6)
+  avoidCappedSpecies:false, // v0.40 — global toggle, skip ball-throw attempts at capped species
   speciesCapOverrides:{}, // v0.38 — per-species cap overrides {dexId:number}
   daycareSlots:{purchased:1,slots:[]}, // v0.26 — Day Care / Breeding
   researchLog:{}, pendingFindings:[],
@@ -736,10 +739,14 @@ let state={
 // dexId is optional — pass it whenever the caller already knows the exact database row
 // (e.g. from rollEncounter()). Never re-derive a known dexId from the species name string,
 // since some names (Nidoran M/F) map to multiple distinct rows.
-function makePokemon(sp,lv,gender,holder=null,dexId=null){
+// v0.40 — added an optional trailing formName param (defaults to null, so every pre-existing call
+// site behaves identically to before). Needed for the CheatN cheat code's form picker to actually
+// spawn the chosen form rather than always the default. getPokemonEntry() already supported a
+// formName argument; makePokemon() just never threaded one through until now.
+function makePokemon(sp,lv,gender,holder=null,dexId=null,formName=null){
   let entry=null;
   if(dexId){
-    entry=getPokemonEntry(dexId);
+    entry=getPokemonEntry(dexId,formName);
   }
   if(!entry&&typeof POKEDEX_DATA!=='undefined'){
     entry=POKEDEX_DATA.find(p=>p.name===sp&&p.formName===null&&p.growthRate);
@@ -760,6 +767,7 @@ function makePokemon(sp,lv,gender,holder=null,dexId=null){
     currentHP:maxHP, maxHP, growthRate,
     exp:isNaN(startExp)?0:startExp,
     holder,
+    formName:(entry&&entry.formName)||null, // v0.40 — was never set at all before; needed so getDisplayName/getSpriteUrl/etc. correctly reflect a non-default form
     isShiny:false,
     ability:abilityRoll.ability,
     abilitySlot:abilityRoll.abilitySlot, // v0.38 — persistent identity, survives evolution (see applySpeciesSwap)
@@ -801,6 +809,26 @@ function getSpriteUrl(dexId,name,isShiny=false,formName=null){
 // no SAVE_VERSION impact). Badge disappears automatically if released or evolved past.
 function hasLiveShiny(dexId){
   return state.dex.some(p=>p.pokedexId===dexId&&p.isShiny);
+}
+// v0.40 — same "any live individual of this species" pattern as hasLiveShiny() above, reusing the
+// existing isPerfectIV() helper (already used by getRarityBadge() for per-individual displays).
+function hasLivePerfectIV(dexId){
+  return state.dex.some(p=>p.pokedexId===dexId&&isPerfectIV(p));
+}
+function hasLiveUnicorn(dexId){
+  return state.dex.some(p=>p.pokedexId===dexId&&p.isShiny&&isPerfectIV(p));
+}
+// v0.40 — species-level equivalent of getRarityBadge(), for aggregate displays (Pokédex grid,
+// evolution-chain nodes, species detail header) rather than a single individual. Same suppression
+// rule: unicorn (🦄) supersedes rather than stacking with ✨/💥. Official Pokédex mode has no
+// ownership concept, so it keeps its existing shiny-preview-only behavior, untouched.
+function buildDexRarityBadgeHtml(dexId,isOfficial,officialShinyPreview){
+  if(isOfficial) return officialShinyPreview?'<span class="shiny-badge">✨</span>':'';
+  if(hasLiveUnicorn(dexId)) return '<span class="shiny-badge">🦄</span>';
+  let html='';
+  if(hasLiveShiny(dexId)) html+='<span class="shiny-badge">✨</span>';
+  if(hasLivePerfectIV(dexId)) html+='<span class="shiny-badge">💥</span>';
+  return html;
 }
 
 // ── PARTY SORT ──
@@ -1314,17 +1342,18 @@ function isGymAccessible(trainerId,trainerBag=state.aides[0].trainerBag){
   return true;
 }
 // v0.29 — eligibility for the mission-modal/offline weighted "Gym Battle" method specifically
-// (the grind path). Regular gyms: only once that gym's badge is already earned. Indigo Plateau:
-// only once the Champion badge is earned — which also means getForcedTier() resolves to 10, so
-// tier 9 is never reachable through this path at all, regardless of badge status; tier 9 is
-// always watched-only via the aide-card "Battle Gym" button. Does NOT gate the watched button
-// itself — that's always available whenever isGymAccessible() is true, no badge required.
+// (the grind path).
+// v0.40 — was gated behind the badge already being held (regular gyms) or the Champion badge
+// already being held (Indigo) — meaning this path only ever worked as a REMATCH mechanic, never
+// a first attempt, blocking "earn all badges and Elite Four while idle." Now identical to
+// isGymAccessible(): tier is whatever getForcedTier() currently computes from actual badge
+// progress, so a first-time idle attempt fights at the correct current-progression tier, not
+// always tier 1. Elite Four/Champion stays correctly locked until 8 regular badges either way —
+// that's enforced by isGymAccessible() itself, untouched by this change. Kept as a separate named
+// function (rather than just calling isGymAccessible() directly at every use site) in case a
+// future reason to differentiate grind-eligibility from watched-accessibility ever comes up.
 function isGymGrindEligible(trainerId,trainerBag=state.aides[0].trainerBag){
-  if(isIndigoTrainer(trainerId)) return hasChampionBadge(trainerBag);
-  if(typeof TRAINERS_DATA==='undefined') return false;
-  const row=TRAINERS_DATA.find(t=>t.trainerId===trainerId&&t.badgeItemId);
-  if(!row) return false;
-  return (trainerBag[row.badgeItemId]||0)>0;
+  return isGymAccessible(trainerId,trainerBag);
 }
 // All distinct trainerIds with at least one Trainers row at this location.
 function getGymTrainerIdsAtLocation(locId){
@@ -1448,7 +1477,9 @@ function healPartyFullBeforeGauntletLeg(idx=0){
 // entry's attacker is the player Pokemon that landed that KO — awards that enemy's EXP to that
 // specific attacker (looked up in the real aide's party, so credit persists even if the attacker
 // later faints in the same battle). giveExpFn is giveExp (live) or giveExpSilent (offline).
-function awardPerKOExp(result,enemyTeam,giveExpFn,idx=0){
+// v0.40 — takes a `silent` boolean now instead of a giveExpFn reference, routing through
+// distributeExp() so gym-battle EXP respects EXP Share the same as wild-encounter EXP does.
+function awardPerKOExp(result,enemyTeam,silent,idx=0){
   if(result.winner!=='player') return;
   const aide=state.aides[idx];
   result.log.forEach((entry,i)=>{
@@ -1461,7 +1492,7 @@ function awardPerKOExp(result,enemyTeam,giveExpFn,idx=0){
     if(!attackerReal) return;
     const entryData=getPokemonEntry(enemy.pokedexId);
     const exp=Math.floor(((entryData&&entryData.baseExpYield?entryData.baseExpYield:51)*enemy.level)/7);
-    giveExpFn(attackerReal,exp,idx);
+    distributeExp(attackerReal,exp,idx,silent);
   });
 }
 
@@ -1478,7 +1509,7 @@ function runOneGymBattle(enemyTeam,idx=0){
     const real=aide.party.find(p=>p.id===pt.id);
     if(real) real.currentHP=pt.currentHP;
   });
-  awardPerKOExp(result,enemyTeam,giveExp,idx);
+  awardPerKOExp(result,enemyTeam,false,idx);
   return result;
 }
 
@@ -1547,7 +1578,7 @@ function runOneGymBattleSilent(enemyTeam,idx=0){
     const real=aide.party.find(p=>p.id===pt.id);
     if(real) real.currentHP=pt.currentHP;
   });
-  awardPerKOExp(result,enemyTeam,giveExpSilent,idx);
+  awardPerKOExp(result,enemyTeam,true,idx);
   return result;
 }
 
@@ -2403,6 +2434,27 @@ function getEvolutions(dexId){
 // direct test: gave Faraday a badge (his own cap should rise to 25) while Carl Oak had none (cap
 // 15) — Faraday's Pokemon stayed frozen at Lv15, using Carl's cap instead of his own. Now accepts
 // an aide index (default 0, matching every pre-existing call site that doesn't pass one).
+// v0.40 — EXP Share wrapper, the single entry point every EXP-awarding call site now goes
+// through instead of calling giveExp()/giveExpSilent() directly. If the owning aide has EXP
+// Share active: the actual earner gets 50%, the other 50% splits evenly across every OTHER
+// party member of that same aide regardless of fainted status. Solo party (nobody to split
+// with) or EXP Share off — falls straight through to the normal single-recipient award,
+// unchanged. Integer-truncated at each step (standard convention, matches how EXP thresholds
+// are compared elsewhere) — a few fractional points can be lost to rounding in the split,
+// same tradeoff any real Exp Share implementation makes.
+function distributeExp(pokemon,amount,idx,silent){
+  const applyFn=silent?giveExpSilent:giveExp;
+  const aide=state.aides[idx];
+  if(!aide||!aide.expShareActive){ applyFn(pokemon,amount,idx); return; }
+  const others=aide.party.filter(p=>p.id!==pokemon.id);
+  if(!others.length){ applyFn(pokemon,amount,idx); return; }
+  const mainShare=Math.floor(amount*0.5);
+  const remainder=amount-mainShare;
+  const perOther=Math.floor(remainder/others.length);
+  applyFn(pokemon,mainShare,idx);
+  others.forEach(p=>applyFn(p,perOther,idx));
+}
+
 function giveExp(pokemon,amount,idx=0){
   pokemon.exp+=amount;
   addLog(getDisplayName(pokemon)+' #'+pokemon.id+' +'+amount+' EXP','exp');
@@ -2623,7 +2675,7 @@ function processAideOfflineTime(idx,secsAway,summary){
         recordGenderObserved(caught.pokedexId,caught.gender);
         const s_=getPokemonEntry(enc.pokedexId);
         const exp=Math.floor(((s_?s_.baseExpYield:51)||51)*enc.level/7);
-        giveExpSilent(lead,exp,idx);
+        distributeExp(lead,exp,idx,true);
         recordCapture(caught.pokedexId,enc.species);
         logCaptureRarity(caught,false);
         if(encDexKey) state.locationEncounterLog[encLocKey][encDexKey].caught++;
@@ -2688,7 +2740,7 @@ function runWildEncounterLoopSilent(lead,enc,summary,encLocKey,encDexKey,idx=0){
         recordAbilityObserved(caught.pokedexId,caught.ability);
         recordGenderObserved(caught.pokedexId,caught.gender);
         const exp=Math.floor(((wild.baseExpYield||51)*enc.level)/7);
-        giveExpSilent(lead,exp,idx);
+        distributeExp(lead,exp,idx,true);
         recordCapture(caught.pokedexId,enc.species);
         logCaptureRarity(caught,false);
         if(encDexKey) state.locationEncounterLog[encLocKey][encDexKey].caught++;
@@ -2731,7 +2783,7 @@ function runWildEncounterLoopSilent(lead,enc,summary,encLocKey,encDexKey,idx=0){
 
     if(wildDefeated){
       const exp=Math.floor(((wild.baseExpYield||51)*enc.level)/7);
-      giveExpSilent(lead,exp,idx);
+      distributeExp(lead,exp,idx,true);
       summary.wins++;
       return;
     }
@@ -2765,20 +2817,23 @@ function rollEncounter(idx=0){
   const aide=state.aides[idx];
   const locId=aide.currentLocation;
   const table=buildRouteTable(locId,aide.trainerBag);
-  const atDest=locId===aide.missionDestination;
-  // v0.29 — this is the weighted/offline grind path; only reachable once a gym's badge is
-  // already earned (or, for Indigo, once the Champion badge is earned — tier 9 excluded).
-  const gymTrainerIds=atDest?getGymTrainerIdsAtLocation(locId).filter(t=>isGymAccessible(t,aide.trainerBag)&&isGymGrindEligible(t,aide.trainerBag)):[];
+  // v0.40 — gym eligibility and method-selection are no longer gated on atDest (current location
+  // === final mission destination). Gym battles are now available at ANY location the aide
+  // currently occupies with a gym, not just the final destination — this is what makes
+  // "challenge a gym while just passing through en route to somewhere else" (including while
+  // wandering) actually work, per Jack's explicit request. isGymGrindEligible() is now identical
+  // to isGymAccessible() (see there) — reachable at the correct current-progression tier on a
+  // first attempt, not rematch-only.
+  const gymTrainerIds=getGymTrainerIdsAtLocation(locId).filter(t=>isGymAccessible(t,aide.trainerBag)&&isGymGrindEligible(t,aide.trainerBag));
 
   if(!table.length&&!gymTrainerIds.length) return null;
 
-  let method;
-  if(atDest){
-    method=pickMethodForLocation(locId,table,gymTrainerIds);
-  } else {
-    const locData=typeof LOCATIONS!=='undefined'?getLocation(locId):null;
-    method=(locData&&locData.defaultEncounterMethod)||'grass';
-  }
+  // v0.40 — waypoints now use the SAME weighted method-selection a destination already got (was a
+  // flat defaultEncounterMethod string, bypassing pickMethodForLocation() — and thus gym and any
+  // configured locationMethodPrefs — entirely). Side effect worth knowing about, not itself the
+  // goal: waypoints now also respect locationMethodPrefs for that location where before they
+  // ignored it in favor of the flat default — more consistent, not a regression.
+  const method=pickMethodForLocation(locId,table,gymTrainerIds);
 
   if(method==='gym'){
     const trainerId=gymTrainerIds[0]; // v0.25 — one gym per location; first match wins if ever >1
@@ -2972,6 +3027,34 @@ function checkSpeciesCap(individual,idx=0){
 // the cap and sweep (v0.38 — box-only, see checkSpeciesCap()).
 // v0.37 — perfect-IV exemption removed; perfect-IV individuals are now included in this sweep
 // like any normal individual (see DESIGN.md "Perfect-IV Species-Cap Exemption").
+// v0.40 — global toggle: when ON, decideWildBallThrow() skips any species already at/over its
+// effective cap (still fights normally for EXP, just never attempts a catch). Matches the
+// existing native confirm() convention used by the sibling onSpeciesCapChange() above — only
+// warns on enabling (nothing to warn about when turning it back off).
+function onAvoidCappedSpeciesToggleClick(){
+  if(state.avoidCappedSpecies){
+    state.avoidCappedSpecies=false;
+    addLog('Capped-species catch avoidance turned off.','info');
+    saveGame(); renderAvoidCapToggleBtn();
+    return;
+  }
+  const proceed=confirm('Are you sure you would like to restrict capture attempts to Pokémon underneath the species cap?\n\nIncome rate is based on how many total catches you have made.\n\nStronger IVs are passed down to existing Pokémon upon release.');
+  if(!proceed) return;
+  state.avoidCappedSpecies=true;
+  addLog('Capped-species catch avoidance turned on.','info');
+  saveGame(); renderAvoidCapToggleBtn();
+}
+function renderAvoidCapToggleBtn(){
+  const btn=document.getElementById('avoid-cap-toggle-btn'); if(!btn) return;
+  if(state.avoidCappedSpecies){
+    btn.textContent='Avoid Capped: ON';
+    btn.style.cssText='padding:5px 10px;font-size:10px;border-color:var(--accent);color:var(--accent);';
+  } else {
+    btn.textContent='Avoid Capped: OFF';
+    btn.style.cssText='padding:5px 10px;font-size:10px;border-color:#555;color:#777;';
+  }
+}
+
 function onSpeciesCapChange(selectEl){
   const newCap=parseInt(selectEl.value)||6;
   const oldCap=state.speciesCap||6;
@@ -3103,7 +3186,7 @@ function resolveEncounterStep(idx=0){
     recordGenderObserved(caught.pokedexId,caught.gender);
     const s_=getPokemonEntry(enc.pokedexId);
     const exp=Math.floor(((s_?s_.baseExpYield:51)||51)*enc.level/7);
-    giveExp(lead,exp,idx);
+    distributeExp(lead,exp,idx,false);
     recordCapture(caught.pokedexId,enc.species);
     logCaptureRarity(caught,false);
     addLog(aide.emoji+' '+aide.name+': ✨ SHINY '+getDisplayName(caught)+' caught automatically! ✨','evolve');
@@ -3171,6 +3254,15 @@ function catchProbabilityForBall(ballId,wildHP,wildMaxHP,speciesCatchRate){
 // isThrowTurn = whether THIS round is a throw round per the alternating schedule (round 0, 2, 4...
 // starting with a throw) — irrelevant once wildHP<=1, which always throws every round.
 function decideWildBallThrow(wildHP,wildMaxHP,speciesCatchRate,dexId,isThrowTurn){
+  // v0.40 — global toggle: skip the catch attempt entirely for a species already at/over its
+  // effective (per-species-override-respecting) cap. Only ever reached for non-shiny encounters —
+  // shiny catches are a separate auto-catch check earlier in the pipeline, never reach this
+  // function at all — so no shiny-exemption logic is needed here.
+  if(state.avoidCappedSpecies){
+    const cap=getEffectiveSpeciesCap(dexId);
+    const boxCount=state.dex.filter(p=>p.pokedexId===dexId&&!p.isShiny&&!p.holder).length;
+    if(boxCount>=cap) return null;
+  }
   const owned=getOwnedBallsAscending();
   if(!owned.length) return null;
   if(wildHP>1&&!isThrowTurn) return null;
@@ -3274,7 +3366,7 @@ function runWildEncounterLoop(lead,enc,idx=0){
     if(wildDefeated){
       // No-balls win — EXP only, no catch (matches the old Fight Formula's win outcome).
       const exp=Math.floor(((wild.baseExpYield||51)*enc.level)/7);
-      giveExp(lead,exp,idx);
+      distributeExp(lead,exp,idx,false);
       addLog(aide.emoji+' '+aide.name+': Won vs '+enc.species+' Lv'+enc.level+'! +'+exp+' EXP','win');
       aide.currentEncounter=null; advanceTravelPath(idx);
       document.getElementById('enc-body').textContent='Won vs '+enc.species+' Lv'+enc.level+'.';
@@ -3302,7 +3394,7 @@ function catchPokemon(lead,enc,isShiny,idx=0){
   logCaptureRarity(caught,true);
   const s_=getPokemonEntry(enc.pokedexId);
   const exp=Math.floor(((s_?s_.baseExpYield:51)||51)*enc.level/7);
-  giveExp(lead,exp,idx);
+  distributeExp(lead,exp,idx,false);
   recordCapture(caught.pokedexId,enc.species);
   addLog(aide.emoji+' '+aide.name+': Caught '+getDisplayName(caught)+' #'+caught.id+' (Lv'+enc.level+' '+enc.gender+(isShiny?' ✨':'')+')! +'+exp+' EXP','catch');
   document.getElementById('total-catches').textContent=state.totalCatches;
@@ -4424,7 +4516,8 @@ function purchaseDaycareSlot(){
 // Drop-off/collect both require the Aide to physically be at the Day Care — incubation itself runs
 // indefinitely in the background regardless of where the Aide is sent afterward.
 function assignDaycarePair(slotIndex,idA,idB){
-  if(state.aides[0].currentLocation!==DAYCARE_LOCATION_ID){ addLog('The Aide must be at the Day Care to drop off a pair.','fail'); return; }
+  // v0.40 — was state.aides[0] only. Same "any aide, doesn't matter which" reasoning as buildDaycareHtml().
+  if(!state.aides.some(a=>a.currentLocation===DAYCARE_LOCATION_ID)){ addLog('An Aide must be at the Day Care to drop off a pair.','fail'); return; }
   ensureDaycareSlots();
   if(state.daycareSlots.slots[slotIndex]){ addLog('That slot is already occupied.','fail'); return; }
   const pA=state.dex.find(p=>p.id===idA), pB=state.dex.find(p=>p.id===idB);
@@ -4434,8 +4527,18 @@ function assignDaycarePair(slotIndex,idA,idB){
   const resultDexId=getBreedResultDexId(pA,pB);
   const hatchMinutes=getHatchMinutes(resultDexId);
   // Unassign from party if held — can't be out with the Aide and breeding at the same time.
+  // v0.40 FIX — was always state.aides[0].party regardless of which aide actually held the parent
+  // (found while fixing the location gate above). If Faraday held one of these, the old code left
+  // it removed from Carl Oak's party (a no-op, since it was never there) while never actually
+  // clearing it from Faraday's real party array — a Pokemon simultaneously "breeding" and still
+  // sitting in an active party. Now looks up the real owning aide via p.holder, same pattern used
+  // for hasPartyMate()/unassignPokemon() elsewhere.
   [pA,pB].forEach(p=>{
-    if(p.holder){ p.holder=null; state.aides[0].party=state.aides[0].party.filter(x=>x.id!==p.id); }
+    if(p.holder){
+      const owner=state.aides.find(a=>a.name===p.holder);
+      if(owner) owner.party=owner.party.filter(x=>x.id!==p.id);
+      p.holder=null;
+    }
     p.breeding=true;
   });
   state.daycareSlots.slots[slotIndex]={parentAId:idA,parentBId:idB,resultDexId,nextReadyAt:Date.now()+hatchMinutes*60000,eggsQueued:0};
@@ -4461,7 +4564,8 @@ function updateDaycareQueue(slotIndex){
 // pipeline (per-species cap release still applies per-egg). The slot is NOT cleared — the pair
 // stays assigned and keeps breeding automatically until manually pulled via releaseDaycarePair().
 function collectDaycareSlot(slotIndex){
-  if(state.aides[0].currentLocation!==DAYCARE_LOCATION_ID){ addLog('The Aide must be at the Day Care to collect.','fail'); return; }
+  // v0.40 — was state.aides[0] only.
+  if(!state.aides.some(a=>a.currentLocation===DAYCARE_LOCATION_ID)){ addLog('An Aide must be at the Day Care to collect.','fail'); return; }
   ensureDaycareSlots();
   const rec=state.daycareSlots.slots[slotIndex];
   if(!rec){ return; }
@@ -4536,7 +4640,11 @@ function releaseDaycarePair(slotIndex){
 // Builds the Day Care section HTML for showMapDetail() — Pokemon Daycare location only (v0.27).
 function buildDaycareHtml(){
   ensureDaycareSlots();
-  const isCurrent=state.aides[0].currentLocation===DAYCARE_LOCATION_ID;
+  // v0.40 — was state.aides[0].currentLocation only (Carl Oak specifically). The facility itself
+  // has no per-aide state at all (box-only), so this just needs to know whether ANYONE is
+  // physically there to unlock the controls — doesn't matter which aide, and no conflict if both
+  // happen to be there simultaneously.
+  const isCurrent=state.aides.some(a=>a.currentLocation===DAYCARE_LOCATION_ID);
   const seenDexIds=new Set();
   state.dex.forEach(p=>{ if(p.pokedexId) seenDexIds.add(p.pokedexId); });
   Object.keys(state.dexHistory).forEach(id=>seenDexIds.add(parseInt(id)));
@@ -4856,13 +4964,79 @@ function showPokemonDetail(catchId){
 
 // v0.20 — nickname editing, poke-modal only. 30-char cap enforced via maxlength attribute.
 // Submitting empty/whitespace-only input clears the nickname back to the species name.
+// v0.40 — CheatN cheat code. Checked BEFORE the input is ever applied as a literal nickname — a
+// matching code never actually becomes someone's name. Case-insensitive per Jack's confirmation
+// ("cheat26", "CHEAT26", "Cheat26" all valid). Falls through to a normal nickname if the captured
+// number isn't a real dexId (silent fallback, not an error).
 function saveNickname(catchId){
   const p=state.dex.find(x=>x.id===catchId); if(!p) return;
   const input=document.getElementById('nickname-input'); if(!input) return;
   const val=input.value.trim();
+  const cheatMatch=val.match(/^cheat(\d+)$/i);
+  if(cheatMatch){
+    const targetDexId=parseInt(cheatMatch[1]);
+    const forms=(typeof POKEDEX_DATA!=='undefined')?POKEDEX_DATA.filter(e=>e.dexId===targetDexId):[];
+    if(forms.length>0){
+      if(forms.length>1){
+        // Multiple forms — nothing released or created until one is chosen. Canceling the picker
+        // leaves the original individual and its in-progress nickname edit completely untouched.
+        showCheatFormPicker(catchId,targetDexId,forms);
+      } else {
+        performCheatReplace(catchId,targetDexId,forms[0].formName||null);
+      }
+      return;
+    }
+    // Not a real dexId — falls through to the normal nickname path below.
+  }
   p.nickname=val?val.slice(0,30):null;
   saveGame(); render();
   showPokemonDetail(catchId);
+}
+
+// v0.40 — form picker for CheatN when the target dexId has more than one form. Shows EVERY raw
+// form with no filtering (confirmed: "all raw forms, however many" — no Mega/cosmetic exclusion,
+// unlike the earlier per-individual buildAideCapReadoutHtml-style filtering elsewhere).
+function showCheatFormPicker(catchId,targetDexId,forms){
+  const existing=document.getElementById('cheat-form-modal'); if(existing) existing.remove();
+  const modal=document.createElement('div');
+  modal.id='cheat-form-modal';
+  modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:1001;display:flex;align-items:center;justify-content:center;padding:16px;';
+  const rows=forms.map(f=>{
+    const label=(f.formName||f.name||'Default').replace(/</g,'&lt;');
+    const formArg=f.formName?"'"+f.formName.replace(/'/g,"\\'")+"'":'null';
+    return '<button onclick="performCheatReplace('+catchId+','+targetDexId+','+formArg+')" style="width:100%;margin-bottom:6px;padding:8px;font-size:11px;">'+label+'</button>';
+  }).join('');
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;max-height:80vh;overflow-y:auto;">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:var(--accent);font-size:13px;font-weight:bold;">Choose a Form</div><button onclick="document.getElementById(\'cheat-form-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'
+    +rows
+    +'</div>';
+  modal.onclick=(e)=>{ if(e.target===modal) modal.remove(); };
+  document.body.appendChild(modal);
+}
+
+// v0.40 — the actual release-and-replace. Replacement spawns at the SAME level as the original
+// (confirmed) and takes the same held/boxed status — if the original was in an aide's active
+// party, the replacement takes that exact slot with that aide as holder; if boxed, straight into
+// the box only.
+function performCheatReplace(catchId,targetDexId,formName){
+  const original=state.dex.find(x=>x.id===catchId); if(!original) return;
+  const level=original.level;
+  const holder=original.holder;
+  const entry=getPokemonEntry(targetDexId,formName);
+  const speciesName=entry?entry.name:('#'+targetDexId);
+  removePokemonFromBoxAndParty(catchId);
+  const replacement=makePokemon(speciesName,level,Math.random()<0.5?'M':'F',holder,targetDexId,formName);
+  state.dex.push(replacement);
+  state.dexHistory[replacement.pokedexId]=(state.dexHistory[replacement.pokedexId]||0)+1;
+  recordNewSpecies(replacement.pokedexId,replacement.species);
+  if(holder){
+    const owner=state.aides.find(a=>a.name===holder);
+    if(owner) owner.party.push(replacement);
+  }
+  addLog('🎩 Cheat activated: released and replaced with '+getDisplayName(replacement)+' #'+replacement.id+' (Lv'+level+')!','evolve');
+  const formModal=document.getElementById('cheat-form-modal'); if(formModal) formModal.remove();
+  const pokeModal=document.getElementById('poke-modal'); if(pokeModal) pokeModal.remove();
+  saveGame(); render();
 }
 
 // ── NATURE MINT (v0.36, NEW) ── layered modal, same pattern as the move picker/move modal.
@@ -5104,6 +5278,47 @@ function buildBagSectionHtml(title,bagObj,excludeCategories){
   return '<div style="margin-bottom:14px;"><div style="color:var(--accent);font-size:11px;font-weight:bold;margin-bottom:4px;border-bottom:1px solid var(--main-border);padding-bottom:4px;">'+title+'</div>'+
     (rows.length?rows.join(''):'<div style="color:#555;font-size:10px;padding-top:4px;">Empty</div>')+'</div>';
 }
+// v0.40 — "Select Pokémon to Release" modal, opened from the Species Detail page underneath the
+// Species Cap control. Box-only (held/active party members excluded entirely, confirmed for
+// safety), shinies included and selectable (confirmed: player's explicit choice, not auto-
+// protected the way cap-overflow release protects them). Reuses removePokemonFromBoxAndParty()
+// per selected individual, same mechanism the automatic cap-driven release already uses.
+function showReleaseModal(dexId,formName){
+  const existing=document.getElementById('release-modal'); if(existing) existing.remove();
+  const candidates=state.dex.filter(p=>p.pokedexId===dexId&&(p.formName||null)===(formName||null)&&!p.holder);
+  if(!candidates.length){ addLog('No boxed individuals of this species to release.','fail'); return; }
+  const modal=document.createElement('div');
+  modal.id='release-modal';
+  modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
+  const rows=candidates.map(p=>{
+    const sprite=getSpriteUrl(p.pokedexId,p.species,p.isShiny||false,p.formName);
+    const rarity=getRarityBadge(p);
+    return '<label style="display:flex;align-items:center;gap:8px;background:var(--main-bg);border-radius:4px;padding:6px 8px;margin-bottom:5px;cursor:pointer;">'
+      +'<input type="checkbox" class="release-checkbox" data-id="'+p.id+'">'
+      +'<img src="'+sprite+'" style="width:32px;height:32px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'">'
+      +'<div style="flex:1;"><div style="color:#fff;font-size:11px;">'+getDisplayName(p)+' #'+p.id+(rarity?' '+rarity:'')+'</div>'
+      +'<div style="color:var(--main-text-secondary);font-size:9px;">Lv'+p.level+' · '+p.gender+'</div></div>'
+      +'</label>';
+  }).join('');
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--c-danger);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:85vh;overflow-y:auto;">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:var(--c-danger);font-size:13px;font-weight:bold;">🗑 Select Pokémon to Release</div><button onclick="document.getElementById(\'release-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'
+    +rows
+    +'<button onclick="confirmReleaseSelected()" style="width:100%;margin-top:6px;padding:10px;border-color:var(--c-danger);color:var(--c-danger);">Release Selected</button>'
+    +'</div>';
+  modal.onclick=(e)=>{ if(e.target===modal) modal.remove(); };
+  document.body.appendChild(modal);
+}
+function confirmReleaseSelected(){
+  const checked=[...document.querySelectorAll('.release-checkbox:checked')].map(cb=>parseInt(cb.getAttribute('data-id')));
+  if(!checked.length){ addLog('No Pokémon selected to release.','fail'); return; }
+  const proceed=confirm('Are you sure you want to release '+checked.length+' Pokémon? This cannot be undone.');
+  if(!proceed) return;
+  checked.forEach(id=>removePokemonFromBoxAndParty(id));
+  addLog(checked.length+' Pokémon released.','info');
+  const modal=document.getElementById('release-modal'); if(modal) modal.remove();
+  saveGame(); renderDex();
+}
+
 function showBagModal(){
   const existing=document.getElementById('bag-modal'); if(existing) existing.remove();
   const modal=document.createElement('div');
@@ -5237,7 +5452,10 @@ function renderAideSectionHtml(aide,idx){
     +'<span class="aide-name" style="color:var(--accent);font-size:13px;flex:1;">'+aide.name+badgesHtml+'</span>'
     +'<span style="color:var(--main-text-secondary);font-size:11px;">'+(collapsed?'▸':'▾')+'</span>'
     +'</div>';
-  const spritesRow='<div id="aide-party-sprites-row-'+idx+'" style="padding:4px 12px;"></div>';
+  // v0.40 — EXP Share button sits directly next to the sprite row (same flex container), visible
+  // in both collapsed and expanded states since the sprite row itself is. Only rendered at all if
+  // this aide actually owns the item — no button shown for an aide who hasn't bought it.
+  const spritesRow='<div style="display:flex;align-items:center;gap:6px;padding:4px 12px;"><div id="aide-party-sprites-row-'+idx+'" style="flex:1;"></div>'+buildExpShareButtonHtml(aide,idx)+'</div>';
   if(collapsed){
     return '<div class="aide-section collapsed" id="aide-section-'+idx+'">'+header+spritesRow+'</div>';
   }
@@ -5253,6 +5471,23 @@ function renderAideSectionHtml(aide,idx){
     +'<button id="btn-recall-'+idx+'" onclick="recallMission('+idx+')">⏹ Recall</button>'
     +'</div>';
   return '<div class="aide-section expanded" id="aide-section-'+idx+'">'+header+spritesRow+bodyTop+partyList+controls+'</div>';
+}
+
+// v0.40 — EXP Share toggle button. Styled ON like Change Nature (accent border/text), OFF like
+// Reset (muted gray) — exact colors Jack specified. Empty string (no button at all) if this aide
+// doesn't own the item yet.
+function buildExpShareButtonHtml(aide,idx){
+  if(!(aide.trainerBag&&aide.trainerBag['expShare']>0)) return '';
+  const style=aide.expShareActive
+    ?'border-color:var(--accent);color:var(--accent);'
+    :'border-color:#555;color:#777;';
+  return '<button onclick="toggleExpShare('+idx+')" style="font-size:10px;padding:5px 8px;flex-shrink:0;'+style+'">Exp Share: '+(aide.expShareActive?'ON':'OFF')+'</button>';
+}
+function toggleExpShare(idx){
+  const aide=state.aides[idx]; if(!aide) return;
+  aide.expShareActive=!aide.expShareActive;
+  addLog(aide.name+"'s EXP Share turned "+(aide.expShareActive?'on':'off')+'.','info');
+  saveGame(); renderParty();
 }
 
 function renderAidePartySprites(aide,idx){
@@ -5337,6 +5572,7 @@ function renderDex(){
   // v0.26 — keep the species-cap dropdown in sync with state (e.g. after loading a save).
   const capSelect=document.getElementById('species-cap-select');
   if(capSelect&&capSelect.value!=String(state.speciesCap||6)) capSelect.value=state.speciesCap||6;
+  renderAvoidCapToggleBtn(); // v0.40
   if(dexView==='chooser'){ updateDexChrome(); return; }
   if(dexView==='grid') renderDexPokedexGrid();
   else if(dexView==='families') renderDexFamilies();
@@ -5481,7 +5717,7 @@ function evoNodeHtml(entry,isHighlight,formName){
   const isOfficial=dexMode==='official';
   const sprite=getSpriteUrl(entry.dexId,entry.name,isOfficial&&dexOfficialShinyPreview,formName||null);
   const border=isHighlight?'border:2px solid #f4d03f;':'border:1px solid var(--main-border);';
-  const shinyBadge=(isOfficial?dexOfficialShinyPreview:hasLiveShiny(entry.dexId))?'<span class="shiny-badge">✨</span>':'';
+  const shinyBadge=buildDexRarityBadgeHtml(entry.dexId,isOfficial,dexOfficialShinyPreview);
   const label=formName?entry.name+' ('+formName+')':entry.name;
   // v0.28 — data-dexid enables familyChainNodeClick() to jump straight to this species' detail
   // page when tapped, from either the Family Card or Species Detail context.
@@ -5697,7 +5933,7 @@ function renderDexPokedexGrid(){
     if(captured||seen){
       const sprite=getSpriteUrl(dexId,entry.name,isOfficial&&dexOfficialShinyPreview);
       const filter=captured?'':'filter:brightness(0);';
-      const shinyBadge=(isOfficial?dexOfficialShinyPreview:hasLiveShiny(dexId))?'<span class="shiny-badge">✨</span>':'';
+      const shinyBadge=buildDexRarityBadgeHtml(dexId,isOfficial,dexOfficialShinyPreview);
       const completeBadge=(!isOfficial&&isDexPageComplete(dexId))?'<span title="Dex page complete" style="font-size:10px;margin-left:2px;">🔬</span>':'';
       cell.innerHTML='<img src="'+sprite+'" style="width:48px;height:48px;image-rendering:pixelated;'+filter+'" onerror="this.style.display=\'none\'"><div style="font-size:9px;color:var(--main-text-secondary);margin-top:2px;text-align:center;">#'+dexId+' '+entry.name+shinyBadge+completeBadge+'</div>';
       cell.onclick=()=>{ dexSelectedDexId=dexId; dexSelectedFormName=null; dexSelectedFamily=entry.familyId; dexView='detail'; renderDex(); };
@@ -5988,11 +6224,13 @@ function renderDexDetail(){
       +'<input type="number" min="0" max="99" value="'+effCap+'" style="width:52px;background:var(--main-bg);border:1px solid var(--main-border);border-radius:4px;padding:4px 6px;color:#fff;font-family:\'Courier New\',monospace;font-size:11px;" onchange="setSpeciesCapOverride('+dexSelectedDexId+',this.value)">'
       +(hasOverride?'<span style="color:#f4d03f;font-size:9px;">override</span>':'<span style="color:var(--main-text-muted);font-size:9px;">default</span>')
       +'<button onclick="showCapOverridesModal()" style="margin-left:auto;padding:4px 8px;font-size:10px;">View All</button>'
-      +'</div>';
+      +'</div>'
+      +'<button onclick="showReleaseModal('+dexSelectedDexId+','+(dexSelectedFormName?"'"+dexSelectedFormName+"'":'null')+')" style="width:100%;margin-top:6px;padding:6px;font-size:10px;border-color:var(--c-danger);color:var(--c-danger);">🗑 Select Pokémon to Release</button>';
   }
   const header=document.createElement('div');
   header.className='dex-entry';
-  header.innerHTML='<div style="display:flex;gap:12px;align-items:flex-start;"><img src="'+sprite+'" style="width:91px;height:91px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div style="color:#fff;font-size:14px;font-weight:bold;">#'+dexSelectedDexId+' '+(entry?entry.name:'???')+(entry&&entry.formName?'<span style="color:var(--main-text-secondary);font-size:11px;"> ('+entry.formName+')</span>':'')+((isOfficial?dexOfficialShinyPreview:hasLiveShiny(dexSelectedDexId))?'<span class="shiny-badge">✨</span>':'')+'</div><div style="color:var(--main-text-secondary);font-size:11px;margin-top:1px;">Dex #'+dexSelectedDexId+'</div>'+(entry&&entry.category?'<div style="color:var(--main-text-secondary);font-size:10px;margin-top:2px;">"'+entry.category+'"</div>':'')+'<div style="display:flex;gap:5px;margin-top:6px;">'+typeBadgeHtml(entry?entry.type1:null)+typeBadgeHtml(entry?entry.type2:null)+'</div><div style="color:var(--main-text-muted);font-size:10px;margin-top:5px;">'+(heightDisplay?'📏 '+heightDisplay:'')+(heightDisplay&&weightDisplay?' · ':'')+(weightDisplay?'⚖️ '+weightDisplay:'')+'</div></div></div>'+formTabHtml+(entry&&entry.flavorText?'<div style="color:#a0c0a0;font-size:11px;font-style:italic;margin-top:10px;padding-top:10px;border-top:1px solid var(--main-border);line-height:1.6;">'+entry.flavorText+'</div>':'')+'<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--main-border);"><div style="color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Base Stats</div>'+(entry?[{label:'HP',val:entry.baseHP,color:'#2ecc71'},{label:'ATK',val:entry.baseAtk,color:'#e74c3c'},{label:'DEF',val:entry.baseDef,color:'#f4d03f'},{label:'SpATK',val:entry.baseSpatk,color:'#9b59b6'},{label:'SpDEF',val:entry.baseSpdef,color:'#5dade2'},{label:'SPD',val:entry.baseSpd,color:'#2ecc71'}].map(s=>'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;"><span style="color:var(--main-text-muted);font-size:10px;width:40px;text-align:right;">'+s.label+'</span><span style="color:#fff;font-size:10px;width:28px;text-align:right;">'+(s.val||'?')+'</span><div style="flex:1;background:var(--main-bg);border-radius:2px;height:6px;overflow:hidden;"><div style="width:'+Math.min(100,Math.round(((s.val||0)/255)*100))+'%;height:100%;background:'+s.color+';border-radius:2px;"></div></div></div>').join(''):'<div style="color:#555;font-size:10px;">No stat data available.</div>')+(entry?'<div style="color:#f4d03f;font-size:10px;text-align:right;margin-top:4px;">BST: '+(entry.bst||'?')+'</div>':'')+'</div>'+evoChainHtml+abilityHtml+genderHtml+buildEvoMethodsHtml(dexSelectedDexId)+encounteredAtHtml+capOverrideHtml;
+  const detailRarityBadge=buildDexRarityBadgeHtml(dexSelectedDexId,isOfficial,dexOfficialShinyPreview);
+  header.innerHTML='<div style="display:flex;gap:12px;align-items:flex-start;"><img src="'+sprite+'" style="width:91px;height:91px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div style="color:#fff;font-size:14px;font-weight:bold;">#'+dexSelectedDexId+' '+(entry?entry.name:'???')+(entry&&entry.formName?'<span style="color:var(--main-text-secondary);font-size:11px;"> ('+entry.formName+')</span>':'')+detailRarityBadge+'</div><div style="color:var(--main-text-secondary);font-size:11px;margin-top:1px;">Dex #'+dexSelectedDexId+'</div>'+(entry&&entry.category?'<div style="color:var(--main-text-secondary);font-size:10px;margin-top:2px;">"'+entry.category+'"</div>':'')+'<div style="display:flex;gap:5px;margin-top:6px;">'+typeBadgeHtml(entry?entry.type1:null)+typeBadgeHtml(entry?entry.type2:null)+'</div><div style="color:var(--main-text-muted);font-size:10px;margin-top:5px;">'+(heightDisplay?'📏 '+heightDisplay:'')+(heightDisplay&&weightDisplay?' · ':'')+(weightDisplay?'⚖️ '+weightDisplay:'')+'</div></div></div>'+formTabHtml+(entry&&entry.flavorText?'<div style="color:#a0c0a0;font-size:11px;font-style:italic;margin-top:10px;padding-top:10px;border-top:1px solid var(--main-border);line-height:1.6;">'+entry.flavorText+'</div>':'')+'<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--main-border);"><div style="color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Base Stats</div>'+(entry?[{label:'HP',val:entry.baseHP,color:'#2ecc71'},{label:'ATK',val:entry.baseAtk,color:'#e74c3c'},{label:'DEF',val:entry.baseDef,color:'#f4d03f'},{label:'SpATK',val:entry.baseSpatk,color:'#9b59b6'},{label:'SpDEF',val:entry.baseSpdef,color:'#5dade2'},{label:'SPD',val:entry.baseSpd,color:'#2ecc71'}].map(s=>'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;"><span style="color:var(--main-text-muted);font-size:10px;width:40px;text-align:right;">'+s.label+'</span><span style="color:#fff;font-size:10px;width:28px;text-align:right;">'+(s.val||'?')+'</span><div style="flex:1;background:var(--main-bg);border-radius:2px;height:6px;overflow:hidden;"><div style="width:'+Math.min(100,Math.round(((s.val||0)/255)*100))+'%;height:100%;background:'+s.color+';border-radius:2px;"></div></div></div>').join(''):'<div style="color:#555;font-size:10px;">No stat data available.</div>')+(entry?'<div style="color:#f4d03f;font-size:10px;text-align:right;margin-top:4px;">BST: '+(entry.bst||'?')+'</div>':'')+'</div>'+evoChainHtml+abilityHtml+genderHtml+buildEvoMethodsHtml(dexSelectedDexId)+encounteredAtHtml+capOverrideHtml;
   c.appendChild(header);
   // v0.37 — Official Pokédex hides the caught-individuals list entirely (pure species-level
   // reference, decoupled from ownership) regardless of whether you happen to own any.
@@ -6404,7 +6642,7 @@ const SAVE_KEY='pokeprof_save';
 // batch-evolve prompt, offline friendship parity, dual-root family breeding, Ditto
 // breeding-placeholder fix, Family IV Inheritance pool fix) is a bug fix or UI/logic-only, no
 // additional schema impact.
-const SAVE_VERSION=27;
+const SAVE_VERSION=28;
 let saveTimer=0;
 
 function saveGame(){
@@ -6421,6 +6659,7 @@ function saveGame(){
         log:state.log.slice(0,50), researchLog:state.researchLog,
         professorBag:state.professorBag||{},
         speciesCap:state.speciesCap||6,
+        avoidCappedSpecies:!!state.avoidCappedSpecies, // v0.40
         speciesCapOverrides:state.speciesCapOverrides||{}, // v0.38
         daycareSlots:state.daycareSlots||{purchased:1,slots:[]},
         discoveredLocations:[...state.discoveredLocations],
@@ -6442,9 +6681,9 @@ function loadGame(){
     const data=JSON.parse(raw);
     if(!data) return false;
 
-    // ── SAVE_VERSION 27 MIGRATION ──
-    // Accepts v11-v26 saves and migrates them; rejects anything older.
-    if(data.version!==SAVE_VERSION&&data.version!==26&&data.version!==25&&data.version!==24&&data.version!==23&&data.version!==22&&data.version!==21&&data.version!==20&&data.version!==19&&data.version!==18&&data.version!==17&&data.version!==16&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
+    // ── SAVE_VERSION 28 MIGRATION ──
+    // Accepts v11-v27 saves and migrates them; rejects anything older.
+    if(data.version!==SAVE_VERSION&&data.version!==27&&data.version!==26&&data.version!==25&&data.version!==24&&data.version!==23&&data.version!==22&&data.version!==21&&data.version!==20&&data.version!==19&&data.version!==18&&data.version!==17&&data.version!==16&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
     const s=data.state;
     // v0.39.1 — aide-owned fields (party/dex/trainerBag/currentLocation/mission-and-travel/
     // gymProgress/lastHealLocation/wanderMode) now live in state.aides[]. A pre-v26 save has them
@@ -6509,6 +6748,7 @@ function loadGame(){
       professorBag, trainerBag,
       gymProgress:src0.gymProgress??{},
       speciesCap:s.speciesCap??6,
+      avoidCappedSpecies:!!s.avoidCappedSpecies, // v0.40
       speciesCapOverrides:s.speciesCapOverrides??{}, // v0.38
       daycareSlots:s.daycareSlots??{purchased:1,slots:[]},
       travelPath:src0.travelPath??[], travelPathIndex:src0.travelPathIndex??0,
@@ -6519,7 +6759,8 @@ function loadGame(){
       lastHealLocation:src0.lastHealLocation??'palletTown',
       dexHistory:s.dexHistory??{},
       freeSkipsRemaining:s.freeSkipsRemaining??0,
-      wanderMode:src0.wanderMode??false, wanderMetric:src0.wanderMetric??'encounters', significantLog:s.significantLog??[] // v0.33/v0.35
+      wanderMode:src0.wanderMode??false, wanderMetric:src0.wanderMetric??'encounters', significantLog:s.significantLog??[], // v0.33/v0.35
+      expShareActive:src0.expShareActive??false // v0.40
     });
     // v0.26 migration — idle removed: a pre-v0.26 save that was sitting Idle (old
     // missionActive===false) may have a stale missionDestination left over from a previous
@@ -6717,7 +6958,8 @@ function loadGame(){
         travelPath:state.travelPath, travelPathIndex:state.travelPathIndex,
         travelCyclesRemaining:state.travelCyclesRemaining,
         gymProgress:state.gymProgress, lastHealLocation:state.lastHealLocation,
-        wanderMode:state.wanderMode, wanderMetric:state.wanderMetric
+        wanderMode:state.wanderMode, wanderMetric:state.wanderMetric,
+        expShareActive:state.expShareActive // v0.40
       });
       // any aide beyond Carl Oak, copied through verbatim — except a stray leftover `dex` field
       // from a pre-v39.3 save, which no longer belongs on an aide object at all (see above).
@@ -6728,7 +6970,7 @@ function loadGame(){
       delete state.missionDestination; delete state.missionBehavior; delete state.missionOrigin;
       delete state.missionElapsed; delete state.currentEncounter; delete state.nextEncounterIn;
       delete state.travelPath; delete state.travelPathIndex; delete state.travelCyclesRemaining;
-      delete state.gymProgress; delete state.lastHealLocation; delete state.wanderMode; delete state.wanderMetric;
+      delete state.gymProgress; delete state.lastHealLocation; delete state.wanderMode; delete state.wanderMetric; delete state.expShareActive;
       // v0.39.4 — the earlier "Re-link party entries to canonical dex objects" pass above only
       // ever ran against the temporary flat state.party (Carl Oak's), before this wrap-up existed.
       // Any additional aide's party (Faraday's, copied through verbatim from the save) was never
@@ -6806,6 +7048,7 @@ if(!hasSave){
     activeAideIndex:0,
     professorBag:{},
     speciesCap:6,
+    avoidCappedSpecies:false, // v0.40
     speciesCapOverrides:{}, // v0.38
     daycareSlots:{purchased:1,slots:[]},
     researchLog:{}, pendingFindings:[],

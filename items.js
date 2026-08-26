@@ -1334,6 +1334,24 @@ const ITEMS_DATA = [
     "usableInBattle": false,
     "sprite": null,
     "bagType": "Professor"
+  },
+  {
+    "itemId": "expShare",
+    "name": "EXP Share",
+    "itemCategory": "tool",
+    "description": "Once owned, can be toggled on/off per aide. When ON: whoever actually battles/catches gets 50% of the EXP, the rest splits evenly across the aide's other party members regardless of fainted status.",
+    "effect": "toggle-exp-share",
+    "effectValue": null,
+    "shopPrice": 100,
+    "sellPrice": null,
+    "shopTier": "full",
+    "isConsumable": false,
+    "catchRateModifier": null,
+    "requiresTarget": false,
+    "usableInField": false,
+    "usableInBattle": false,
+    "sprite": null,
+    "bagType": "Trainer"
   }
 ];
 

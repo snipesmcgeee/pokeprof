@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.38</title>
+<title>PokeProf v0.41</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -142,7 +142,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span style="font-size:11px;color:var(--main-text-muted);">v0.40</span></h1>
+  <h1>PokeProf <span style="font-size:11px;color:var(--main-text-muted);">v0.41</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">100.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -1328,6 +1328,15 @@ function getLevelCap(trainerBag=state.aides[0].trainerBag){
 }
 function isIndigoTrainer(trainerId){
   return typeof TRAINERS_DATA!=='undefined'&&TRAINERS_DATA.some(t=>t.trainerId===trainerId&&t.isGauntlet);
+}
+// v0.41 — per-trainer badge check (as opposed to hasChampionBadge()/countRegularBadges()'
+// aggregate checks above), used to compute the Gym Battle mission-modal checkbox's badge-aware
+// default (see renderMethodPrefs()/updateMethodPrefs()).
+function hasGymBadge(trainerId,trainerBag=state.aides[0].trainerBag){
+  if(typeof TRAINERS_DATA==='undefined') return false;
+  const row=TRAINERS_DATA.find(t=>t.trainerId===trainerId);
+  const badgeId=row?row.badgeItemId:null;
+  return !!(badgeId&&trainerBag[badgeId]>0);
 }
 // Forced tier — never player-selectable. Regular gyms clamp at 8 until Champion is beaten,
 // then jump to 10 everywhere (tier 9 is Indigo-exclusive, never appears on a regular gym).
@@ -4023,12 +4032,26 @@ function renderMethodPrefs(locId){
   // available-but-unchecked) defaults to checked once, self-correcting with one tap if undesired.
   const knownMethods=prefs?(prefs.knownMethods||prefs.methods||[]):[];
 
+  // v0.41 — Gym Battle's checked state does NOT use the generic knownMethods default above.
+  // Instead it's live-recomputed from the gym's own badge status every render: unchecked by
+  // default while unearned, checked by default once earned. gymBadgeState records which badge
+  // state ('earned'/'unearned') the checkbox was last rendered under; if that no longer matches
+  // the current live status (badge was just earned since the last render), the default is
+  // recomputed fresh — overriding whatever the player had manually set beforehand. Between
+  // transitions, the player's manual choice is respected and persists like any other method.
+  let gymChecked=false, gymBadgeState=null;
+  if(gymTrainerIds.length){
+    const gymHasBadge=hasGymBadge(gymTrainerIds[0],state.aides[missionModalAideIndex].trainerBag);
+    gymBadgeState=gymHasBadge?'earned':'unearned';
+    gymChecked=(!prefs||prefs.gymBadgeState!==gymBadgeState)?gymHasBadge:prefs.methods.includes('gym');
+  }
+
   let html='<div style="margin-top:10px;border-top:1px solid var(--main-card);padding-top:10px;">';
   html+='<div style="color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Encounter Methods</div>';
 
   allMethods.forEach(method=>{
     const locked=lockedMethods.has(method);
-    const checked=locked?false:(prefs?(knownMethods.includes(method)?prefs.methods.includes(method):true):defaultChecked.includes(method));
+    const checked=method==='gym'?gymChecked:(locked?false:(prefs?(knownMethods.includes(method)?prefs.methods.includes(method):true):defaultChecked.includes(method)));
     const weight=prefs&&prefs.weights?(prefs.weights[method]||1):1;
     let label=FISH_ROD_LABELS[method]||method;
     if(method==='gym'){
@@ -4046,8 +4069,13 @@ function renderMethodPrefs(locId){
   html+='</div>';
   el.innerHTML=html;
 
-  // Initialise prefs in state if not set
-  if(!prefs) updateMethodPrefs(locId);
+  // Initialise prefs in state if not set, OR if Gym Battle's badge-state default just changed
+  // (see gymChecked/gymBadgeState above) — without this, the freshly-recomputed default is only
+  // ever visible in the DOM checkbox until the player happens to touch some other control on this
+  // panel; pickMethodForLocation() reads the SAVED methods[] array at encounter-roll time, not the
+  // DOM, so an un-persisted transition would silently never actually enter the weighted pool.
+  const gymTransitioned=gymTrainerIds.length&&(!prefs||prefs.gymBadgeState!==gymBadgeState);
+  if(!prefs||gymTransitioned) updateMethodPrefs(locId);
 }
 
 function updateMethodPrefs(locId){
@@ -4073,7 +4101,11 @@ function updateMethodPrefs(locId){
   // (defensive against this running before a re-render, or a method temporarily re-locking).
   const prevKnown=(state.locationMethodPrefs[locId]&&state.locationMethodPrefs[locId].knownMethods)||[];
   const knownMethods=[...new Set([...prevKnown,...knownNow])];
-  state.locationMethodPrefs[locId]={methods,weights,knownMethods};
+  // v0.41 — recompute gymBadgeState fresh from live badge status on every save (this runs on
+  // every checkbox/weight change on the panel, plus once on first init), so the very next render
+  // always has an accurate "last known badge state" to compare against. See renderMethodPrefs().
+  const gymBadgeState=gymTrainerIds.length?(hasGymBadge(gymTrainerIds[0],state.aides[missionModalAideIndex].trainerBag)?'earned':'unearned'):null;
+  state.locationMethodPrefs[locId]={methods,weights,knownMethods,gymBadgeState};
 }
 
 // Toggle expand/collapse of evolution methods panel in dex detail
@@ -5340,7 +5372,21 @@ function showBagModal(){
 }
 
 // ── RENDER ──
+// v0.41 — focus-guard. render() is called unconditionally every gameTick() (every 1s) and every
+// panel it touches does a full innerHTML rebuild, including any <input>/<textarea> sitting inside
+// that panel (e.g. the Species Cap override field on Species Detail). On mobile, that rebuild
+// destroys and recreates the input mid-edit, which dismisses the soft keyboard the instant it
+// starts to open — the input never stays focused long enough to type into. Fix: if the currently
+// focused element anywhere in the document is an INPUT or TEXTAREA, skip the redraw for this tick
+// entirely and return early. Nothing upstream of render() inside gameTick() is affected — encounter
+// rolls, travel, income, friendship, evolution testing all continue normally; only the DOM redraw
+// pauses. The next tick's render() call (or a manual render() from any other action) fires normally
+// the moment focus leaves the field, so the display is never stale for more than one tick's worth
+// of visible time. Structural fix — protects every current and future tick-rendered input, not
+// just this one field.
 function render(){
+  const active=document.activeElement;
+  if(active&&(active.tagName==='INPUT'||active.tagName==='TEXTAREA')) return;
   renderParty();
   renderDex();
   updateAllAideLocations();
@@ -5936,7 +5982,10 @@ function renderDexPokedexGrid(){
       const shinyBadge=buildDexRarityBadgeHtml(dexId,isOfficial,dexOfficialShinyPreview);
       const completeBadge=(!isOfficial&&isDexPageComplete(dexId))?'<span title="Dex page complete" style="font-size:10px;margin-left:2px;">🔬</span>':'';
       cell.innerHTML='<img src="'+sprite+'" style="width:48px;height:48px;image-rendering:pixelated;'+filter+'" onerror="this.style.display=\'none\'"><div style="font-size:9px;color:var(--main-text-secondary);margin-top:2px;text-align:center;">#'+dexId+' '+entry.name+shinyBadge+completeBadge+'</div>';
-      cell.onclick=()=>{ dexSelectedDexId=dexId; dexSelectedFormName=null; dexSelectedFamily=entry.familyId; dexView='detail'; renderDex(); };
+      // v0.41 fix — was hardcoded null, which broke "form-only" species (every Pokédex row has a
+      // non-null formName, no null-form sibling — e.g. Nidoran M/F) by mismatching every filter
+      // keyed on (p.formName||null)===(dexSelectedFormName||null). Use the entry's real form.
+      cell.onclick=()=>{ dexSelectedDexId=dexId; dexSelectedFormName=entry.formName||null; dexSelectedFamily=entry.familyId; dexView='detail'; renderDex(); };
     } else {
       cell.innerHTML='<div style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;font-size:22px;color:#555;">?</div><div style="font-size:9px;color:#555;margin-top:2px;">#'+dexId+'</div>';
     }
@@ -6020,7 +6069,8 @@ function renderDexSpecies(){
     d.className='dex-entry'; d.style.cursor='pointer';
     const rightLabel=isOfficial?'▶':(totalEver+' total ('+liveCount+' held) ▶');
     d.innerHTML='<div style="display:flex;align-items:center;gap:10px;"><img src="'+sprite+'" style="width:40px;height:40px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div class="dex-header"><span class="dex-name">#'+entry.dexId+' '+entry.name+'</span><span class="dex-id">'+rightLabel+'</span></div><div class="dex-details">'+(entry.type1||'???')+(entry.type2?' / '+entry.type2:'')+' · BST '+(entry.bst||'?')+'</div>'+(isOfficial?'':'<div style="color:var(--main-text-muted);font-size:10px;margin-top:2px;">'+getEvolutionDisplayText(entry.dexId)+'</div>')+'</div></div>';
-    d.onclick=()=>{ dexSelectedDexId=entry.dexId; dexSelectedFormName=null; dexView='detail'; renderDex(); };
+    // v0.41 fix — see renderDexPokedexGrid() above for the full bug explanation; same fix here.
+    d.onclick=()=>{ dexSelectedDexId=entry.dexId; dexSelectedFormName=entry.formName||null; dexView='detail'; renderDex(); };
     c.appendChild(d);
   });
   if(isOfficial) return;
@@ -6457,7 +6507,8 @@ function renderDexOfficialSpeciesList(){
     const sprite=getSpriteUrl(entry.dexId,entry.name,dexOfficialShinyPreview);
     const typesHtml=typeBadgeHtml(entry.type1)+typeBadgeHtml(entry.type2);
     d.innerHTML='<div style="display:flex;align-items:center;gap:8px;"><img src="'+sprite+'" style="width:36px;height:36px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div class="dex-header"><span class="dex-name">#'+entry.dexId+' '+entry.name+' '+typesHtml+'</span></div><div class="dex-details">Total: '+(entry.bst||'?')+'</div></div></div>';
-    d.onclick=()=>{ dexSelectedDexId=entry.dexId; dexSelectedFormName=null; dexView='detail'; renderDex(); };
+    // v0.41 fix — see renderDexPokedexGrid() above for the full bug explanation; same fix here.
+    d.onclick=()=>{ dexSelectedDexId=entry.dexId; dexSelectedFormName=entry.formName||null; dexView='detail'; renderDex(); };
     c.appendChild(d);
   });
 }
@@ -7194,6 +7245,34 @@ function renderMap(){
     text.textContent=locData.name||locId;
     g.appendChild(text);
 
+    // v0.41 — tiny badge-sprite icon next to the location name for any discovered gym location,
+    // regardless of current accessibility (confirmed). Same BADGE_SPRITE_MAP/champion-badge-emoji
+    // convention as the Aide Panel and the map-detail-panel block above. Positioned just to the
+    // right of the label's approximate text width (label font is 9px monospace, so this is an
+    // estimate, not a measured width — good enough at this scale).
+    const gymTrainerIdsAtNode=getGymTrainerIdsAtLocation(locId);
+    if(gymTrainerIdsAtNode.length){
+      const trainerRow=typeof TRAINERS_DATA!=='undefined'?TRAINERS_DATA.find(t=>t.trainerId===gymTrainerIdsAtNode[0]):null;
+      const badgeId=trainerRow?trainerRow.badgeItemId:null;
+      const labelWidth=(locData.name||locId).length*5.5;
+      const iconX=x+labelWidth/2+3, iconY=y+labelYOffset-8;
+      if(badgeId&&BADGE_SPRITE_MAP[badgeId]){
+        const badgeImg=document.createElementNS('http://www.w3.org/2000/svg','image');
+        badgeImg.setAttribute('href',BADGE_SPRITE_MAP[badgeId]);
+        badgeImg.setAttribute('x',iconX); badgeImg.setAttribute('y',iconY);
+        badgeImg.setAttribute('width','10'); badgeImg.setAttribute('height','10');
+        badgeImg.setAttribute('pointer-events','none');
+        g.appendChild(badgeImg);
+      } else {
+        const badgeEmoji=document.createElementNS('http://www.w3.org/2000/svg','text');
+        badgeEmoji.setAttribute('x',iconX); badgeEmoji.setAttribute('y',iconY+9);
+        badgeEmoji.setAttribute('font-size','9');
+        badgeEmoji.setAttribute('pointer-events','none');
+        badgeEmoji.textContent='🏆';
+        g.appendChild(badgeEmoji);
+      }
+    }
+
     g.onclick=(e)=>{ e.stopPropagation(); selectMapLocation(locId); };
     svg.appendChild(g);
   });
@@ -7251,7 +7330,31 @@ function showMapDetail(locId){
   const aidesHere=state.aides.filter(a=>a.currentLocation===locId);
   const hereLabel=aidesHere.length?('📍 '+aidesHere.map(a=>a.emoji+' '+a.name).join(', ')+' here'):'';
 
+  // v0.41 — Gym badge/tier info block. Shown for any location with a gym, regardless of whether
+  // it's currently accessible (confirmed) — badge sprite/name via the same BADGE_SPRITE_MAP/
+  // getItem() convention as the Aide Panel, tier via each aide's existing gymProgress tracker.
+  const gymTrainerIdsHere=getGymTrainerIdsAtLocation(locId);
+  let gymHtml='';
+  if(gymTrainerIdsHere.length){
+    const gymTrainerId=gymTrainerIdsHere[0];
+    const trainerRow=typeof TRAINERS_DATA!=='undefined'?TRAINERS_DATA.find(t=>t.trainerId===gymTrainerId):null;
+    const badgeId=trainerRow?trainerRow.badgeItemId:null;
+    const badgeItem=badgeId?getItem(badgeId):null;
+    const badgeIconHtml=badgeId&&BADGE_SPRITE_MAP[badgeId]
+      ?'<img src="'+BADGE_SPRITE_MAP[badgeId]+'" style="width:18px;height:18px;image-rendering:pixelated;vertical-align:middle;" onerror="this.style.display=\'none\'">'
+      :'<span style="font-size:15px;vertical-align:middle;">🏆</span>';
+    const tierLines=state.aides.map(aide=>{
+      const tier=aide.gymProgress&&aide.gymProgress[gymTrainerId];
+      return '<div style="color:var(--main-text-secondary);font-size:10px;">'+aide.emoji+' '+aide.name+': '+(tier?'Tier '+tier+' cleared':'Not yet challenged')+'</div>';
+    }).join('');
+    gymHtml='<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--main-card);">'
+      +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">'+badgeIconHtml+'<span style="color:var(--main-text);font-size:11px;font-weight:bold;">'+(badgeItem?badgeItem.name:'Gym Badge')+'</span></div>'
+      +tierLines
+      +'</div>';
+  }
+
   content.innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;"><div><div style="color:var(--main-text);font-size:13px;font-weight:bold;">'+locName+'</div><div style="color:var(--main-text-muted);font-size:10px;">'+(locData?locData.region||'Kanto':'Kanto')+'</div></div><div style="text-align:right;font-size:10px;">'+(hereLabel?'<span style="color:#f4d03f;">'+hereLabel+'</span><br>':'')+(heals?'<span style="color:#2ecc71;">🏥 Heals party</span><br>':'')+(shop?'<span style="color:#f4d03f;">🛒 Shop: '+shop+'</span>':'')+'</div></div>'+
+    gymHtml+
     (locId===DAYCARE_LOCATION_ID?buildDaycareHtml():'')+encHtml;
 
   detail.style.display='block';

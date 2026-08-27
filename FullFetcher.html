@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PokeProf — Full Fetcher</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #1a1a2e; color: #e0e0e0; font-family: 'Courier New', monospace; font-size: 13px; padding: 20px; min-height: 100vh; }
+
+  h1 { color: #e63946; font-size: 18px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; }
+  .subtitle { color: #6080a0; font-size: 11px; margin-bottom: 24px; }
+
+  .card { background: #16213e; border: 1px solid #0f3460; border-radius: 6px; padding: 16px; margin-bottom: 16px; }
+  .card h2 { color: #5dade2; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; }
+
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+  label { color: #a0a0c0; font-size: 11px; white-space: nowrap; }
+
+  input[type=number], input[type=text] {
+    background: #0f3460; border: 1px solid #1a4a80; color: #e0e0e0;
+    font-family: 'Courier New', monospace; font-size: 12px;
+    padding: 7px 10px; border-radius: 4px; width: 80px;
+  }
+  input[type=text] { width: 220px; }
+  input[type=checkbox] { width: 14px; height: 14px; cursor: pointer; }
+
+  button {
+    background: #0f3460; color: #e0e0e0; border: 1px solid #1a4a80;
+    border-radius: 4px; padding: 8px 16px; font-family: 'Courier New', monospace;
+    font-size: 11px; cursor: pointer; letter-spacing: 1px; text-transform: uppercase;
+  }
+  button:hover { background: #1a4a80; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.primary { border-color: #2ecc71; color: #2ecc71; }
+  button.primary:hover { background: #0a3020; }
+  button.danger { border-color: #e63946; color: #e63946; }
+  button.flag-btn { border-color: #f4d03f; color: #f4d03f; padding: 5px 10px; font-size: 10px; text-transform: none; letter-spacing: 0; }
+  button.flag-btn:hover { background: #2a2000; }
+
+  #progress-wrap { display: none; margin-top: 10px; }
+  #progress-bar-bg { background: #0a0a1a; border-radius: 3px; height: 8px; overflow: hidden; margin-bottom: 6px; }
+  #progress-bar { height: 100%; background: #2ecc71; border-radius: 3px; width: 0%; transition: width 0.3s; }
+  #progress-text { font-size: 11px; color: #a0a0c0; }
+
+  #status { font-size: 11px; margin-top: 8px; min-height: 18px; }
+  #status.ok { color: #2ecc71; }
+  #status.err { color: #e63946; }
+  #status.info { color: #5dade2; }
+
+  #results-card { display: none; }
+  #results-card h2 { margin-bottom: 8px; }
+
+  .results-controls { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; align-items: center; }
+  .results-controls span { color: #a0a0c0; font-size: 11px; }
+
+  #results-table-wrap { overflow-x: auto; max-height: 480px; overflow-y: auto; }
+  table { border-collapse: collapse; font-size: 10px; white-space: nowrap; min-width: 100%; }
+  thead th {
+    background: #0f3460; color: #5dade2; padding: 5px 8px;
+    text-align: left; border-bottom: 1px solid #1a4a80;
+    position: sticky; top: 0; z-index: 1;
+  }
+  tbody tr:nth-child(even) { background: #13213a; }
+  tbody tr:hover { background: #1a3a5a; }
+  tbody tr.has-review { outline: 1px solid #3a3010; }
+  td { padding: 4px 8px; color: #c0c0d0; border-bottom: 1px solid #0f1a2a; }
+  td.null { color: #3a4a5a; font-style: italic; }
+  td.review { color: #f4d03f; }
+  td.review::after { content: ' ⚑'; font-size: 9px; }
+
+  .warning-box { background: #2a2000; border: 1px solid #f4d03f; border-radius: 4px; padding: 10px 14px; font-size: 11px; color: #f4d03f; margin-top: 10px; line-height: 1.7; }
+  .note { color: #6080a0; font-size: 10px; margin-top: 6px; line-height: 1.6; }
+
+  .flag-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #0f1a2a; border: 1px solid #1a4a80; border-radius: 4px; padding: 8px 12px; margin-bottom: 6px; font-size: 11px; }
+  .flag-row .flag-label { color: #f4d03f; }
+  .flag-row .flag-sub { color: #6080a0; font-size: 10px; }
+</style>
+</head>
+<body>
+
+<h1>🎓 PokeProf — Full Fetcher</h1>
+<p class="subtitle">Complete Pokédex rows (stats, forms, evolution, egg groups, and all 36 move-slot columns) in a single pass</p>
+
+<div class="card">
+  <h2>Pass 1 — National Dex by Number</h2>
+  <div class="row">
+    <label>From dexId:</label>
+    <input type="number" id="from-id" value="1" min="1" max="1025">
+    <label>To dexId:</label>
+    <input type="number" id="to-id" value="20" min="1" max="1025">
+    <button class="primary" id="fetch-btn" onclick="startFetch()">⬇ Fetch Range</button>
+    <button onclick="stopFetch()" id="stop-btn" disabled>⏹ Stop</button>
+  </div>
+  <div class="row">
+    <label>Or single name / slug:</label>
+    <input type="text" id="single-name" placeholder="e.g. rattata or rattata-alola">
+    <button onclick="fetchSingle()">⬇ Fetch One</button>
+  </div>
+  <div id="progress-wrap">
+    <div id="progress-bar-bg"><div id="progress-bar"></div></div>
+    <div id="progress-text">Fetching...</div>
+  </div>
+  <div id="status"></div>
+  <p class="note">⚠ PokéAPI rate limit: ~100 requests/min. Each species needs a pokemon + species + evolution-chain lookup plus one lookup per unique move in its learnset (moves are cached globally this session, so repeats like Tackle/Thunderbolt are only fetched once). Large ranges take a while — only pull contiguous ranges at a time.</p>
+  <p class="note">Rows marked ⚑ used a best-effort fallback (inherited from the base species, or auto-picked among a branching evolution) rather than a confirmed per-form value — see the "Review Needed" filter below. This happens for a small minority of exotic forms and branching evolutions; everything else is fully automatic.</p>
+</div>
+
+<div class="card" id="flags-card" style="display:none;">
+  <h2>⚑ Pass 2 — Form Variants Detected</h2>
+  <div id="flags-list"></div>
+  <button class="primary" id="fetch-all-variants-btn" onclick="fetchAllFlaggedVariants()" style="margin-top:8px;">⬇ Fetch All Flagged Variants</button>
+</div>
+
+<div class="card" id="results-card">
+  <h2>Results — <span id="result-count">0</span> rows (<span id="review-count">0</span> flagged for review)</h2>
+  <div class="results-controls">
+    <button class="primary" onclick="copyForExcel()">📋 Copy for Excel</button>
+    <button onclick="downloadCSV()">⬇ Download CSV</button>
+    <label style="margin-left:8px;"><input type="checkbox" id="review-only-toggle" onchange="renderTable()"> Show only rows needing review</label>
+    <button class="danger" onclick="clearResults()">✕ Clear</button>
+    <span id="copy-status"></span>
+  </div>
+  <div class="warning-box">
+    ⚠ Columns are in your Pokedex sheet's exact order (39 base columns + 36 move-slot columns = 75 total). Copy/Download exports every row currently visible (respects the review-only filter above).
+  </div>
+  <div id="results-table-wrap">
+    <table id="results-table">
+      <thead id="results-head"></thead>
+      <tbody id="results-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+// ── SCHEMA ──────────────────────────────────────────────────────────────
+// Column order matches your Excel Pokedex tab exactly. formVariant and
+// hasSizeVariants are intentionally NOT included (dropped per explicit
+// decision — formVariant's meaning was never pinned down and it's unused
+// anywhere in the game code; hasSizeVariants is redundant with the
+// variety-flagging this tool already surfaces directly).
+const BASE_COLUMNS = [
+  'dexId','familyId','name','formName','category','flavorText',
+  'type1','type2','heightM','weightKg',
+  'baseHP','baseAtk','baseDef','baseSpatk','baseSpdef','baseSpd',
+  'ability1','ability2','hiddenAbility',
+  'growthRate','baseExpYield','catchRate','genderMalePct',
+  'evolvesIntoId','evolveMethod','evolveLevel','evolveItem',
+  'eggGroup1','eggGroup2','eggCycles',
+  'colorGroup','shape','habitat',
+  'genderDifference','baseFormId',
+  'isLegendary','isMythical'
+];
+const MOVE_TYPES = ['normal','fire','water','electric','grass','ice','fighting','poison',
+  'ground','flying','psychic','bug','rock','ghost','dragon','dark','steel','fairy'];
+const MOVE_COLUMNS = [];
+MOVE_TYPES.forEach(t => { MOVE_COLUMNS.push(t + 'Physical'); MOVE_COLUMNS.push(t + 'Special'); });
+const COLUMNS = BASE_COLUMNS.concat(MOVE_COLUMNS);
+
+const GROWTH_RATE_MAP = {
+  'slow': 'slow', 'medium': 'mediumFast', 'fast': 'fast',
+  'medium-slow': 'mediumSlow', 'slow-then-very-fast': 'erratic', 'fast-then-very-slow': 'fluctuating'
+};
+
+// PokéAPI's egg-group slugs are legacy Stadium-2-era internal names, not modern display
+// names — confirmed against Bulbapedia's Egg Group overview. Naively capitalizing the raw
+// slug gets 7 of 15 groups wrong (the three Water groups have no hyphen to insert a space
+// into; ground/plant/humanshape/indeterminate were all renamed after Gen 3/4 but PokéAPI
+// kept the old slug).
+const EGG_GROUP_MAP = {
+  'monster': 'Monster', 'water1': 'Water 1', 'bug': 'Bug', 'flying': 'Flying',
+  'ground': 'Field', 'fairy': 'Fairy', 'plant': 'Grass', 'humanshape': 'Human-Like',
+  'water3': 'Water 3', 'mineral': 'Mineral', 'indeterminate': 'Amorphous', 'water2': 'Water 2',
+  'ditto': 'Ditto', 'dragon': 'Dragon', 'no-eggs-discovered': 'Undiscovered'
+};
+const eggGroupName = slug => slug ? (EGG_GROUP_MAP[slug] || capitalize(slug.replace('-', ' '))) : null;
+
+// Regional-variant regions: PokéAPI slug suffix -> display formName (matches the existing
+// convention already used throughout pokedex.js, e.g. Alolan Rattata) -> the real games that
+// variety was introduced in, used to pull genuinely correct per-form flavor text instead of
+// inheriting the base species' (which would otherwise reflect a different, wrong form).
+const REGIONAL_FORMS = {
+  'alola':  { formName: 'Alolan',   versions: ['sun','moon','ultra-sun','ultra-moon'] },
+  'galar':  { formName: 'Galarian', versions: ['sword','shield'] },
+  'hisui':  { formName: 'Hisuian',  versions: ['legends-arceus'] },
+  'paldea': { formName: 'Paldean',  versions: ['scarlet','violet'] }
+};
+
+// One known exception to "familyId = PokéAPI's own evolution-chain ID": Nidoran♀/♂ are two
+// fully separate PokéAPI species/chains (29 and 32), deliberately merged into one breeding
+// family in this game's design — the only case of its kind in the whole franchise. Forced to
+// share Nidoran♀'s own chain ID so both land in the same familyId.
+const FAMILY_MERGES = { 32: 29 }; // dexId 32 (Nidoran-M) borrows dexId 29's (Nidoran-F) chain
+
+let results = [];
+let fetching = false;
+let stopRequested = false;
+let moveCache = {};        // moveName -> {type, damageClass, power} | null
+let flaggedForms = {};     // dexId -> [{slug}]
+let baseSpeciesCache = {}; // dexId -> {species, chain, familyId}
+let evoSourceCache = {};   // speciesName -> Promise<moveSlots|null>, invisible pre-evolution walk
+const capitalize = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : null;
+
+function setStatus(msg, type='info') {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = type;
+}
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ── MOVES (folded in from MoveFetcher.html, unchanged logic) ─────────────
+async function getMoveData(moveName) {
+  if (moveName in moveCache) return moveCache[moveName];
+  try {
+    const res = await fetch(`https://pokeapi.co/api/v2/move/${moveName}`);
+    if (!res.ok) { moveCache[moveName] = null; return null; }
+    const data = await res.json();
+    const info = {
+      type: capitalize(data.type?.name) || null,
+      damageClass: data.damage_class?.name || null,
+      power: data.power || null
+    };
+    moveCache[moveName] = info;
+    await sleep(120);
+    return info;
+  } catch(e) {
+    moveCache[moveName] = null;
+    return null;
+  }
+}
+async function computeMoveSlotsFromPoke(poke) {
+  const uniqueMoveNames = [...new Set(poke.moves.map(m => m.move.name))];
+  const slots = {};
+  MOVE_COLUMNS.forEach(c => { slots[c] = null; });
+  for (const moveName of uniqueMoveNames) {
+    const info = await getMoveData(moveName);
+    if (!info || !info.type || !info.power) continue;
+    if (info.damageClass !== 'physical' && info.damageClass !== 'special') continue;
+    const col = info.type.toLowerCase() + (info.damageClass === 'physical' ? 'Physical' : 'Special');
+    if (!(col in slots)) continue;
+    if (slots[col] === null || info.power > slots[col]) slots[col] = info.power;
+  }
+  return slots;
+}
+function mergeMaxInto(target, source) {
+  if (!source) return;
+  MOVE_COLUMNS.forEach(col => {
+    const s = source[col];
+    if (s == null) return;
+    if (target[col] == null || s > target[col]) target[col] = s;
+  });
+}
+async function getInheritedMoveSlots(speciesName) {
+  const key = speciesName.toLowerCase();
+  if (key in evoSourceCache) return evoSourceCache[key];
+  const promise = (async () => {
+    try {
+      const poke = await fetch(`https://pokeapi.co/api/v2/pokemon/${key}`).then(r => r.ok ? r.json() : null);
+      const species = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${key}`).then(r => r.ok ? r.json() : null);
+      if (!poke) return null;
+      await sleep(120);
+      const slots = await computeMoveSlotsFromPoke(poke);
+      const evolvesFromName = species?.evolves_from_species?.name || null;
+      if (evolvesFromName) {
+        const grandparentSlots = await getInheritedMoveSlots(evolvesFromName);
+        mergeMaxInto(slots, grandparentSlots);
+      }
+      return slots;
+    } catch(e) { return null; }
+  })();
+  evoSourceCache[key] = promise;
+  return promise;
+}
+
+// ── EVOLUTION ──────────────────────────────────────────────────────────
+// Walks a fetched evolution-chain to find this species' own node and its evolves_to list.
+function findChainNode(chainRoot, speciesName) {
+  if (chainRoot.species.name === speciesName) return chainRoot;
+  for (const child of chainRoot.evolves_to) {
+    const found = findChainNode(child, speciesName);
+    if (found) return found;
+  }
+  return null;
+}
+// Resolves one species' forward evolution. PokéAPI has NO field marking a branch as
+// exclusive to a particular form/variety (confirmed — evolution_details has no such field),
+// so a species with exactly one evolves_to target is unambiguous and fully automatic; a
+// species with 2+ targets (a real branch, e.g. Wooper -> Quagsire/Clodsire) is genuinely
+// ambiguous from the API alone. For those, auto-pick the branch whose target was introduced
+// in the generation closest to this row's own generation (the Paldean-Wooper-style pattern:
+// the newer variant's exclusive evolution target is itself a newer addition) and flag it for
+// review rather than silently trusting the guess.
+async function resolveEvolution(chainUrl, speciesName, rowGeneration) {
+  const empty = { evolvesIntoId: null, evolveMethod: null, evolveLevel: null, evolveItem: null, needsReview: false };
+  if (!chainUrl) return empty;
+  try {
+    const chain = await fetch(chainUrl).then(r => r.ok ? r.json() : null);
+    if (!chain) return empty;
+    const node = findChainNode(chain.chain, speciesName);
+    if (!node || !node.evolves_to.length) return empty;
+    let target, needsReview = false;
+    if (node.evolves_to.length === 1) {
+      target = node.evolves_to[0];
+    } else {
+      // Branching — pick by nearest introduced-generation to this row, flag regardless.
+      needsReview = true;
+      const withGen = await Promise.all(node.evolves_to.map(async t => {
+        const sp = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${t.species.name}`).then(r => r.ok ? r.json() : null);
+        return { t, gen: sp ? sp.generation.url.match(/(\d+)\/?$/)[1] * 1 : 0 };
+      }));
+      withGen.sort((a,b) => Math.abs(a.gen - rowGeneration) - Math.abs(b.gen - rowGeneration));
+      target = withGen[0].t;
+    }
+    const detail = target.evolution_details[0];
+    const targetSpecies = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${target.species.name}`).then(r => r.ok ? r.json() : null);
+    return {
+      evolvesIntoId: targetSpecies ? targetSpecies.id : null,
+      evolveMethod: detail?.trigger?.name === 'level-up' ? 'level' : (detail?.trigger?.name || null),
+      evolveLevel: detail?.min_level || null,
+      evolveItem: detail?.item ? detail.item.name.split('-').map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ') : null,
+      needsReview
+    };
+  } catch(e) { return empty; }
+}
+
+// ── FLAVOR TEXT ────────────────────────────────────────────────────────
+// Base species: prefer the most RECENT game's English entry (entries are chronologically
+// appended in PokéAPI's data, so the last English match is the newest) rather than
+// whatever's first — modern phrasing, not a dated Gen 1/2 entry.
+function pickLatestFlavorText(entries, versionFilter) {
+  if (!entries) return null;
+  const candidates = entries.filter(f => f.language.name === 'en' && (!versionFilter || versionFilter.includes(f.version?.name)));
+  if (!candidates.length) return null;
+  const last = candidates[candidates.length - 1];
+  return last.flavor_text.replace(/[\n\f]/g, ' ').trim();
+}
+
+// ── VARIETY FLAGGING ───────────────────────────────────────────────────
+function flagVarieties(species, excludeSlug=null) {
+  if (!species?.varieties) return;
+  const alreadyFetched = new Set(results.map(r => r._sourceSlug).filter(Boolean));
+  const extras = species.varieties
+    .filter(v => !v.is_default && v.pokemon.name !== excludeSlug && !alreadyFetched.has(v.pokemon.name))
+    .map(v => ({ slug: v.pokemon.name }));
+  if (extras.length) {
+    flaggedForms[species.id] = extras;
+    renderFlags();
+  }
+}
+function renderFlags() {
+  const card = document.getElementById('flags-card');
+  const list = document.getElementById('flags-list');
+  const dexIds = Object.keys(flaggedForms);
+  if (!dexIds.length) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  list.innerHTML = '';
+  dexIds.forEach(dexId => {
+    flaggedForms[dexId].forEach((form, i) => {
+      const row = document.createElement('div');
+      row.className = 'flag-row';
+      row.innerHTML = `<div><span class="flag-label">#${dexId}</span> has an extra variety: <span class="flag-label">${form.slug}</span><div class="flag-sub">Not included in the base dexId pull — fetch it separately</div></div>`;
+      const btn = document.createElement('button');
+      btn.className = 'flag-btn';
+      btn.textContent = '⬇ Fetch this form too';
+      btn.onclick = async () => {
+        btn.disabled = true;
+        btn.textContent = 'Fetching...';
+        await fetchAndPushVariant(dexId, form.slug);
+        flaggedForms[dexId].splice(flaggedForms[dexId].indexOf(form), 1);
+        if (!flaggedForms[dexId].length) delete flaggedForms[dexId];
+        renderFlags();
+      };
+      row.appendChild(btn);
+      list.appendChild(row);
+    });
+  });
+}
+async function fetchAllFlaggedVariants() {
+  const btn = document.getElementById('fetch-all-variants-btn');
+  btn.disabled = true;
+  const jobs = [];
+  Object.keys(flaggedForms).forEach(dexId => {
+    flaggedForms[dexId].forEach(form => jobs.push({ dexId, slug: form.slug }));
+  });
+  let done = 0;
+  for (const job of jobs) {
+    setStatus(`Fetching variant ${job.slug} (${done}/${jobs.length})...`, 'info');
+    await fetchAndPushVariant(job.dexId, job.slug);
+    done++;
+    await sleep(150);
+  }
+  flaggedForms = {};
+  renderFlags();
+  btn.disabled = false;
+  setStatus(`✔ Fetched ${jobs.length} form variants.`, 'ok');
+}
+
+// ── BASE SPECIES ROW ───────────────────────────────────────────────────
+async function fetchBaseRow(idOrName) {
+  const [poke, species] = await Promise.all([
+    fetch(`https://pokeapi.co/api/v2/pokemon/${idOrName}`).then(r => r.ok ? r.json() : null),
+    fetch(`https://pokeapi.co/api/v2/pokemon-species/${idOrName}`).then(r => r.ok ? r.json() : null)
+  ]);
+  if (!poke || !species) return null;
+
+  const types = poke.types.sort((a,b) => a.slot - b.slot).map(t => t.type.name);
+  const type1 = capitalize(types[0]) || null;
+  const type2 = capitalize(types[1]) || null;
+
+  const statMap = {};
+  poke.stats.forEach(s => { statMap[s.stat.name] = s.base_stat; });
+
+  const abilities = poke.abilities.sort((a,b) => a.slot - b.slot);
+  const ability1 = abilities.find(a => a.slot === 1 && !a.is_hidden);
+  const ability2 = abilities.find(a => a.slot === 2 && !a.is_hidden);
+  const hidden   = abilities.find(a => a.is_hidden);
+  const fmtAbility = a => a ? a.ability.name.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : null;
+
+  const gr = GROWTH_RATE_MAP[species.growth_rate?.name] || species.growth_rate?.name || null;
+
+  let genderMalePct = null;
+  if (species.gender_rate === -1) genderMalePct = null;
+  else genderMalePct = Math.round((8 - species.gender_rate) / 8 * 100);
+
+  const eggs = species.egg_groups || [];
+  const eggGroup1 = eggs[0] ? eggGroupName(eggs[0].name) : null;
+  const eggGroup2 = eggs[1] ? eggGroupName(eggs[1].name) : null;
+
+  const flavorText = pickLatestFlavorText(species.flavor_text_entries, null);
+  const genus = species.genera?.find(g => g.language.name === 'en');
+  const category = genus ? genus.genus : null;
+
+  const colorGroup = capitalize(species.color?.name) || null;
+  const shape = capitalize(species.shape?.name?.replace('-', ' ')) || null;
+  const habitat = capitalize(species.habitat?.name?.replace('-', ' ')) || null;
+  const genderDifference = species.has_gender_differences || false;
+
+  const generation = species.generation?.url ? parseInt(species.generation.url.match(/(\d+)\/?$/)[1]) : 0;
+  const evo = await resolveEvolution(species.evolution_chain?.url, species.name, generation);
+
+  const moveSlots = await computeMoveSlotsFromPoke(poke);
+  const evolvesFromName = species.evolves_from_species?.name || null;
+  if (evolvesFromName) {
+    const inherited = await getInheritedMoveSlots(evolvesFromName);
+    mergeMaxInto(moveSlots, inherited);
+  }
+
+  // familyId: PokéAPI's own evolution-chain ID, with the one known hardcoded merge exception.
+  let familyId = species.evolution_chain?.url ? parseInt(species.evolution_chain.url.match(/(\d+)\/?$/)[1]) : null;
+  const reviewFields = [];
+  if (evo.needsReview) reviewFields.push('evolvesIntoId','evolveMethod','evolveLevel','evolveItem');
+
+  // Cache for pass 2 (variant fetches reuse this instead of re-requesting species-level data
+  // PokéAPI can't provide per-form anyway).
+  baseSpeciesCache[species.id] = { species, familyId, generation };
+
+  flagVarieties(species, idOrName);
+
+  const row = {
+    dexId: species.id, familyId, name: capitalize(species.name), formName: null,
+    category, flavorText, type1, type2,
+    heightM: poke.height / 10, weightKg: poke.weight / 10,
+    baseHP: statMap['hp'] || null, baseAtk: statMap['attack'] || null, baseDef: statMap['defense'] || null,
+    baseSpatk: statMap['special-attack'] || null, baseSpdef: statMap['special-defense'] || null, baseSpd: statMap['speed'] || null,
+    ability1: fmtAbility(ability1), ability2: fmtAbility(ability2), hiddenAbility: fmtAbility(hidden),
+    growthRate: gr, baseExpYield: poke.base_experience || null, catchRate: species.capture_rate || null, genderMalePct,
+    evolvesIntoId: evo.evolvesIntoId, evolveMethod: evo.evolveMethod, evolveLevel: evo.evolveLevel, evolveItem: evo.evolveItem,
+    eggGroup1, eggGroup2, eggCycles: species.hatch_counter || null,
+    colorGroup, shape, habitat, genderDifference,
+    baseFormId: null,
+    isLegendary: species.is_legendary || false, isMythical: species.is_mythical || false,
+    ...moveSlots,
+    _sourceSlug: idOrName, _reviewFields: reviewFields
+  };
+  return row;
+}
+
+// ── VARIANT ROW ────────────────────────────────────────────────────────
+async function buildVariantRow(poke, cached, slug) {
+  const { species: baseSpecies, familyId, generation } = cached;
+  const reviewFields = [];
+
+  const types = poke.types.sort((a,b) => a.slot - b.slot).map(t => t.type.name);
+  const type1 = capitalize(types[0]) || null;
+  const type2 = capitalize(types[1]) || null;
+
+  const statMap = {};
+  poke.stats.forEach(s => { statMap[s.stat.name] = s.base_stat; });
+
+  const abilities = poke.abilities.sort((a,b) => a.slot - b.slot);
+  const ability1 = abilities.find(a => a.slot === 1 && !a.is_hidden);
+  const ability2 = abilities.find(a => a.slot === 2 && !a.is_hidden);
+  const hidden   = abilities.find(a => a.is_hidden);
+  const fmtAbility = a => a ? a.ability.name.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : null;
+
+  const gr = GROWTH_RATE_MAP[baseSpecies.growth_rate?.name] || baseSpecies.growth_rate?.name || null;
+  let genderMalePct = null;
+  if (baseSpecies.gender_rate === -1) genderMalePct = null;
+  else genderMalePct = Math.round((8 - baseSpecies.gender_rate) / 8 * 100);
+
+  const eggs = baseSpecies.egg_groups || [];
+  const eggGroup1 = eggs[0] ? eggGroupName(eggs[0].name) : null;
+  const eggGroup2 = eggs[1] ? eggGroupName(eggs[1].name) : null;
+  const genderDifference = baseSpecies.has_gender_differences || false;
+
+  // Region suffix match, e.g. "wooper-paldea" -> "paldea" -> REGIONAL_FORMS.paldea
+  const regionKey = Object.keys(REGIONAL_FORMS).find(r => slug.endsWith('-' + r));
+  const region = regionKey ? REGIONAL_FORMS[regionKey] : null;
+
+  let formName, flavorText, category, colorGroup, shape, habitat;
+  if (region) {
+    formName = region.formName;
+    flavorText = pickLatestFlavorText(baseSpecies.flavor_text_entries, region.versions);
+    if (!flavorText) { flavorText = pickLatestFlavorText(baseSpecies.flavor_text_entries, null); reviewFields.push('flavorText'); }
+  } else {
+    formName = capitalize(slug.split('-').slice(1).join(' '));
+    reviewFields.push('formName');
+    flavorText = pickLatestFlavorText(baseSpecies.flavor_text_entries, null);
+    reviewFields.push('flavorText');
+  }
+  // No per-form field exists in PokéAPI's data model at all for these — always inherited.
+  const genus = baseSpecies.genera?.find(g => g.language.name === 'en');
+  category = genus ? genus.genus : null; reviewFields.push('category');
+  colorGroup = capitalize(baseSpecies.color?.name) || null; reviewFields.push('colorGroup');
+  shape = capitalize(baseSpecies.shape?.name?.replace('-', ' ')) || null; reviewFields.push('shape');
+  habitat = capitalize(baseSpecies.habitat?.name?.replace('-', ' ')) || null; reviewFields.push('habitat');
+
+  const evo = await resolveEvolution(baseSpecies.evolution_chain?.url, poke.species.name, generation);
+  if (evo.needsReview) reviewFields.push('evolvesIntoId','evolveMethod','evolveLevel','evolveItem');
+
+  const moveSlots = await computeMoveSlotsFromPoke(poke);
+
+  return {
+    dexId: baseSpecies.id, familyId, name: capitalize(baseSpecies.name), formName,
+    category, flavorText, type1, type2,
+    heightM: poke.height / 10, weightKg: poke.weight / 10,
+    baseHP: statMap['hp'] || null, baseAtk: statMap['attack'] || null, baseDef: statMap['defense'] || null,
+    baseSpatk: statMap['special-attack'] || null, baseSpdef: statMap['special-defense'] || null, baseSpd: statMap['speed'] || null,
+    ability1: fmtAbility(ability1), ability2: fmtAbility(ability2), hiddenAbility: fmtAbility(hidden),
+    growthRate: gr, baseExpYield: poke.base_experience || null, catchRate: baseSpecies.capture_rate || null, genderMalePct,
+    evolvesIntoId: evo.evolvesIntoId, evolveMethod: evo.evolveMethod, evolveLevel: evo.evolveLevel, evolveItem: evo.evolveItem,
+    eggGroup1, eggGroup2, eggCycles: baseSpecies.hatch_counter || null,
+    colorGroup, shape, habitat, genderDifference,
+    baseFormId: baseSpecies.id,
+    isLegendary: baseSpecies.is_legendary || false, isMythical: baseSpecies.is_mythical || false,
+    ...moveSlots,
+    _sourceSlug: slug, _reviewFields: reviewFields
+  };
+}
+async function fetchAndPushVariant(dexId, slug) {
+  let cached = baseSpeciesCache[dexId];
+  const poke = await fetch(`https://pokeapi.co/api/v2/pokemon/${slug}`).then(r => r.ok ? r.json() : null);
+  if (!poke) { setStatus('Not found: ' + slug, 'err'); return null; }
+  if (!cached) {
+    const baseSlug = poke.species?.name;
+    const baseSpecies = baseSlug ? await fetch(`https://pokeapi.co/api/v2/pokemon-species/${baseSlug}`).then(r => r.ok ? r.json() : null) : null;
+    if (!baseSpecies) { setStatus('Not found: ' + slug, 'err'); return null; }
+    const generation = baseSpecies.generation?.url ? parseInt(baseSpecies.generation.url.match(/(\d+)\/?$/)[1]) : 0;
+    const familyId = baseSpecies.evolution_chain?.url ? parseInt(baseSpecies.evolution_chain.url.match(/(\d+)\/?$/)[1]) : null;
+    cached = { species: baseSpecies, familyId, generation };
+    baseSpeciesCache[baseSpecies.id] = cached;
+    flagVarieties(baseSpecies, slug);
+  }
+  const data = await buildVariantRow(poke, cached, slug);
+  results.push(data);
+  renderTable();
+  return data;
+}
+
+// ── DISPATCH ───────────────────────────────────────────────────────────
+async function fetchOneById(id) {
+  const row = await fetchBaseRow(id);
+  if (row) applyFamilyMerge(row);
+  return row;
+}
+function applyFamilyMerge(row) {
+  if (FAMILY_MERGES[row.dexId] != null) {
+    const targetDexId = FAMILY_MERGES[row.dexId];
+    const targetCached = baseSpeciesCache[targetDexId];
+    if (targetCached) row.familyId = targetCached.familyId;
+  }
+}
+
+async function startFetch() {
+  const from = parseInt(document.getElementById('from-id').value);
+  const to   = parseInt(document.getElementById('to-id').value);
+  if (isNaN(from) || isNaN(to) || from > to) { setStatus('Invalid range.', 'err'); return; }
+  if (to - from > 100) { setStatus('Max 100 at a time — this tool does more per species than a plain Pokedex pull (moves + evolution chain), so ranges are slower.', 'err'); return; }
+
+  fetching = true; stopRequested = false;
+  document.getElementById('fetch-btn').disabled = true;
+  document.getElementById('stop-btn').disabled = false;
+  document.getElementById('progress-wrap').style.display = 'block';
+
+  const total = to - from + 1;
+  let done = 0, errors = 0;
+
+  for (let id = from; id <= to; id++) {
+    if (stopRequested) { setStatus('Stopped at ' + id + '.', 'info'); break; }
+    setStatus(`Fetching #${id} (${done}/${total})... ${Object.keys(moveCache).length} moves cached`, 'info');
+    document.getElementById('progress-text').textContent = `${done}/${total} — ${Math.round(done/total*100)}%`;
+    document.getElementById('progress-bar').style.width = (done/total*100) + '%';
+    try {
+      const row = await fetchOneById(id);
+      if (row) results.push(row); else errors++;
+    } catch(e) { errors++; setStatus('Error on #'+id+': '+e.message, 'err'); }
+    done++;
+    await sleep(150);
+  }
+
+  fetching = false;
+  document.getElementById('fetch-btn').disabled = false;
+  document.getElementById('stop-btn').disabled = true;
+  document.getElementById('progress-bar').style.width = '100%';
+  document.getElementById('progress-text').textContent = `Done — ${results.length} fetched, ${errors} errors`;
+  setStatus(`✔ Fetched ${results.length} rows. ${errors > 0 ? errors + ' failed.' : ''} ${Object.keys(flaggedForms).length ? 'Form variants detected below.' : ''}`, 'ok');
+  renderTable();
+}
+
+async function fetchSingle() {
+  const name = document.getElementById('single-name').value.trim().toLowerCase();
+  if (!name) { setStatus('Enter a name or slug.', 'err'); return; }
+  setStatus('Fetching ' + name + '...', 'info');
+  try {
+    const row = await fetchBaseRow(name);
+    if (row) {
+      applyFamilyMerge(row);
+      results.push(row);
+      renderTable();
+      setStatus('✔ Fetched ' + row.name, 'ok');
+      return;
+    }
+    // Base-species combined fetch failed — likely a form-variant slug (no pokemon-species
+    // entry of its own). Retry as a variant.
+    const data = await fetchAndPushVariant(null, name);
+    if (data) setStatus('✔ Fetched ' + data.name + ' (' + name + ')' + (data._reviewFields.length ? ' — some fields flagged for review.' : ''), 'ok');
+    else setStatus('Not found: ' + name, 'err');
+  } catch(e) { setStatus('Error: ' + e.message, 'err'); }
+}
+function stopFetch() {
+  stopRequested = true;
+  document.getElementById('stop-btn').disabled = true;
+}
+
+// ── TABLE / EXPORT ─────────────────────────────────────────────────────
+function renderTable() {
+  document.getElementById('results-card').style.display = 'block';
+  const reviewOnly = document.getElementById('review-only-toggle').checked;
+  const visible = reviewOnly ? results.filter(r => r._reviewFields.length) : results;
+  document.getElementById('result-count').textContent = results.length;
+  document.getElementById('review-count').textContent = results.filter(r => r._reviewFields.length).length;
+
+  const thead = document.getElementById('results-head');
+  thead.innerHTML = '<tr>' + COLUMNS.map(c => `<th>${c}</th>`).join('') + '</tr>';
+
+  const tbody = document.getElementById('results-body');
+  tbody.innerHTML = '';
+  visible.forEach(row => {
+    const tr = document.createElement('tr');
+    if (row._reviewFields.length) tr.className = 'has-review';
+    tr.innerHTML = COLUMNS.map(col => {
+      const v = row[col];
+      const isReview = row._reviewFields.includes(col);
+      if (v === null || v === undefined || v === '') return `<td class="null"></td>`;
+      if (typeof v === 'boolean') return `<td>${v ? 'TRUE' : 'FALSE'}</td>`;
+      return `<td class="${isReview ? 'review' : ''}">${v}</td>`;
+    }).join('');
+    tbody.appendChild(tr);
+  });
+}
+function visibleRows() {
+  const reviewOnly = document.getElementById('review-only-toggle').checked;
+  return reviewOnly ? results.filter(r => r._reviewFields.length) : results;
+}
+function copyForExcel() {
+  const tsv = visibleRows().map(row =>
+    COLUMNS.map(col => {
+      const v = row[col];
+      if (v === null || v === undefined) return '';
+      if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE';
+      return String(v).replace(/\t/g, ' ');
+    }).join('\t')
+  ).join('\n');
+  navigator.clipboard.writeText(tsv).then(() => {
+    document.getElementById('copy-status').textContent = '✔ Copied! Paste into Excel.';
+    document.getElementById('copy-status').style.color = '#2ecc71';
+    setTimeout(() => { document.getElementById('copy-status').textContent = ''; }, 3000);
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = tsv;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    document.getElementById('copy-status').textContent = '✔ Copied (fallback)';
+  });
+}
+function downloadCSV() {
+  const header = COLUMNS.join(',');
+  const rows = visibleRows().map(row =>
+    COLUMNS.map(col => {
+      const v = row[col];
+      if (v === null || v === undefined) return '';
+      if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE';
+      const s = String(v);
+      return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g,'""')}"` : s;
+    }).join(',')
+  ).join('\n');
+  const blob = new Blob([header + '\n' + rows], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'pokeprof_full_fetch.csv';
+  a.click();
+}
+function clearResults() {
+  if (!confirm('Clear all ' + results.length + ' fetched results? (Move cache and species cache are kept.)')) return;
+  results = [];
+  document.getElementById('results-card').style.display = 'none';
+  document.getElementById('results-body').innerHTML = '';
+  setStatus('Cleared.', 'info');
+}
+</script>
+</body>
+</html>

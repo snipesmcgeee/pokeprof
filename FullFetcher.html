@@ -147,7 +147,7 @@ const BASE_COLUMNS = [
   'growthRate','baseExpYield','catchRate','genderMalePct',
   'evolvesIntoId','evolveMethod','evolveLevel','evolveItem',
   'eggGroup1','eggGroup2','eggCycles',
-  'colorGroup','shape','habitat',
+  'colorGroup','shape',
   'genderDifference','baseFormId',
   'isLegendary','isMythical'
 ];
@@ -432,7 +432,11 @@ async function fetchBaseRow(idOrName) {
 
   const colorGroup = capitalize(species.color?.name) || null;
   const shape = capitalize(species.shape?.name?.replace('-', ' ')) || null;
-  const habitat = capitalize(species.habitat?.name?.replace('-', ' ')) || null;
+  // habitat dropped entirely, per explicit decision — not a sourcing gap, a field that stopped
+  // being official information around Gen IV; Bulbapedia's own infobox template no longer
+  // carries it for ANY species regardless of generation (confirmed even on Gen I species that
+  // once had a real value), so there is no live source, official or otherwise, left to pull it
+  // from. Never populate, never flag, never expect a value here again.
   const genderDifference = species.has_gender_differences || false;
 
   const generation = species.generation?.url ? parseInt(species.generation.url.match(/(\d+)\/?$/)[1]) : 0;
@@ -466,7 +470,7 @@ async function fetchBaseRow(idOrName) {
     growthRate: gr, baseExpYield: poke.base_experience || null, catchRate: species.capture_rate || null, genderMalePct,
     evolvesIntoId: evo.evolvesIntoId, evolveMethod: evo.evolveMethod, evolveLevel: evo.evolveLevel, evolveItem: evo.evolveItem,
     eggGroup1, eggGroup2, eggCycles: species.hatch_counter || null,
-    colorGroup, shape, habitat, genderDifference,
+    colorGroup, shape, genderDifference,
     baseFormId: null,
     isLegendary: species.is_legendary || false, isMythical: species.is_mythical || false,
     ...moveSlots,
@@ -507,7 +511,7 @@ async function buildVariantRow(poke, cached, slug) {
   const regionKey = Object.keys(REGIONAL_FORMS).find(r => slug.endsWith('-' + r));
   const region = regionKey ? REGIONAL_FORMS[regionKey] : null;
 
-  let formName, flavorText, category, colorGroup, shape, habitat;
+  let formName, flavorText, category, colorGroup, shape;
   if (region) {
     formName = region.formName;
     flavorText = pickLatestFlavorText(baseSpecies.flavor_text_entries, region.versions);
@@ -519,11 +523,11 @@ async function buildVariantRow(poke, cached, slug) {
     reviewFields.push('flavorText');
   }
   // No per-form field exists in PokéAPI's data model at all for these — always inherited.
+  // habitat intentionally absent — dropped entirely, see fetchBaseRow()'s comment.
   const genus = baseSpecies.genera?.find(g => g.language.name === 'en');
   category = genus ? genus.genus : null; reviewFields.push('category');
   colorGroup = capitalize(baseSpecies.color?.name) || null; reviewFields.push('colorGroup');
   shape = capitalize(baseSpecies.shape?.name?.replace('-', ' ')) || null; reviewFields.push('shape');
-  habitat = capitalize(baseSpecies.habitat?.name?.replace('-', ' ')) || null; reviewFields.push('habitat');
 
   const evo = await resolveEvolution(baseSpecies.evolution_chain?.url, poke.species.name, generation);
   if (evo.needsReview) reviewFields.push('evolvesIntoId','evolveMethod','evolveLevel','evolveItem');
@@ -540,7 +544,7 @@ async function buildVariantRow(poke, cached, slug) {
     growthRate: gr, baseExpYield: poke.base_experience || null, catchRate: baseSpecies.capture_rate || null, genderMalePct,
     evolvesIntoId: evo.evolvesIntoId, evolveMethod: evo.evolveMethod, evolveLevel: evo.evolveLevel, evolveItem: evo.evolveItem,
     eggGroup1, eggGroup2, eggCycles: baseSpecies.hatch_counter || null,
-    colorGroup, shape, habitat, genderDifference,
+    colorGroup, shape, genderDifference,
     baseFormId: baseSpecies.id,
     isLegendary: baseSpecies.is_legendary || false, isMythical: baseSpecies.is_mythical || false,
     ...moveSlots,

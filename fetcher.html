@@ -154,6 +154,32 @@ const GROWTH_RATE_MAP = {
   'fast-then-very-slow': 'fluctuating'
 };
 
+// v0.41-tooling fix — PokéAPI's egg-group slugs are legacy Stadium-2-era internal names, not
+// modern display names. Naively capitalizing the raw slug (the old approach) got 7 of the 15
+// groups wrong: the three Water groups are single words with no space to insert ("water1" ->
+// "Water1" instead of "Water 1"), and four groups were renamed after Gen 3/4 but PokéAPI kept
+// the old slug (ground->Field, plant->Grass, humanshape->Human-Like, indeterminate->Amorphous).
+// Confirmed against Bulbapedia's Egg Group overview page. Same lookup-table pattern as
+// GROWTH_RATE_MAP above, for the same reason: the API's raw value isn't the display value.
+const EGG_GROUP_MAP = {
+  'monster': 'Monster',
+  'water1': 'Water 1',
+  'bug': 'Bug',
+  'flying': 'Flying',
+  'ground': 'Field',
+  'fairy': 'Fairy',
+  'plant': 'Grass',
+  'humanshape': 'Human-Like',
+  'water3': 'Water 3',
+  'mineral': 'Mineral',
+  'indeterminate': 'Amorphous',
+  'water2': 'Water 2',
+  'ditto': 'Ditto',
+  'dragon': 'Dragon',
+  'no-eggs-discovered': 'Undiscovered'
+};
+const eggGroupName = slug => slug ? (EGG_GROUP_MAP[slug] || capitalize(slug.replace('-', ' '))) : null;
+
 let results = [];
 let fetching = false;
 let stopRequested = false;
@@ -225,20 +251,23 @@ async function fetchAndPushVariant(dexId, slug) {
   const data = buildVariantRow(poke, baseSpecies, slug);
   results.push(data);
   renderTable();
-  setStatus('✔ Fetched ' + data.name + ' (' + slug + ') — category/flavorText/evolution left blank, see manual columns.', 'ok');
+  setStatus('✔ Fetched ' + data.name + ' (' + slug + ') — category/flavorText/evolution/color/shape/habitat left blank, see manual columns.', 'ok');
 }
 
 // Builds a row for a FORM VARIANT slug (e.g. wooper-paldea): type/stats/height/weight/abilities/
-// sprite come from the variant's own /pokemon/{slug} data (poke) — genuinely per-form. Everything
-// genuinely species-wide (egg groups, growth rate, gender ratio, color/shape/habitat, legendary/
-// mythical status) is inherited from baseSpecies, already fetched, never re-requested per variant.
+// sprite come from the variant's own /pokemon/{slug} data (poke) — genuinely per-form. Only
+// egg groups, growth rate, gender ratio, and legendary/mythical status are inherited from
+// baseSpecies — those are real per-species (not per-variety) fields in PokéAPI's data model, so
+// there's nothing more correct to fall back to even for the default variety itself.
 // dexId is baseSpecies.id — the REAL National Dex number — not poke.id, which for a non-default
 // variety is PokéAPI's internal per-variety ID (e.g. 10253 for wooper-paldea), not a dex number.
-// category/flavorText/evolvesIntoId/evolveMethod/evolveLevel/evolveItem are deliberately left
-// null/manual rather than inherited: PokéAPI's species-level genus/flavor-text/evolution-chain
-// data reflects the DEFAULT variety only, and can be flatly wrong for a variant (e.g. Paldean
-// Wooper evolves into Clodsire, not Quagsire like base Wooper) — silently copying the base
-// species' value here would be actively incorrect, not just incomplete.
+// category/flavorText/evolvesIntoId/evolveMethod/evolveLevel/evolveItem/colorGroup/shape/habitat
+// are all deliberately left null/manual rather than inherited: PokéAPI's species-level genus/
+// flavor-text/evolution-chain/color/shape/habitat data reflects the DEFAULT variety only, with no
+// per-form field to fall back to even in principle, and can be flatly wrong for a variant — e.g.
+// Paldean Wooper evolves into Clodsire, not Quagsire like base Wooper, and is officially brown,
+// not blue like base Wooper's inherited colorGroup would silently claim. Silently copying the
+// base species' value for any of these would be actively incorrect, not just incomplete.
 function buildVariantRow(poke, baseSpecies, slug) {
   const types = poke.types.sort((a,b) => a.slot - b.slot).map(t => t.type.name);
   const type1 = capitalize(types[0]) || null;
@@ -260,12 +289,15 @@ function buildVariantRow(poke, baseSpecies, slug) {
   else genderMalePct = Math.round((8 - baseSpecies.gender_rate) / 8 * 100);
 
   const eggs = baseSpecies.egg_groups || [];
-  const eggGroup1 = eggs[0] ? capitalize(eggs[0].name.replace('-', ' ')) : null;
-  const eggGroup2 = eggs[1] ? capitalize(eggs[1].name.replace('-', ' ')) : null;
+  const eggGroup1 = eggs[0] ? eggGroupName(eggs[0].name) : null;
+  const eggGroup2 = eggs[1] ? eggGroupName(eggs[1].name) : null;
 
-  const colorGroup = capitalize(baseSpecies.color?.name) || null;
-  const shape = capitalize(baseSpecies.shape?.name?.replace('-', ' ')) || null;
-  const habitat = capitalize(baseSpecies.habitat?.name?.replace('-', ' ')) || null;
+  // v0.41-tooling fix — colorGroup/shape/habitat are NOT reliably safe to inherit from the base
+  // species, contrary to the original assumption here. PokéAPI's species resource stores exactly
+  // one color/shape/habitat value covering the DEFAULT variety only — there's no per-form field
+  // to read even if one wanted to. Confirmed wrong in practice: Paldean Wooper is officially
+  // brown, base Wooper is blue, yet both would read baseSpecies.color="blue" with no way to tell.
+  // Left manual, same treatment as category/flavorText/evolution above, for the same reason.
   const genderDifference = baseSpecies.has_gender_differences || false;
 
   return {
@@ -298,7 +330,9 @@ function buildVariantRow(poke, baseSpecies, slug) {
     evolveItem: null,       // manual
     eggGroup1, eggGroup2,
     eggCycles: baseSpecies.hatch_counter || null,
-    colorGroup, shape, habitat,
+    colorGroup: null,       // manual — see comment above; NOT safe to inherit, can be flatly wrong
+    shape: null,            // manual — same reason
+    habitat: null,          // manual — same reason
     genderDifference,
     hasSizeVariants: null,  // manual
     baseFormId: null,       // manual
@@ -341,8 +375,8 @@ async function fetchPokemon(idOrName) {
 
   // Egg groups
   const eggs = species.egg_groups || [];
-  const eggGroup1 = eggs[0] ? capitalize(eggs[0].name.replace('-', ' ')) : null;
-  const eggGroup2 = eggs[1] ? capitalize(eggs[1].name.replace('-', ' ')) : null;
+  const eggGroup1 = eggs[0] ? eggGroupName(eggs[0].name) : null;
+  const eggGroup2 = eggs[1] ? eggGroupName(eggs[1].name) : null;
 
   // Evolution chain — fetch to find what this species evolves into
   let evolvesIntoId = null, evolveMethod = null, evolveLevel = null, evolveItem = null;
@@ -508,7 +542,7 @@ async function fetchSingle() {
     results.push(variantData);
     flagVarieties(baseSpecies, name); // surface any OTHER siblings while we're here
     renderTable();
-    setStatus('✔ Fetched ' + variantData.name + ' (' + name + ') — category/flavorText/evolution left blank, see manual columns.', 'ok');
+    setStatus('✔ Fetched ' + variantData.name + ' (' + name + ') — category/flavorText/evolution/color/shape/habitat left blank, see manual columns.', 'ok');
   } catch(e) { setStatus('Error: ' + e.message, 'err'); }
 }
 

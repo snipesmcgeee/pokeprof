@@ -66,6 +66,12 @@
 
   .warning-box { background: #2a2000; border: 1px solid #f4d03f; border-radius: 4px; padding: 10px 14px; font-size: 11px; color: #f4d03f; margin-top: 10px; line-height: 1.7; }
   .note { color: #6080a0; font-size: 10px; margin-top: 6px; line-height: 1.6; }
+
+  .flag-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #0f1a2a; border: 1px solid #1a4a80; border-radius: 4px; padding: 8px 12px; margin-bottom: 6px; font-size: 11px; }
+  .flag-row .flag-label { color: #f4d03f; }
+  .flag-row .flag-sub { color: #6080a0; font-size: 10px; }
+  button.flag-btn { border-color: #f4d03f; color: #f4d03f; padding: 5px 10px; font-size: 10px; text-transform: none; letter-spacing: 0; }
+  button.flag-btn:hover { background: #2a2000; }
 </style>
 </head>
 <body>
@@ -84,8 +90,8 @@
     <button onclick="stopFetch()" id="stop-btn" disabled>⏹ Stop</button>
   </div>
   <div class="row">
-    <label>Or single name:</label>
-    <input type="text" id="single-name" placeholder="e.g. rattata">
+    <label>Or single name / slug:</label>
+    <input type="text" id="single-name" placeholder="e.g. rattata or rattata-alola">
     <button onclick="fetchSingle()">⬇ Fetch One</button>
   </div>
   <div id="progress-wrap">
@@ -93,7 +99,13 @@
     <div id="progress-text">Fetching...</div>
   </div>
   <div id="status"></div>
-  <p class="note">⚠ PokeAPI rate limit: ~100 requests/min. Large ranges may take several minutes. Base forms only — regional variants and megas are not fetched (those need manual entry per your form system).</p>
+  <p class="note">⚠ PokeAPI rate limit: ~100 requests/min. Large ranges may take several minutes.</p>
+  <p class="note">Form variants (Alolan, Galarian, Paldean, etc.) are not reachable via the dexId-range pull — PokéAPI indexes them by name-slug. Type the exact slug into the single-name field (e.g. "wooper-paldea"), or use the "fetch this form too" flags below once a base species is pulled.</p>
+</div>
+
+<div class="card" id="flags-card" style="display:none;">
+  <h2>⚑ Form Variants Detected</h2>
+  <div id="flags-list"></div>
 </div>
 
 <div class="card" id="results-card">
@@ -145,11 +157,155 @@ const GROWTH_RATE_MAP = {
 let results = [];
 let fetching = false;
 let stopRequested = false;
+// v0.41-tooling — form-variant flagging, mirrors MoveFetcher.html's pattern exactly.
+// flaggedForms: dexId -> [{slug}] non-default varieties not yet fetched.
+// baseSpeciesCache: dexId -> the already-fetched species object, reused so a variant fetch
+// never needs a second (impossible) pokemon-species/{variant-slug} call for its shared fields.
+let flaggedForms = {};
+let baseSpeciesCache = {};
+const capitalize = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : null;
 
 function setStatus(msg, type='info') {
   const el = document.getElementById('status');
   el.textContent = msg;
   el.className = type;
+}
+
+// Registers any non-default varieties on a fetched species as flags, skipping any slug already
+// fetched this session (excludeSlug) or already sitting in results. Shared by the base-name path
+// (fetchPokemon) and the direct-variant-slug path (fetchSingle's fallback) — either one finding
+// the species record is enough to discover and flag its siblings.
+function flagVarieties(species, excludeSlug=null) {
+  if (!species?.varieties) return;
+  const alreadyFetched = new Set(results.map(r => r._sourceSlug).filter(Boolean));
+  const extras = species.varieties
+    .filter(v => !v.is_default && v.pokemon.name !== excludeSlug && !alreadyFetched.has(v.pokemon.name))
+    .map(v => ({ slug: v.pokemon.name }));
+  if (extras.length) {
+    flaggedForms[species.id] = extras;
+    baseSpeciesCache[species.id] = species;
+    renderFlags();
+  }
+}
+
+function renderFlags() {
+  const card = document.getElementById('flags-card');
+  const list = document.getElementById('flags-list');
+  const dexIds = Object.keys(flaggedForms);
+  if (!dexIds.length) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  list.innerHTML = '';
+  dexIds.forEach(dexId => {
+    flaggedForms[dexId].forEach((form, i) => {
+      const row = document.createElement('div');
+      row.className = 'flag-row';
+      row.innerHTML = `<div><span class="flag-label">#${dexId}</span> has an extra variety: <span class="flag-label">${form.slug}</span><div class="flag-sub">Not included in the base dexId pull — fetch it separately</div></div>`;
+      const btn = document.createElement('button');
+      btn.className = 'flag-btn';
+      btn.textContent = '⬇ Fetch this form too';
+      btn.onclick = async () => {
+        btn.disabled = true;
+        btn.textContent = 'Fetching...';
+        await fetchAndPushVariant(dexId, form.slug);
+        flaggedForms[dexId].splice(flaggedForms[dexId].indexOf(form), 1);
+        if (!flaggedForms[dexId].length) delete flaggedForms[dexId];
+        renderFlags();
+      };
+      row.appendChild(btn);
+      list.appendChild(row);
+    });
+  });
+}
+
+async function fetchAndPushVariant(dexId, slug) {
+  const baseSpecies = baseSpeciesCache[dexId];
+  if (!baseSpecies) { setStatus('Lost the base species record for #' + dexId + ' — re-fetch it first.', 'err'); return; }
+  const poke = await fetch(`https://pokeapi.co/api/v2/pokemon/${slug}`).then(r => r.ok ? r.json() : null);
+  if (!poke) { setStatus('Not found: ' + slug, 'err'); return; }
+  const data = buildVariantRow(poke, baseSpecies, slug);
+  results.push(data);
+  renderTable();
+  setStatus('✔ Fetched ' + data.name + ' (' + slug + ') — category/flavorText/evolution left blank, see manual columns.', 'ok');
+}
+
+// Builds a row for a FORM VARIANT slug (e.g. wooper-paldea): type/stats/height/weight/abilities/
+// sprite come from the variant's own /pokemon/{slug} data (poke) — genuinely per-form. Everything
+// genuinely species-wide (egg groups, growth rate, gender ratio, color/shape/habitat, legendary/
+// mythical status) is inherited from baseSpecies, already fetched, never re-requested per variant.
+// dexId is baseSpecies.id — the REAL National Dex number — not poke.id, which for a non-default
+// variety is PokéAPI's internal per-variety ID (e.g. 10253 for wooper-paldea), not a dex number.
+// category/flavorText/evolvesIntoId/evolveMethod/evolveLevel/evolveItem are deliberately left
+// null/manual rather than inherited: PokéAPI's species-level genus/flavor-text/evolution-chain
+// data reflects the DEFAULT variety only, and can be flatly wrong for a variant (e.g. Paldean
+// Wooper evolves into Clodsire, not Quagsire like base Wooper) — silently copying the base
+// species' value here would be actively incorrect, not just incomplete.
+function buildVariantRow(poke, baseSpecies, slug) {
+  const types = poke.types.sort((a,b) => a.slot - b.slot).map(t => t.type.name);
+  const type1 = capitalize(types[0]) || null;
+  const type2 = capitalize(types[1]) || null;
+
+  const statMap = {};
+  poke.stats.forEach(s => { statMap[s.stat.name] = s.base_stat; });
+
+  const abilities = poke.abilities.sort((a,b) => a.slot - b.slot);
+  const ability1 = abilities.find(a => a.slot === 1 && !a.is_hidden);
+  const ability2 = abilities.find(a => a.slot === 2 && !a.is_hidden);
+  const hidden   = abilities.find(a => a.is_hidden);
+  const fmtAbility = a => a ? a.ability.name.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : null;
+
+  const gr = GROWTH_RATE_MAP[baseSpecies.growth_rate?.name] || baseSpecies.growth_rate?.name || null;
+
+  let genderMalePct = null;
+  if (baseSpecies.gender_rate === -1) genderMalePct = null;
+  else genderMalePct = Math.round((8 - baseSpecies.gender_rate) / 8 * 100);
+
+  const eggs = baseSpecies.egg_groups || [];
+  const eggGroup1 = eggs[0] ? capitalize(eggs[0].name.replace('-', ' ')) : null;
+  const eggGroup2 = eggs[1] ? capitalize(eggs[1].name.replace('-', ' ')) : null;
+
+  const colorGroup = capitalize(baseSpecies.color?.name) || null;
+  const shape = capitalize(baseSpecies.shape?.name?.replace('-', ' ')) || null;
+  const habitat = capitalize(baseSpecies.habitat?.name?.replace('-', ' ')) || null;
+  const genderDifference = baseSpecies.has_gender_differences || false;
+
+  return {
+    dexId: baseSpecies.id,
+    formVariant: null,      // manual
+    familyId: null,         // manual
+    name: capitalize(baseSpecies.name), // e.g. "Wooper" — species name, matching the formName-carries-the-variant convention already used throughout pokedex.js (see Alolan Rattata)
+    formName: null,         // manual, per confirmed decision — no slug-guessing
+    category: null,         // manual — base species genus reflects the default variety only
+    flavorText: null,       // manual — same reason
+    type1, type2,
+    heightM: poke.height / 10,
+    weightKg: poke.weight / 10,
+    baseHP: statMap['hp'] || null,
+    baseAtk: statMap['attack'] || null,
+    baseDef: statMap['defense'] || null,
+    baseSpatk: statMap['special-attack'] || null,
+    baseSpdef: statMap['special-defense'] || null,
+    baseSpd: statMap['speed'] || null,
+    ability1: fmtAbility(ability1),
+    ability2: fmtAbility(ability2),
+    hiddenAbility: fmtAbility(hidden),
+    growthRate: gr,
+    baseExpYield: poke.base_experience || null,
+    catchRate: baseSpecies.capture_rate || null,
+    genderMalePct,
+    evolvesIntoId: null,    // manual — see function comment above (may differ from the base species' own evolution target)
+    evolveMethod: null,     // manual
+    evolveLevel: null,      // manual
+    evolveItem: null,       // manual
+    eggGroup1, eggGroup2,
+    eggCycles: baseSpecies.hatch_counter || null,
+    colorGroup, shape, habitat,
+    genderDifference,
+    hasSizeVariants: null,  // manual
+    baseFormId: null,       // manual
+    isLegendary: baseSpecies.is_legendary || false,
+    isMythical: baseSpecies.is_mythical || false,
+    _sourceSlug: slug       // internal only — not an export column, used to dedupe flags (see flagVarieties)
+  };
 }
 
 async function fetchPokemon(idOrName) {
@@ -161,7 +317,6 @@ async function fetchPokemon(idOrName) {
 
   // Types
   const types = poke.types.sort((a,b) => a.slot - b.slot).map(t => t.type.name);
-  const capitalize = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : null;
   const type1 = capitalize(types[0]) || null;
   const type2 = capitalize(types[1]) || null;
 
@@ -243,6 +398,10 @@ async function fetchPokemon(idOrName) {
   // Gender difference (has_gender_differences)
   const genderDifference = species.has_gender_differences || false;
 
+  // v0.41-tooling — flag any non-default varieties this species has, so they show up as
+  // "fetch this form too" options instead of silently never being reachable.
+  flagVarieties(species, idOrName);
+
   return {
     dexId: species.id,
     formVariant: null,      // manual
@@ -278,7 +437,8 @@ async function fetchPokemon(idOrName) {
     hasSizeVariants: null,   // manual
     baseFormId: null,        // manual
     isLegendary: species.is_legendary || false,
-    isMythical: species.is_mythical || false
+    isMythical: species.is_mythical || false,
+    _sourceSlug: idOrName    // internal only — not an export column, used to dedupe flags
   };
 }
 
@@ -322,7 +482,7 @@ async function startFetch() {
 
 async function fetchSingle() {
   const name = document.getElementById('single-name').value.trim().toLowerCase();
-  if (!name) { setStatus('Enter a name.', 'err'); return; }
+  if (!name) { setStatus('Enter a name or slug.', 'err'); return; }
   setStatus('Fetching ' + name + '...', 'info');
   try {
     const data = await fetchPokemon(name);
@@ -330,9 +490,25 @@ async function fetchSingle() {
       results.push(data);
       setStatus('✔ Fetched ' + data.name, 'ok');
       renderTable();
-    } else {
-      setStatus('Not found: ' + name, 'err');
+      return;
     }
+    // fetchPokemon() requires BOTH /pokemon/{name} and /pokemon-species/{name} to succeed.
+    // A form-variant slug (e.g. "wooper-paldea") has no pokemon-species entry of its own, so
+    // it always fails that combined check even though real per-form data exists. Retry as a
+    // variant: fetch /pokemon/{name} alone, then resolve the REAL base species via the
+    // response's own species reference (poke.species.name) to source shared fields from.
+    const poke = await fetch(`https://pokeapi.co/api/v2/pokemon/${name}`).then(r => r.ok ? r.json() : null);
+    if (!poke) { setStatus('Not found: ' + name, 'err'); return; }
+    const baseSlug = poke.species?.name;
+    const baseSpecies = baseSlug
+      ? await fetch(`https://pokeapi.co/api/v2/pokemon-species/${baseSlug}`).then(r => r.ok ? r.json() : null)
+      : null;
+    if (!baseSpecies) { setStatus('Not found: ' + name, 'err'); return; }
+    const variantData = buildVariantRow(poke, baseSpecies, name);
+    results.push(variantData);
+    flagVarieties(baseSpecies, name); // surface any OTHER siblings while we're here
+    renderTable();
+    setStatus('✔ Fetched ' + variantData.name + ' (' + name + ') — category/flavorText/evolution left blank, see manual columns.', 'ok');
   } catch(e) { setStatus('Error: ' + e.message, 'err'); }
 }
 

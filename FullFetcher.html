@@ -80,6 +80,7 @@
 <body>
 
 <h1>🎓 PokeProf — Full Fetcher</h1>
+<p class="subtitle" style="color:#f4d03f;">Last updated: August 29, 2026, 10:28 AM Central</p>
 <p class="subtitle">Complete Pokédex rows (stats, forms, evolution, egg groups, and all 36 move-slot columns) in a single pass</p>
 
 <div class="card">
@@ -128,6 +129,22 @@
     <table id="results-table">
       <thead id="results-head"></thead>
       <tbody id="results-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card" id="evotree-card" style="display:none;">
+  <h2>⚑ EVO_TREE Branches Needed — <span id="evotree-count">0</span></h2>
+  <p class="note">Every variant row above that itself evolves needs one of these too — the main table's flat evolvesIntoId/evolveItem columns alone always resolve to the DEFAULT form on evolution (confirmed in pokeprof.html's own code), so without these, evolving e.g. Alolan Vulpix would silently turn it into regular Ninetales. Assumes the evolution preserves the same regional form on the target — the consistent real-game pattern, but still an assumption worth a glance, not a certainty.</p>
+  <div class="results-controls">
+    <button class="primary" onclick="copyEvoTreeForExcel()">📋 Copy EVO_TREE rows</button>
+    <button onclick="downloadEvoTreeCSV()">⬇ Download CSV</button>
+    <span id="evotree-copy-status"></span>
+  </div>
+  <div id="evotree-table-wrap" style="overflow-x:auto;">
+    <table id="evotree-table">
+      <thead><tr><th>fromDexId</th><th>toDexId</th><th>evolveMethod</th><th>evolveLevel</th><th>evolveItem</th><th>toFormName</th><th>evolveNickname</th></tr></thead>
+      <tbody id="evotree-body"></tbody>
     </table>
   </div>
 </div>
@@ -198,6 +215,17 @@ let stopRequested = false;
 let moveCache = {};        // moveName -> {type, damageClass, power} | null
 let flaggedForms = {};     // dexId -> [{slug}]
 let baseSpeciesCache = {}; // dexId -> {species, chain, familyId}
+// v0.41-tooling — EVO_TREE-style branch rows for form-preserving variant evolutions.
+// Confirmed directly in pokeprof.html's own evolution logic: the flat evolvesIntoId/evolveItem
+// columns ALWAYS resolve to toFormName:null (hardcoded — `if(path1Matched) branches.push(
+// {toDexId:path1Target,toFormName:null})`), with no way to express "stay in this form." So an
+// Alolan Vulpix row with only flat columns would evolve into regular Ninetales when an Ice
+// Stone is used, not Alolan Ninetales — confirmed the same bug class as the Alolan Rattata
+// phantom-ID issue found at the very start of this project's fetcher work, just not yet fixed
+// for the fetcher's OWN output. Every variant row with a resolved evolution needs its own
+// EVO_TREE branch (fromDexId, toDexId, evolveMethod/Level/Item, toFormName) — the flat columns
+// alone are structurally insufficient for any form-preserving evolution, always, no exceptions.
+let evoTreeRows = [];
 let colorListCache = null; // whole "List of Pokémon by color" page text, fetched once per session
 
 // ── VARIANT COLOR — Bulbapedia primary, sprite-pixel fallback ────────────
@@ -675,39 +703,61 @@ async function buildVariantRow(poke, cached, slug) {
   let formName, flavorText, category, colorGroup, shape;
   if (region) {
     formName = region.formName;
-    flavorText = pickLatestFlavorText(baseSpecies.flavor_text_entries, region.versions);
-    // v0.41-tooling fix — do NOT fall back to the base species' own "latest overall" text.
-    // Confirmed this was producing byte-identical duplicates of the base row's flavorText
-    // whenever no distinct region-tagged entry exists (a real, PokeAPI-documented gap — their
-    // own issue tracker confirms Legends: Arceus flavor text is frequently just missing from
-    // their data, especially for older species that later got a Hisuian form, e.g. Growlithe).
-    // The review flag alone wasn't a strong enough signal — a duplicated value sitting right
-    // next to its twin is easy to skim past as "looks fine." Leaving it genuinely blank is
-    // unmistakable, and is also simply more honest: there IS no confirmed distinct text to show.
-    if (!flavorText) reviewFields.push('flavorText');
   } else {
     formName = capitalize(slug.split('-').slice(1).join(' '));
     reviewFields.push('formName');
-    flavorText = null; // same reasoning — no known game version to even attempt a real lookup
-    reviewFields.push('flavorText');
   }
+  // flavorText — NEVER attempted via version-filtering anymore, for any variant, regional or
+  // not. Confirmed via PokéAPI's own issue tracker: when a single game features multiple
+  // varieties of one species, ALL their flavor text entries share the same version tag with no
+  // field distinguishing which entry belongs to which form — so filtering by game version was
+  // never actually reliable, it just happened to look right on a test case with no ambiguity.
+  // Real confirmed failure: Alolan Vulpix kept getting the Kantonian-flavored Sun/Moon entry
+  // because PokéAPI itself can't tell the two apart under that version tag. Always blank,
+  // always flagged — no attempt at a "confirmed" value that can't actually be confirmed.
+  flavorText = null;
+  reviewFields.push('flavorText');
   // No per-form field exists in PokéAPI's data model at all for these — always inherited.
   // habitat intentionally absent — dropped entirely, see fetchBaseRow()'s comment.
   const genus = baseSpecies.genera?.find(g => g.language.name === 'en');
   category = genus ? genus.genus : null; reviewFields.push('category');
   shape = capitalize(baseSpecies.shape?.name?.replace('-', ' ')) || null; reviewFields.push('shape');
 
-  // colorGroup — NEVER inherited from the base species. Bulbapedia's color-list article first
-  // (the real, per-form-aware, authoritative record), sprite-pixel detection as fallback. Only
-  // flagged if both genuinely fail to produce an answer — never a silently-wrong placeholder.
+  // colorGroup — NEVER inherited from the base species. Bulbapedia's color-list article
+  // attempted first, sprite-pixel detection as fallback — but ALWAYS flagged for review now,
+  // even when Bulbapedia "succeeds", regardless of source. Two real, confirmed failures against
+  // actual live data (a section-splitting bug that made every variant resolve to "Pink", then a
+  // second case that resolved to the base species' own color instead of the real per-form
+  // answer) are enough evidence that this sandbox's ability to verify Bulbapedia's exact page
+  // format from search snippets alone isn't reliable enough to ever call "confirmed." Kept as a
+  // best-effort first guess — better than nothing — but never presented as settled fact.
   const spriteUrl = poke.sprites?.front_default || null;
   const colorResult = await resolveVariantColor(capitalize(baseSpecies.name), formName, spriteUrl);
   colorGroup = colorResult.color;
-  if (colorResult.source === 'sprite') reviewFields.push('colorGroup'); // heuristic, worth a glance
-  if (!colorResult.color) reviewFields.push('colorGroup'); // both sources failed — genuinely unknown
+  reviewFields.push('colorGroup');
 
   const evo = await resolveEvolution(baseSpecies.evolution_chain?.url, poke.species.name, generation, true);
   if (evo.needsReview) reviewFields.push('evolvesIntoId','evolveMethod','evolveLevel','evolveItem');
+
+  // EVO_TREE branch — see the note on evoTreeRows above. Any variant that itself evolves needs
+  // one; the flat evolvesIntoId columns above are kept too (for the common case where a tool
+  // or a person only looks at the main table), but they alone would silently evolve this
+  // Pokémon out of its own form. Assumes the evolution preserves the same regional form onto
+  // the target (Alolan Vulpix -> Alolan Ninetales, not a different form) — the overwhelmingly
+  // consistent real-game pattern for every regional-variant evolution, but still an assumption,
+  // so still flagged rather than silently trusted.
+  if (evo.evolvesIntoId) {
+    evoTreeRows.push({
+      fromDexId: baseSpecies.id,
+      toDexId: evo.evolvesIntoId,
+      evolveMethod: evo.evolveMethod,
+      evolveLevel: evo.evolveLevel,
+      evolveItem: evo.evolveItem,
+      toFormName: formName,
+      evolveNickname: formName,
+      _needsReview: true
+    });
+  }
 
   const moveSlots = await computeMoveSlotsFromPoke(poke);
 
@@ -848,6 +898,55 @@ function renderTable() {
     }).join('');
     tbody.appendChild(tr);
   });
+  renderEvoTreeTable();
+}
+const EVOTREE_COLUMNS = ['fromDexId','toDexId','evolveMethod','evolveLevel','evolveItem','toFormName','evolveNickname'];
+function renderEvoTreeTable() {
+  const card = document.getElementById('evotree-card');
+  if (!evoTreeRows.length) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  document.getElementById('evotree-count').textContent = evoTreeRows.length;
+  const tbody = document.getElementById('evotree-body');
+  tbody.innerHTML = '';
+  evoTreeRows.forEach(row => {
+    const tr = document.createElement('tr');
+    tr.className = 'has-review';
+    tr.innerHTML = EVOTREE_COLUMNS.map(col => {
+      const v = row[col];
+      if (v === null || v === undefined || v === '') return `<td class="null"></td>`;
+      return `<td class="review">${v}</td>`;
+    }).join('');
+    tbody.appendChild(tr);
+  });
+}
+function copyEvoTreeForExcel() {
+  const tsv = evoTreeRows.map(row => EVOTREE_COLUMNS.map(col => row[col] ?? '').join('\t')).join('\n');
+  navigator.clipboard.writeText(tsv).then(() => {
+    document.getElementById('evotree-copy-status').textContent = '✔ Copied!';
+    setTimeout(() => { document.getElementById('evotree-copy-status').textContent = ''; }, 3000);
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = tsv;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    document.getElementById('evotree-copy-status').textContent = '✔ Copied (fallback)';
+  });
+}
+function downloadEvoTreeCSV() {
+  const header = EVOTREE_COLUMNS.join(',');
+  const rows = evoTreeRows.map(row => EVOTREE_COLUMNS.map(col => {
+    const v = row[col];
+    if (v === null || v === undefined) return '';
+    const s = String(v);
+    return s.includes(',') || s.includes('"') ? `"${s.replace(/"/g,'""')}"` : s;
+  }).join(',')).join('\n');
+  const blob = new Blob([header + '\n' + rows], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'pokeprof_evo_tree.csv';
+  a.click();
 }
 function visibleRows() {
   const reviewOnly = document.getElementById('review-only-toggle').checked;
@@ -896,8 +995,11 @@ function downloadCSV() {
 function clearResults() {
   if (!confirm('Clear all ' + results.length + ' fetched results? (Move cache and species cache are kept.)')) return;
   results = [];
+  evoTreeRows = [];
   document.getElementById('results-card').style.display = 'none';
   document.getElementById('results-body').innerHTML = '';
+  document.getElementById('evotree-card').style.display = 'none';
+  document.getElementById('evotree-body').innerHTML = '';
   setStatus('Cleared.', 'info');
 }
 </script>

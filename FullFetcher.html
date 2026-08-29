@@ -80,7 +80,6 @@
 <body>
 
 <h1>🎓 PokeProf — Full Fetcher</h1>
-<p class="subtitle" style="color:#f4d03f;">Last updated: August 29, 2026, 10:28 AM Central</p>
 <p class="subtitle">Complete Pokédex rows (stats, forms, evolution, egg groups, and all 36 move-slot columns) in a single pass</p>
 
 <div class="card">
@@ -164,7 +163,7 @@ const BASE_COLUMNS = [
   'growthRate','baseExpYield','catchRate','genderMalePct',
   'evolvesIntoId','evolveMethod','evolveLevel','evolveItem',
   'eggGroup1','eggGroup2','eggCycles',
-  'colorGroup','shape',
+  'shape',
   'genderDifference','baseFormId',
   'isLegendary','isMythical'
 ];
@@ -208,6 +207,12 @@ const REGIONAL_FORMS = {
 // family in this game's design — the only case of its kind in the whole franchise. Forced to
 // share Nidoran♀'s own chain ID so both land in the same familyId.
 const FAMILY_MERGES = { 32: 29 }; // dexId 32 (Nidoran-M) borrows dexId 29's (Nidoran-F) chain
+// Slugs for temporary in-battle transformations with no learnset of their own in the source
+// games — confirmed for both: Gigantamax gets no separate movepool at all, and Mega Evolution
+// changes stats/type/ability but keeps the exact same moveset as the pre-Mega form (confirmed
+// directly — "Mega Evolution... its moves will remain the same"). PokéAPI slugs: "-gmax" for
+// Gigantamax, "-mega"/"-mega-x"/"-mega-y" for Mega Evolution.
+const TEMP_TRANSFORM_SLUG = /-gmax$|gigantamax|-mega(-x|-y)?$/i;
 
 let results = [];
 let fetching = false;
@@ -226,153 +231,6 @@ let baseSpeciesCache = {}; // dexId -> {species, chain, familyId}
 // EVO_TREE branch (fromDexId, toDexId, evolveMethod/Level/Item, toFormName) — the flat columns
 // alone are structurally insufficient for any form-preserving evolution, always, no exceptions.
 let evoTreeRows = [];
-let colorListCache = null; // whole "List of Pokémon by color" page text, fetched once per session
-
-// ── VARIANT COLOR — Bulbapedia primary, sprite-pixel fallback ────────────
-// Nothing gets inherited from the base species anymore. PokéAPI has no per-form color field
-// at all (confirmed), so a variant's color comes from one of two REAL sources, in order:
-// 1. Bulbapedia's "List of Pokémon by color" article — the one page on the whole wiki proven
-//    to separately track per-form color (confirmed: it lists "Wooper · Paldean Form" as its
-//    own entry, distinct from base Wooper, under the correct color). This is the actual
-//    authoritative record, not a guess. Category-membership lookups were tried and rejected —
-//    MediaWiki categories track by page, not by form, so a multi-form species only shows up
-//    under ONE color regardless of how many forms it actually has (confirmed via Vulpix).
-// 2. Sprite pixel-color detection — reads the variant's own sprite, buckets its pixels against
-//    the 10 official Pokédex colors, used only when the list-article lookup finds no match
-//    (a new species not yet added to the list, or a genuine parsing miss).
-// Only if BOTH fail does colorGroup fall back to null + a review flag — never silently wrong.
-const COLOR_REFERENCE_RGB = {
-  'Red':    [200, 40, 40],
-  'Blue':   [60, 100, 200],
-  'Yellow': [230, 210, 50],
-  'Green':  [60, 160, 80],
-  'Black':  [40, 40, 40],
-  'Brown':  [140, 90, 50],
-  'Purple': [140, 70, 160],
-  'Gray':   [150, 150, 150],
-  'White':  [235, 235, 235],
-  'Pink':   [230, 150, 180]
-};
-const COLOR_NAMES = Object.keys(COLOR_REFERENCE_RGB);
-
-async function getColorListText() {
-  if (colorListCache) return colorListCache;
-  try {
-    const res = await fetch('https://bulbapedia.bulbagarden.net/w/api.php?action=parse&page=List_of_Pok%C3%A9mon_by_color&prop=text&format=json&origin=*');
-    if (!res.ok) return null;
-    const data = await res.json();
-    const html = data?.parse?.text?.['*'];
-    if (!html) return null;
-    // v0.41-tooling fix — keep the RAW HTML, not stripped plain text. Confirmed real bug: the
-    // page's own intro sentence lists all ten color names together ("the games divide Pokémon
-    // into the following ten categories...") and the table-of-contents lists every heading too
-    // — a plain-text search for " ColorName " finds one of those false positives instead of the
-    // real section, and every section boundary collapses into that intro/TOC area, so ONE color
-    // silently absorbs the entire rest of the page as "its" section. Section splitting needs
-    // the actual heading markup (see splitColorSections below), which only exists in the raw HTML.
-    colorListCache = html;
-    return html;
-  } catch (e) { return null; }
-}
-
-// Splits the RAW HTML into one chunk per color heading, anchored on MediaWiki's own
-// <span class="mw-headline" id="ColorName"> markers — confirmed via a real Bulbapedia fetch
-// earlier this session (the same pattern was visible on the Bulbasaur page's own section
-// headings) — rather than any plain-text mention of the color name. This is what actually
-// fixes the "every variant comes back Pink" bug: real heading positions, not text-search guesses.
-function splitColorSections(rawHtml) {
-  const sections = {};
-  const positions = [];
-  const headingRegex = /<span class="mw-headline" id="([^"]+)">/g;
-  let match;
-  while ((match = headingRegex.exec(rawHtml)) !== null) {
-    if (COLOR_NAMES.includes(match[1])) positions.push({ name: match[1], idx: match.index });
-  }
-  positions.sort((a, b) => a.idx - b.idx);
-  for (let i = 0; i < positions.length; i++) {
-    const start = positions[i].idx;
-    const end = i + 1 < positions.length ? positions[i + 1].idx : rawHtml.length;
-    // Strip tags and decode entities only WITHIN this already-correctly-bounded section, so
-    // stray color-name mentions elsewhere on the page can never leak into a section again.
-    sections[positions[i].name] = rawHtml.slice(start, end).replace(/<[^>]+>/g, ' ')
-      .replace(/&#160;|&nbsp;/g, ' ')
-      .replace(/&#183;|&middot;/g, '·')
-      .replace(/\s+/g, ' ');
-  }
-  return sections;
-}
-
-async function lookupOfficialColor(speciesName, formName) {
-  const fullText = await getColorListText();
-  if (!fullText) return null;
-  const sections = splitColorSections(fullText);
-  const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  // Prefer an exact "Species · FormName" match (form has its own distinct color)...
-  if (formName) {
-    const formPattern = new RegExp(esc(speciesName) + '\\s*·\\s*' + esc(formName), 'i');
-    for (const color of COLOR_NAMES) {
-      if (formPattern.test(sections[color] || '')) return color;
-    }
-  }
-  // ...fall back to a bare species match (all forms, including ours, share one color) — but
-  // only if that species doesn't appear with a DIFFERENT explicit form entry elsewhere, which
-  // would mean forms really do diverge and we just didn't match our specific one above.
-  const barePattern = new RegExp('\\b' + esc(speciesName) + '\\b(?!\\s*·)', 'i');
-  for (const color of COLOR_NAMES) {
-    if (barePattern.test(sections[color] || '')) return color;
-  }
-  return null;
-}
-
-function nearestColorName(r, g, b) {
-  let best = null, bestDist = Infinity;
-  for (const name of COLOR_NAMES) {
-    const [rr, gg, bb] = COLOR_REFERENCE_RGB[name];
-    const dist = (r - rr) ** 2 + (g - gg) ** 2 + (b - bb) ** 2;
-    if (dist < bestDist) { bestDist = dist; best = name; }
-  }
-  return best;
-}
-
-function detectSpriteColor(spriteUrl) {
-  return new Promise((resolve) => {
-    if (!spriteUrl) { resolve(null); return; }
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      try {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width; canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-        const counts = {};
-        COLOR_NAMES.forEach(n => { counts[n] = 0; });
-        for (let i = 0; i < data.length; i += 4) {
-          const alpha = data[i + 3];
-          if (alpha < 100) continue; // skip transparent/near-transparent pixels
-          const name = nearestColorName(data[i], data[i + 1], data[i + 2]);
-          counts[name]++;
-        }
-        let best = null, bestCount = -1;
-        for (const name of COLOR_NAMES) {
-          if (counts[name] > bestCount) { bestCount = counts[name]; best = name; }
-        }
-        resolve(bestCount > 0 ? best : null);
-      } catch (e) { resolve(null); } // canvas tainted by CORS, or other failure — fall through
-    };
-    img.onerror = () => resolve(null);
-    img.src = spriteUrl;
-  });
-}
-
-async function resolveVariantColor(speciesName, formName, spriteUrl) {
-  const official = await lookupOfficialColor(speciesName, formName);
-  if (official) return { color: official, source: 'bulbapedia' };
-  const sprite = await detectSpriteColor(spriteUrl);
-  if (sprite) return { color: sprite, source: 'sprite' };
-  return { color: null, source: null };
-}
 
 let evoSourceCache = {};   // speciesName -> Promise<moveSlots|null>, invisible pre-evolution walk
 const capitalize = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : null;
@@ -448,6 +306,29 @@ async function getInheritedMoveSlots(speciesName) {
   return promise;
 }
 
+// evolveMethod — PokéAPI uses the SAME trigger name ("level-up") for plain level-ups AND
+// friendship-based evolutions; the real distinguishing field is min_happiness (with optional
+// time_of_day), not the trigger name. Confirmed real bug: a naive trigger-name passthrough
+// mislabeled Alolan Meowth's real friendship-based evolution into Alolan Persian as a plain
+// level-up. Matches the exact method vocabulary pokeprof.html itself expects (level/friendship/
+// friendship-day/friendship-night/use-move/in-party), not PokéAPI's raw trigger name.
+function deriveEvolveMethod(detail) {
+  if (!detail) return null;
+  if (detail.trigger?.name === 'level-up') {
+    if (detail.min_happiness != null) {
+      return detail.time_of_day === 'day' ? 'friendship-day'
+        : detail.time_of_day === 'night' ? 'friendship-night'
+        : 'friendship';
+    }
+    return 'level';
+  }
+  if (detail.trigger?.name === 'use-item') return 'use-item';
+  return detail.trigger?.name || null;
+}
+function formatItemName(item) {
+  return item ? item.name.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : null;
+}
+
 // ── EVOLUTION ──────────────────────────────────────────────────────────
 // Walks a fetched evolution-chain to find this species' own node and its evolves_to list.
 function findChainNode(chainRoot, speciesName) {
@@ -460,28 +341,52 @@ function findChainNode(chainRoot, speciesName) {
 }
 // Resolves one species' forward evolution. PokéAPI has NO field marking a branch as
 // exclusive to a particular form/variety (confirmed — evolution_details has no such field).
-// Two genuinely distinct kinds of ambiguity exist and BOTH need flagging, not just one:
-// 1. Multiple TARGETS (a real branch to different species, e.g. Wooper -> Quagsire/Clodsire).
-// 2. Multiple DETAILS on a single target (same next species, different trigger per variety —
-//    e.g. Vulpix -> Ninetales via Fire Stone, Alolan Vulpix -> Ninetales via Ice Stone; PokéAPI
-//    models this as ONE evolves_to node with two evolution_details entries, not two branches).
-// An earlier version of this function only checked for case 1, so case 2 silently always
-// returned evolution_details[0] with no review flag — confirmed root cause of a real bug: an
-// Alolan Vulpix row got "Fire Stone" (the older, Gen 1 entry, listed first) instead of the
-// correct "Ice Stone". Both cases now flag for review; neither is silently trusted.
-async function resolveEvolution(chainUrl, speciesName, rowGeneration, isVariant=false, regionSuffix=null) {
-  const empty = { evolvesIntoId: null, evolveMethod: null, evolveLevel: null, evolveItem: null, needsReview: false };
+// THREE genuinely distinct cases, and each needs different handling:
+// 1. TRUE multi-path from one form (Eevee's 8 Eeveelutions): the source species has only ONE
+//    variety of itself (no regional forms) yet multiple simultaneous real evolution options —
+//    none of them is "the" answer, so none belongs in the flat single-value columns at all.
+//    Confirmed via the actual live EVO_TREE data this project already ships: Eevee's own
+//    pokedex.js row has a blank flat evolvesIntoId, and all 8 branches live entirely in
+//    EVO_TREE. Detected by: evolves_to.length > 1 AND the source species itself has only one
+//    variety — distinguishing this from case 2 below.
+// 2. Multiple TARGETS, but variety-dependent (Wooper -> Quagsire/Clodsire, Meowth -> Persian/
+//    Perrserker): the source species itself HAS multiple varieties, and each variety has
+//    exactly one correct target — it's just that PokéAPI's chain structure merges them into one
+//    shared node. Each row (base or variant) resolves to ONE branch via regional-variety
+//    matching (does the target species itself have a matching regional form?), falling back to
+//    generation-proximity only when no target has one. Populates the flat columns normally.
+// 3. Multiple DETAILS on a single target (Vulpix -> Ninetales via Fire Stone or Ice Stone,
+//    same species either way): base rows keep the first-listed detail, variant rows try the
+//    last (variety-specific methods tend to be appended later, chronologically).
+// All three are flagged for review — inference, not certainty, regardless of case.
+async function resolveEvolution(chainUrl, speciesName, rowGeneration, isVariant=false, regionSuffix=null, sourceHasMultipleVarieties=false) {
+  const empty = { evolvesIntoId: null, evolveMethod: null, evolveLevel: null, evolveItem: null, needsReview: false, allBranches: [] };
   if (!chainUrl) return empty;
   try {
     const chain = await fetch(chainUrl).then(r => r.ok ? r.json() : null);
     if (!chain) return empty;
     const node = findChainNode(chain.chain, speciesName);
     if (!node || !node.evolves_to.length) return empty;
+
+    // Case 1 — true multi-path. Resolve EVERY branch; none goes in the flat columns.
+    if (node.evolves_to.length > 1 && !sourceHasMultipleVarieties) {
+      const branches = await Promise.all(node.evolves_to.map(async t => {
+        const targetSpecies = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${t.species.name}`).then(r => r.ok ? r.json() : null);
+        const detail = t.evolution_details[0];
+        return {
+          toDexId: targetSpecies ? targetSpecies.id : null,
+          evolveMethod: deriveEvolveMethod(detail),
+          evolveLevel: detail?.min_level || null,
+          evolveItem: formatItemName(detail?.item)
+        };
+      }));
+      return { evolvesIntoId: null, evolveMethod: null, evolveLevel: null, evolveItem: null, needsReview: true, allBranches: branches };
+    }
     let target, needsReview = false;
     if (node.evolves_to.length === 1) {
       target = node.evolves_to[0];
     } else {
-      // Branching — confirmed real bug: a pure "nearest generation" guess breaks whenever
+      // Case 2 — Branching — confirmed real bug: a pure "nearest generation" guess breaks whenever
       // multiple varieties of the SOURCE species share one branch while only some diverge to
       // a different one (Meowth: Kantonian AND Alolan both -> Persian; only Galarian -> the
       // Gen 8 Perrserker). Generation-proximity wrongly matches Gen 7 Alolan to the
@@ -519,33 +424,13 @@ async function resolveEvolution(chainUrl, speciesName, rowGeneration, isVariant=
       detail = isVariant ? target.evolution_details[target.evolution_details.length - 1] : target.evolution_details[0];
     }
     const targetSpecies = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${target.species.name}`).then(r => r.ok ? r.json() : null);
-    // evolveMethod — PokéAPI uses the SAME trigger name ("level-up") for plain level-ups AND
-    // friendship-based evolutions; the real distinguishing field is min_happiness (with
-    // optional time_of_day), not the trigger name. Confirmed real bug: this was blindly
-    // mapping every level-up trigger to 'level', which would have mislabeled Alolan Meowth's
-    // real friendship-based evolution into Alolan Persian as a plain level-up. Matches the
-    // exact method vocabulary pokeprof.html itself expects (level/friendship/friendship-day/
-    // friendship-night/use-move/in-party), not a generic passthrough of PokéAPI's trigger name.
-    let evolveMethod = null;
-    if (detail?.trigger?.name === 'level-up') {
-      if (detail.min_happiness != null) {
-        evolveMethod = detail.time_of_day === 'day' ? 'friendship-day'
-          : detail.time_of_day === 'night' ? 'friendship-night'
-          : 'friendship';
-      } else {
-        evolveMethod = 'level';
-      }
-    } else if (detail?.trigger?.name === 'use-item') {
-      evolveMethod = 'use-item';
-    } else {
-      evolveMethod = detail?.trigger?.name || null;
-    }
     return {
       evolvesIntoId: targetSpecies ? targetSpecies.id : null,
-      evolveMethod,
+      evolveMethod: deriveEvolveMethod(detail),
       evolveLevel: detail?.min_level || null,
-      evolveItem: detail?.item ? detail.item.name.split('-').map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ') : null,
-      needsReview
+      evolveItem: formatItemName(detail?.item),
+      needsReview,
+      allBranches: []
     };
   } catch(e) { return empty; }
 }
@@ -657,8 +542,11 @@ async function fetchBaseRow(idOrName) {
   const genus = species.genera?.find(g => g.language.name === 'en');
   const category = genus ? genus.genus : null;
 
-  const colorGroup = capitalize(species.color?.name) || null;
   const shape = capitalize(species.shape?.name?.replace('-', ' ')) || null;
+  // colorGroup dropped entirely — confirmed zero usage anywhere in pokeprof.html (grep-verified),
+  // and its only sourcing mechanism (Bulbapedia's color-list page) produced two real, confirmed
+  // wrong values against live data despite genuine effort to parse it reliably. Not worth
+  // maintaining a fragile lookup for a field the game never reads. Never populate, never flag.
   // habitat dropped entirely, per explicit decision — not a sourcing gap, a field that stopped
   // being official information around Gen IV; Bulbapedia's own infobox template no longer
   // carries it for ANY species regardless of generation (confirmed even on Gen I species that
@@ -667,7 +555,8 @@ async function fetchBaseRow(idOrName) {
   const genderDifference = species.has_gender_differences || false;
 
   const generation = species.generation?.url ? parseInt(species.generation.url.match(/(\d+)\/?$/)[1]) : 0;
-  const evo = await resolveEvolution(species.evolution_chain?.url, species.name, generation, false);
+  const sourceHasMultipleVarieties = (species.varieties?.length || 1) > 1;
+  const evo = await resolveEvolution(species.evolution_chain?.url, species.name, generation, false, null, sourceHasMultipleVarieties);
 
   const moveSlots = await computeMoveSlotsFromPoke(poke);
   const evolvesFromName = species.evolves_from_species?.name || null;
@@ -680,6 +569,22 @@ async function fetchBaseRow(idOrName) {
   let familyId = species.evolution_chain?.url ? parseInt(species.evolution_chain.url.match(/(\d+)\/?$/)[1]) : null;
   const reviewFields = [];
   if (evo.needsReview) reviewFields.push('evolvesIntoId','evolveMethod','evolveLevel','evolveItem');
+
+  // True multi-path species (Eevee-style, confirmed via resolveEvolution's sourceHasMultipleVarieties
+  // check) — every real branch goes to EVO_TREE, since none of them belongs in the flat columns.
+  // Confirmed real bug this fixes: Eevee previously produced ZERO EVO_TREE rows at all, because
+  // EVO_TREE generation only ever ran for variant (regional-form) rows — a species with no
+  // alternate forms but multiple simultaneous evolutions never went through that code path.
+  if (evo.allBranches?.length) {
+    evo.allBranches.forEach(branch => {
+      if (!branch.toDexId) return;
+      evoTreeRows.push({
+        fromDexId: species.id, toDexId: branch.toDexId,
+        evolveMethod: branch.evolveMethod, evolveLevel: branch.evolveLevel, evolveItem: branch.evolveItem,
+        toFormName: null, evolveNickname: null, _needsReview: true
+      });
+    });
+  }
 
   // Cache for pass 2 (variant fetches reuse this instead of re-requesting species-level data
   // PokéAPI can't provide per-form anyway).
@@ -697,7 +602,7 @@ async function fetchBaseRow(idOrName) {
     growthRate: gr, baseExpYield: poke.base_experience || null, catchRate: species.capture_rate || null, genderMalePct,
     evolvesIntoId: evo.evolvesIntoId, evolveMethod: evo.evolveMethod, evolveLevel: evo.evolveLevel, evolveItem: evo.evolveItem,
     eggGroup1, eggGroup2, eggCycles: species.hatch_counter || null,
-    colorGroup, shape, genderDifference,
+    shape, genderDifference,
     baseFormId: null,
     isLegendary: species.is_legendary || false, isMythical: species.is_mythical || false,
     ...moveSlots,
@@ -738,7 +643,7 @@ async function buildVariantRow(poke, cached, slug) {
   const regionKey = Object.keys(REGIONAL_FORMS).find(r => slug.endsWith('-' + r));
   const region = regionKey ? REGIONAL_FORMS[regionKey] : null;
 
-  let formName, flavorText, category, colorGroup, shape;
+  let formName, flavorText, category, shape;
   if (region) {
     formName = region.formName;
   } else {
@@ -757,22 +662,12 @@ async function buildVariantRow(poke, cached, slug) {
   reviewFields.push('flavorText');
   // No per-form field exists in PokéAPI's data model at all for these — always inherited.
   // habitat intentionally absent — dropped entirely, see fetchBaseRow()'s comment.
+  // colorGroup dropped entirely — see fetchBaseRow()'s comment; confirmed zero usage anywhere
+  // in pokeprof.html, and its only sourcing mechanism (Bulbapedia's color-list page) produced
+  // two real, confirmed wrong values against live data.
   const genus = baseSpecies.genera?.find(g => g.language.name === 'en');
   category = genus ? genus.genus : null; reviewFields.push('category');
   shape = capitalize(baseSpecies.shape?.name?.replace('-', ' ')) || null; reviewFields.push('shape');
-
-  // colorGroup — NEVER inherited from the base species. Bulbapedia's color-list article
-  // attempted first, sprite-pixel detection as fallback — but ALWAYS flagged for review now,
-  // even when Bulbapedia "succeeds", regardless of source. Two real, confirmed failures against
-  // actual live data (a section-splitting bug that made every variant resolve to "Pink", then a
-  // second case that resolved to the base species' own color instead of the real per-form
-  // answer) are enough evidence that this sandbox's ability to verify Bulbapedia's exact page
-  // format from search snippets alone isn't reliable enough to ever call "confirmed." Kept as a
-  // best-effort first guess — better than nothing — but never presented as settled fact.
-  const spriteUrl = poke.sprites?.front_default || null;
-  const colorResult = await resolveVariantColor(capitalize(baseSpecies.name), formName, spriteUrl);
-  colorGroup = colorResult.color;
-  reviewFields.push('colorGroup');
 
   // v0.41-tooling fix — confirmed real bug: this used to pass the BASE species' own generation
   // (e.g. Gen 1 for Meowth) regardless of which variant was actually asking, so the branching-
@@ -781,7 +676,7 @@ async function buildVariantRow(poke, cached, slug) {
   // Galarian Meowth (real Gen 8) was resolving to Persian instead of Perrserker because the
   // heuristic thought it was asking as if it were Gen 1. Use the region's own real generation
   // when one is known, not the base species' generation.
-  const evo = await resolveEvolution(baseSpecies.evolution_chain?.url, poke.species.name, region ? region.generation : generation, true, regionKey);
+  const evo = await resolveEvolution(baseSpecies.evolution_chain?.url, poke.species.name, region ? region.generation : generation, true, regionKey, true);
   if (evo.needsReview) reviewFields.push('evolvesIntoId','evolveMethod','evolveLevel','evolveItem');
 
   // EVO_TREE branch — see the note on evoTreeRows above. Any variant that itself evolves needs
@@ -804,18 +699,20 @@ async function buildVariantRow(poke, cached, slug) {
     });
   }
 
-  // GMAX movepool — inherits from the base form it Gigantamaxes from, not computed from its
-  // own /pokemon/{slug} moves. Real reason, not just convenience: Gigantamax is a temporary
-  // battle transformation, not a separate evolutionary form — the source games don't give it
-  // its own learnset at all, so the variant's own poke.moves would be empty or unreliable.
+  // GMAX/MEGA movepool — inherits from the base form it transforms from, not computed from its
+  // own /pokemon/{slug} moves. Real reason, not just convenience: both are temporary in-battle
+  // transformations, not separate evolutionary forms — Gigantamax has no learnset of its own at
+  // all in the source games, and Mega Evolution keeps the exact same moveset as its pre-Mega
+  // form (confirmed — only stats/type/ability change). So the variant's own poke.moves would be
+  // empty or simply wrong for either.
   // Confirmed related fact worth knowing: a Gigantamax-Factor Pokémon can't evolve while in
   // that state (e.g. "Meowth with the Gigantamax Factor cannot evolve" — Bulbapedia), so the
   // evolution fields above may end up populated from the shared species chain even though a
   // real Gmax individual couldn't act on them; not suppressed here since that's a gameplay-
   // state nuance pokeprof.html's own logic should handle, not something to blank out at the
   // data layer.
-  const isGmax = /gmax|gigantamax/i.test(slug);
-  const moveSlots = await computeMoveSlotsFromPoke(isGmax && cached.basePoke ? cached.basePoke : poke);
+  const isTempTransform = TEMP_TRANSFORM_SLUG.test(slug);
+  const moveSlots = await computeMoveSlotsFromPoke(isTempTransform && cached.basePoke ? cached.basePoke : poke);
 
   return {
     dexId: baseSpecies.id, familyId, name: capitalize(baseSpecies.name), formName,
@@ -827,7 +724,7 @@ async function buildVariantRow(poke, cached, slug) {
     growthRate: gr, baseExpYield: poke.base_experience || null, catchRate: baseSpecies.capture_rate || null, genderMalePct,
     evolvesIntoId: evo.evolvesIntoId, evolveMethod: evo.evolveMethod, evolveLevel: evo.evolveLevel, evolveItem: evo.evolveItem,
     eggGroup1, eggGroup2, eggCycles: baseSpecies.hatch_counter || null,
-    colorGroup, shape, genderDifference,
+    shape, genderDifference,
     baseFormId: baseSpecies.id,
     isLegendary: baseSpecies.is_legendary || false, isMythical: baseSpecies.is_mythical || false,
     ...moveSlots,
@@ -844,10 +741,10 @@ async function fetchAndPushVariant(dexId, slug) {
     if (!baseSpecies) { setStatus('Not found: ' + slug, 'err'); return null; }
     const generation = baseSpecies.generation?.url ? parseInt(baseSpecies.generation.url.match(/(\d+)\/?$/)[1]) : 0;
     const familyId = baseSpecies.evolution_chain?.url ? parseInt(baseSpecies.evolution_chain.url.match(/(\d+)\/?$/)[1]) : null;
-    // Fetch the base form's own poke data too when this is a direct Gmax-slug search with no
-    // prior base fetch — otherwise the Gmax-movepool-inheritance below has nothing to borrow
-    // from and silently falls back to the (likely empty) Gmax-specific movepool instead.
-    const basePoke = /gmax|gigantamax/i.test(slug) && baseSlug
+    // Fetch the base form's own poke data too when this is a direct Gmax/Mega-slug search with
+    // no prior base fetch — otherwise the movepool-inheritance below has nothing to borrow from
+    // and silently falls back to the (empty or wrong) transformed-form movepool instead.
+    const basePoke = TEMP_TRANSFORM_SLUG.test(slug) && baseSlug
       ? await fetch(`https://pokeapi.co/api/v2/pokemon/${baseSlug}`).then(r => r.ok ? r.json() : null)
       : undefined;
     cached = { species: baseSpecies, familyId, generation, basePoke };

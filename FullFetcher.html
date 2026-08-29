@@ -422,14 +422,17 @@ function findChainNode(chainRoot, speciesName) {
   return null;
 }
 // Resolves one species' forward evolution. PokéAPI has NO field marking a branch as
-// exclusive to a particular form/variety (confirmed — evolution_details has no such field),
-// so a species with exactly one evolves_to target is unambiguous and fully automatic; a
-// species with 2+ targets (a real branch, e.g. Wooper -> Quagsire/Clodsire) is genuinely
-// ambiguous from the API alone. For those, auto-pick the branch whose target was introduced
-// in the generation closest to this row's own generation (the Paldean-Wooper-style pattern:
-// the newer variant's exclusive evolution target is itself a newer addition) and flag it for
-// review rather than silently trusting the guess.
-async function resolveEvolution(chainUrl, speciesName, rowGeneration) {
+// exclusive to a particular form/variety (confirmed — evolution_details has no such field).
+// Two genuinely distinct kinds of ambiguity exist and BOTH need flagging, not just one:
+// 1. Multiple TARGETS (a real branch to different species, e.g. Wooper -> Quagsire/Clodsire).
+// 2. Multiple DETAILS on a single target (same next species, different trigger per variety —
+//    e.g. Vulpix -> Ninetales via Fire Stone, Alolan Vulpix -> Ninetales via Ice Stone; PokéAPI
+//    models this as ONE evolves_to node with two evolution_details entries, not two branches).
+// An earlier version of this function only checked for case 1, so case 2 silently always
+// returned evolution_details[0] with no review flag — confirmed root cause of a real bug: an
+// Alolan Vulpix row got "Fire Stone" (the older, Gen 1 entry, listed first) instead of the
+// correct "Ice Stone". Both cases now flag for review; neither is silently trusted.
+async function resolveEvolution(chainUrl, speciesName, rowGeneration, isVariant=false) {
   const empty = { evolvesIntoId: null, evolveMethod: null, evolveLevel: null, evolveItem: null, needsReview: false };
   if (!chainUrl) return empty;
   try {
@@ -450,7 +453,17 @@ async function resolveEvolution(chainUrl, speciesName, rowGeneration) {
       withGen.sort((a,b) => Math.abs(a.gen - rowGeneration) - Math.abs(b.gen - rowGeneration));
       target = withGen[0].t;
     }
-    const detail = target.evolution_details[0];
+    // Multiple methods to reach the SAME target — no reliable signal exists to tell which
+    // detail belongs to which variety, so: base rows keep the first-listed entry (usually the
+    // original/default method, historically listed first); variant rows try the LAST entry
+    // (variety-specific methods tend to be appended later, chronologically) as a marginally
+    // better guess than defaulting to the same one the base row uses. Either way, always
+    // flagged — this is a guess, not a confirmed fact, regardless of which one is picked.
+    let detail = target.evolution_details[0];
+    if (target.evolution_details.length > 1) {
+      needsReview = true;
+      detail = isVariant ? target.evolution_details[target.evolution_details.length - 1] : target.evolution_details[0];
+    }
     const targetSpecies = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${target.species.name}`).then(r => r.ok ? r.json() : null);
     return {
       evolvesIntoId: targetSpecies ? targetSpecies.id : null,
@@ -579,7 +592,7 @@ async function fetchBaseRow(idOrName) {
   const genderDifference = species.has_gender_differences || false;
 
   const generation = species.generation?.url ? parseInt(species.generation.url.match(/(\d+)\/?$/)[1]) : 0;
-  const evo = await resolveEvolution(species.evolution_chain?.url, species.name, generation);
+  const evo = await resolveEvolution(species.evolution_chain?.url, species.name, generation, false);
 
   const moveSlots = await computeMoveSlotsFromPoke(poke);
   const evolvesFromName = species.evolves_from_species?.name || null;
@@ -676,7 +689,7 @@ async function buildVariantRow(poke, cached, slug) {
   if (colorResult.source === 'sprite') reviewFields.push('colorGroup'); // heuristic, worth a glance
   if (!colorResult.color) reviewFields.push('colorGroup'); // both sources failed — genuinely unknown
 
-  const evo = await resolveEvolution(baseSpecies.evolution_chain?.url, poke.species.name, generation);
+  const evo = await resolveEvolution(baseSpecies.evolution_chain?.url, poke.species.name, generation, true);
   if (evo.needsReview) reviewFields.push('evolvesIntoId','evolveMethod','evolveLevel','evolveItem');
 
   const moveSlots = await computeMoveSlotsFromPoke(poke);

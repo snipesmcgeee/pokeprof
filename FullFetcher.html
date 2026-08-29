@@ -235,32 +235,41 @@ async function getColorListText() {
     const data = await res.json();
     const html = data?.parse?.text?.['*'];
     if (!html) return null;
-    // Strip tags to plain text — resilient to exact markup/template details we can't fully
-    // pin down without a live browser session; searching plain text for "Species" or
-    // "Species · FormName" is more robust than depending on a specific wikitext template shape.
-    const plain = html.replace(/<[^>]+>/g, ' ')
-      .replace(/&#160;|&nbsp;/g, ' ')
-      .replace(/&#183;|&middot;/g, '·') // the "·" separator between species and form name is
-                                         // commonly rendered as this HTML entity, not the raw
-                                         // character — decode it or every form-specific match fails
-      .replace(/\s+/g, ' ');
-    colorListCache = plain;
-    return plain;
+    // v0.41-tooling fix — keep the RAW HTML, not stripped plain text. Confirmed real bug: the
+    // page's own intro sentence lists all ten color names together ("the games divide Pokémon
+    // into the following ten categories...") and the table-of-contents lists every heading too
+    // — a plain-text search for " ColorName " finds one of those false positives instead of the
+    // real section, and every section boundary collapses into that intro/TOC area, so ONE color
+    // silently absorbs the entire rest of the page as "its" section. Section splitting needs
+    // the actual heading markup (see splitColorSections below), which only exists in the raw HTML.
+    colorListCache = html;
+    return html;
   } catch (e) { return null; }
 }
 
-// Splits the cached plain text into one chunk per color heading, using the 10 known official
-// color names as section boundaries (these are fixed, confirmed headings on the page).
-function splitColorSections(fullText) {
+// Splits the RAW HTML into one chunk per color heading, anchored on MediaWiki's own
+// <span class="mw-headline" id="ColorName"> markers — confirmed via a real Bulbapedia fetch
+// earlier this session (the same pattern was visible on the Bulbasaur page's own section
+// headings) — rather than any plain-text mention of the color name. This is what actually
+// fixes the "every variant comes back Pink" bug: real heading positions, not text-search guesses.
+function splitColorSections(rawHtml) {
   const sections = {};
-  const positions = COLOR_NAMES
-    .map(name => ({ name, idx: fullText.indexOf(' ' + name + ' ') }))
-    .filter(p => p.idx !== -1)
-    .sort((a, b) => a.idx - b.idx);
+  const positions = [];
+  const headingRegex = /<span class="mw-headline" id="([^"]+)">/g;
+  let match;
+  while ((match = headingRegex.exec(rawHtml)) !== null) {
+    if (COLOR_NAMES.includes(match[1])) positions.push({ name: match[1], idx: match.index });
+  }
+  positions.sort((a, b) => a.idx - b.idx);
   for (let i = 0; i < positions.length; i++) {
     const start = positions[i].idx;
-    const end = i + 1 < positions.length ? positions[i + 1].idx : fullText.length;
-    sections[positions[i].name] = fullText.slice(start, end);
+    const end = i + 1 < positions.length ? positions[i + 1].idx : rawHtml.length;
+    // Strip tags and decode entities only WITHIN this already-correctly-bounded section, so
+    // stray color-name mentions elsewhere on the page can never leak into a section again.
+    sections[positions[i].name] = rawHtml.slice(start, end).replace(/<[^>]+>/g, ' ')
+      .replace(/&#160;|&nbsp;/g, ' ')
+      .replace(/&#183;|&middot;/g, '·')
+      .replace(/\s+/g, ' ');
   }
   return sections;
 }
@@ -667,11 +676,19 @@ async function buildVariantRow(poke, cached, slug) {
   if (region) {
     formName = region.formName;
     flavorText = pickLatestFlavorText(baseSpecies.flavor_text_entries, region.versions);
-    if (!flavorText) { flavorText = pickLatestFlavorText(baseSpecies.flavor_text_entries, null); reviewFields.push('flavorText'); }
+    // v0.41-tooling fix — do NOT fall back to the base species' own "latest overall" text.
+    // Confirmed this was producing byte-identical duplicates of the base row's flavorText
+    // whenever no distinct region-tagged entry exists (a real, PokeAPI-documented gap — their
+    // own issue tracker confirms Legends: Arceus flavor text is frequently just missing from
+    // their data, especially for older species that later got a Hisuian form, e.g. Growlithe).
+    // The review flag alone wasn't a strong enough signal — a duplicated value sitting right
+    // next to its twin is easy to skim past as "looks fine." Leaving it genuinely blank is
+    // unmistakable, and is also simply more honest: there IS no confirmed distinct text to show.
+    if (!flavorText) reviewFields.push('flavorText');
   } else {
     formName = capitalize(slug.split('-').slice(1).join(' '));
     reviewFields.push('formName');
-    flavorText = pickLatestFlavorText(baseSpecies.flavor_text_entries, null);
+    flavorText = null; // same reasoning — no known game version to even attempt a real lookup
     reviewFields.push('flavorText');
   }
   // No per-form field exists in PokéAPI's data model at all for these — always inherited.

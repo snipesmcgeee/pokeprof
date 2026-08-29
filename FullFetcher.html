@@ -197,10 +197,10 @@ const eggGroupName = slug => slug ? (EGG_GROUP_MAP[slug] || capitalize(slug.repl
 // variety was introduced in, used to pull genuinely correct per-form flavor text instead of
 // inheriting the base species' (which would otherwise reflect a different, wrong form).
 const REGIONAL_FORMS = {
-  'alola':  { formName: 'Alolan',   versions: ['sun','moon','ultra-sun','ultra-moon'] },
-  'galar':  { formName: 'Galarian', versions: ['sword','shield'] },
-  'hisui':  { formName: 'Hisuian',  versions: ['legends-arceus'] },
-  'paldea': { formName: 'Paldean',  versions: ['scarlet','violet'] }
+  'alola':  { formName: 'Alolan',   versions: ['sun','moon','ultra-sun','ultra-moon'], generation: 7 },
+  'galar':  { formName: 'Galarian', versions: ['sword','shield'], generation: 8 },
+  'hisui':  { formName: 'Hisuian',  versions: ['legends-arceus'], generation: 8 },
+  'paldea': { formName: 'Paldean',  versions: ['scarlet','violet'], generation: 9 }
 };
 
 // One known exception to "familyId = PokéAPI's own evolution-chain ID": Nidoran♀/♂ are two
@@ -469,7 +469,7 @@ function findChainNode(chainRoot, speciesName) {
 // returned evolution_details[0] with no review flag — confirmed root cause of a real bug: an
 // Alolan Vulpix row got "Fire Stone" (the older, Gen 1 entry, listed first) instead of the
 // correct "Ice Stone". Both cases now flag for review; neither is silently trusted.
-async function resolveEvolution(chainUrl, speciesName, rowGeneration, isVariant=false) {
+async function resolveEvolution(chainUrl, speciesName, rowGeneration, isVariant=false, regionSuffix=null) {
   const empty = { evolvesIntoId: null, evolveMethod: null, evolveLevel: null, evolveItem: null, needsReview: false };
   if (!chainUrl) return empty;
   try {
@@ -481,14 +481,31 @@ async function resolveEvolution(chainUrl, speciesName, rowGeneration, isVariant=
     if (node.evolves_to.length === 1) {
       target = node.evolves_to[0];
     } else {
-      // Branching — pick by nearest introduced-generation to this row, flag regardless.
+      // Branching — confirmed real bug: a pure "nearest generation" guess breaks whenever
+      // multiple varieties of the SOURCE species share one branch while only some diverge to
+      // a different one (Meowth: Kantonian AND Alolan both -> Persian; only Galarian -> the
+      // Gen 8 Perrserker). Generation-proximity wrongly matches Gen 7 Alolan to the
+      // chronologically-closer Gen 8 Perrserker branch, when the correct answer has nothing to
+      // do with chronology — Alolan just isn't the variety that diverges. Far more reliable:
+      // check whether each candidate TARGET species itself has a variety matching this row's
+      // own region suffix (does Persian have an "-alola" form? Yes -> that's Alolan's branch.
+      // Does Perrserker? No -> ruled out). Falls back to generation-proximity only when no
+      // target has a matching regional variety at all (the Wooper case — neither Quagsire nor
+      // Clodsire has any regional variety of its own, so there's nothing to match against).
       needsReview = true;
       const withGen = await Promise.all(node.evolves_to.map(async t => {
         const sp = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${t.species.name}`).then(r => r.ok ? r.json() : null);
-        return { t, gen: sp ? sp.generation.url.match(/(\d+)\/?$/)[1] * 1 : 0 };
+        const gen = sp ? sp.generation.url.match(/(\d+)\/?$/)[1] * 1 : 0;
+        const hasMatchingVariety = regionSuffix && sp?.varieties?.some(v => v.pokemon.name.endsWith('-' + regionSuffix));
+        return { t, gen, hasMatchingVariety };
       }));
-      withGen.sort((a,b) => Math.abs(a.gen - rowGeneration) - Math.abs(b.gen - rowGeneration));
-      target = withGen[0].t;
+      const regionMatch = withGen.find(w => w.hasMatchingVariety);
+      if (regionMatch) {
+        target = regionMatch.t;
+      } else {
+        withGen.sort((a,b) => Math.abs(a.gen - rowGeneration) - Math.abs(b.gen - rowGeneration));
+        target = withGen[0].t;
+      }
     }
     // Multiple methods to reach the SAME target — no reliable signal exists to tell which
     // detail belongs to which variety, so: base rows keep the first-listed entry (usually the
@@ -502,9 +519,30 @@ async function resolveEvolution(chainUrl, speciesName, rowGeneration, isVariant=
       detail = isVariant ? target.evolution_details[target.evolution_details.length - 1] : target.evolution_details[0];
     }
     const targetSpecies = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${target.species.name}`).then(r => r.ok ? r.json() : null);
+    // evolveMethod — PokéAPI uses the SAME trigger name ("level-up") for plain level-ups AND
+    // friendship-based evolutions; the real distinguishing field is min_happiness (with
+    // optional time_of_day), not the trigger name. Confirmed real bug: this was blindly
+    // mapping every level-up trigger to 'level', which would have mislabeled Alolan Meowth's
+    // real friendship-based evolution into Alolan Persian as a plain level-up. Matches the
+    // exact method vocabulary pokeprof.html itself expects (level/friendship/friendship-day/
+    // friendship-night/use-move/in-party), not a generic passthrough of PokéAPI's trigger name.
+    let evolveMethod = null;
+    if (detail?.trigger?.name === 'level-up') {
+      if (detail.min_happiness != null) {
+        evolveMethod = detail.time_of_day === 'day' ? 'friendship-day'
+          : detail.time_of_day === 'night' ? 'friendship-night'
+          : 'friendship';
+      } else {
+        evolveMethod = 'level';
+      }
+    } else if (detail?.trigger?.name === 'use-item') {
+      evolveMethod = 'use-item';
+    } else {
+      evolveMethod = detail?.trigger?.name || null;
+    }
     return {
       evolvesIntoId: targetSpecies ? targetSpecies.id : null,
-      evolveMethod: detail?.trigger?.name === 'level-up' ? 'level' : (detail?.trigger?.name || null),
+      evolveMethod,
       evolveLevel: detail?.min_level || null,
       evolveItem: detail?.item ? detail.item.name.split('-').map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ') : null,
       needsReview
@@ -645,7 +683,7 @@ async function fetchBaseRow(idOrName) {
 
   // Cache for pass 2 (variant fetches reuse this instead of re-requesting species-level data
   // PokéAPI can't provide per-form anyway).
-  baseSpeciesCache[species.id] = { species, familyId, generation };
+  baseSpeciesCache[species.id] = { species, familyId, generation, basePoke: poke };
 
   flagVarieties(species, idOrName);
 
@@ -736,7 +774,14 @@ async function buildVariantRow(poke, cached, slug) {
   colorGroup = colorResult.color;
   reviewFields.push('colorGroup');
 
-  const evo = await resolveEvolution(baseSpecies.evolution_chain?.url, poke.species.name, generation, true);
+  // v0.41-tooling fix — confirmed real bug: this used to pass the BASE species' own generation
+  // (e.g. Gen 1 for Meowth) regardless of which variant was actually asking, so the branching-
+  // evolution fallback heuristic (nearest generation, used when no target has a matching
+  // regional variety — see resolveEvolution's own comment) always favored the oldest branch.
+  // Galarian Meowth (real Gen 8) was resolving to Persian instead of Perrserker because the
+  // heuristic thought it was asking as if it were Gen 1. Use the region's own real generation
+  // when one is known, not the base species' generation.
+  const evo = await resolveEvolution(baseSpecies.evolution_chain?.url, poke.species.name, region ? region.generation : generation, true, regionKey);
   if (evo.needsReview) reviewFields.push('evolvesIntoId','evolveMethod','evolveLevel','evolveItem');
 
   // EVO_TREE branch — see the note on evoTreeRows above. Any variant that itself evolves needs
@@ -759,7 +804,18 @@ async function buildVariantRow(poke, cached, slug) {
     });
   }
 
-  const moveSlots = await computeMoveSlotsFromPoke(poke);
+  // GMAX movepool — inherits from the base form it Gigantamaxes from, not computed from its
+  // own /pokemon/{slug} moves. Real reason, not just convenience: Gigantamax is a temporary
+  // battle transformation, not a separate evolutionary form — the source games don't give it
+  // its own learnset at all, so the variant's own poke.moves would be empty or unreliable.
+  // Confirmed related fact worth knowing: a Gigantamax-Factor Pokémon can't evolve while in
+  // that state (e.g. "Meowth with the Gigantamax Factor cannot evolve" — Bulbapedia), so the
+  // evolution fields above may end up populated from the shared species chain even though a
+  // real Gmax individual couldn't act on them; not suppressed here since that's a gameplay-
+  // state nuance pokeprof.html's own logic should handle, not something to blank out at the
+  // data layer.
+  const isGmax = /gmax|gigantamax/i.test(slug);
+  const moveSlots = await computeMoveSlotsFromPoke(isGmax && cached.basePoke ? cached.basePoke : poke);
 
   return {
     dexId: baseSpecies.id, familyId, name: capitalize(baseSpecies.name), formName,
@@ -788,7 +844,13 @@ async function fetchAndPushVariant(dexId, slug) {
     if (!baseSpecies) { setStatus('Not found: ' + slug, 'err'); return null; }
     const generation = baseSpecies.generation?.url ? parseInt(baseSpecies.generation.url.match(/(\d+)\/?$/)[1]) : 0;
     const familyId = baseSpecies.evolution_chain?.url ? parseInt(baseSpecies.evolution_chain.url.match(/(\d+)\/?$/)[1]) : null;
-    cached = { species: baseSpecies, familyId, generation };
+    // Fetch the base form's own poke data too when this is a direct Gmax-slug search with no
+    // prior base fetch — otherwise the Gmax-movepool-inheritance below has nothing to borrow
+    // from and silently falls back to the (likely empty) Gmax-specific movepool instead.
+    const basePoke = /gmax|gigantamax/i.test(slug) && baseSlug
+      ? await fetch(`https://pokeapi.co/api/v2/pokemon/${baseSlug}`).then(r => r.ok ? r.json() : null)
+      : undefined;
+    cached = { species: baseSpecies, familyId, generation, basePoke };
     baseSpeciesCache[baseSpecies.id] = cached;
     flagVarieties(baseSpecies, slug);
   }

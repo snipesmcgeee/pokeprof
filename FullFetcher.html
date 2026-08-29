@@ -555,8 +555,20 @@ async function fetchBaseRow(idOrName) {
   const genderDifference = species.has_gender_differences || false;
 
   const generation = species.generation?.url ? parseInt(species.generation.url.match(/(\d+)\/?$/)[1]) : 0;
-  const sourceHasMultipleVarieties = (species.varieties?.length || 1) > 1;
-  const evo = await resolveEvolution(species.evolution_chain?.url, species.name, generation, false, null, sourceHasMultipleVarieties);
+  // v0.41-tooling fix — confirmed real bug: this checked "does the species have MORE THAN ONE
+  // variety at all", which wrongly fires for Eevee — real Eevee has 3 varieties (base, the
+  // Let's Go partner "Starter" form, and Gmax), but NONE of those are genuine regional forms.
+  // That misrouted true Eevee into the Meowth/Wooper-style "variety-dependent, pick one branch"
+  // logic instead of "true multi-path, all 8 branches are real" — confirmed via live data:
+  // Eevee's own row was getting evolvesIntoId=134 (Vaporeon) instead of staying blank with all
+  // 8 branches in EVO_TREE. The correct check is specifically for REGIONAL varieties (the ones
+  // that actually cause variety-dependent evolution branching, like Meowth/Wooper/Vulpix) — a
+  // species with only cosmetic/temporary extra varieties (Starter, Gmax) but no regional ones
+  // is still a true multi-path species for evolution purposes.
+  const sourceHasRegionalVarieties = species.varieties?.some(v =>
+    Object.keys(REGIONAL_FORMS).some(region => v.pokemon.name.endsWith('-' + region))
+  ) || false;
+  const evo = await resolveEvolution(species.evolution_chain?.url, species.name, generation, false, null, sourceHasRegionalVarieties);
 
   const moveSlots = await computeMoveSlotsFromPoke(poke);
   const evolvesFromName = species.evolves_from_species?.name || null;
@@ -669,34 +681,62 @@ async function buildVariantRow(poke, cached, slug) {
   category = genus ? genus.genus : null; reviewFields.push('category');
   shape = capitalize(baseSpecies.shape?.name?.replace('-', ' ')) || null; reviewFields.push('shape');
 
-  // v0.41-tooling fix — confirmed real bug: this used to pass the BASE species' own generation
-  // (e.g. Gen 1 for Meowth) regardless of which variant was actually asking, so the branching-
-  // evolution fallback heuristic (nearest generation, used when no target has a matching
-  // regional variety — see resolveEvolution's own comment) always favored the oldest branch.
-  // Galarian Meowth (real Gen 8) was resolving to Persian instead of Perrserker because the
-  // heuristic thought it was asking as if it were Gen 1. Use the region's own real generation
-  // when one is known, not the base species' generation.
-  const evo = await resolveEvolution(baseSpecies.evolution_chain?.url, poke.species.name, region ? region.generation : generation, true, regionKey, true);
-  if (evo.needsReview) reviewFields.push('evolvesIntoId','evolveMethod','evolveLevel','evolveItem');
+  // Gmax/Mega are NOT evolutions — they're temporary form changes, confirmed directly (per
+  // explicit decision): "not evolution, but a form change... worth discussing at some point" for
+  // whether a real items-based Gmax/Mega transformation mechanic gets added to the game later.
+  // Until then, they get no evolution data at all — not blank-because-it's-unknown, blank
+  // because the question doesn't apply to them. No EVO_TREE row either, for the same reason.
+  const isTempTransform = TEMP_TRANSFORM_SLUG.test(slug);
+  let evo = { evolvesIntoId: null, evolveMethod: null, evolveLevel: null, evolveItem: null, needsReview: false, allBranches: [] };
+  if (!isTempTransform) {
+    // v0.41-tooling fix — confirmed real bug: this used to pass the BASE species' own generation
+    // (e.g. Gen 1 for Meowth) regardless of which variant was actually asking, so the branching-
+    // evolution fallback heuristic (nearest generation, used when no target has a matching
+    // regional variety — see resolveEvolution's own comment) always favored the oldest branch.
+    // Galarian Meowth (real Gen 8) was resolving to Persian instead of Perrserker because the
+    // heuristic thought it was asking as if it were Gen 1. Use the region's own real generation
+    // when one is known, not the base species' generation.
+    // Same regional-varieties check as fetchBaseRow() — a non-regional variant of a species
+    // that ALSO has no regional varieties at all (e.g. Eevee's "Starter" form) is still a true
+    // multi-path species for evolution purposes, and should get the same all-branches-to-
+    // EVO_TREE treatment as the base row, not a single generation-guessed branch.
+    const sourceHasRegionalVarieties = baseSpecies.varieties?.some(v =>
+      Object.keys(REGIONAL_FORMS).some(r => v.pokemon.name.endsWith('-' + r))
+    ) || false;
+    evo = await resolveEvolution(baseSpecies.evolution_chain?.url, poke.species.name, region ? region.generation : generation, true, regionKey, sourceHasRegionalVarieties);
+    if (evo.needsReview) reviewFields.push('evolvesIntoId','evolveMethod','evolveLevel','evolveItem');
 
-  // EVO_TREE branch — see the note on evoTreeRows above. Any variant that itself evolves needs
-  // one; the flat evolvesIntoId columns above are kept too (for the common case where a tool
-  // or a person only looks at the main table), but they alone would silently evolve this
-  // Pokémon out of its own form. Assumes the evolution preserves the same regional form onto
-  // the target (Alolan Vulpix -> Alolan Ninetales, not a different form) — the overwhelmingly
-  // consistent real-game pattern for every regional-variant evolution, but still an assumption,
-  // so still flagged rather than silently trusted.
-  if (evo.evolvesIntoId) {
-    evoTreeRows.push({
-      fromDexId: baseSpecies.id,
-      toDexId: evo.evolvesIntoId,
-      evolveMethod: evo.evolveMethod,
-      evolveLevel: evo.evolveLevel,
-      evolveItem: evo.evolveItem,
-      toFormName: formName,
-      evolveNickname: formName,
-      _needsReview: true
-    });
+    // EVO_TREE branch — see the note on evoTreeRows above. Any variant that itself evolves needs
+    // one; the flat evolvesIntoId columns above are kept too (for the common case where a tool
+    // or a person only looks at the main table), but they alone would silently evolve this
+    // Pokémon out of its own form. Assumes the evolution preserves the same regional form onto
+    // the target (Alolan Vulpix -> Alolan Ninetales, not a different form) — the overwhelmingly
+    // consistent real-game pattern for every regional-variant evolution, but still an assumption,
+    // so still flagged rather than silently trusted.
+    if (evo.evolvesIntoId) {
+      evoTreeRows.push({
+        fromDexId: baseSpecies.id,
+        toDexId: evo.evolvesIntoId,
+        evolveMethod: evo.evolveMethod,
+        evolveLevel: evo.evolveLevel,
+        evolveItem: evo.evolveItem,
+        toFormName: formName,
+        evolveNickname: formName,
+        _needsReview: true
+      });
+    }
+    // True multi-path case (e.g. Eevee's "Starter" form) — every real branch, tagged with this
+    // row's own formName, same treatment as the base row gets.
+    if (evo.allBranches?.length) {
+      evo.allBranches.forEach(branch => {
+        if (!branch.toDexId) return;
+        evoTreeRows.push({
+          fromDexId: baseSpecies.id, toDexId: branch.toDexId,
+          evolveMethod: branch.evolveMethod, evolveLevel: branch.evolveLevel, evolveItem: branch.evolveItem,
+          toFormName: formName, evolveNickname: formName, _needsReview: true
+        });
+      });
+    }
   }
 
   // GMAX/MEGA movepool — inherits from the base form it transforms from, not computed from its
@@ -705,13 +745,6 @@ async function buildVariantRow(poke, cached, slug) {
   // all in the source games, and Mega Evolution keeps the exact same moveset as its pre-Mega
   // form (confirmed — only stats/type/ability change). So the variant's own poke.moves would be
   // empty or simply wrong for either.
-  // Confirmed related fact worth knowing: a Gigantamax-Factor Pokémon can't evolve while in
-  // that state (e.g. "Meowth with the Gigantamax Factor cannot evolve" — Bulbapedia), so the
-  // evolution fields above may end up populated from the shared species chain even though a
-  // real Gmax individual couldn't act on them; not suppressed here since that's a gameplay-
-  // state nuance pokeprof.html's own logic should handle, not something to blank out at the
-  // data layer.
-  const isTempTransform = TEMP_TRANSFORM_SLUG.test(slug);
   const moveSlots = await computeMoveSlotsFromPoke(isTempTransform && cached.basePoke ? cached.basePoke : poke);
 
   return {

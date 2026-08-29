@@ -198,6 +198,145 @@ let stopRequested = false;
 let moveCache = {};        // moveName -> {type, damageClass, power} | null
 let flaggedForms = {};     // dexId -> [{slug}]
 let baseSpeciesCache = {}; // dexId -> {species, chain, familyId}
+let colorListCache = null; // whole "List of Pokémon by color" page text, fetched once per session
+
+// ── VARIANT COLOR — Bulbapedia primary, sprite-pixel fallback ────────────
+// Nothing gets inherited from the base species anymore. PokéAPI has no per-form color field
+// at all (confirmed), so a variant's color comes from one of two REAL sources, in order:
+// 1. Bulbapedia's "List of Pokémon by color" article — the one page on the whole wiki proven
+//    to separately track per-form color (confirmed: it lists "Wooper · Paldean Form" as its
+//    own entry, distinct from base Wooper, under the correct color). This is the actual
+//    authoritative record, not a guess. Category-membership lookups were tried and rejected —
+//    MediaWiki categories track by page, not by form, so a multi-form species only shows up
+//    under ONE color regardless of how many forms it actually has (confirmed via Vulpix).
+// 2. Sprite pixel-color detection — reads the variant's own sprite, buckets its pixels against
+//    the 10 official Pokédex colors, used only when the list-article lookup finds no match
+//    (a new species not yet added to the list, or a genuine parsing miss).
+// Only if BOTH fail does colorGroup fall back to null + a review flag — never silently wrong.
+const COLOR_REFERENCE_RGB = {
+  'Red':    [200, 40, 40],
+  'Blue':   [60, 100, 200],
+  'Yellow': [230, 210, 50],
+  'Green':  [60, 160, 80],
+  'Black':  [40, 40, 40],
+  'Brown':  [140, 90, 50],
+  'Purple': [140, 70, 160],
+  'Gray':   [150, 150, 150],
+  'White':  [235, 235, 235],
+  'Pink':   [230, 150, 180]
+};
+const COLOR_NAMES = Object.keys(COLOR_REFERENCE_RGB);
+
+async function getColorListText() {
+  if (colorListCache) return colorListCache;
+  try {
+    const res = await fetch('https://bulbapedia.bulbagarden.net/w/api.php?action=parse&page=List_of_Pok%C3%A9mon_by_color&prop=text&format=json&origin=*');
+    if (!res.ok) return null;
+    const data = await res.json();
+    const html = data?.parse?.text?.['*'];
+    if (!html) return null;
+    // Strip tags to plain text — resilient to exact markup/template details we can't fully
+    // pin down without a live browser session; searching plain text for "Species" or
+    // "Species · FormName" is more robust than depending on a specific wikitext template shape.
+    const plain = html.replace(/<[^>]+>/g, ' ')
+      .replace(/&#160;|&nbsp;/g, ' ')
+      .replace(/&#183;|&middot;/g, '·') // the "·" separator between species and form name is
+                                         // commonly rendered as this HTML entity, not the raw
+                                         // character — decode it or every form-specific match fails
+      .replace(/\s+/g, ' ');
+    colorListCache = plain;
+    return plain;
+  } catch (e) { return null; }
+}
+
+// Splits the cached plain text into one chunk per color heading, using the 10 known official
+// color names as section boundaries (these are fixed, confirmed headings on the page).
+function splitColorSections(fullText) {
+  const sections = {};
+  const positions = COLOR_NAMES
+    .map(name => ({ name, idx: fullText.indexOf(' ' + name + ' ') }))
+    .filter(p => p.idx !== -1)
+    .sort((a, b) => a.idx - b.idx);
+  for (let i = 0; i < positions.length; i++) {
+    const start = positions[i].idx;
+    const end = i + 1 < positions.length ? positions[i + 1].idx : fullText.length;
+    sections[positions[i].name] = fullText.slice(start, end);
+  }
+  return sections;
+}
+
+async function lookupOfficialColor(speciesName, formName) {
+  const fullText = await getColorListText();
+  if (!fullText) return null;
+  const sections = splitColorSections(fullText);
+  const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // Prefer an exact "Species · FormName" match (form has its own distinct color)...
+  if (formName) {
+    const formPattern = new RegExp(esc(speciesName) + '\\s*·\\s*' + esc(formName), 'i');
+    for (const color of COLOR_NAMES) {
+      if (formPattern.test(sections[color] || '')) return color;
+    }
+  }
+  // ...fall back to a bare species match (all forms, including ours, share one color) — but
+  // only if that species doesn't appear with a DIFFERENT explicit form entry elsewhere, which
+  // would mean forms really do diverge and we just didn't match our specific one above.
+  const barePattern = new RegExp('\\b' + esc(speciesName) + '\\b(?!\\s*·)', 'i');
+  for (const color of COLOR_NAMES) {
+    if (barePattern.test(sections[color] || '')) return color;
+  }
+  return null;
+}
+
+function nearestColorName(r, g, b) {
+  let best = null, bestDist = Infinity;
+  for (const name of COLOR_NAMES) {
+    const [rr, gg, bb] = COLOR_REFERENCE_RGB[name];
+    const dist = (r - rr) ** 2 + (g - gg) ** 2 + (b - bb) ** 2;
+    if (dist < bestDist) { bestDist = dist; best = name; }
+  }
+  return best;
+}
+
+function detectSpriteColor(spriteUrl) {
+  return new Promise((resolve) => {
+    if (!spriteUrl) { resolve(null); return; }
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width; canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        const counts = {};
+        COLOR_NAMES.forEach(n => { counts[n] = 0; });
+        for (let i = 0; i < data.length; i += 4) {
+          const alpha = data[i + 3];
+          if (alpha < 100) continue; // skip transparent/near-transparent pixels
+          const name = nearestColorName(data[i], data[i + 1], data[i + 2]);
+          counts[name]++;
+        }
+        let best = null, bestCount = -1;
+        for (const name of COLOR_NAMES) {
+          if (counts[name] > bestCount) { bestCount = counts[name]; best = name; }
+        }
+        resolve(bestCount > 0 ? best : null);
+      } catch (e) { resolve(null); } // canvas tainted by CORS, or other failure — fall through
+    };
+    img.onerror = () => resolve(null);
+    img.src = spriteUrl;
+  });
+}
+
+async function resolveVariantColor(speciesName, formName, spriteUrl) {
+  const official = await lookupOfficialColor(speciesName, formName);
+  if (official) return { color: official, source: 'bulbapedia' };
+  const sprite = await detectSpriteColor(spriteUrl);
+  if (sprite) return { color: sprite, source: 'sprite' };
+  return { color: null, source: null };
+}
+
 let evoSourceCache = {};   // speciesName -> Promise<moveSlots|null>, invisible pre-evolution walk
 const capitalize = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : null;
 
@@ -526,8 +665,16 @@ async function buildVariantRow(poke, cached, slug) {
   // habitat intentionally absent — dropped entirely, see fetchBaseRow()'s comment.
   const genus = baseSpecies.genera?.find(g => g.language.name === 'en');
   category = genus ? genus.genus : null; reviewFields.push('category');
-  colorGroup = capitalize(baseSpecies.color?.name) || null; reviewFields.push('colorGroup');
   shape = capitalize(baseSpecies.shape?.name?.replace('-', ' ')) || null; reviewFields.push('shape');
+
+  // colorGroup — NEVER inherited from the base species. Bulbapedia's color-list article first
+  // (the real, per-form-aware, authoritative record), sprite-pixel detection as fallback. Only
+  // flagged if both genuinely fail to produce an answer — never a silently-wrong placeholder.
+  const spriteUrl = poke.sprites?.front_default || null;
+  const colorResult = await resolveVariantColor(capitalize(baseSpecies.name), formName, spriteUrl);
+  colorGroup = colorResult.color;
+  if (colorResult.source === 'sprite') reviewFields.push('colorGroup'); // heuristic, worth a glance
+  if (!colorResult.color) reviewFields.push('colorGroup'); // both sources failed — genuinely unknown
 
   const evo = await resolveEvolution(baseSpecies.evolution_chain?.url, poke.species.name, generation);
   if (evo.needsReview) reviewFields.push('evolvesIntoId','evolveMethod','evolveLevel','evolveItem');

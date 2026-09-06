@@ -1,6 +1,6 @@
 // PokeProf — Locations Database
-// Auto-generated: 8/14/2026, 2:19:56 PM
-// Entries: 103
+// Auto-generated: 9/5/2026, 11:20:22 PM
+// Entries: 111
 
 const LOCATIONS = [
   {
@@ -8,7 +8,7 @@ const LOCATIONS = [
     "name": "Pallet Town",
     "region": "Kanto",
     "heals": true,
-    "shopTier": "basic",
+    "shopTier": "lab",
     "travelTime": 1,
     "mapCol": 111,
     "mapRow": 97,
@@ -1134,6 +1134,94 @@ const LOCATIONS = [
     "travelTime": 1,
     "mapCol": 121,
     "mapRow": 94,
+    "defaultEncounterMethod": "cave"
+  },
+  {
+    "locationId": "oneIsland",
+    "name": "One Island",
+    "region": "Sevii Islands",
+    "heals": true,
+    "shopTier": null,
+    "travelTime": 1,
+    "mapCol": null,
+    "mapRow": null,
+    "defaultEncounterMethod": "surf"
+  },
+  {
+    "locationId": "treasureBeach",
+    "name": "Treasure Beach",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 3,
+    "mapCol": null,
+    "mapRow": null,
+    "defaultEncounterMethod": "surf"
+  },
+  {
+    "locationId": "kindleRoad",
+    "name": "Kindle Road",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 8,
+    "mapCol": null,
+    "mapRow": null,
+    "defaultEncounterMethod": "surf"
+  },
+  {
+    "locationId": "mtEmber",
+    "name": "Mt. Ember",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 14,
+    "mapCol": null,
+    "mapRow": null,
+    "defaultEncounterMethod": "grass"
+  },
+  {
+    "locationId": "summitPath1F",
+    "name": "Summit Path 1F",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 3,
+    "mapCol": null,
+    "mapRow": null,
+    "defaultEncounterMethod": "cave"
+  },
+  {
+    "locationId": "summitPath2F",
+    "name": "Summit Path 2F",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 5,
+    "mapCol": null,
+    "mapRow": null,
+    "defaultEncounterMethod": "cave"
+  },
+  {
+    "locationId": "summitPath3F",
+    "name": "Summit Path 3F",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 2,
+    "mapCol": null,
+    "mapRow": null,
+    "defaultEncounterMethod": "cave"
+  },
+  {
+    "locationId": "summit",
+    "name": "Summit",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 1,
+    "mapCol": null,
+    "mapRow": null,
     "defaultEncounterMethod": "cave"
   }
 ];

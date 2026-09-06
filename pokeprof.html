@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.41</title>
+<title>PokeProf v0.42</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -142,7 +142,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span style="font-size:11px;color:var(--main-text-muted);">v0.41</span></h1>
+  <h1>PokeProf <span style="font-size:11px;color:var(--main-text-muted);">v0.42</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">100.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -512,7 +512,7 @@ function buildBadgeSpritesHtml(trainerBag){
 // tested"/"Does not evolve". Deriving it live from the same data the auto-test loop already
 // reads makes that drift structurally impossible going forward.
 const EVOLUTION_METHODS = (function(){
-  const base=['level','friendship','friendship-day','friendship-night','use-move','in-party'];
+  const base=['level','friendship','friendship-day','friendship-night','use-move','in-party','shed']; // v0.42 — 'shed' added for Nincada->Shedinja (see checkEvolution()'s per-aide level-up loop)
   const items=(typeof ITEMS_DATA!=='undefined'?ITEMS_DATA:[])
     .filter(i=>i.effect==='evolve-stone'||i.effect==='evolve-trade')
     .map(i=>i.name);
@@ -2209,7 +2209,7 @@ function professorAutoTestEvolutions(){
       // included, no longer treated as auto-apply-exempt. Each needs its own live candidate.
       const branches=[];
       if(path1Matched) branches.push({toDexId:path1Target,toFormName:null});
-      path2Branches.forEach(b=>branches.push({toDexId:b.toDexId,toFormName:b.toFormName||null}));
+      path2Branches.forEach(b=>branches.push({toDexId:b.toDexId,toFormName:b.toFormName||null,fromFormName:b.fromFormName!=null?b.fromFormName:null,requiredGender:b.requiredGender||null}));
 
       let allResolved=true;
       for(const br of branches){
@@ -2221,9 +2221,14 @@ function professorAutoTestEvolutions(){
         // Eligible = owned, in the Professor's possession (!p.holder — not with an aide), not evolveBlocked.
         // v0.36 — also excludes any individual nickname-locked to a DIFFERENT branch than this one
         // (see getNicknameEvolveLock()); a lock stays eligible for the one branch matching its own lock.
+        // v0.42 — also enforces fromFormName/requiredGender (see "Branch Source-Form & Gender
+        // Restrictions" in DESIGN.md). Blank on either means no restriction, matches any individual —
+        // this was always the intended semantics of a blank column, not a later reinterpretation.
         // Highest level wins; ties broken by array order.
         const candidates=state.dex.filter(p=>{
           if(p.pokedexId!==dexId||p.holder||p.evolveBlocked) return false;
+          if((br.fromFormName||null)!==(p.formName||null)) return false;
+          if(br.requiredGender&&p.gender!==br.requiredGender) return false;
           const lock=getNicknameEvolveLock(p);
           if(lock&&(lock.toDexId!==br.toDexId||(lock.toFormName||null)!==br.toFormName)) return false;
           return true;
@@ -2357,6 +2362,7 @@ function checkEvolution(p){
       recordEvolution(prevDexId,newEntry.dexId,'level',p.level);
       addLog(old+' #'+p.id+' evolved into '+getDisplayName(p)+'!','evolve');
       document.getElementById('enc-body').textContent=old+' evolved into '+getDisplayName(p)+'!';
+      maybeCreateShedFriend(prevDexId,p); // v0.42 — Nincada->Shedinja; no-ops for every other species
       return;
     }
   }
@@ -2369,6 +2375,7 @@ function checkEvolution(p){
       recordEvolution(prevDexId,newEntry.dexId,'friendship',p.level);
       addLog(old+' #'+p.id+' evolved into '+getDisplayName(p)+'!','evolve');
       document.getElementById('enc-body').textContent=old+' evolved into '+getDisplayName(p)+'!';
+      maybeCreateShedFriend(prevDexId,p);
       return;
     }
   }
@@ -2381,6 +2388,7 @@ function checkEvolution(p){
       recordEvolution(prevDexId,newEntry.dexId,'use-move',p.level);
       addLog(old+' #'+p.id+' evolved into '+getDisplayName(p)+'!','evolve');
       document.getElementById('enc-body').textContent=old+' evolved into '+getDisplayName(p)+'!';
+      maybeCreateShedFriend(prevDexId,p);
       return;
     }
   }
@@ -2393,6 +2401,7 @@ function checkEvolution(p){
       recordEvolution(prevDexId,newEntry.dexId,'in-party',p.level);
       addLog(old+' #'+p.id+' evolved into '+getDisplayName(p)+'!','evolve');
       document.getElementById('enc-body').textContent=old+' evolved into '+getDisplayName(p)+'!';
+      maybeCreateShedFriend(prevDexId,p);
       return;
     }
   }
@@ -2404,6 +2413,11 @@ function checkEvolution(p){
     const isDay=hour>=6&&hour<18;
     let branches=getEvolutions(p.pokedexId).filter(b=>{
       if(!b.toDexId) return false;
+      // v0.42 — enforce fromFormName/requiredGender (see "Branch Source-Form & Gender
+      // Restrictions" in DESIGN.md). Blank on either means no restriction, matches any
+      // individual — this was always the intended semantics of a blank column.
+      if((b.fromFormName||null)!==(p.formName||null)) return false;
+      if(b.requiredGender&&p.gender!==b.requiredGender) return false;
       if(b.evolveMethod==='level') return p.level>=b.evolveLevel;
       if(b.evolveMethod==='friendship-day') return isDay&&p.friendship>=FRIENDSHIP_THRESHOLD;
       if(b.evolveMethod==='friendship-night') return !isDay&&p.friendship>=FRIENDSHIP_THRESHOLD;
@@ -2424,6 +2438,7 @@ function checkEvolution(p){
         recordEvolution(prevDexId,newEntry.dexId,branch.evolveMethod,p.level,branch.toFormName);
         addLog(old+' #'+p.id+' evolved into '+getDisplayName(p)+'!','evolve');
         document.getElementById('enc-body').textContent=old+' evolved into '+getDisplayName(p)+'!';
+        maybeCreateShedFriend(prevDexId,p);
       }
     }
   }
@@ -2436,6 +2451,35 @@ function checkEvolution(p){
 function getEvolutions(dexId){
   if(typeof EVO_TREE==='undefined') return [];
   return EVO_TREE.filter(e=>e.fromDexId===dexId&&e.toDexId);
+}
+
+// v0.42 — Nincada -> Shedinja. NOT a competing branch (Nincada doesn't choose between Ninjask
+// and Shedinja) — evolving into Ninjask via the normal level-up path ALSO creates a second,
+// brand-new individual as a side effect, if there's room. Called after every successful
+// evolution completes in checkEvolution(), for any method — keyed off whether the
+// PRE-evolution dexId has a 'shed'-method EVO_TREE entry, not hardcoded to Nincada's dexId
+// specifically, so any future species with the same mechanic works without another code change.
+// Deliberate simplification vs. the real games (see DESIGN.md): only checks for a free party
+// slot, not also a spare Poké Ball.
+function maybeCreateShedFriend(prevDexId,evolvedPokemon){
+  if(typeof EVO_TREE==='undefined') return;
+  const shedBranch=EVO_TREE.find(e=>e.fromDexId===prevDexId&&e.evolveMethod==='shed'&&e.toDexId);
+  if(!shedBranch) return;
+  const aide=state.aides.find(a=>a.name===evolvedPokemon.holder)||state.aides[0];
+  if(!aide||aide.party.length>=6) return; // no free slot — no error, no log spam, just no Shedinja this time (matches real-game behavior)
+  const newEntry=getPokemonEntry(shedBranch.toDexId,shedBranch.toFormName||null);
+  if(!newEntry) return;
+  const shedFriend=makePokemon(newEntry.name,evolvedPokemon.level,evolvedPokemon.gender,aide.name,shedBranch.toDexId,shedBranch.toFormName||null);
+  // Inherit the evolving Pokémon's own level and IVs exactly, rather than a freshly-rolled
+  // individual — matches the real games (Shedinja is a copy, not a new catch) and the explicit
+  // design decision made for this feature. recalcStats() re-derives HP/stats from the copied
+  // values using existing, tested stat-calculation logic rather than duplicating it here.
+  shedFriend.level=evolvedPokemon.level;
+  shedFriend.ivs=JSON.parse(JSON.stringify(evolvedPokemon.ivs));
+  recalcStats(shedFriend);
+  shedFriend.currentHP=shedFriend.maxHP;
+  aide.party.push(shedFriend); state.dex.push(shedFriend);
+  addLog('✨ '+getDisplayName(shedFriend)+' #'+shedFriend.id+' emerged from the discarded shell!','evolve');
 }
 
 // v0.39.5 CRITICAL FIX — previously called getLevelCap() with no argument, which defaults to

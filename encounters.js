@@ -1,6 +1,6 @@
 // PokeProf — Encounters Database
-// Auto-generated: 8/14/2026, 2:19:56 PM
-// Entries: 1301
+// Auto-generated: 9/5/2026, 11:20:22 PM
+// Entries: 1360
 
 const ENCOUNTERS = [
   {
@@ -11711,6 +11711,537 @@ const ENCOUNTERS = [
     "encounterRate": 1,
     "encounterMethod": "cave",
     "requiresItem": null
+  },
+  {
+    "locationId": "oneIsland",
+    "dexId": 72,
+    "minLevel": 5,
+    "maxLevel": 40,
+    "encounterRate": 190,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf"
+  },
+  {
+    "locationId": "oneIsland",
+    "dexId": 73,
+    "minLevel": 35,
+    "maxLevel": 40,
+    "encounterRate": 10,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf"
+  },
+  {
+    "locationId": "oneIsland",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 100,
+    "encounterMethod": "fish",
+    "requiresItem": "oldRod"
+  },
+  {
+    "locationId": "oneIsland",
+    "dexId": 116,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "oneIsland",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "oneIsland",
+    "dexId": 98,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "oneIsland",
+    "dexId": 90,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "oneIsland",
+    "dexId": 116,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "oneIsland",
+    "dexId": 130,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 30,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "oneIsland",
+    "dexId": 117,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 4,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "oneIsland",
+    "dexId": 54,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 1,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "oneIsland",
+    "dexId": 120,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "oneIsland",
+    "dexId": 98,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "oneIsland",
+    "dexId": 99,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 4,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "oneIsland",
+    "dexId": 79,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 1,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "treasureBeach",
+    "dexId": 21,
+    "minLevel": 31,
+    "maxLevel": 32,
+    "encounterRate": 60,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "treasureBeach",
+    "dexId": 114,
+    "minLevel": 33,
+    "maxLevel": 35,
+    "encounterRate": 60,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "treasureBeach",
+    "dexId": 22,
+    "minLevel": 36,
+    "maxLevel": 40,
+    "encounterRate": 40,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "treasureBeach",
+    "dexId": 52,
+    "minLevel": 31,
+    "maxLevel": 31,
+    "encounterRate": 20,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "treasureBeach",
+    "dexId": 53,
+    "minLevel": 37,
+    "maxLevel": 40,
+    "encounterRate": 10,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "treasureBeach",
+    "dexId": 54,
+    "minLevel": 31,
+    "maxLevel": 31,
+    "encounterRate": 5,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "treasureBeach",
+    "dexId": 79,
+    "minLevel": 31,
+    "maxLevel": 31,
+    "encounterRate": 5,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "treasureBeach",
+    "dexId": 72,
+    "minLevel": 5,
+    "maxLevel": 40,
+    "encounterRate": 190,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf"
+  },
+  {
+    "locationId": "treasureBeach",
+    "dexId": 73,
+    "minLevel": 35,
+    "maxLevel": 40,
+    "encounterRate": 10,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf"
+  },
+  {
+    "locationId": "treasureBeach",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 100,
+    "encounterMethod": "fish",
+    "requiresItem": "oldRod"
+  },
+  {
+    "locationId": "treasureBeach",
+    "dexId": 116,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "treasureBeach",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "treasureBeach",
+    "dexId": 98,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "treasureBeach",
+    "dexId": 116,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "treasureBeach",
+    "dexId": 130,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 30,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "treasureBeach",
+    "dexId": 117,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 4,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "treasureBeach",
+    "dexId": 54,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 1,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "treasureBeach",
+    "dexId": 98,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "treasureBeach",
+    "dexId": 99,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 4,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "treasureBeach",
+    "dexId": 79,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 1,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "kindleRoad",
+    "dexId": 77,
+    "minLevel": 31,
+    "maxLevel": 34,
+    "encounterRate": 60,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "kindleRoad",
+    "dexId": 21,
+    "minLevel": 30,
+    "maxLevel": 32,
+    "encounterRate": 50,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "kindleRoad",
+    "dexId": 22,
+    "minLevel": 36,
+    "maxLevel": 36,
+    "encounterRate": 20,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "kindleRoad",
+    "dexId": 52,
+    "minLevel": 31,
+    "maxLevel": 31,
+    "encounterRate": 20,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "kindleRoad",
+    "dexId": 74,
+    "minLevel": 31,
+    "maxLevel": 31,
+    "encounterRate": 20,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "kindleRoad",
+    "dexId": 53,
+    "minLevel": 37,
+    "maxLevel": 40,
+    "encounterRate": 10,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "kindleRoad",
+    "dexId": 78,
+    "minLevel": 37,
+    "maxLevel": 40,
+    "encounterRate": 10,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "kindleRoad",
+    "dexId": 54,
+    "minLevel": 34,
+    "maxLevel": 34,
+    "encounterRate": 5,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "kindleRoad",
+    "dexId": 79,
+    "minLevel": 34,
+    "maxLevel": 34,
+    "encounterRate": 5,
+    "encounterMethod": "grass",
+    "requiresItem": null
+  },
+  {
+    "locationId": "kindleRoad",
+    "dexId": 74,
+    "minLevel": 5,
+    "maxLevel": 30,
+    "encounterRate": 95,
+    "encounterMethod": "rock-smash",
+    "requiresItem": "hm-rockSmash"
+  },
+  {
+    "locationId": "kindleRoad",
+    "dexId": 75,
+    "minLevel": 25,
+    "maxLevel": 40,
+    "encounterRate": 5,
+    "encounterMethod": "rock-smash",
+    "requiresItem": "hm-rockSmash"
+  },
+  {
+    "locationId": "kindleRoad",
+    "dexId": 72,
+    "minLevel": 5,
+    "maxLevel": 40,
+    "encounterRate": 190,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf"
+  },
+  {
+    "locationId": "kindleRoad",
+    "dexId": 73,
+    "minLevel": 35,
+    "maxLevel": 40,
+    "encounterRate": 10,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf"
+  },
+  {
+    "locationId": "kindleRoad",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 100,
+    "encounterMethod": "fish",
+    "requiresItem": "oldRod"
+  },
+  {
+    "locationId": "kindleRoad",
+    "dexId": 116,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "kindleRoad",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "kindleRoad",
+    "dexId": 98,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod"
+  },
+  {
+    "locationId": "kindleRoad",
+    "dexId": 116,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "kindleRoad",
+    "dexId": 130,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 30,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "kindleRoad",
+    "dexId": 117,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 4,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "kindleRoad",
+    "dexId": 54,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 1,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "kindleRoad",
+    "dexId": 98,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "kindleRoad",
+    "dexId": 99,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 4,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
+  },
+  {
+    "locationId": "kindleRoad",
+    "dexId": 79,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 1,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod"
   }
 ];
 

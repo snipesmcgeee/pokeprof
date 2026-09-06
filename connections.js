@@ -1,6 +1,6 @@
 // PokeProf — Connections Database
-// Auto-generated: 8/14/2026, 2:19:56 PM
-// Connections: 224
+// Auto-generated: 9/5/2026, 11:20:22 PM
+// Connections: 232
 
 // Flat array with full data (used for requiresItem checks)
 const CONNECTIONS_DATA = [
@@ -1347,6 +1347,54 @@ const CONNECTIONS_DATA = [
     "toLocationId": "pokemonDaycare",
     "requiresItem": null,
     "travelTime": null
+  },
+  {
+    "fromLocationId": "sSAnne",
+    "toLocationId": "oneIsland",
+    "requiresItem": "sSTicket",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "oneIsland",
+    "toLocationId": "sSAnne",
+    "requiresItem": "sSTicket",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "oneIsland",
+    "toLocationId": "treasureBeach",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "treasureBeach",
+    "toLocationId": "oneIsland",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "oneIsland",
+    "toLocationId": "kindleRoad",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "kindleRoad",
+    "toLocationId": "oneIsland",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "kindleRoad",
+    "toLocationId": "mtEmber",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "mtEmber",
+    "toLocationId": "kindleRoad",
+    "requiresItem": "hm-surf",
+    "travelTime": null
   }
 ];
 
@@ -1643,7 +1691,8 @@ const CONNECTIONS = {
     "diglettsCaveN"
   ],
   "sSAnne": [
-    "vermillionCity"
+    "vermillionCity",
+    "oneIsland"
   ],
   "route14": [
     "route13",
@@ -1781,6 +1830,21 @@ const CONNECTIONS = {
   ],
   "pokemonDaycare": [
     "route5"
+  ],
+  "oneIsland": [
+    "sSAnne",
+    "treasureBeach",
+    "kindleRoad"
+  ],
+  "treasureBeach": [
+    "oneIsland"
+  ],
+  "kindleRoad": [
+    "oneIsland",
+    "mtEmber"
+  ],
+  "mtEmber": [
+    "kindleRoad"
   ]
 };
 

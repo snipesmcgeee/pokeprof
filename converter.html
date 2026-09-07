@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PokeProf — Database Converter v8</title>
+<title>PokeProf — Database Converter v9</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #1a1a2e; color: #e0e0e0; font-family: 'Courier New', monospace; font-size: 13px; padding: 20px; }
@@ -41,7 +41,7 @@
 </head>
 <body>
 
-<h1>🎓 PokeProf — Database Converter v8</h1>
+<h1>🎓 PokeProf — Database Converter v9</h1>
 <p class="subtitle">Upload your Excel file to generate the game database JS files</p>
 
 <div class="card">
@@ -172,6 +172,7 @@ function convertAll() {
     convertTrainers();
     convertGeneric('Moves', 'moves.js', 'MOVES_DATA', ['movePower','accuracy','pp','priority'].map(f=>f), 'function getMove(name){ return MOVES_DATA.find(m=>m.name===name)||null; }');
     convertGeneric('Abilities', 'abilities.js', 'ABILITIES_DATA', [], 'function getAbility(name){ return ABILITIES_DATA.find(a=>a.name===name)||null; }');
+    convertInfo();
 
     // Show download section
     const grid = document.getElementById('download-grid');
@@ -551,6 +552,43 @@ function convertTrainers() {
   });
   if (badMoves.length > 0) {
     warnings.push(`Trainers rows with unparseable move column (expected format like "rockSpecial"): ${badMoves.join(', ')}`);
+  }
+}
+
+// v0.43 — Info menu content, sourced from the Info sheet: one row per idea
+// (category, subCategory, text). Rows are grouped by category, in first-appearance
+// order — that order becomes both the topic tile order and its display title, so no
+// separate id/order column is needed. Within a topic, rows become sections in sheet
+// order; a blank subCategory means that section has no header. `text` is stored/
+// rendered as raw HTML — author literal <br><br> in the cell for a line break.
+function convertInfo() {
+  const rows = getSheet('Info');
+  if (!rows || rows.length < 2) { warnings.push('Info sheet is empty or missing'); return; }
+  const headers = rows[0].map(h => String(h).trim());
+  const col = (name) => headers.findIndex(h => h.toLowerCase() === name.toLowerCase());
+
+  const topics = [];
+  const topicIndex = {};
+  const skippedRows = [];
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    const category = val(r[col('category')]);
+    const text = val(r[col('text')]);
+    if (!category || !text) { if (r.some(c => val(c) !== null)) skippedRows.push(i + 1); continue; }
+    const subCategory = val(r[col('subCategory')]);
+
+    if (!(category in topicIndex)) {
+      topicIndex[category] = topics.length;
+      topics.push({ id: category, title: category, sections: [] });
+    }
+    topics[topicIndex[category]].sections.push({ header: subCategory || null, text });
+  }
+
+  outputFiles['info.js'] =
+    `// PokeProf — Info Topics\n// Auto-generated: ${new Date().toLocaleString()}\n// Topics: ${topics.length}\n\nconst INFO_TOPICS = ${JSON.stringify(topics, null, 2)};\n`;
+
+  if (skippedRows.length > 0) {
+    warnings.push(`Info sheet rows missing category or text, skipped: ${skippedRows.join(', ')}`);
   }
 }
 

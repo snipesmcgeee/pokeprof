@@ -1,5 +1,5 @@
 // PokeProf — Evolution Tree (branching evolutions)
-// Auto-generated: 9/6/2026, 12:24:11 AM
+// Auto-generated: 9/6/2026, 8:42:41 PM
 // Entries: 109
 
 const EVO_TREE = [
@@ -23,7 +23,7 @@ const EVO_TREE = [
     "evolveItem": "thunder-stone",
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Raichu"
   },
   {
     "fromDexId": 25,
@@ -67,7 +67,7 @@ const EVO_TREE = [
     "evolveItem": "leaf-stone",
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Vileplume"
   },
   {
     "fromDexId": 44,
@@ -78,7 +78,7 @@ const EVO_TREE = [
     "evolveItem": "sun-stone",
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Bellossom"
   },
   {
     "fromDexId": 50,
@@ -121,8 +121,8 @@ const EVO_TREE = [
     "evolveLevel": 28,
     "evolveItem": null,
     "requiredGender": null,
-    "toFormName": "Galarian",
-    "evolveNickname": "Galarian"
+    "toFormName": null,
+    "evolveNickname": null
   },
   {
     "fromDexId": 58,
@@ -144,7 +144,7 @@ const EVO_TREE = [
     "evolveItem": "water-stone",
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Poliwrath"
   },
   {
     "fromDexId": 61,
@@ -155,7 +155,7 @@ const EVO_TREE = [
     "evolveItem": "kings-rock",
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Politoed"
   },
   {
     "fromDexId": 74,
@@ -199,7 +199,7 @@ const EVO_TREE = [
     "evolveItem": "galarica-cuff",
     "requiredGender": null,
     "toFormName": "Galarian",
-    "evolveNickname": "Galarian"
+    "evolveNickname": "Slowbro"
   },
   {
     "fromDexId": 79,
@@ -210,7 +210,7 @@ const EVO_TREE = [
     "evolveItem": null,
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Slowbro"
   },
   {
     "fromDexId": 79,
@@ -221,7 +221,7 @@ const EVO_TREE = [
     "evolveItem": "kings-rock",
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Slowking"
   },
   {
     "fromDexId": 79,
@@ -232,7 +232,7 @@ const EVO_TREE = [
     "evolveItem": "galarica-wreath",
     "requiredGender": null,
     "toFormName": "Galarian",
-    "evolveNickname": "Galarian"
+    "evolveNickname": "Slowking"
   },
   {
     "fromDexId": 83,
@@ -242,8 +242,8 @@ const EVO_TREE = [
     "evolveLevel": null,
     "evolveItem": "grass-physical",
     "requiredGender": null,
-    "toFormName": "Galarian",
-    "evolveNickname": "Galarian"
+    "toFormName": null,
+    "evolveNickname": null
   },
   {
     "fromDexId": 88,
@@ -276,7 +276,7 @@ const EVO_TREE = [
     "evolveItem": "leaf-stone",
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Exeggutor"
   },
   {
     "fromDexId": 102,
@@ -298,7 +298,7 @@ const EVO_TREE = [
     "evolveItem": null,
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Marowak"
   },
   {
     "fromDexId": 104,
@@ -320,7 +320,7 @@ const EVO_TREE = [
     "evolveItem": null,
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Weezing"
   },
   {
     "fromDexId": 109,
@@ -342,7 +342,7 @@ const EVO_TREE = [
     "evolveItem": "normal-physical",
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Mr. Mime"
   },
   {
     "fromDexId": 439,
@@ -375,7 +375,7 @@ const EVO_TREE = [
     "evolveItem": "metal-coat",
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Scizor"
   },
   {
     "fromDexId": 123,
@@ -386,7 +386,7 @@ const EVO_TREE = [
     "evolveItem": "black-augurite",
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Kleavor"
   },
   {
     "fromDexId": 133,
@@ -397,7 +397,7 @@ const EVO_TREE = [
     "evolveItem": "water-stone",
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Vaporeon"
   },
   {
     "fromDexId": 133,
@@ -408,7 +408,7 @@ const EVO_TREE = [
     "evolveItem": "thunder-stone",
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Jolteon"
   },
   {
     "fromDexId": 133,
@@ -419,7 +419,7 @@ const EVO_TREE = [
     "evolveItem": "fire-stone",
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Flareon"
   },
   {
     "fromDexId": 133,
@@ -430,7 +430,7 @@ const EVO_TREE = [
     "evolveItem": null,
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Espeon"
   },
   {
     "fromDexId": 133,
@@ -441,7 +441,7 @@ const EVO_TREE = [
     "evolveItem": null,
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Umbreon"
   },
   {
     "fromDexId": 133,
@@ -452,7 +452,7 @@ const EVO_TREE = [
     "evolveItem": "leaf-stone",
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Leafeon"
   },
   {
     "fromDexId": 133,
@@ -463,7 +463,7 @@ const EVO_TREE = [
     "evolveItem": "ice-stone",
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Glaceon"
   },
   {
     "fromDexId": 133,
@@ -474,7 +474,7 @@ const EVO_TREE = [
     "evolveItem": "fairy-special",
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Sylveon"
   },
   {
     "fromDexId": 156,
@@ -485,7 +485,7 @@ const EVO_TREE = [
     "evolveItem": null,
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Johtonian"
   },
   {
     "fromDexId": 156,
@@ -528,8 +528,8 @@ const EVO_TREE = [
     "evolveLevel": 60,
     "evolveItem": "poison-physical",
     "requiredGender": null,
-    "toFormName": "Hisuian",
-    "evolveNickname": "Hisuian"
+    "toFormName": null,
+    "evolveNickname": null
   },
   {
     "fromDexId": 215,
@@ -573,7 +573,7 @@ const EVO_TREE = [
     "evolveItem": null,
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Hitmonlee"
   },
   {
     "fromDexId": 236,
@@ -584,7 +584,7 @@ const EVO_TREE = [
     "evolveItem": null,
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Hitmonchan"
   },
   {
     "fromDexId": 236,
@@ -595,7 +595,7 @@ const EVO_TREE = [
     "evolveItem": null,
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Hitmontop"
   },
   {
     "fromDexId": 263,
@@ -639,7 +639,7 @@ const EVO_TREE = [
     "evolveItem": null,
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Silcoon"
   },
   {
     "fromDexId": 265,
@@ -650,7 +650,7 @@ const EVO_TREE = [
     "evolveItem": null,
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Cascoon"
   },
   {
     "fromDexId": 281,
@@ -661,7 +661,7 @@ const EVO_TREE = [
     "evolveItem": null,
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Gardevoir"
   },
   {
     "fromDexId": 281,
@@ -672,7 +672,7 @@ const EVO_TREE = [
     "evolveItem": "dawn-stone",
     "requiredGender": "M",
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Gallade"
   },
   {
     "fromDexId": 290,
@@ -705,7 +705,7 @@ const EVO_TREE = [
     "evolveItem": null,
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Glalie"
   },
   {
     "fromDexId": 361,
@@ -716,7 +716,7 @@ const EVO_TREE = [
     "evolveItem": "dawn-stone",
     "requiredGender": "F",
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Froslass"
   },
   {
     "fromDexId": 366,
@@ -727,7 +727,7 @@ const EVO_TREE = [
     "evolveItem": "deep-sea-tooth",
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Huntail"
   },
   {
     "fromDexId": 366,
@@ -738,7 +738,7 @@ const EVO_TREE = [
     "evolveItem": "deep-sea-scale",
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Gorebyss"
   },
   {
     "fromDexId": 412,
@@ -749,7 +749,7 @@ const EVO_TREE = [
     "evolveItem": null,
     "requiredGender": "F",
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Wormadam"
   },
   {
     "fromDexId": 412,
@@ -760,7 +760,7 @@ const EVO_TREE = [
     "evolveItem": null,
     "requiredGender": "M",
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Mothim"
   },
   {
     "fromDexId": 415,
@@ -782,7 +782,7 @@ const EVO_TREE = [
     "evolveItem": null,
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Samurott"
   },
   {
     "fromDexId": 502,
@@ -804,7 +804,7 @@ const EVO_TREE = [
     "evolveItem": "sun-stone",
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Lilligsant"
   },
   {
     "fromDexId": 548,
@@ -903,7 +903,7 @@ const EVO_TREE = [
     "evolveItem": null,
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Braviary"
   },
   {
     "fromDexId": 627,
@@ -924,7 +924,7 @@ const EVO_TREE = [
     "evolveLevel": 25,
     "evolveItem": null,
     "requiredGender": "M",
-    "toFormName": null,
+    "toFormName": "Male",
     "evolveNickname": null
   },
   {
@@ -936,7 +936,7 @@ const EVO_TREE = [
     "evolveItem": null,
     "requiredGender": "F",
     "toFormName": "Female",
-    "evolveNickname": "Female"
+    "evolveNickname": null
   },
   {
     "fromDexId": 704,
@@ -947,7 +947,7 @@ const EVO_TREE = [
     "evolveItem": null,
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Sliggoo"
   },
   {
     "fromDexId": 704,
@@ -980,7 +980,7 @@ const EVO_TREE = [
     "evolveItem": null,
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Goodra"
   },
   {
     "fromDexId": 710,
@@ -1024,7 +1024,7 @@ const EVO_TREE = [
     "evolveItem": null,
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Avalugg"
   },
   {
     "fromDexId": 712,
@@ -1046,7 +1046,7 @@ const EVO_TREE = [
     "evolveItem": null,
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Decidueye"
   },
   {
     "fromDexId": 723,
@@ -1112,7 +1112,7 @@ const EVO_TREE = [
     "evolveItem": null,
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Solgaleo"
   },
   {
     "fromDexId": 790,
@@ -1123,7 +1123,7 @@ const EVO_TREE = [
     "evolveItem": null,
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Lunala"
   },
   {
     "fromDexId": 840,
@@ -1134,7 +1134,7 @@ const EVO_TREE = [
     "evolveItem": "tart-apple",
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Flapple"
   },
   {
     "fromDexId": 840,
@@ -1145,7 +1145,7 @@ const EVO_TREE = [
     "evolveItem": "sweet-apple",
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Appletun"
   },
   {
     "fromDexId": 840,
@@ -1156,7 +1156,7 @@ const EVO_TREE = [
     "evolveItem": "syrupy-apple",
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Dipplin"
   },
   {
     "fromDexId": 891,
@@ -1189,7 +1189,7 @@ const EVO_TREE = [
     "evolveItem": "auspicious-armor",
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Armarouge"
   },
   {
     "fromDexId": 935,
@@ -1200,7 +1200,7 @@ const EVO_TREE = [
     "evolveItem": "malicious-armor",
     "requiredGender": null,
     "toFormName": null,
-    "evolveNickname": null
+    "evolveNickname": "Ceruledge"
   }
 ];
 

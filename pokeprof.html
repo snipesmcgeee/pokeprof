@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.42</title>
+<title>PokeProf v0.43</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -13,6 +13,7 @@
 <script src="formtriggers.js"></script>
 <script src="items.js"></script>
 <script src="trainers.js"></script>
+<script src="info.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
@@ -142,7 +143,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span style="font-size:11px;color:var(--main-text-muted);">v0.42</span></h1>
+  <h1>PokeProf <span style="font-size:11px;color:var(--main-text-muted);">v0.43</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">100.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -193,7 +194,9 @@
     <div style="display:flex;gap:6px;margin-bottom:6px;">
       <button id="log-tab-full" onclick="setLogViewMode('full')" style="flex:1;padding:6px 2px;font-size:10px;border-color:var(--main-border);color:var(--main-text-secondary);">Full</button>
       <button id="log-tab-condensed" onclick="setLogViewMode('condensed')" style="flex:1;padding:6px 2px;font-size:10px;">Condensed</button>
+      <button id="log-tab-custom" onclick="setLogViewMode('custom')" style="flex:1;padding:6px 2px;font-size:10px;">Custom</button>
     </div>
+    <button id="log-custom-filter-btn" onclick="openLogFilterPopup()" style="display:none;width:100%;margin-bottom:6px;font-size:11px;padding:6px;">Filter ▾</button>
     <div id="log"></div>
   </div>
 
@@ -234,6 +237,7 @@
     <div id="dex-viewall-controls" style="display:none;flex-direction:column;gap:6px;padding:6px 8px;border-bottom:1px solid var(--main-card);flex-shrink:0;background:var(--main-panel);">
       <div style="display:flex;gap:6px;">
         <select id="sort-select" onchange="onDexListControlsChange()" style="background:var(--main-card);border:1px solid var(--main-border);color:var(--main-text);font-family:'Courier New',monospace;font-size:11px;padding:6px;border-radius:4px;flex:1;"></select>
+        <button id="dex-sort-dir-btn" onclick="toggleDexSortDir()" title="Reverse sort direction" style="flex-shrink:0;font-size:11px;padding:6px 10px;">▲</button>
         <button id="dex-filter-btn" onclick="openDexFilterPopup()" style="flex:1;font-size:11px;padding:6px;">Filter ▾</button>
       </div>
       <input id="dex-search-input" type="text" placeholder="Search..." oninput="onDexListControlsChange()" style="background:var(--main-card);border:1px solid var(--main-border);color:var(--main-text);font-family:'Courier New',monospace;font-size:11px;padding:6px 8px;border-radius:4px;width:100%;">
@@ -667,17 +671,17 @@ function useItemFromBag(itemId, pokemon){
     const heal=parseInt(item.effectValue)||20;
     const healed=Math.min(heal,pokemon.maxHP-pokemon.currentHP);
     pokemon.currentHP=Math.min(pokemon.maxHP,pokemon.currentHP+heal);
-    addLog(item.name+' used on '+getDisplayName(pokemon)+': +'+healed+' HP ('+pokemon.currentHP+'/'+pokemon.maxHP+')','info');
+    addLog(item.name+' used on '+getDisplayName(pokemon)+': +'+healed+' HP ('+pokemon.currentHP+'/'+pokemon.maxHP+')','info','itemUsage',(state.aides.find(a=>a.name===pokemon.holder)||{}).id||'general');
   } else if(item.effect==='heal-hp-full'){
     const healed=pokemon.maxHP-pokemon.currentHP;
     pokemon.currentHP=pokemon.maxHP;
-    addLog(item.name+' used on '+getDisplayName(pokemon)+': +'+healed+' HP (full)','info');
+    addLog(item.name+' used on '+getDisplayName(pokemon)+': +'+healed+' HP (full)','info','itemUsage',(state.aides.find(a=>a.name===pokemon.holder)||{}).id||'general');
   } else if(item.effect==='revive-half'){
     pokemon.currentHP=Math.floor(pokemon.maxHP/2);
-    addLog(item.name+' used: '+getDisplayName(pokemon)+' revived to '+pokemon.currentHP+' HP','info');
+    addLog(item.name+' used: '+getDisplayName(pokemon)+' revived to '+pokemon.currentHP+' HP','info','itemUsage',(state.aides.find(a=>a.name===pokemon.holder)||{}).id||'general');
   } else if(item.effect==='revive-full'){
     pokemon.currentHP=pokemon.maxHP;
-    addLog(item.name+' used: '+getDisplayName(pokemon)+' fully revived','info');
+    addLog(item.name+' used: '+getDisplayName(pokemon)+' fully revived','info','itemUsage',(state.aides.find(a=>a.name===pokemon.holder)||{}).id||'general');
   }
   state.professorBag[itemId]--;
   if(state.professorBag[itemId]<=0) delete state.professorBag[itemId];
@@ -731,7 +735,11 @@ let state={
   locationEncounterLog:{},
   locationMethodPrefs:{},
   dexHistory:{},
-  freeSkipsRemaining:50
+  freeSkipsRemaining:50,
+  // v0.43 — Custom log view filters, persisted across sessions (unlike logViewMode itself, which
+  // stays transient/resets to 'full'). Empty categories = show nothing; empty aides = no
+  // additional narrowing (any aide). See matchesCustomLogFilters() / DESIGN.md "v0.43 #5".
+  logCustomFilters:{categories:{},aides:{}}
 };
 
 // ── MAKE POKEMON ──
@@ -796,11 +804,17 @@ function getDisplayName(p){
 const SPRITE_BASE='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon';
 // v0.33 — optional formName param so a form-variant individual's actual sprite resolves,
 // instead of always falling through to the base form's spriteUrl.
+// v0.43 — a populated entry.spriteUrl previously ignored isShiny entirely, always returning the
+// non-shiny sprite verbatim. Now derives the shiny path by swapping the '/pokemon/' directory
+// segment for '/pokemon/shiny/', matching the same directory convention the fallback path below
+// already uses. Dormant until spriteUrl values are populated (none are, as of v0.43).
 function getSpriteUrl(dexId,name,isShiny=false,formName=null){
   if(!dexId||dexId===0) return '';
   if(typeof POKEDEX_DATA!=='undefined'){
     const entry=getPokemonEntry(dexId,formName);
-    if(entry&&entry.spriteUrl) return entry.spriteUrl;
+    if(entry&&entry.spriteUrl){
+      return isShiny?entry.spriteUrl.replace('/pokemon/','/pokemon/shiny/'):entry.spriteUrl;
+    }
   }
   return (isShiny?SPRITE_BASE+'/shiny':SPRITE_BASE)+'/'+dexId+'.png';
 }
@@ -848,7 +862,11 @@ function sortParty(aide=state.aides[0]){
 // always checked state.aides[0].trainerBag regardless of which aide was actually pathfinding.
 // Accepts an optional trainerBag now, defaulting to aides[0] so any pre-existing bare call keeps
 // working exactly as before.
-function buildTravelPath(fromId,toId,trainerBag=state.aides[0].trainerBag){
+// v0.43 — gained `ignoreDiscovery` (default false, so every pre-existing caller is unaffected).
+// When true, both BFS branches skip their discoveredLocations check entirely, so a path can be
+// computed straight through and to undiscovered nodes — used exclusively by Wander (see
+// getWanderReachableLocations() below and its callers). requiresItem gating is untouched either way.
+function buildTravelPath(fromId,toId,trainerBag=state.aides[0].trainerBag,ignoreDiscovery=false){
   if(typeof CONNECTIONS_DATA!=='undefined'){
     const visited=new Set([fromId]);
     const queue=[[fromId,[]]];
@@ -856,8 +874,8 @@ function buildTravelPath(fromId,toId,trainerBag=state.aides[0].trainerBag){
       const [cur,path]=queue.shift();
       const available=(CONNECTIONS_DATA||[]).filter(c=>{
         if(c.fromLocationId!==cur) return false;
-        // Must be a discovered location
-        if(!state.discoveredLocations.has(c.toLocationId)) return false;
+        // Must be a discovered location — unless ignoreDiscovery (Wander) opted out.
+        if(!ignoreDiscovery&&!state.discoveredLocations.has(c.toLocationId)) return false;
         if(!c.requiresItem) return true;
         return (trainerBag&&trainerBag[c.requiresItem]&&trainerBag[c.requiresItem]>0)||
                (state.trainerUnlocks&&state.trainerUnlocks[c.requiresItem]);
@@ -881,7 +899,7 @@ function buildTravelPath(fromId,toId,trainerBag=state.aides[0].trainerBag){
       const neighbors=getConnectedLocations(cur)||[];
       for(const n of neighbors){
         if(visited.has(n)) continue;
-        if(!state.discoveredLocations.has(n)) continue;
+        if(!ignoreDiscovery&&!state.discoveredLocations.has(n)) continue;
         visited.add(n);
         const newPath=[...path,n];
         if(n===toId) return newPath;
@@ -930,11 +948,41 @@ function getReachableDiscoveredLocations(fromId,trainerBag=state.aides[0].traine
   return reachable;
 }
 
+// v0.43 — Wander-only counterpart to getReachableDiscoveredLocations() above: identical BFS,
+// minus every discoveredLocations check. Every location reachable through valid (item-satisfied)
+// connection edges is included, discovered or not — the only remaining gate is requiresItem.
+// Manual "dispatch to a specific location" deliberately keeps using the discovery-gated version
+// above; this one is only ever passed to buildTravelPath() with ignoreDiscovery=true.
+function getWanderReachableLocations(fromId,trainerBag=state.aides[0].trainerBag){
+  const reachable=[];
+  if(typeof CONNECTIONS_DATA==='undefined') return reachable;
+  reachable.push(fromId);
+  const visited=new Set([fromId]);
+  const queue=[fromId];
+  while(queue.length){
+    const cur=queue.shift();
+    const available=(CONNECTIONS_DATA||[]).filter(c=>{
+      if(c.fromLocationId!==cur) return false;
+      if(!c.requiresItem) return true;
+      return (trainerBag&&trainerBag[c.requiresItem]&&trainerBag[c.requiresItem]>0)||
+             (state.trainerUnlocks&&state.trainerUnlocks[c.requiresItem]);
+    });
+    for(const conn of available){
+      const n=conn.toLocationId;
+      if(visited.has(n)) continue;
+      visited.add(n);
+      reachable.push(n);
+      queue.push(n);
+    }
+  }
+  return reachable;
+}
+
 function arriveAtLocation(locId,aide=state.aides[0]){
   aide.currentLocation=locId;
   const locData=typeof LOCATIONS!=='undefined'?getLocation(locId):null;
   const locName=locData?locData.name:locId;
-  addLog('📍 '+aide.name+' arrived at '+locName+'!','info');
+  addLog('📍 '+aide.name+' arrived at '+locName+'!','info','travel',aide.id);
 
   // Update lastHealLocation and heal party only at locations with heals:true
   if(locData&&(locData.heals==='TRUE'||locData.heals===true||locData.heals==='true')){
@@ -942,7 +990,7 @@ function arriveAtLocation(locId,aide=state.aides[0]){
     const needsHeal=aide.party.some(p=>p.currentHP<p.maxHP||p.currentHP<=0);
     if(needsHeal){
       aide.party.forEach(p=>{ p.currentHP=p.maxHP; });
-      addLog('🏥 Party healed at '+locName+'!','info');
+      addLog('🏥 Party healed at '+locName+'!','info','healing',aide.id);
     }
   }
 
@@ -957,7 +1005,7 @@ function arriveAtLocation(locId,aide=state.aides[0]){
         if(!state.discoveredLocations.has(conn.toLocationId)){
           state.discoveredLocations.add(conn.toLocationId);
           const newLoc=typeof LOCATIONS!=='undefined'?getLocation(conn.toLocationId):null;
-          addLog('🗺️ New area discovered: '+(newLoc?newLoc.name:conn.toLocationId)+'!','info');
+          addLog('🗺️ New area discovered: '+(newLoc?newLoc.name:conn.toLocationId)+'!','info','travel',aide.id);
         }
       }
     });
@@ -992,7 +1040,7 @@ function advanceTravelPath(idx=0){
     } else {
       aide.currentLocation=aide.missionDestination;
       const locData=typeof LOCATIONS!=='undefined'?getLocation(aide.missionDestination):null;
-      addLog('🏁 '+aide.name+' reached '+(locData?locData.name:aide.missionDestination)+'!','info');
+      addLog('🏁 '+aide.name+' reached '+(locData?locData.name:aide.missionDestination)+'!','info','travel',aide.id);
     }
   }
 }
@@ -1420,13 +1468,13 @@ function awardGymWin(trainerId,tier,idx=0){
   if(!alreadyEarned){
     aide.trainerBag[badgeId]=(aide.trainerBag[badgeId]||0)+1;
     const badgeItem=getItem(badgeId);
-    addLog('🎖 '+aide.name+' earned: '+(badgeItem?badgeItem.name:badgeId)+'!','evolve');
+    addLog('🎖 '+aide.name+' earned: '+(badgeItem?badgeItem.name:badgeId)+'!','evolve','gymBadges',aide.id);
     addSignificantLog('🎖 '+aide.name+' earned: '+(badgeItem?badgeItem.name:badgeId)+'!','evolve');
   }
   if(!row.isGauntlet){
     const tmAward=alreadyEarned?1:(tier+4);
     state.professorBag['tm']=(state.professorBag['tm']||0)+tmAward;
-    addLog('Received '+tmAward+' TM'+(tmAward!==1?'s':'')+' for defeating the gym!','catch');
+    addLog('Received '+tmAward+' TM'+(tmAward!==1?'s':'')+' for defeating the gym!','catch','gymBadges',aide.id);
   }
   renderBagDisplay();
 }
@@ -1538,11 +1586,11 @@ function runGymEncounter(trainerId,tier,idx=0){
     const enemyTeam=buildEnemyTeam(trainerId,tier);
     const result=runOneGymBattle(enemyTeam,idx);
     if(result.winner==='player'){
-      addLog('⚔ '+aide.name+' defeated '+gymName+' (Tier '+tier+')!','win');
+      addLog('⚔ '+aide.name+' defeated '+gymName+' (Tier '+tier+')!','win','gymBadges',aide.id);
       awardGymWin(trainerId,tier,idx);
       document.getElementById('enc-body').textContent='Won gym battle at '+gymName+' (Tier '+tier+')!';
     } else {
-      addLog('⚔ '+aide.name+' lost to '+gymName+' (Tier '+tier+'). Try again.','fail');
+      addLog('⚔ '+aide.name+' lost to '+gymName+' (Tier '+tier+'). Try again.','fail','gymBadges',aide.id);
       document.getElementById('enc-body').textContent='Lost gym battle at '+gymName+'.';
     }
     aide.currentEncounter=null;
@@ -1558,16 +1606,16 @@ function runGymEncounter(trainerId,tier,idx=0){
     const enemyTeam=buildEnemyTeam(trainerId,tier,leg);
     const result=runOneGymBattle(enemyTeam,idx);
     if(result.winner!=='player'){
-      addLog('⚔ '+aide.name+' lost the Elite Four/Champion gauntlet at leg '+leg+'/5 — attempt reset.','fail');
+      addLog('⚔ '+aide.name+' lost the Elite Four/Champion gauntlet at leg '+leg+'/5 — attempt reset.','fail','gymBadges',aide.id);
       document.getElementById('enc-body').textContent='Lost the gauntlet at leg '+leg+'/5. Try again.';
       aide.currentEncounter=null;
       advanceTravelPath(idx);
       saveGame();
       return;
     }
-    addLog('⚔ Gauntlet leg '+leg+'/5 defeated!','win');
+    addLog('⚔ Gauntlet leg '+leg+'/5 defeated!','win','gymBadges',aide.id);
   }
-  addLog('🏆 Elite Four and Champion defeated!','evolve');
+  addLog('🏆 Elite Four and Champion defeated!','evolve','gymBadges',aide.id);
   awardGymWin(trainerId,tier,idx);
   document.getElementById('enc-body').textContent='🏆 Champion defeated at '+gymName+'!';
   aide.currentEncounter=null;
@@ -1902,17 +1950,17 @@ function finishWatchedBattle(result){
   const won=result.winner==='player';
   if(!won){
     if(watchedBattle.isGauntlet){
-      addLog('⚔ Lost the Elite Four/Champion gauntlet at leg '+watchedBattle.leg+'/5 — attempt reset.','fail');
+      addLog('⚔ Lost the Elite Four/Champion gauntlet at leg '+watchedBattle.leg+'/5 — attempt reset.','fail','gymBadges',state.aides[watchedBattle.aideIndex||0].id);
       if(resultArea) resultArea.innerHTML='<div style="color:var(--c-danger);font-size:12px;text-align:center;">Lost at leg '+watchedBattle.leg+'/5. Attempt reset.</div><button onclick="closeWatchedBattle()" style="width:100%;margin-top:8px;">Close</button>';
     } else {
-      addLog('⚔ Lost a gym battle. Try again.','fail');
+      addLog('⚔ Lost a gym battle. Try again.','fail','gymBadges',state.aides[watchedBattle.aideIndex||0].id);
       if(resultArea) resultArea.innerHTML='<div style="color:var(--c-danger);font-size:12px;text-align:center;">Defeated. Try again.</div><button onclick="closeWatchedBattle()" style="width:100%;margin-top:8px;">Close</button>';
     }
     saveGame();
     return;
   }
   if(watchedBattle.isGauntlet&&watchedBattle.leg<5){
-    addLog('⚔ Gauntlet leg '+watchedBattle.leg+'/5 defeated!','win');
+    addLog('⚔ Gauntlet leg '+watchedBattle.leg+'/5 defeated!','win','gymBadges',state.aides[watchedBattle.aideIndex||0].id);
     watchedBattle.leg++;
     const modal=document.getElementById('battle-modal'); if(modal) modal.remove();
     showTeamOrderModal(); // reorder + auto-heal before the next leg
@@ -1922,9 +1970,9 @@ function finishWatchedBattle(result){
   const locData=typeof LOCATIONS!=='undefined'?getLocation(state.aides[idx].currentLocation):null;
   const gymName=locData?locData.name:watchedBattle.trainerId;
   if(watchedBattle.isGauntlet){
-    addLog('🏆 Elite Four and Champion defeated!','evolve');
+    addLog('🏆 Elite Four and Champion defeated!','evolve','gymBadges',state.aides[watchedBattle.aideIndex||0].id);
   } else {
-    addLog('⚔ Defeated '+gymName+' (Tier '+watchedBattle.tier+')!','win');
+    addLog('⚔ Defeated '+gymName+' (Tier '+watchedBattle.tier+')!','win','gymBadges',state.aides[watchedBattle.aideIndex||0].id);
   }
   awardGymWin(watchedBattle.trainerId,watchedBattle.tier,idx);
   if(resultArea) resultArea.innerHTML='<div style="color:#2ecc71;font-size:12px;text-align:center;">🏆 Victory!</div><button onclick="closeWatchedBattle()" class="primary" style="width:100%;margin-top:8px;">Continue</button>';
@@ -2093,7 +2141,7 @@ function recordNewSpecies(dexId,name){
     // v0.33 — previously only reached the separate pendingFindings/Findings Report mechanism,
     // never the Log tab in any form. Now appears in both Full and Condensed.
     const msg='🆕 New Species: '+name+' first sighted!';
-    addLog(msg,'catch'); addSignificantLog(msg,'catch');
+    addLog(msg,'catch','catches','general'); addSignificantLog(msg,'catch');
   }
 }
 // v0.24 — fires "🎯 Captured" on first successful catch of a species (distinct from
@@ -2105,7 +2153,7 @@ function recordCapture(dexId,name){
     r.firstCaught=true; addFinding('captured',name,dexId);
     // v0.33 — same "newly appears in the Log tab" note as recordNewSpecies above.
     const msg='🎯 Captured: '+name+' first caught!';
-    addLog(msg,'catch'); addSignificantLog(msg,'catch');
+    addLog(msg,'catch','catches','general'); addSignificantLog(msg,'catch');
   }
 }
 function addFinding(type,...args){ state.pendingFindings.push({type,args,time:Date.now()}); }
@@ -2244,7 +2292,7 @@ function professorAutoTestEvolutions(){
         const oldName=getDisplayName(chosen);
         if(toEntry) applySpeciesSwap(chosen,toEntry);
         const toLabel=toEntry?(br.toFormName?toEntry.name+' ('+br.toFormName+')':toEntry.name):'#'+br.toDexId;
-        addLog('🔬 Research: '+(entry?entry.name:'#'+dexId)+' confirmed to evolve with '+itemName+' → '+toLabel+'! '+oldName+' #'+chosen.id+' evolved into '+getDisplayName(chosen)+'!','evolve');
+        addLog('🔬 Research: '+(entry?entry.name:'#'+dexId)+' confirmed to evolve with '+itemName+' → '+toLabel+'! '+oldName+' #'+chosen.id+' evolved into '+getDisplayName(chosen)+'!','evolve','evolutions','general');
         anyChange=true;
       }
       if(allResolved) r.testedMethods.push(itemName);
@@ -2263,32 +2311,32 @@ function professorAutoTestEvolutions(){
 function applyItemEvolution(catchId,intoId,toFormName){
   toFormName=toFormName||null;
   const p=state.dex.find(x=>x.id===catchId); if(!p) return;
-  if(p.evolveBlocked){ addLog('Evolution is blocked for this Pokémon.','fail'); return; }
+  if(p.evolveBlocked){ addLog('Evolution is blocked for this Pokémon.','fail','systemErrors','general'); return; }
   // v0.36 — nickname exclusivity lock: refuse a manual evolve attempt that doesn't match this
   // individual's lock, same style as the evolveBlocked refusal above.
   const nickLock=getNicknameEvolveLock(p);
   if(nickLock&&(nickLock.toDexId!==intoId||(nickLock.toFormName||null)!==toFormName)){
-    addLog(getDisplayName(p)+' is nickname-locked to a different evolution.','fail'); return;
+    addLog(getDisplayName(p)+' is nickname-locked to a different evolution.','fail','systemErrors',(state.aides.find(a=>a.name===p.holder)||{}).id||'general'); return;
   }
   const r=state.researchLog[p.pokedexId];
   if(!r||!r.confirmedBranches||!r.confirmedBranches.length) return;
   const nonManual=['level','friendship','friendship-day','friendship-night','use-move','in-party'];
   const branch=r.confirmedBranches.find(b=>b.intoId===intoId&&(b.toFormName||null)===toFormName&&!nonManual.includes(b.method));
-  if(!branch){ addLog('That evolution is not available.','fail'); return; }
+  if(!branch){ addLog('That evolution is not available.','fail','systemErrors',(state.aides.find(a=>a.name===p.holder)||{}).id||'general'); return; }
   const methodName=branch.method;
   const itemEntry=typeof ITEMS_DATA!=='undefined'?ITEMS_DATA.find(i=>i.name===methodName):null;
-  if(!itemEntry){ addLog('Item not found in database: '+methodName,'fail'); return; }
+  if(!itemEntry){ addLog('Item not found in database: '+methodName,'fail','systemErrors','general'); return; }
   const itemId=itemEntry.itemId;
-  if(!(state.professorBag[itemId]>0)){ addLog('No '+methodName+' in Professor\'s bag!','fail'); return; }
+  if(!(state.professorBag[itemId]>0)){ addLog('No '+methodName+' in Professor\'s bag!','fail','systemErrors','general'); return; }
   const newEntry=getPokemonEntry(intoId,toFormName);
-  if(!newEntry){ addLog('Evolution target not found in database.','fail'); return; }
+  if(!newEntry){ addLog('Evolution target not found in database.','fail','systemErrors','general'); return; }
   // Consume item
   state.professorBag[itemId]--;
   if(state.professorBag[itemId]<=0) delete state.professorBag[itemId];
   // Apply evolution
   const old=getDisplayName(p);
   applySpeciesSwap(p,newEntry);
-  addLog(old+' #'+p.id+' evolved into '+getDisplayName(p)+' using '+methodName+'!','evolve');
+  addLog(old+' #'+p.id+' evolved into '+getDisplayName(p)+' using '+methodName+'!','evolve','evolutions',(state.aides.find(a=>a.name===p.holder)||{}).id||'general');
   document.getElementById('enc-body').textContent=old+' evolved into '+getDisplayName(p)+'!';
   saveGame(); render();
   const m=document.getElementById('poke-modal'); if(m) m.remove();
@@ -2360,7 +2408,7 @@ function checkEvolution(p){
       const old=getDisplayName(p); const prevDexId=p.pokedexId;
       applySpeciesSwap(p,newEntry);
       recordEvolution(prevDexId,newEntry.dexId,'level',p.level);
-      addLog(old+' #'+p.id+' evolved into '+getDisplayName(p)+'!','evolve');
+      addLog(old+' #'+p.id+' evolved into '+getDisplayName(p)+'!','evolve','evolutions',(state.aides.find(a=>a.name===p.holder)||{}).id||'general');
       document.getElementById('enc-body').textContent=old+' evolved into '+getDisplayName(p)+'!';
       maybeCreateShedFriend(prevDexId,p); // v0.42 — Nincada->Shedinja; no-ops for every other species
       return;
@@ -2373,7 +2421,7 @@ function checkEvolution(p){
       const old=getDisplayName(p); const prevDexId=p.pokedexId;
       applySpeciesSwap(p,newEntry);
       recordEvolution(prevDexId,newEntry.dexId,'friendship',p.level);
-      addLog(old+' #'+p.id+' evolved into '+getDisplayName(p)+'!','evolve');
+      addLog(old+' #'+p.id+' evolved into '+getDisplayName(p)+'!','evolve','evolutions',(state.aides.find(a=>a.name===p.holder)||{}).id||'general');
       document.getElementById('enc-body').textContent=old+' evolved into '+getDisplayName(p)+'!';
       maybeCreateShedFriend(prevDexId,p);
       return;
@@ -2386,7 +2434,7 @@ function checkEvolution(p){
       const old=getDisplayName(p); const prevDexId=p.pokedexId;
       applySpeciesSwap(p,newEntry);
       recordEvolution(prevDexId,newEntry.dexId,'use-move',p.level);
-      addLog(old+' #'+p.id+' evolved into '+getDisplayName(p)+'!','evolve');
+      addLog(old+' #'+p.id+' evolved into '+getDisplayName(p)+'!','evolve','evolutions',(state.aides.find(a=>a.name===p.holder)||{}).id||'general');
       document.getElementById('enc-body').textContent=old+' evolved into '+getDisplayName(p)+'!';
       maybeCreateShedFriend(prevDexId,p);
       return;
@@ -2399,7 +2447,7 @@ function checkEvolution(p){
       const old=getDisplayName(p); const prevDexId=p.pokedexId;
       applySpeciesSwap(p,newEntry);
       recordEvolution(prevDexId,newEntry.dexId,'in-party',p.level);
-      addLog(old+' #'+p.id+' evolved into '+getDisplayName(p)+'!','evolve');
+      addLog(old+' #'+p.id+' evolved into '+getDisplayName(p)+'!','evolve','evolutions',(state.aides.find(a=>a.name===p.holder)||{}).id||'general');
       document.getElementById('enc-body').textContent=old+' evolved into '+getDisplayName(p)+'!';
       maybeCreateShedFriend(prevDexId,p);
       return;
@@ -2436,7 +2484,7 @@ function checkEvolution(p){
         const old=getDisplayName(p); const prevDexId=p.pokedexId;
         applySpeciesSwap(p,newEntry);
         recordEvolution(prevDexId,newEntry.dexId,branch.evolveMethod,p.level,branch.toFormName);
-        addLog(old+' #'+p.id+' evolved into '+getDisplayName(p)+'!','evolve');
+        addLog(old+' #'+p.id+' evolved into '+getDisplayName(p)+'!','evolve','evolutions',(state.aides.find(a=>a.name===p.holder)||{}).id||'general');
         document.getElementById('enc-body').textContent=old+' evolved into '+getDisplayName(p)+'!';
         maybeCreateShedFriend(prevDexId,p);
       }
@@ -2479,7 +2527,7 @@ function maybeCreateShedFriend(prevDexId,evolvedPokemon){
   recalcStats(shedFriend);
   shedFriend.currentHP=shedFriend.maxHP;
   aide.party.push(shedFriend); state.dex.push(shedFriend);
-  addLog('✨ '+getDisplayName(shedFriend)+' #'+shedFriend.id+' emerged from the discarded shell!','evolve');
+  addLog('✨ '+getDisplayName(shedFriend)+' #'+shedFriend.id+' emerged from the discarded shell!','evolve','evolutions',(state.aides.find(a=>a.name===shedFriend.holder)||{}).id||'general');
 }
 
 // v0.39.5 CRITICAL FIX — previously called getLevelCap() with no argument, which defaults to
@@ -2510,7 +2558,7 @@ function distributeExp(pokemon,amount,idx,silent){
 
 function giveExp(pokemon,amount,idx=0){
   pokemon.exp+=amount;
-  addLog(getDisplayName(pokemon)+' #'+pokemon.id+' +'+amount+' EXP','exp');
+  addLog(getDisplayName(pokemon)+' #'+pokemon.id+' +'+amount+' EXP','exp','levelExp',(state.aides.find(a=>a.name===pokemon.holder)||{}).id||'general');
   let levelled=false;
   while(true){
     const s=getPokemonEntry(pokemon.pokedexId,pokemon.formName)||SPECIES[pokemon.species+'|'+(pokemon.formName||'')]||SPECIES[pokemon.species];
@@ -2520,7 +2568,7 @@ function giveExp(pokemon,amount,idx=0){
       pokemon.level++; levelled=true;
       const om=pokemon.maxHP; recalcStats(pokemon);
       pokemon.currentHP=Math.min(pokemon.maxHP,pokemon.currentHP+(pokemon.maxHP-om));
-      addLog(getDisplayName(pokemon)+' #'+pokemon.id+' -> Lv'+pokemon.level+'!','evolve');
+      addLog(getDisplayName(pokemon)+' #'+pokemon.id+' -> Lv'+pokemon.level+'!','evolve','levelExp',(state.aides.find(a=>a.name===pokemon.holder)||{}).id||'general');
       checkEvolution(pokemon); saveGame();
       checkMethodRuleOut(pokemon.pokedexId,pokemon.level,pokemon.friendship);
     } else break;
@@ -2975,7 +3023,13 @@ function movePowerTotal(p){
 // a current party member — leaving state.aides[0].party unfiltered would orphan that slot.
 // v0.39.2 — operates across ALL aides' dex/party, not one. Finds whichever aide currently owns
 // this individual and removes it from that aide's own arrays specifically.
+// v0.43 — catch #1 (the starter Rattata created at init(), id assigned via the monotonic
+// state.dexIdCounter — permanent, never reused) can never be removed, through ANY path. This is
+// the shared low-level function every release path already calls (species-cap auto-release,
+// species-cap sweep, manual release modal, CheatN release-and-replace) — guarding it here
+// structurally protects all of them, and any future release path, with a single check.
 function removePokemonFromBoxAndParty(id){
+  if(id===1) return;
   state.aides.forEach(aide=>{
     state.dex=state.dex.filter(p=>p.id!==id);
     aide.party=aide.party.filter(p=>p.id!==id);
@@ -3058,19 +3112,25 @@ function checkSpeciesCap(individual,idx=0){
     recalcStats(recipient);
     recipient.currentHP=recipient.maxHP;
     removePokemonFromBoxAndParty(individual.id);
-    addLog(getDisplayName(recipient)+' #'+recipient.id+' inherited superior IVs from the newly caught '+getDisplayName(individual)+'!','evolve');
+    addLog(getDisplayName(recipient)+' #'+recipient.id+' inherited superior IVs from the newly caught '+getDisplayName(individual)+'!','evolve','roster',(state.aides.find(a=>a.name===recipient.holder)||{}).id||'general');
     return;
   }
   // No IV-donation recipient — release the weakest of the full same-species BOXED pool
   // (liveNonShinyBox already includes `individual` itself, since both a fresh catch and a
   // freshly-evolved individual are already present in its owning aide's dex by the time this runs).
-  let releaseTarget=liveNonShinyBox[0];
-  liveNonShinyBox.forEach(p=>{
-    const rp=movePowerTotal(releaseTarget), pp=movePowerTotal(p);
-    if(pp<rp||(pp===rp&&p.id>releaseTarget.id)) releaseTarget=p;
-  });
-  removePokemonFromBoxAndParty(releaseTarget.id);
-  addLog('Released '+getDisplayName(releaseTarget)+' #'+releaseTarget.id+' — species cap reached ('+cap+' max).','info');
+  // v0.43 — catch #1 (starter Rattata) is never a candidate, no matter how weak — see
+  // removePokemonFromBoxAndParty()'s guard, which this mirrors so cap enforcement keeps working
+  // (releases the next-weakest instead of silently no-op'ing) rather than relying on that guard alone.
+  const releaseCandidates=liveNonShinyBox.filter(p=>p.id!==1);
+  if(releaseCandidates.length){
+    let releaseTarget=releaseCandidates[0];
+    releaseCandidates.forEach(p=>{
+      const rp=movePowerTotal(releaseTarget), pp=movePowerTotal(p);
+      if(pp<rp||(pp===rp&&p.id>releaseTarget.id)) releaseTarget=p;
+    });
+    removePokemonFromBoxAndParty(releaseTarget.id);
+    addLog('Released '+getDisplayName(releaseTarget)+' #'+releaseTarget.id+' — species cap reached ('+cap+' max).','info','roster','general');
+  }
 }
 
 // v0.26 — dropdown handler for the editable GLOBAL per-species cap. Raising applies immediately
@@ -3087,14 +3147,14 @@ function checkSpeciesCap(individual,idx=0){
 function onAvoidCappedSpeciesToggleClick(){
   if(state.avoidCappedSpecies){
     state.avoidCappedSpecies=false;
-    addLog('Capped-species catch avoidance turned off.','info');
+    addLog('Capped-species catch avoidance turned off.','info','roster','general');
     saveGame(); renderAvoidCapToggleBtn();
     return;
   }
   const proceed=confirm('Are you sure you would like to restrict capture attempts to Pokémon underneath the species cap?\n\nIncome rate is based on how many total catches you have made.\n\nStronger IVs are passed down to existing Pokémon upon release.');
   if(!proceed) return;
   state.avoidCappedSpecies=true;
-  addLog('Capped-species catch avoidance turned on.','info');
+  addLog('Capped-species catch avoidance turned on.','info','roster','general');
   saveGame(); renderAvoidCapToggleBtn();
 }
 function renderAvoidCapToggleBtn(){
@@ -3113,7 +3173,7 @@ function onSpeciesCapChange(selectEl){
   const oldCap=state.speciesCap||6;
   if(newCap>=oldCap){
     state.speciesCap=newCap;
-    addLog('Per-species cap set to '+newCap+'.','info');
+    addLog('Per-species cap set to '+newCap+'.','info','roster','general');
     saveGame(); render();
     return;
   }
@@ -3126,7 +3186,7 @@ function onSpeciesCapChange(selectEl){
   const dexIds=new Set(state.dex.filter(p=>!p.isShiny&&!p.holder).map(p=>p.pokedexId));
   let released=0;
   dexIds.forEach(dexId=>{ released+=sweepSpeciesToCap(dexId,getEffectiveSpeciesCap(dexId)); });
-  addLog('Per-species cap lowered to '+newCap+' — '+released+' excess Pokémon released.','info');
+  addLog('Per-species cap lowered to '+newCap+' — '+released+' excess Pokémon released.','info','roster','general');
   saveGame(); render();
 }
 
@@ -3153,7 +3213,7 @@ function setSpeciesCapOverride(dexId,rawValue){
   else delete state.speciesCapOverrides[dexId];
   const released=sweepSpeciesToCap(dexId,newEffective);
   const entry=getPokemonEntry(dexId);
-  addLog('Species cap for '+(entry?entry.name:'#'+dexId)+' set to '+newEffective+(released>0?' — '+released+' excess released.':'.'),'info');
+  addLog('Species cap for '+(entry?entry.name:'#'+dexId)+' set to '+newEffective+(released>0?' — '+released+' excess released.':'.'),'info','roster','general');
   saveGame(); renderDex();
 }
 // v0.38 — clears an override back to the global default, reusing setSpeciesCapOverride()'s
@@ -3208,7 +3268,7 @@ function checkLocationHeal(idx=0){
     const needsHeal=aide.party.some(p=>p.currentHP<p.maxHP||p.currentHP<=0);
     if(needsHeal){
       aide.party.forEach(p=>{ p.currentHP=p.maxHP; });
-      addLog('🏥 Party fully healed at '+locData.name+'!','info');
+      addLog('🏥 Party fully healed at '+locData.name+'!','info','healing',aide.id);
     }
   }
 }
@@ -3242,7 +3302,7 @@ function resolveEncounterStep(idx=0){
     distributeExp(lead,exp,idx,false);
     recordCapture(caught.pokedexId,enc.species);
     logCaptureRarity(caught,false);
-    addLog(aide.emoji+' '+aide.name+': ✨ SHINY '+getDisplayName(caught)+' caught automatically! ✨','evolve');
+    addLog(aide.emoji+' '+aide.name+': ✨ SHINY '+getDisplayName(caught)+' caught automatically! ✨','evolve','catches',aide.id);
     document.getElementById('total-catches').textContent=state.totalCatches;
     document.getElementById('total-sightings').textContent=state.totalSightings;
     document.getElementById('enc-body').textContent='✨ SHINY '+enc.species+' caught!';
@@ -3377,13 +3437,13 @@ function runWildEncounterLoop(lead,enc,idx=0){
       const move=wild.equippedMoves[0];
       const hit=move?applyCrit(calcBattleDamage(wild,lead,move)):{damage:1,isCrit:false};
       lead.currentHP=Math.max(0,lead.currentHP-hit.damage);
-      addLog(aide.emoji+' '+aide.name+': '+(hit.isCrit?'A critical hit! ':'')+'Ball missed! '+enc.species+' Lv'+enc.level+' deals '+hit.damage+' dmg. ('+getDisplayName(lead)+': '+lead.currentHP+'/'+lead.maxHP+' HP)','fail');
+      addLog(aide.emoji+' '+aide.name+': '+(hit.isCrit?'A critical hit! ':'')+'Ball missed! '+enc.species+' Lv'+enc.level+' deals '+hit.damage+' dmg. ('+getDisplayName(lead)+': '+lead.currentHP+'/'+lead.maxHP+' HP)','fail','wildEncounters',aide.id);
       document.getElementById('enc-body').textContent='Ball missed! '+getDisplayName(lead)+' at '+lead.currentHP+'/'+lead.maxHP+' HP';
       if(lead.currentHP<=0){
-        addLog(aide.emoji+' '+aide.name+': '+getDisplayName(lead)+' #'+lead.id+' fainted!','faint');
+        addLog(aide.emoji+' '+aide.name+': '+getDisplayName(lead)+' #'+lead.id+' fainted!','faint','fainting',aide.id);
         const next=getLeadPokemon(idx);
-        if(!next){ addLog(aide.emoji+' '+aide.name+": Your party was defeated by "+enc.species+'!','fail'); aide.currentEncounter=null; endMission('faint',idx); return; }
-        addLog(aide.emoji+' '+aide.name+': '+getDisplayName(next)+' #'+next.id+' was sent out!','info');
+        if(!next){ addLog(aide.emoji+' '+aide.name+": Your party was defeated by "+enc.species+'!','fail','fainting',aide.id); aide.currentEncounter=null; endMission('faint',idx); return; }
+        addLog(aide.emoji+' '+aide.name+': '+getDisplayName(next)+' #'+next.id+' was sent out!','info','fainting',aide.id);
       }
       continue;
     }
@@ -3403,7 +3463,7 @@ function runWildEncounterLoop(lead,enc,idx=0){
         if(!history[lead.id]) history[lead.id]=[];
         history[lead.id].push(move.type+'|'+move.category);
         if(history[lead.id].length>2) history[lead.id].shift();
-        addLog(aide.emoji+' '+aide.name+': '+(hit.isCrit?'A critical hit! ':'')+getDisplayName(lead)+' attacks '+enc.species+' — '+hit.damage+' dmg! ('+wild.currentHP+'/'+wild.maxHP+' HP)','damage');
+        addLog(aide.emoji+' '+aide.name+': '+(hit.isCrit?'A critical hit! ':'')+getDisplayName(lead)+' attacks '+enc.species+' — '+hit.damage+' dmg! ('+wild.currentHP+'/'+wild.maxHP+' HP)','damage','wildEncounters',aide.id);
         if(wild.currentHP<=0){ wildDefeated=true; break; }
       } else {
         if(lead.currentHP<=0) continue;
@@ -3411,7 +3471,7 @@ function runWildEncounterLoop(lead,enc,idx=0){
         if(!move) continue;
         const hit=applyCrit(calcBattleDamage(wild,lead,move));
         lead.currentHP=Math.max(0,lead.currentHP-hit.damage);
-        addLog(aide.emoji+' '+aide.name+': '+(hit.isCrit?'A critical hit! ':'')+enc.species+' Lv'+enc.level+' attacks '+getDisplayName(lead)+' — '+hit.damage+' dmg! ('+lead.currentHP+'/'+lead.maxHP+' HP)','damage');
+        addLog(aide.emoji+' '+aide.name+': '+(hit.isCrit?'A critical hit! ':'')+enc.species+' Lv'+enc.level+' attacks '+getDisplayName(lead)+' — '+hit.damage+' dmg! ('+lead.currentHP+'/'+lead.maxHP+' HP)','damage','wildEncounters',aide.id);
         if(lead.currentHP<=0){ leadFainted=true; break; }
       }
     }
@@ -3420,17 +3480,17 @@ function runWildEncounterLoop(lead,enc,idx=0){
       // No-balls win — EXP only, no catch (matches the old Fight Formula's win outcome).
       const exp=Math.floor(((wild.baseExpYield||51)*enc.level)/7);
       distributeExp(lead,exp,idx,false);
-      addLog(aide.emoji+' '+aide.name+': Won vs '+enc.species+' Lv'+enc.level+'! +'+exp+' EXP','win');
+      addLog(aide.emoji+' '+aide.name+': Won vs '+enc.species+' Lv'+enc.level+'! +'+exp+' EXP','win','wildEncounters',aide.id);
       aide.currentEncounter=null; advanceTravelPath(idx);
       document.getElementById('enc-body').textContent='Won vs '+enc.species+' Lv'+enc.level+'.';
       saveGame();
       return;
     }
     if(leadFainted){
-      addLog(aide.emoji+' '+aide.name+': '+getDisplayName(lead)+' #'+lead.id+' fainted!','faint');
+      addLog(aide.emoji+' '+aide.name+': '+getDisplayName(lead)+' #'+lead.id+' fainted!','faint','fainting',aide.id);
       const next=getLeadPokemon(idx);
-      if(!next){ addLog(aide.emoji+' '+aide.name+": Your party was defeated by "+enc.species+'!','fail'); aide.currentEncounter=null; endMission('faint',idx); return; }
-      addLog(aide.emoji+' '+aide.name+': '+getDisplayName(next)+' #'+next.id+' was sent out!','info');
+      if(!next){ addLog(aide.emoji+' '+aide.name+": Your party was defeated by "+enc.species+'!','fail','fainting',aide.id); aide.currentEncounter=null; endMission('faint',idx); return; }
+      addLog(aide.emoji+' '+aide.name+': '+getDisplayName(next)+' #'+next.id+' was sent out!','info','fainting',aide.id);
     }
   }
 }
@@ -3443,13 +3503,13 @@ function catchPokemon(lead,enc,isShiny,idx=0){
   state.dexHistory[caught.pokedexId]=(state.dexHistory[caught.pokedexId]||0)+1;
   recordAbilityObserved(caught.pokedexId,caught.ability);
   recordGenderObserved(caught.pokedexId,caught.gender);
-  if(isShiny) addLog(aide.emoji+' '+aide.name+': ✨ SHINY '+getDisplayName(caught)+' caught automatically! ✨','evolve');
+  if(isShiny) addLog(aide.emoji+' '+aide.name+': ✨ SHINY '+getDisplayName(caught)+' caught automatically! ✨','evolve','catches',aide.id);
   logCaptureRarity(caught,true);
   const s_=getPokemonEntry(enc.pokedexId);
   const exp=Math.floor(((s_?s_.baseExpYield:51)||51)*enc.level/7);
   distributeExp(lead,exp,idx,false);
   recordCapture(caught.pokedexId,enc.species);
-  addLog(aide.emoji+' '+aide.name+': Caught '+getDisplayName(caught)+' #'+caught.id+' (Lv'+enc.level+' '+enc.gender+(isShiny?' ✨':'')+')! +'+exp+' EXP','catch');
+  addLog(aide.emoji+' '+aide.name+': Caught '+getDisplayName(caught)+' #'+caught.id+' (Lv'+enc.level+' '+enc.gender+(isShiny?' ✨':'')+')! +'+exp+' EXP','catch','catches',aide.id);
   document.getElementById('total-catches').textContent=state.totalCatches;
   document.getElementById('total-sightings').textContent=state.totalSightings;
   // Write caught to encounter log — {seen, caught} schema
@@ -3554,7 +3614,7 @@ function processAideTick(idx){
       // to record against); just announce the battle. resolveEncounterStep() handles it next tick.
       const locData=typeof LOCATIONS!=='undefined'?getLocation(aide.currentLocation):null;
       const gymName=locData?locData.name:enc.trainerId;
-      addLog(aide.emoji+' '+aide.name+': ⚔ Gym Battle triggered at '+gymName+' (Tier '+enc.tier+')!','info');
+      addLog(aide.emoji+' '+aide.name+': ⚔ Gym Battle triggered at '+gymName+' (Tier '+enc.tier+')!','info','gymBadges',aide.id);
       document.getElementById('enc-body').textContent=aide.name+': ⚔ Gym Battle at '+gymName+' (Tier '+enc.tier+')!';
       return;
     }
@@ -3580,7 +3640,7 @@ function processAideTick(idx){
     // see DESIGN.md), so one aide's catch could leave the other stranded with none, reading as one
     // confusing continuous story instead of two parallel ones. Now every message in this whole
     // encounter-resolution chain is prefixed with the aide's own emoji+name.
-    addLog(aide.emoji+' '+aide.name+': Wild '+enc.species+' appeared! Lv'+enc.level+' '+enc.gender,'info');
+    addLog(aide.emoji+' '+aide.name+': Wild '+enc.species+' appeared! Lv'+enc.level+' '+enc.gender,'info','wildEncounters',aide.id);
     document.getElementById('enc-body').textContent=aide.name+': Wild '+enc.species+' Lv'+enc.level+' ('+enc.gender+') appeared!';
     state.totalSightings++;
     document.getElementById('total-sightings').textContent=state.totalSightings;
@@ -3597,8 +3657,8 @@ let missionModalAideIndex=0;
 function startMission(idx=0){
   missionModalAideIndex=idx;
   const aide=state.aides[idx];
-  if(!isHealLocation(aide.currentLocation)){ addLog('Can only start a new mission from a healing location!','fail'); return; }
-  if(!aide.party.find(p=>p.currentHP>0)){ addLog('No conscious Pokémon!','fail'); return; }
+  if(!isHealLocation(aide.currentLocation)){ addLog('Can only start a new mission from a healing location!','fail','systemErrors',aide.id); return; }
+  if(!aide.party.find(p=>p.currentHP>0)){ addLog('No conscious Pokémon!','fail','systemErrors',aide.id); return; }
   showMissionModal();
 }
 
@@ -3687,7 +3747,9 @@ function evaluateWanderTarget(idx=0){
   const tp=aide.travelPath||[];
   if(aide.travelPathIndex<tp.length) return;
   const currentLoc=aide.currentLocation||'palletTown';
-  const reachable=getReachableDiscoveredLocations(currentLoc,aide.trainerBag).filter(locId=>buildRouteTable(locId,aide.trainerBag).length>0);
+  // v0.43 — Wander now considers every location reachable via the connection graph regardless of
+  // discovery, not just already-discovered ones. requiresItem gates still fully apply.
+  const reachable=getWanderReachableLocations(currentLoc,aide.trainerBag).filter(locId=>buildRouteTable(locId,aide.trainerBag).length>0);
   if(!reachable.length) return; // nothing reachable can ever have an encounter — nothing to do
   const metric=aide.wanderMetric||'encounters'; // v0.35 — 'encounters'|'catches', set at dispatch
   const currentIsEligible=reachable.includes(aide.missionDestination);
@@ -3698,8 +3760,10 @@ function evaluateWanderTarget(idx=0){
     if(c<bestCount){ best=locId; bestCount=c; }
   });
   if(best===aide.missionDestination) return; // current target still eligible and lowest (or tied) — no redirect
-  const path=buildTravelPath(currentLoc,best,aide.trainerBag);
-  if(!path.length) return; // unreachable by an actual walkable path — leave destination as-is
+  // v0.43 — ignoreDiscovery=true: best may be an undiscovered location, and the path may cross
+  // undiscovered waypoints too — both fine now, only requiresItem gates still block a route.
+  const path=buildTravelPath(currentLoc,best,aide.trainerBag,true);
+  if(!path.length) return; // unreachable by an actual walkable path (item-gated) — leave destination as-is
   // v0.34 fix — the current location is about to stop being the destination, so it must be
   // *departed* like any other waypoint: pay its own travelTime as a dwell cost before the new
   // path's first real step begins. travelPathIndex=-1 is a sentinel meaning "departure dwell in
@@ -3715,7 +3779,7 @@ function evaluateWanderTarget(idx=0){
   aide.travelPathIndex=-1;
   const destLocData=typeof LOCATIONS!=='undefined'?getLocation(best):null;
   const metricLabel=metric==='catches'?'lowest-catch':'lowest-encounter'; // v0.35
-  addLog('🧭 '+aide.name+' changes course — new '+metricLabel+' destination: '+(destLocData?destLocData.name:best)+'.','info');
+  addLog('🧭 '+aide.name+' changes course — new '+metricLabel+' destination: '+(destLocData?destLocData.name:best)+'.','info','travel',aide.id);
 }
 
 function destSortButtonHtml(field,label){
@@ -3781,7 +3845,17 @@ function renderDestList(){
           // v0.39 — universal selection highlight: 2px accent border on the chosen destination.
           const isSel=state._missionDest===loc;
           const selStyle=isSel?'border:2px solid var(--accent);color:var(--accent-light);':'border-color:var(--main-border);color:var(--main-text-secondary);';
-          return '<button onclick="selectMissionDest(\''+loc+'\')" style="display:block;width:100%;margin-bottom:6px;padding:10px;text-align:left;'+selStyle+'">'+name+'</button>';
+          // v0.43 — combined level range across every currently-valid encounter row at this
+          // location (respects the aide's trainerBag, same rod/item gating buildRouteTable()
+          // already applies). One combined min-max across all methods, not broken out per method.
+          const routeTable=buildRouteTable(loc,state.aides[missionModalAideIndex].trainerBag);
+          let levelStr='';
+          if(routeTable.length){
+            const minLv=Math.min(...routeTable.map(r=>r.minLv));
+            const maxLv=Math.max(...routeTable.map(r=>r.maxLv));
+            levelStr=' (Lv '+minLv+(minLv!==maxLv?'-'+maxLv:'')+')';
+          }
+          return '<button onclick="selectMissionDest(\''+loc+'\')" style="display:block;width:100%;margin-bottom:6px;padding:10px;text-align:left;'+selStyle+'">'+name+levelStr+'</button>';
         }).join('')
       : '<div style="color:#e67e22;font-size:11px;padding:8px 0;">No destinations reachable from here.</div>';
   }
@@ -3824,8 +3898,10 @@ function showMissionModal(){
 // pressed; stored in state._wanderMetric so confirmMission() can carry it into state.aides[missionModalAideIndex].wanderMetric.
 function selectWanderMode(metric){
   const currentLoc=state.aides[missionModalAideIndex].currentLocation||'palletTown';
-  const reachable=getReachableDiscoveredLocations(currentLoc,state.aides[missionModalAideIndex].trainerBag).filter(locId=>buildRouteTable(locId,state.aides[missionModalAideIndex].trainerBag).length>0);
-  if(!reachable.length){ addLog('No reachable destinations with possible encounters for Wander mode.','fail'); return; }
+  // v0.43 — same discovery-ignoring pool as evaluateWanderTarget(), for consistency between the
+  // initial pick and ongoing re-routing.
+  const reachable=getWanderReachableLocations(currentLoc,state.aides[missionModalAideIndex].trainerBag).filter(locId=>buildRouteTable(locId,state.aides[missionModalAideIndex].trainerBag).length>0);
+  if(!reachable.length){ addLog('No reachable destinations with possible encounters for Wander mode.','fail','systemErrors',state.aides[missionModalAideIndex].id); return; }
   let best=reachable[0], bestCount=computeLocationMetric(reachable[0],metric);
   reachable.forEach(locId=>{
     const c=computeLocationMetric(locId,metric);
@@ -3931,57 +4007,9 @@ function showPreambleModal(){
 }
 
 // ── INFO MENU (v0.27) ──
-// 9 topics, 2-level flow (topic list → scrollable text page). Sub-items render as in-page bold
-// headers within a topic's page, never as additional tiles (see DESIGN.md "Info Menu"). Copy
-// verified against live game constants (shiny rate, income formula, level cap formula, tick
-// intervals) before being locked in.
-const INFO_TOPICS=[
-  {id:'objectives',title:'Objectives',sections:[
-    {header:'Complete the Pokedex',text:'Find every Pokemon through catching them in the wild, evolution, and breeding.'},
-    {header:'Pokemon League',text:'Defeat all 8 Gym Leaders in any order you choose, then take on the Elite Four to become the Champion!'},
-    {header:'Shiny Hunting',text:'There is a 1:4096 chance that you will encounter a "shiny" Pokemon, which you will catch with 100% success regardless of how many Pokeballs you own. Collect them all!'}
-  ]},
-  {id:'characters',title:'Playable Characters',sections:[
-    {header:'Professor and Aides',text:'You are the Professor, your Aides work for you, but in practice it feels as though you are the Aides.'},
-    {header:'Pokemon Ownership',text:'All Pokemon are owned by the Professor, but you will have full control to un/assign them to any Aide you wish.'},
-    {header:'Item Ownership',text:'All items that help you progress physically through the game like HMs and Badges are owned by each individual Aide.<br><br>All consumable items like Potions and TMs are owned by the Professor.'}
-  ]},
-  {id:'dexCompletion',title:'Dex Completion',sections:[
-    {header:null,text:'Aides will automatically report all findings once they return from their missions, which will update the Pokedex.'},
-    {header:null,text:'In order to complete a Species\' Dex Page, you will need to rule out all evolution methods. The Lab will automatically test evolution items upon purchase, and only consume them if they work. (First time per species only)'},
-    {header:'Evolution',text:'Level (per species) and Friendship (225) will execute automatically once the threshold is achieved.<br><br>Items (once discovered) can be manually triggered if you hold the item in your inventory.'}
-  ]},
-  {id:'cash',title:'Cash Generation',sections:[
-    {header:null,text:'You will earn $1.00 per minute at default. That amount will go up by $0.01 for every 100 Pokemon you catch.'}
-  ]},
-  {id:'levelCaps',title:'Level Caps',sections:[
-    {header:null,text:'Each Aide will begin with a Level Cap of 15, which raises by 10 for each badge earned. Once that Aide defeats the Champion, their level cap will be 100.'}
-  ]},
-  {id:'time',title:'Time',sections:[
-    {header:null,text:'When you have the game open, actions will occur every 10 seconds; that number raises to 30 seconds while the game is closed.'},
-    {header:null,text:'Breeding cycles last roughly 5-10 minutes, no need to check in on these until you want to pick up your hatched Pokemon.'}
-  ]},
-  {id:'battles',title:'Battles',sections:[
-    {header:null,text:'Wild encounters now use the same battle engine as trainer fights — type matchups, moves, and catch odds based on the wild Pokemon\'s remaining HP all come into play.'},
-    {header:null,text:'Trainer fights simulate a battle engine taking type matchups and moves into effect.'},
-    {header:'Moves',text:'Each Pokemon can learn a unique set of moves that have been simplified to Type | Physical/Special | Power.<br><br>TMs allow you to either add, upgrade, or change moves.'}
-  ]},
-  {id:'map',title:'Map',sections:[
-    {header:null,text:'You start in Pallet Town and are only able to see the adjacent routes.'},
-    {header:null,text:'Every time you enter a new location, your map will expand to show all adjacent locations.'},
-    {header:null,text:'The Map will dynamically expand to everything you have discovered.'},
-    {header:null,text:'Certain locations are only accessible if you have the requisite items to traverse them, such as: Cut, Surf, Silph Scope, etc.'}
-  ]},
-  {id:'wildEncounters',title:'Wild Encounters',sections:[
-    {header:null,text:'Each location shows you the types of encounters you can have: grass, surf, fish, cave, rock-smash.'},
-    {header:null,text:'You are able to dynamically choose the rate at which you would like to do each type of encounter.'},
-    {header:null,text:'Certain encounters such as fishing are blocked until you have the item necessary to get to them.'}
-  ]},
-  {id:'evolutionSecrets',title:'Evolution Secrets',sections:[
-    {header:null,text:'Some Pokémon have more than one possible evolution outcome. For a few of these, giving a Pokémon the right nickname before it evolves can lock in a specific result instead of leaving it to chance.'},
-    {header:null,text:'There\'s no in-game list of which species or which words work — experimentation (or comparing notes with other Professors) is part of the fun.'}
-  ]}
-];
+// v0.43 — INFO_TOPICS moved to info.js (converter-generated from the Info Excel sheet,
+// one row per idea: category|subCategory|text). See DESIGN.md "v0.43 #7". Nothing else
+// in this section changes — INFO_TOPICS is read the same way, just from a different file.
 function showInfoMenu(){
   const existing=document.getElementById('info-modal'); if(existing) existing.remove();
   const modal=document.createElement('div');
@@ -4188,9 +4216,11 @@ function confirmMission(){
   if(state.aides[missionModalAideIndex].missionOrigin===state.aides[missionModalAideIndex].missionDestination){
     state.aides[missionModalAideIndex].travelPath=[]; state.aides[missionModalAideIndex].travelPathIndex=0; state.aides[missionModalAideIndex].travelCyclesRemaining=0;
   } else {
-    state.aides[missionModalAideIndex].travelPath=buildTravelPath(state.aides[missionModalAideIndex].missionOrigin,state.aides[missionModalAideIndex].missionDestination,state.aides[missionModalAideIndex].trainerBag);
+    // v0.43 — ignoreDiscovery only for Wander dispatches (wanderMode already set above from
+    // state._wanderSelected); manual destination picks stay discovery-gated as before.
+    state.aides[missionModalAideIndex].travelPath=buildTravelPath(state.aides[missionModalAideIndex].missionOrigin,state.aides[missionModalAideIndex].missionDestination,state.aides[missionModalAideIndex].trainerBag,state.aides[missionModalAideIndex].wanderMode);
     if(state.aides[missionModalAideIndex].travelPath.length===0){
-      addLog('⚠ Cannot reach that destination — missing required item.','fail');
+      addLog('⚠ Cannot reach that destination — missing required item.','fail','systemErrors',state.aides[missionModalAideIndex].id);
       return;
     }
     sortParty(state.aides[missionModalAideIndex]);
@@ -4201,7 +4231,7 @@ function confirmMission(){
   const locData=typeof LOCATIONS!=='undefined'?getLocation(state.aides[missionModalAideIndex].missionDestination):null;
   // v0.27 — Daycare gets a distinct dispatch message (see selectMissionDest for the modal-preview equivalent).
   const arrivalNote=(state.aides[missionModalAideIndex].missionDestination===DAYCARE_LOCATION_ID)?'manage breeding on arrival':'research on arrival';
-  addLog(state.aides[missionModalAideIndex].name+' dispatched to '+(locData?locData.name:state.aides[missionModalAideIndex].missionDestination)+' ('+arrivalNote+').','info');
+  addLog(state.aides[missionModalAideIndex].name+' dispatched to '+(locData?locData.name:state.aides[missionModalAideIndex].missionDestination)+' ('+arrivalNote+').','info','travel',state.aides[missionModalAideIndex].id);
   state.pendingFindings=[];
   updateAllAideLocations(); render();
 }
@@ -4231,13 +4261,13 @@ function endMission(reason='faint',idx=0){
   const originName=originLoc?originLoc.name:returnLocId;
   const msg=reason==='recall'?(aide.name+' recalled to '+originName+'.'):('All fainted — '+aide.name+' returned to '+originName+'.');
   document.getElementById('enc-body').textContent=msg;
-  addLog(msg,reason==='recall'?'info':'faint');
+  addLog(msg,reason==='recall'?'info':'faint',reason==='recall'?'travel':'fainting',state.aides[idx].id);
   aide.currentLocation=returnLocId;
   if(isHealLocation(returnLocId)){
     const needsHeal=aide.party.some(p=>p.currentHP<p.maxHP||p.currentHP<=0);
     if(needsHeal){
       aide.party.forEach(p=>{ p.currentHP=p.maxHP; });
-      addLog('🏥 Party fully healed at '+originName+'!','info');
+      addLog('🏥 Party fully healed at '+originName+'!','info','healing',state.aides[idx].id);
     }
   }
   if(reason==='faint'){
@@ -4336,9 +4366,9 @@ function buyItem(itemId, qty){
   if(adminMode){
     actualQty=qty; totalCost=0;
   } else {
-    if(state.funds<price){ addLog('Not enough funds for '+item.name+'!','fail'); return; }
+    if(state.funds<price){ addLog('Not enough funds for '+item.name+'!','fail','shopPurchases',state.aides[missionModalAideIndex].id); return; }
     const maxCanBuy=Math.floor(state.funds/price);
-    if(maxCanBuy<=0){ addLog('Not enough funds for '+item.name+'!','fail'); return; }
+    if(maxCanBuy<=0){ addLog('Not enough funds for '+item.name+'!','fail','shopPurchases',state.aides[missionModalAideIndex].id); return; }
     actualQty=Math.min(qty,maxCanBuy);
     totalCost=Math.round(price*actualQty*100)/100;
     state.funds=Math.round((state.funds-totalCost)*100)/100;
@@ -4363,9 +4393,9 @@ function buyItem(itemId, qty){
   if(bagEl) bagEl.textContent=targetBag[itemId];
   renderBagDisplay();
   if(actualQty<qty){
-    addLog('Bought '+actualQty+'× '+item.name+' ($'+totalCost.toFixed(2)+') — could not afford full qty','info');
+    addLog('Bought '+actualQty+'× '+item.name+' ($'+totalCost.toFixed(2)+') — could not afford full qty','info','shopPurchases',state.aides[missionModalAideIndex].id);
   } else {
-    addLog('Bought '+actualQty+'× '+item.name+' ($'+totalCost.toFixed(2)+')','info');
+    addLog('Bought '+actualQty+'× '+item.name+' ($'+totalCost.toFixed(2)+')','info','shopPurchases',state.aides[missionModalAideIndex].id);
   }
   // v0.33 — explicit trigger removed here; professorAutoTestEvolutions() now runs unconditionally
   // at the top of every gameTick() instead — one source of truth (see gameTick()).
@@ -4474,7 +4504,7 @@ function confirmBatchEvolve(itemId,maxQty){
     const fromDexId=p.pokedexId, preLevel=p.level, old=getDisplayName(p);
     recordEvolution(fromDexId,intoId,itemName,preLevel,toFormName);
     applySpeciesSwap(p,toEntry);
-    addLog(old+' #'+p.id+' evolved into '+getDisplayName(p)+' using '+itemName+'!','evolve');
+    addLog(old+' #'+p.id+' evolved into '+getDisplayName(p)+' using '+itemName+'!','evolve','evolutions',(state.aides.find(a=>a.name===p.holder)||{}).id||'general');
   });
   const modal=document.getElementById('batch-evolve-modal'); if(modal) modal.remove();
   saveGame(); render();
@@ -4579,13 +4609,13 @@ function ensureDaycareSlots(){
 }
 function purchaseDaycareSlot(){
   ensureDaycareSlots();
-  if(state.daycareSlots.purchased>=DAYCARE_MAX_SLOTS){ addLog('All Day Care slots already purchased.','fail'); return; }
-  if(state.funds<DAYCARE_SLOT_PRICE){ addLog('Not enough funds for another Day Care slot.','fail'); return; }
+  if(state.daycareSlots.purchased>=DAYCARE_MAX_SLOTS){ addLog('All Day Care slots already purchased.','fail','daycare','general'); return; }
+  if(state.funds<DAYCARE_SLOT_PRICE){ addLog('Not enough funds for another Day Care slot.','fail','daycare','general'); return; }
   if(!confirm('Purchase another Day Care slot for $'+DAYCARE_SLOT_PRICE+'?')) return;
   state.funds=Math.round((state.funds-DAYCARE_SLOT_PRICE)*100)/100;
   state.daycareSlots.purchased++;
   ensureDaycareSlots();
-  addLog('Purchased Day Care slot '+state.daycareSlots.purchased+' ($'+DAYCARE_SLOT_PRICE+').','info');
+  addLog('Purchased Day Care slot '+state.daycareSlots.purchased+' ($'+DAYCARE_SLOT_PRICE+').','info','daycare','general');
   document.getElementById('funds-display').textContent=state.funds.toFixed(2);
   saveGame(); showMapDetail(DAYCARE_LOCATION_ID);
 }
@@ -4593,13 +4623,13 @@ function purchaseDaycareSlot(){
 // indefinitely in the background regardless of where the Aide is sent afterward.
 function assignDaycarePair(slotIndex,idA,idB){
   // v0.40 — was state.aides[0] only. Same "any aide, doesn't matter which" reasoning as buildDaycareHtml().
-  if(!state.aides.some(a=>a.currentLocation===DAYCARE_LOCATION_ID)){ addLog('An Aide must be at the Day Care to drop off a pair.','fail'); return; }
+  if(!state.aides.some(a=>a.currentLocation===DAYCARE_LOCATION_ID)){ addLog('An Aide must be at the Day Care to drop off a pair.','fail','daycare','general'); return; }
   ensureDaycareSlots();
-  if(state.daycareSlots.slots[slotIndex]){ addLog('That slot is already occupied.','fail'); return; }
+  if(state.daycareSlots.slots[slotIndex]){ addLog('That slot is already occupied.','fail','daycare','general'); return; }
   const pA=state.dex.find(p=>p.id===idA), pB=state.dex.find(p=>p.id===idB);
   if(!pA||!pB) return;
   const check=canBreedPair(pA,pB);
-  if(!check.ok){ addLog('Cannot pair: '+check.reason,'fail'); return; }
+  if(!check.ok){ addLog('Cannot pair: '+check.reason,'fail','daycare','general'); return; }
   const resultDexId=getBreedResultDexId(pA,pB);
   const hatchMinutes=getHatchMinutes(resultDexId);
   // Unassign from party if held — can't be out with the Aide and breeding at the same time.
@@ -4618,7 +4648,7 @@ function assignDaycarePair(slotIndex,idA,idB){
     p.breeding=true;
   });
   state.daycareSlots.slots[slotIndex]={parentAId:idA,parentBId:idB,resultDexId,nextReadyAt:Date.now()+hatchMinutes*60000,eggsQueued:0};
-  addLog(getDisplayName(pA)+' and '+getDisplayName(pB)+' dropped off at the Day Care.','info');
+  addLog(getDisplayName(pA)+' and '+getDisplayName(pB)+' dropped off at the Day Care.','info','daycare','general');
   const modal=document.getElementById('daycare-modal'); if(modal) modal.remove();
   saveGame(); render(); showMapDetail(DAYCARE_LOCATION_ID);
 }
@@ -4641,13 +4671,13 @@ function updateDaycareQueue(slotIndex){
 // stays assigned and keeps breeding automatically until manually pulled via releaseDaycarePair().
 function collectDaycareSlot(slotIndex){
   // v0.40 — was state.aides[0] only.
-  if(!state.aides.some(a=>a.currentLocation===DAYCARE_LOCATION_ID)){ addLog('An Aide must be at the Day Care to collect.','fail'); return; }
+  if(!state.aides.some(a=>a.currentLocation===DAYCARE_LOCATION_ID)){ addLog('An Aide must be at the Day Care to collect.','fail','daycare','general'); return; }
   ensureDaycareSlots();
   const rec=state.daycareSlots.slots[slotIndex];
   if(!rec){ return; }
   updateDaycareQueue(slotIndex);
   const count=rec.eggsQueued||0;
-  if(!count){ addLog('Not ready yet.','fail'); return; }
+  if(!count){ addLog('Not ready yet.','fail','daycare','general'); return; }
   // v0.36 — "breeding tested" for the hatched species: one successful hatch confirms its
   // lineage either way (whether it produces itself or a distinct baby form) — see "Unconfirmed
   // Predecessor via Breeding". getResearch() ensures the record exists if this is a brand-new dexId.
@@ -4697,7 +4727,7 @@ function collectDaycareSlot(slotIndex){
   if(perfectCount>0) extras.push(perfectCount+' perfect IV');
   if(shinyCount>0) extras.push(shinyCount+' shiny'+(shinyCount>1?'ies':''));
   const extrasStr=extras.length?' — '+extras.join(', ')+'!':'';
-  addLog('Collected '+count+' egg'+(count>1?'s':'')+' at the Day Care!'+(released>0?' ('+kept+' kept, '+released+' released — species cap)':'')+extrasStr,'catch');
+  addLog('Collected '+count+' egg'+(count>1?'s':'')+' at the Day Care!'+(released>0?' ('+kept+' kept, '+released+' released — species cap)':'')+extrasStr,'catch','daycare','general');
   saveGame(); render(); showMapDetail(DAYCARE_LOCATION_ID);
 }
 function releaseDaycarePair(slotIndex){
@@ -4896,13 +4926,13 @@ function confirmDaycareAssignFromModal(){
 function assignToAide(catchId,idx=0){
   const aide=state.aides[idx]; if(!aide) return;
   const p=state.dex.find(x=>x.id===catchId); if(!p) return;
-  if(!isHealLocation(aide.currentLocation)){ addLog('Can only change party at a healing location!','fail'); return; }
-  if(p.breeding){ addLog(getDisplayName(p)+' #'+p.id+' is at the Day Care!','fail'); return; }
-  if(aide.party.length>=6){ addLog(aide.name+"'s party is full (6 max)!",'fail'); return; }
-  if(p.level>getLevelCap(aide.trainerBag)){ addLog(getDisplayName(p)+' #'+p.id+' is above '+aide.name+"'s level cap (Lv"+getLevelCap(aide.trainerBag)+') — cannot assign until more badges are earned.','fail'); return; }
+  if(!isHealLocation(aide.currentLocation)){ addLog('Can only change party at a healing location!','fail','roster',aide.id); return; }
+  if(p.breeding){ addLog(getDisplayName(p)+' #'+p.id+' is at the Day Care!','fail','roster',aide.id); return; }
+  if(aide.party.length>=6){ addLog(aide.name+"'s party is full (6 max)!",'fail','roster',aide.id); return; }
+  if(p.level>getLevelCap(aide.trainerBag)){ addLog(getDisplayName(p)+' #'+p.id+' is above '+aide.name+"'s level cap (Lv"+getLevelCap(aide.trainerBag)+') — cannot assign until more badges are earned.','fail','roster',aide.id); return; }
   p.holder=aide.name;
   aide.party.push(p);
-  addLog(getDisplayName(p)+' #'+p.id+' assigned to '+aide.name+'.','info');
+  addLog(getDisplayName(p)+' #'+p.id+' assigned to '+aide.name+'.','info','roster',aide.id);
   saveGame(); render();
   const m=document.getElementById('poke-modal'); if(m) m.remove();
 }
@@ -4913,22 +4943,22 @@ function unassignPokemon(catchId){
   const p=state.dex.find(x=>x.id===catchId); if(!p) return;
   const owner=state.aides.find(a=>a.party.some(x=>x.id===catchId));
   if(!owner) return;
-  if(!isHealLocation(owner.currentLocation)){ addLog('Can only change party at a healing location!','fail'); return; }
+  if(!isHealLocation(owner.currentLocation)){ addLog('Can only change party at a healing location!','fail','roster',owner.id); return; }
   p.holder=null;
   owner.party=owner.party.filter(x=>x.id!==catchId);
-  addLog(getDisplayName(p)+' #'+p.id+' unassigned.','info');
+  addLog(getDisplayName(p)+' #'+p.id+' unassigned.','info','roster',owner.id);
   saveGame(); render();
   const m=document.getElementById('poke-modal'); if(m) m.remove();
 }
 
 function revivePokemon(catchId){
-  if(state.funds<20){ addLog('Not enough funds to revive!','fail'); return; }
+  if(state.funds<20){ addLog('Not enough funds to revive!','fail','itemUsage',(state.aides.find(a=>a.name===p.holder)||{}).id||'general'); return; }
   const p=state.dex.find(x=>x.id===catchId); if(!p) return;
   state.funds=Math.round((state.funds-20)*100)/100;
   p.currentHP=p.maxHP;
   saveGame(); render();
   const m=document.getElementById('poke-modal'); if(m) m.remove();
-  addLog('💊 '+getDisplayName(p)+' #'+p.id+' revived!','info');
+  addLog('💊 '+getDisplayName(p)+' #'+p.id+' revived!','info','itemUsage',(state.aides.find(a=>a.name===p.holder)||{}).id||'general');
 }
 
 // v0.31 — HP/ATK/DEF/SATK/SDEF/SPD IV row + Current Stat row for the Pokémon detail modal.
@@ -5058,7 +5088,9 @@ function saveNickname(catchId){
         // leaves the original individual and its in-progress nickname edit completely untouched.
         showCheatFormPicker(catchId,targetDexId,forms);
       } else {
-        performCheatReplace(catchId,targetDexId,forms[0].formName||null);
+        // v0.43 — single-form species now also stop at the Shiny/Normal question instead of
+        // replacing instantly (previously zero questions asked at all in this branch).
+        showCheatShinyPicker(catchId,targetDexId,forms[0].formName||null);
       }
       return;
     }
@@ -5080,7 +5112,8 @@ function showCheatFormPicker(catchId,targetDexId,forms){
   const rows=forms.map(f=>{
     const label=(f.formName||f.name||'Default').replace(/</g,'&lt;');
     const formArg=f.formName?"'"+f.formName.replace(/'/g,"\\'")+"'":'null';
-    return '<button onclick="performCheatReplace('+catchId+','+targetDexId+','+formArg+')" style="width:100%;margin-bottom:6px;padding:8px;font-size:11px;">'+label+'</button>';
+    // v0.43 — form choice now hands off to the Shiny/Normal question instead of replacing directly.
+    return '<button onclick="showCheatShinyPicker('+catchId+','+targetDexId+','+formArg+')" style="width:100%;margin-bottom:6px;padding:8px;font-size:11px;">'+label+'</button>';
   }).join('');
   modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;max-height:80vh;overflow-y:auto;">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:var(--accent);font-size:13px;font-weight:bold;">Choose a Form</div><button onclick="document.getElementById(\'cheat-form-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'
@@ -5090,18 +5123,45 @@ function showCheatFormPicker(catchId,targetDexId,forms){
   document.body.appendChild(modal);
 }
 
+// v0.43 — Shiny/Normal question, shown for EVERY CheatN invocation (single-form species
+// previously replaced instantly with zero questions; multi-form species now chain
+// form-choice → this → replace). Nothing is created until a button here is pressed —
+// canceling leaves the original individual and its in-progress nickname edit untouched,
+// same guarantee as the form picker.
+function showCheatShinyPicker(catchId,targetDexId,formName){
+  const existing=document.getElementById('cheat-shiny-modal'); if(existing) existing.remove();
+  const modal=document.createElement('div');
+  modal.id='cheat-shiny-modal';
+  modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:1002;display:flex;align-items:center;justify-content:center;padding:16px;';
+  const formArg=formName?"'"+formName.replace(/'/g,"\\'")+"'":'null';
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:var(--accent);font-size:13px;font-weight:bold;">Shiny or Normal?</div><button onclick="document.getElementById(\'cheat-shiny-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'
+    +'<button onclick="performCheatReplace('+catchId+','+targetDexId+','+formArg+',true)" style="width:100%;margin-bottom:6px;padding:8px;font-size:11px;border-color:#f4d03f;color:#f4d03f;">✨ Shiny</button>'
+    +'<button onclick="performCheatReplace('+catchId+','+targetDexId+','+formArg+',false)" style="width:100%;padding:8px;font-size:11px;">Normal</button>'
+    +'</div>';
+  modal.onclick=(e)=>{ if(e.target===modal) modal.remove(); };
+  document.body.appendChild(modal);
+}
+
 // v0.40 — the actual release-and-replace. Replacement spawns at the SAME level as the original
 // (confirmed) and takes the same held/boxed status — if the original was in an aide's active
 // party, the replacement takes that exact slot with that aide as holder; if boxed, straight into
-// the box only.
-function performCheatReplace(catchId,targetDexId,formName){
+// the box only. v0.43 — gained isShiny param, set on the replacement post-creation (purely
+// cosmetic/exemption-flag, no makePokemon() signature change needed).
+function performCheatReplace(catchId,targetDexId,formName,isShiny=false){
   const original=state.dex.find(x=>x.id===catchId); if(!original) return;
+  // v0.43 — catch #1 (starter Rattata) can never be released, "no matter what" — including this
+  // cheat tool. Guarding removePokemonFromBoxAndParty() alone isn't enough here: without this
+  // early return, a replacement would still be created and pushed (and, if held, added to the
+  // owner's party) even though the original silently failed to be removed, leaving a duplicate.
+  if(catchId===1){ addLog('Catch #1 cannot be released, even by cheat.','fail','systemErrors','general'); return; }
   const level=original.level;
   const holder=original.holder;
   const entry=getPokemonEntry(targetDexId,formName);
   const speciesName=entry?entry.name:('#'+targetDexId);
   removePokemonFromBoxAndParty(catchId);
   const replacement=makePokemon(speciesName,level,Math.random()<0.5?'M':'F',holder,targetDexId,formName);
+  replacement.isShiny=isShiny;
   state.dex.push(replacement);
   state.dexHistory[replacement.pokedexId]=(state.dexHistory[replacement.pokedexId]||0)+1;
   recordNewSpecies(replacement.pokedexId,replacement.species);
@@ -5109,7 +5169,8 @@ function performCheatReplace(catchId,targetDexId,formName){
     const owner=state.aides.find(a=>a.name===holder);
     if(owner) owner.party.push(replacement);
   }
-  addLog('🎩 Cheat activated: released and replaced with '+getDisplayName(replacement)+' #'+replacement.id+' (Lv'+level+')!','evolve');
+  addLog('🎩 Cheat activated: released and replaced with '+(isShiny?'✨ SHINY ':'')+getDisplayName(replacement)+' #'+replacement.id+' (Lv'+level+')!','evolve','roster',(state.aides.find(a=>a.name===replacement.holder)||{}).id||'general');
+  const shinyModal=document.getElementById('cheat-shiny-modal'); if(shinyModal) shinyModal.remove();
   const formModal=document.getElementById('cheat-form-modal'); if(formModal) formModal.remove();
   const pokeModal=document.getElementById('poke-modal'); if(pokeModal) pokeModal.remove();
   saveGame(); render();
@@ -5155,12 +5216,12 @@ function showNatureMintRequiredModal(){
 function confirmNatureChange(catchId,natureName){
   const p=state.dex.find(x=>x.id===catchId); if(!p) return;
   if(!confirm('Change Nature to '+natureName+' ('+natureEffectLabel(natureName)+')? Uses 1 Nature Mint.')) return;
-  if((state.professorBag['natureMint']||0)<1){ addLog('No Nature Mint in Professor\'s bag!','fail'); return; }
+  if((state.professorBag['natureMint']||0)<1){ addLog('No Nature Mint in Professor\'s bag!','fail','itemUsage',(state.aides.find(a=>a.name===p.holder)||{}).id||'general'); return; }
   state.professorBag['natureMint']--;
   if(state.professorBag['natureMint']<=0) delete state.professorBag['natureMint'];
   p.nature=natureName;
   recalcStats(p);
-  addLog(getDisplayName(p)+"'s Nature changed to "+natureName+'.','info');
+  addLog(getDisplayName(p)+"'s Nature changed to "+natureName+'.','info','itemUsage',(state.aides.find(a=>a.name===p.holder)||{}).id||'general');
   const modal=document.getElementById('nature-modal'); if(modal) modal.remove();
   saveGame(); render();
   const pokeModal=document.getElementById('poke-modal');
@@ -5280,13 +5341,13 @@ function buildMovePickerHtml(catchId,slotIndex,mode){
 function confirmMoveAction(catchId,slotIndex,mode,type,category,qty){
   const p=state.dex.find(x=>x.id===catchId); if(!p) return;
   const entry=getPokemonEntry(p.pokedexId,p.formName); if(!entry) return;
-  if(getTMCount()<1){ addLog('Need 1 TM.','fail'); return; }
+  if(getTMCount()<1){ addLog('Need 1 TM.','fail','moveTm',(state.aides.find(a=>a.name===p.holder)||{}).id||'general'); return; }
   if(!p.equippedMoves) p.equippedMoves=[null,null,null,null];
 
   if(mode==='upgrade'){
     const slot=p.equippedMoves[slotIndex]; if(!slot) return;
     const cap=getMoveCap(entry,slot.type,slot.category);
-    if(cap!=null&&slot.power>=cap){ addLog(slot.type+' '+slot.category+' is already maxed.','fail'); return; }
+    if(cap!=null&&slot.power>=cap){ addLog(slot.type+' '+slot.category+' is already maxed.','fail','moveTm',(state.aides.find(a=>a.name===p.holder)||{}).id||'general'); return; }
     // v0.26 — bulk upgrade: qty defaults to 1 if not supplied (defensive), clamped to TMs owned.
     const n=Math.max(1,Math.min(getTMCount(),parseInt(qty)||1));
     const newPower=slot.power+5*n;
@@ -5294,13 +5355,13 @@ function confirmMoveAction(catchId,slotIndex,mode,type,category,qty){
     state.professorBag['tm']-=n;
     if(state.professorBag['tm']<=0) delete state.professorBag['tm'];
     slot.power=newPower;
-    addLog('Upgraded '+getDisplayName(p)+"'s "+slot.type+' '+slot.category+' to power '+slot.power+' ('+n+' TM'+(n>1?'s':'')+').','info');
+    addLog('Upgraded '+getDisplayName(p)+"'s "+slot.type+' '+slot.category+' to power '+slot.power+' ('+n+' TM'+(n>1?'s':'')+').','info','moveTm',(state.aides.find(a=>a.name===p.holder)||{}).id||'general');
   } else if(mode==='add'||mode==='change'){
     if(!type||!category) return;
     if(!confirm('Use 1 TM to '+(mode==='add'?'add':'change to')+' '+type+' '+category+'?')) return;
     state.professorBag['tm']--;
     p.equippedMoves[slotIndex]={type,category,power:40};
-    addLog((mode==='add'?'Added ':'Changed to ')+type+' '+category+' on '+getDisplayName(p)+'.','info');
+    addLog((mode==='add'?'Added ':'Changed to ')+type+' '+category+' on '+getDisplayName(p)+'.','info','moveTm',(state.aides.find(a=>a.name===p.holder)||{}).id||'general');
   }
 
   saveGame(); render();
@@ -5361,8 +5422,9 @@ function buildBagSectionHtml(title,bagObj,excludeCategories){
 // per selected individual, same mechanism the automatic cap-driven release already uses.
 function showReleaseModal(dexId,formName){
   const existing=document.getElementById('release-modal'); if(existing) existing.remove();
-  const candidates=state.dex.filter(p=>p.pokedexId===dexId&&(p.formName||null)===(formName||null)&&!p.holder);
-  if(!candidates.length){ addLog('No boxed individuals of this species to release.','fail'); return; }
+  // v0.43 — catch #1 (starter Rattata) never appears as a release candidate, even when boxed.
+  const candidates=state.dex.filter(p=>p.pokedexId===dexId&&(p.formName||null)===(formName||null)&&!p.holder&&p.id!==1);
+  if(!candidates.length){ addLog('No boxed individuals of this species to release.','fail','roster','general'); return; }
   const modal=document.createElement('div');
   modal.id='release-modal';
   modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
@@ -5386,11 +5448,11 @@ function showReleaseModal(dexId,formName){
 }
 function confirmReleaseSelected(){
   const checked=[...document.querySelectorAll('.release-checkbox:checked')].map(cb=>parseInt(cb.getAttribute('data-id')));
-  if(!checked.length){ addLog('No Pokémon selected to release.','fail'); return; }
+  if(!checked.length){ addLog('No Pokémon selected to release.','fail','roster','general'); return; }
   const proceed=confirm('Are you sure you want to release '+checked.length+' Pokémon? This cannot be undone.');
   if(!proceed) return;
   checked.forEach(id=>removePokemonFromBoxAndParty(id));
-  addLog(checked.length+' Pokémon released.','info');
+  addLog(checked.length+' Pokémon released.','info','roster','general');
   const modal=document.getElementById('release-modal'); if(modal) modal.remove();
   saveGame(); renderDex();
 }
@@ -5480,10 +5542,10 @@ function buildHireAideButtonHtml(){
 }
 
 function hireAide(){
-  if(state.aides.length>1){ addLog('Already hired your second aide.','fail'); return; }
+  if(state.aides.length>1){ addLog('Already hired your second aide.','fail','aideManagement','general'); return; }
   const item=getItem('aide-hire-2');
   const price=item?item.shopPrice:100;
-  if(state.funds<price){ addLog('Not enough funds to hire a second aide!','fail'); return; }
+  if(state.funds<price){ addLog('Not enough funds to hire a second aide!','fail','aideManagement','general'); return; }
   showAideEmojiPicker();
 }
 
@@ -5507,12 +5569,12 @@ function confirmHireAide(emoji){
   if(state.aides.length>1) return; // safety re-check — cap already enforced in hireAide(), guards against a stale/double-clicked modal
   const item=getItem('aide-hire-2');
   const price=item?item.shopPrice:100;
-  if(state.funds<price){ addLog('Not enough funds to hire a second aide!','fail'); return; }
+  if(state.funds<price){ addLog('Not enough funds to hire a second aide!','fail','aideManagement','general'); return; }
   state.funds=Math.round((state.funds-price)*100)/100;
   const faraday=makeAide('faraday','M. Faraday',emoji,'palletTown');
   state.aides.push(faraday);
   const modal=document.getElementById('aide-emoji-modal'); if(modal) modal.remove();
-  addLog(emoji+' M. Faraday hired! Assign Pokémon from your box to get them started.','evolve');
+  addLog(emoji+' M. Faraday hired! Assign Pokémon from your box to get them started.','evolve','aideManagement','general');
   document.getElementById('funds-display').textContent=state.funds.toFixed(2);
   render();
   saveGame();
@@ -5576,7 +5638,7 @@ function buildExpShareButtonHtml(aide,idx){
 function toggleExpShare(idx){
   const aide=state.aides[idx]; if(!aide) return;
   aide.expShareActive=!aide.expShareActive;
-  addLog(aide.name+"'s EXP Share turned "+(aide.expShareActive?'on':'off')+'.','info');
+  addLog(aide.name+"'s EXP Share turned "+(aide.expShareActive?'on':'off')+'.','info','aideManagement',aide.id);
   saveGame(); renderParty();
 }
 
@@ -5628,6 +5690,12 @@ let dexCatchesSearch='';
 let dexSpeciesSort='dexid';
 let dexSpeciesFilters={all:true,type:null,moveType:null};
 let dexSpeciesSearch='';
+// v0.43 — bidirectional dex sorting. Shared lookup of each sort field's own pre-existing default
+// direction (unchanged behavior from before this version — only reversibility is new). No key
+// collisions between the two views' field sets, so one shared object covers both.
+const DEX_SORT_DEFAULT_DIR={id:'asc',dexid:'asc',family:'asc',level:'desc',stats:'desc',bst:'desc',ivtotal:'desc',total:'desc',hp:'desc',atk:'desc',def:'desc',spatk:'desc',spdef:'desc',spd:'desc'};
+let dexCatchesSortDir=DEX_SORT_DEFAULT_DIR[dexCatchesSort];
+let dexSpeciesSortDir=DEX_SORT_DEFAULT_DIR[dexSpeciesSort];
 
 // v0.37 — device-local "last destination" (mode + top-level sub-tab), outside the save file, same
 // pattern as the Theming System. Overwritten on every top-level navigation. First-ever visit (no
@@ -6364,25 +6432,45 @@ function renderDexDetail(){
 // v0.37 — populates the sort dropdown's options for whichever list is active (All Catches vs the
 // new Official Species tab use different sort keys) and syncs the search box's value. Called from
 // updateDexChrome() whenever either list view becomes active.
+// v0.43 — also syncs the new direction-toggle button's arrow (▲/▼) to the active view's current dir.
 function renderDexListControls(){
   const sortEl=document.getElementById('sort-select');
   const searchEl=document.getElementById('dex-search-input');
+  const dirBtn=document.getElementById('dex-sort-dir-btn');
   if(!sortEl||!searchEl) return;
   if(dexView==='viewall'){
     sortEl.innerHTML='<option value="dexid">Sort: Dex #</option><option value="family">Sort: Family #</option><option value="stats">Sort: Stats</option><option value="bst">Sort: BST</option><option value="level">Sort: Level</option><option value="ivtotal">Sort: IV Total</option><option value="id">Sort: Catch #</option>';
     sortEl.value=dexCatchesSort;
     searchEl.value=dexCatchesSearch;
+    if(dirBtn) dirBtn.textContent=dexCatchesSortDir==='asc'?'▲':'▼';
   } else if(dexView==='officialSpeciesList'){
     sortEl.innerHTML='<option value="dexid">Sort: Dex #</option><option value="family">Sort: Family #</option><option value="total">Sort: Total</option><option value="hp">Sort: HP</option><option value="atk">Sort: ATK</option><option value="def">Sort: DEF</option><option value="spatk">Sort: SpATK</option><option value="spdef">Sort: SpDEF</option><option value="spd">Sort: SPD</option>';
     sortEl.value=dexSpeciesSort;
     searchEl.value=dexSpeciesSearch;
+    if(dirBtn) dirBtn.textContent=dexSpeciesSortDir==='asc'?'▲':'▼';
   }
 }
+// v0.43 — detects an actual sort-FIELD change (vs. just the search box firing this same handler)
+// and resets direction to that field's own default via DEX_SORT_DEFAULT_DIR — picking a different
+// field never carries over whatever direction was last toggled on the previous field.
 function onDexListControlsChange(){
   const sortEl=document.getElementById('sort-select');
   const searchEl=document.getElementById('dex-search-input');
-  if(dexView==='viewall'){ dexCatchesSort=sortEl.value; dexCatchesSearch=searchEl.value; }
-  else if(dexView==='officialSpeciesList'){ dexSpeciesSort=sortEl.value; dexSpeciesSearch=searchEl.value; }
+  if(dexView==='viewall'){
+    if(sortEl.value!==dexCatchesSort){ dexCatchesSort=sortEl.value; dexCatchesSortDir=DEX_SORT_DEFAULT_DIR[dexCatchesSort]||'asc'; }
+    dexCatchesSearch=searchEl.value;
+  } else if(dexView==='officialSpeciesList'){
+    if(sortEl.value!==dexSpeciesSort){ dexSpeciesSort=sortEl.value; dexSpeciesSortDir=DEX_SORT_DEFAULT_DIR[dexSpeciesSort]||'asc'; }
+    dexSpeciesSearch=searchEl.value;
+  }
+  renderDexListControls();
+  renderDex();
+}
+// v0.43 — flips the ACTIVE view's direction only; does not touch the other view's state.
+function toggleDexSortDir(){
+  if(dexView==='viewall') dexCatchesSortDir=dexCatchesSortDir==='asc'?'desc':'asc';
+  else if(dexView==='officialSpeciesList') dexSpeciesSortDir=dexSpeciesSortDir==='asc'?'desc':'asc';
+  renderDexListControls();
   renderDex();
 }
 
@@ -6486,15 +6574,20 @@ function renderDexViewAll(){
   const c=document.getElementById('dex-list'); c.innerHTML='';
   let entries=state.dex.filter(p=>matchesCatchesFilters(p,dexCatchesFilters)&&matchesCatchesSearch(p,dexCatchesSearch));
   const sort=dexCatchesSort;
-  if(sort==='id') entries.sort((a,b)=>a.id-b.id);
-  else if(sort==='dexid') entries.sort((a,b)=>(a.pokedexId||0)-(b.pokedexId||0));
-  else if(sort==='level') entries.sort((a,b)=>b.level-a.level);
-  else if(sort==='stats') entries.sort((a,b)=>calcBST(b.species,b.level,b)-calcBST(a.species,a.level,a));
-  else if(sort==='bst') entries.sort((a,b)=>((getPokemonEntry(b.pokedexId,b.formName)||{}).bst||0)-((getPokemonEntry(a.pokedexId,a.formName)||{}).bst||0));
-  else if(sort==='ivtotal') entries.sort((a,b)=>ivTotal(b)-ivTotal(a));
+  // v0.43 — every comparator now expressed as a canonical ASCENDING diff, then wrapped by dir —
+  // preserves each field's exact pre-v0.43 default behavior when dir matches its default
+  // (DEX_SORT_DEFAULT_DIR), while making every field reversible via the new toggle button.
+  const dir=dexCatchesSortDir;
+  if(sort==='id') entries.sort((a,b)=>{ const cmp=a.id-b.id; return dir==='asc'?cmp:-cmp; });
+  else if(sort==='dexid') entries.sort((a,b)=>{ const cmp=(a.pokedexId||0)-(b.pokedexId||0); return dir==='asc'?cmp:-cmp; });
+  else if(sort==='level') entries.sort((a,b)=>{ const cmp=a.level-b.level; return dir==='asc'?cmp:-cmp; });
+  else if(sort==='stats') entries.sort((a,b)=>{ const cmp=calcBST(a.species,a.level,a)-calcBST(b.species,b.level,b); return dir==='asc'?cmp:-cmp; });
+  else if(sort==='bst') entries.sort((a,b)=>{ const cmp=((getPokemonEntry(a.pokedexId,a.formName)||{}).bst||0)-((getPokemonEntry(b.pokedexId,b.formName)||{}).bst||0); return dir==='asc'?cmp:-cmp; });
+  else if(sort==='ivtotal') entries.sort((a,b)=>{ const cmp=ivTotal(a)-ivTotal(b); return dir==='asc'?cmp:-cmp; });
   else if(sort==='family') entries.sort((a,b)=>{
     const fa=(getPokemonEntry(a.pokedexId)||{}).familyId||0, fb=(getPokemonEntry(b.pokedexId)||{}).familyId||0;
-    return fa-fb||(a.pokedexId||0)-(b.pokedexId||0);
+    const cmp=fa-fb||(a.pokedexId||0)-(b.pokedexId||0);
+    return dir==='asc'?cmp:-cmp;
   });
   if(!entries.length){ c.innerHTML='<div style="color:#555;padding:12px;font-size:11px;">No entries.</div>'; return; }
   entries.forEach(p=>{
@@ -6535,15 +6628,17 @@ function renderDexOfficialSpeciesList(){
   if(!roster.length){ c.innerHTML='<div style="color:var(--c-danger);padding:12px;font-size:11px;">Database not loaded. Check pokedex.js is in GitHub.</div>'; return; }
   let entries=roster.filter(e=>matchesSpeciesFilters(e,dexSpeciesFilters)&&matchesSpeciesSearch(e,dexSpeciesSearch));
   const sort=dexSpeciesSort;
-  if(sort==='dexid') entries.sort((a,b)=>a.dexId-b.dexId);
-  else if(sort==='family') entries.sort((a,b)=>(a.familyId||0)-(b.familyId||0)||a.dexId-b.dexId);
-  else if(sort==='total') entries.sort((a,b)=>(b.bst||0)-(a.bst||0));
-  else if(sort==='hp') entries.sort((a,b)=>(b.baseHP||0)-(a.baseHP||0));
-  else if(sort==='atk') entries.sort((a,b)=>(b.baseAtk||0)-(a.baseAtk||0));
-  else if(sort==='def') entries.sort((a,b)=>(b.baseDef||0)-(a.baseDef||0));
-  else if(sort==='spatk') entries.sort((a,b)=>(b.baseSpatk||0)-(a.baseSpatk||0));
-  else if(sort==='spdef') entries.sort((a,b)=>(b.baseSpdef||0)-(a.baseSpdef||0));
-  else if(sort==='spd') entries.sort((a,b)=>(b.baseSpd||0)-(a.baseSpd||0));
+  // v0.43 — same canonical-ascending + dir-wrapper treatment as renderDexViewAll() above.
+  const dir=dexSpeciesSortDir;
+  if(sort==='dexid') entries.sort((a,b)=>{ const cmp=a.dexId-b.dexId; return dir==='asc'?cmp:-cmp; });
+  else if(sort==='family') entries.sort((a,b)=>{ const cmp=(a.familyId||0)-(b.familyId||0)||a.dexId-b.dexId; return dir==='asc'?cmp:-cmp; });
+  else if(sort==='total') entries.sort((a,b)=>{ const cmp=(a.bst||0)-(b.bst||0); return dir==='asc'?cmp:-cmp; });
+  else if(sort==='hp') entries.sort((a,b)=>{ const cmp=(a.baseHP||0)-(b.baseHP||0); return dir==='asc'?cmp:-cmp; });
+  else if(sort==='atk') entries.sort((a,b)=>{ const cmp=(a.baseAtk||0)-(b.baseAtk||0); return dir==='asc'?cmp:-cmp; });
+  else if(sort==='def') entries.sort((a,b)=>{ const cmp=(a.baseDef||0)-(b.baseDef||0); return dir==='asc'?cmp:-cmp; });
+  else if(sort==='spatk') entries.sort((a,b)=>{ const cmp=(a.baseSpatk||0)-(b.baseSpatk||0); return dir==='asc'?cmp:-cmp; });
+  else if(sort==='spdef') entries.sort((a,b)=>{ const cmp=(a.baseSpdef||0)-(b.baseSpdef||0); return dir==='asc'?cmp:-cmp; });
+  else if(sort==='spd') entries.sort((a,b)=>{ const cmp=(a.baseSpd||0)-(b.baseSpd||0); return dir==='asc'?cmp:-cmp; });
   if(!entries.length){ c.innerHTML='<div style="color:#555;padding:12px;font-size:11px;">No entries.</div>'; return; }
   entries.forEach(entry=>{
     const d=document.createElement('div');
@@ -6596,13 +6691,55 @@ function switchTab(name){
 // state.significantLog rather than filtering the shared state.log — if it were just a filtered
 // view of the shared log, routine activity could push a rare event out of the shared 200-entry
 // buffer before it was ever seen. A separate cap guarantees that can't happen.
+// v0.43 — third mode, 'custom', reads from the SAME state.log as Full (just filtered by category/
+// aide), unlike Condensed's separate buffer — Custom is a display-time filter over everything
+// that already happened, not a separately-curated "significant events" list.
 let logViewMode='full';
+
+// v0.43 — the 15 trackable categories every addLog() call site is now tagged with.
+const CUSTOM_LOG_CATEGORIES=[
+  {key:'catches',label:'Catches'},
+  {key:'wildEncounters',label:'Wild Encounters'},
+  {key:'evolutions',label:'Evolutions'},
+  {key:'levelExp',label:'Level Ups & EXP'},
+  {key:'gymBadges',label:'Gym Battles & Badges'},
+  {key:'travel',label:'Travel & Discovery'},
+  {key:'healing',label:'Healing'},
+  {key:'fainting',label:'Fainting'},
+  {key:'itemUsage',label:'Item Usage'},
+  {key:'shopPurchases',label:'Shop Purchases'},
+  {key:'daycare',label:'Day Care / Breeding'},
+  {key:'roster',label:'Roster Management'},
+  {key:'moveTm',label:'Move / TM Management'},
+  {key:'aideManagement',label:'Aide Management'},
+  {key:'systemErrors',label:'System / Errors'}
+];
+
+// v0.43 — category group: empty selection shows nothing (must actively pick at least one);
+// non-empty ORs together. Aide group: empty selection means no additional narrowing (any aide
+// passes); non-empty ANDs with the category result, narrowing to just those aides/General.
+function matchesCustomLogFilters(entry){
+  const f=state.logCustomFilters||{categories:{},aides:{}};
+  const catKeys=Object.keys(f.categories||{}).filter(k=>f.categories[k]);
+  if(!catKeys.length) return false;
+  if(!catKeys.includes(entry.category)) return false;
+  const aideKeys=Object.keys(f.aides||{}).filter(k=>f.aides[k]);
+  if(aideKeys.length&&!aideKeys.includes(entry.aideId||'general')) return false;
+  return true;
+}
+
 function renderLogPanel(){
   const logEl=document.getElementById('log'); if(!logEl) return;
-  const fullBtn=document.getElementById('log-tab-full'), condBtn=document.getElementById('log-tab-condensed');
+  const fullBtn=document.getElementById('log-tab-full'), condBtn=document.getElementById('log-tab-condensed'), customBtn=document.getElementById('log-tab-custom');
   if(fullBtn) fullBtn.style.cssText='flex:1;padding:6px 2px;font-size:10px;'+(logViewMode==='full'?'border-color:var(--main-text-secondary);color:var(--main-text);':'');
   if(condBtn) condBtn.style.cssText='flex:1;padding:6px 2px;font-size:10px;'+(logViewMode==='condensed'?'border-color:var(--main-text-secondary);color:var(--main-text);':'');
-  const source=logViewMode==='condensed'?(state.significantLog||[]):state.log;
+  if(customBtn) customBtn.style.cssText='flex:1;padding:6px 2px;font-size:10px;'+(logViewMode==='custom'?'border-color:var(--main-text-secondary);color:var(--main-text);':'');
+  const filterBtn=document.getElementById('log-custom-filter-btn');
+  if(filterBtn) filterBtn.style.display=logViewMode==='custom'?'block':'none';
+  let source;
+  if(logViewMode==='condensed') source=state.significantLog||[];
+  else if(logViewMode==='custom') source=state.log.filter(matchesCustomLogFilters);
+  else source=state.log;
   logEl.innerHTML='';
   // v0.34 fix — source is already newest-first (built via .unshift()), matching the live-update
   // insertBefore(el.firstChild) path in addLog()/addSignificantLog(). The old .reverse() here put
@@ -6619,10 +6756,60 @@ function setLogViewMode(mode){
   logViewMode=mode;
   renderLogPanel();
 }
-function addLog(msg,type=''){
-  state.log.unshift({msg,type});
+// v0.43 — Custom log's checkbox filter popup, same visual/interaction pattern as the existing
+// dex-filter-modal (openDexFilterPopup/renderDexFilterPopupContent).
+function openLogFilterPopup(){
+  const existing=document.getElementById('log-filter-modal'); if(existing) existing.remove();
+  const modal=document.createElement('div');
+  modal.id='log-filter-modal';
+  modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:1150;display:flex;align-items:center;justify-content:center;padding:16px;';
+  document.body.appendChild(modal);
+  renderLogFilterPopupContent();
+}
+function renderLogFilterPopupContent(){
+  const modal=document.getElementById('log-filter-modal'); if(!modal) return;
+  const f=state.logCustomFilters;
+  const catRows=CUSTOM_LOG_CATEGORIES.map(c=>
+    '<label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12px;"><input type="checkbox" '+(f.categories[c.key]?'checked':'')+' onchange="toggleLogCategoryFilter(\''+c.key+'\')"> '+c.label+'</label>'
+  ).join('');
+  const aideRows=state.aides.map(a=>
+    '<label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12px;"><input type="checkbox" '+(f.aides[a.id]?'checked':'')+' onchange="toggleLogAideFilter(\''+a.id+'\')"> '+a.emoji+' '+a.name+'</label>'
+  ).join('')
+  +'<label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12px;"><input type="checkbox" '+(f.aides['general']?'checked':'')+' onchange="toggleLogAideFilter(\'general\')"> General (no single aide)</label>';
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:85vh;overflow-y:auto;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><div style="color:var(--accent);font-size:13px;font-weight:bold;">Filter</div><button onclick="document.getElementById(\'log-filter-modal\').remove();renderLogPanel();" style="padding:4px 10px;font-size:12px;">✕</button></div>'
+    +'<div style="color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin:4px 0 2px;">Categories</div>'+catRows
+    +'<div style="color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin:10px 0 2px;">Aides</div>'+aideRows
+    +'</div>';
+  modal.onclick=(e)=>{ if(e.target===modal){ modal.remove(); renderLogPanel(); } };
+}
+function toggleLogCategoryFilter(key){
+  state.logCustomFilters.categories[key]=!state.logCustomFilters.categories[key];
+  saveGame();
+  renderLogFilterPopupContent();
+  renderLogPanel();
+}
+function toggleLogAideFilter(key){
+  state.logCustomFilters.aides[key]=!state.logCustomFilters.aides[key];
+  saveGame();
+  renderLogFilterPopupContent();
+  renderLogPanel();
+}
+// v0.43 — gained category/aideId params, both stored on the log entry so Custom can filter on
+// them later. Every one of the 113 pre-existing call sites was tagged individually — see
+// DESIGN.md "v0.43 #5" for the category list and the aide-attribution rule used throughout.
+function addLog(msg,type='',category='',aideId=null){
+  state.log.unshift({msg,type,category,aideId});
   if(state.log.length>200) state.log.pop();
   if(logViewMode==='full'){
+    const el=document.getElementById('log');
+    if(el){
+      const d=document.createElement('div');
+      d.className='log-entry '+type;
+      d.textContent=msg;
+      el.insertBefore(d,el.firstChild);
+      if(el.children.length>200) el.removeChild(el.lastChild);
+    }
+  } else if(logViewMode==='custom'&&matchesCustomLogFilters({category,aideId})){
     const el=document.getElementById('log');
     if(el){
       const d=document.createElement('div');
@@ -6664,7 +6851,7 @@ function logCaptureRarity(caught,alsoFullLog){
   else if(caught.isShiny) msg='✨ Shiny Capture: '+getDisplayName(caught)+' #'+caught.id+'!';
   if(!msg) return;
   addSignificantLog(msg,'evolve');
-  if(alsoFullLog) addLog(msg,'evolve');
+  if(alsoFullLog) addLog(msg,'evolve','catches',(state.aides.find(a=>a.name===caught.holder)||{}).id||'general');
 }
 
 // ── SAVE / LOAD / RESET ──
@@ -6762,7 +6949,8 @@ function saveGame(){
         locationMethodPrefs:state.locationMethodPrefs||{},
         dexHistory:state.dexHistory||{},
         freeSkipsRemaining:state.freeSkipsRemaining||0,
-        significantLog:(state.significantLog||[]).slice(0,50) // v0.33/v0.35
+        significantLog:(state.significantLog||[]).slice(0,50), // v0.33/v0.35
+        logCustomFilters:state.logCustomFilters||{categories:{},aides:{}} // v0.43
       }
     }));
     setSaveIndicator('✔ Saved','saving');
@@ -6855,7 +7043,8 @@ function loadGame(){
       dexHistory:s.dexHistory??{},
       freeSkipsRemaining:s.freeSkipsRemaining??0,
       wanderMode:src0.wanderMode??false, wanderMetric:src0.wanderMetric??'encounters', significantLog:s.significantLog??[], // v0.33/v0.35
-      expShareActive:src0.expShareActive??false // v0.40
+      expShareActive:src0.expShareActive??false, // v0.40
+      logCustomFilters:s.logCustomFilters??{categories:{},aides:{}} // v0.43 — absent on any pre-v0.43 save
     });
     // v0.26 migration — idle removed: a pre-v0.26 save that was sitting Idle (old
     // missionActive===false) may have a stale missionDestination left over from a previous
@@ -7120,7 +7309,7 @@ function init(){
   state.dexHistory[s.pokedexId]=(state.dexHistory[s.pokedexId]||0)+1;
   recordNewSpecies(s.pokedexId,'Rattata');
   recordSighting(s.pokedexId,5);
-  addLog('Rattata #1 added to party as starter.','info');
+  addLog('Rattata #1 added to party as starter.','info','catches',state.aides[0].id);
   render();
 }
 
@@ -7336,6 +7525,24 @@ function selectMapLocation(locId){
   showMapDetail(locId);
 }
 
+// v0.43 — returns the requiresItem value of every connection directly touching locId whose item
+// isn't currently owned by any aide, deduped. Listed regardless of whether another (ungated or
+// already-owned) connection also reaches the same node — per design, this is informational, not
+// a strict "is this node reachable at all" check. Same ownership formula renderMap()'s line
+// coloring already uses, so this is always consistent with what's drawn on the map itself.
+// Direct connections only — matches the map's existing line-coloring scope, not a full path trace.
+function getMissingItemGatesForLocation(locId){
+  if(typeof CONNECTIONS_DATA==='undefined') return [];
+  const missing=new Set();
+  CONNECTIONS_DATA.forEach(conn=>{
+    if(conn.fromLocationId!==locId&&conn.toLocationId!==locId) return;
+    if(!conn.requiresItem) return;
+    const gatedOwned=state.aides.some(a=>a.trainerBag&&a.trainerBag[conn.requiresItem]>0)||(state.trainerUnlocks&&state.trainerUnlocks[conn.requiresItem]);
+    if(!gatedOwned) missing.add(conn.requiresItem);
+  });
+  return [...missing];
+}
+
 function showMapDetail(locId){
   const detail=document.getElementById('map-detail');
   const content=document.getElementById('map-detail-content');
@@ -7374,6 +7581,13 @@ function showMapDetail(locId){
   const aidesHere=state.aides.filter(a=>a.currentLocation===locId);
   const hereLabel=aidesHere.length?('📍 '+aidesHere.map(a=>a.emoji+' '+a.name).join(', ')+' here'):'';
 
+  // v0.43 — one line per currently-missing item gate on a connection touching this node.
+  const missingGates=getMissingItemGatesForLocation(locId);
+  const gateInfoHtml=missingGates.map(itemId=>{
+    const it=getItem(itemId);
+    return '<span style="color:#e63946;">🔒 Requires: '+(it?it.name:itemId)+'</span><br>';
+  }).join('');
+
   // v0.41 — Gym badge/tier info block. Shown for any location with a gym, regardless of whether
   // it's currently accessible (confirmed) — badge sprite/name via the same BADGE_SPRITE_MAP/
   // getItem() convention as the Aide Panel, tier via each aide's existing gymProgress tracker.
@@ -7397,7 +7611,7 @@ function showMapDetail(locId){
       +'</div>';
   }
 
-  content.innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;"><div><div style="color:var(--main-text);font-size:13px;font-weight:bold;">'+locName+'</div><div style="color:var(--main-text-muted);font-size:10px;">'+(locData?locData.region||'Kanto':'Kanto')+'</div></div><div style="text-align:right;font-size:10px;">'+(hereLabel?'<span style="color:#f4d03f;">'+hereLabel+'</span><br>':'')+(heals?'<span style="color:#2ecc71;">🏥 Heals party</span><br>':'')+(shop?'<span style="color:#f4d03f;">🛒 Shop: '+shop+'</span>':'')+'</div></div>'+
+  content.innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;"><div><div style="color:var(--main-text);font-size:13px;font-weight:bold;">'+locName+'</div><div style="color:var(--main-text-muted);font-size:10px;">'+(locData?locData.region||'Kanto':'Kanto')+'</div></div><div style="text-align:right;font-size:10px;">'+(hereLabel?'<span style="color:#f4d03f;">'+hereLabel+'</span><br>':'')+gateInfoHtml+(heals?'<span style="color:#2ecc71;">🏥 Heals party</span><br>':'')+(shop?'<span style="color:#f4d03f;">🛒 Shop: '+shop+'</span>':'')+'</div></div>'+
     gymHtml+
     (locId===DAYCARE_LOCATION_ID?buildDaycareHtml():'')+encHtml;
 

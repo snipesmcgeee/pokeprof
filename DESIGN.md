@@ -44,12 +44,13 @@ There is no survival element. Aides do not need food, sleep, or anything like th
   - `evotree.js` — evolution branches
   - `formtriggers.js` — form change conditions
   - `typechart.js` — type effectiveness
+  - `info.js` — Info-menu topic/section content (v0.43)
 - Dev tools: `converter.html` (Excel → JS), `fetcher.html` (PokéAPI data fetcher)
 - Hosted on GitHub Pages; all DB files are uploaded there after conversion
 - Desktop and mobile friendly
 
 ### CRITICAL: External Script Tags (SETTLED — do not omit in rewrites)
-- All 8 data files are loaded via **relative path `<script src="filename.js">` tags in `<head>`** — no CDN, no absolute URLs
+- All 10 data files are loaded via **relative path `<script src="filename.js">` tags in `<head>`** — no CDN, no absolute URLs
 - They must appear in this order, before the closing `</head>` tag:
   ```html
   <script src="pokedex.js"></script>
@@ -60,7 +61,10 @@ There is no survival element. Aides do not need food, sleep, or anything like th
   <script src="evotree.js"></script>
   <script src="formtriggers.js"></script>
   <script src="items.js"></script>
+  <script src="trainers.js"></script>
+  <script src="info.js"></script>
   ```
+  *(`trainers.js` corrected into this list v0.43 — it was already present in the live `pokeprof.html` `<head>` but had been missing from this doc's listing.)*
 - Omitting these tags causes total game failure: no sprites, no destinations, no encounters. This has happened in rewrites — verify these are present before deploying any rewrite.
 
 ---
@@ -70,7 +74,7 @@ There is no survival element. Aides do not need food, sleep, or anything like th
 - The `<h1>` tag always shows the current version (e.g. `PokeProf v0.18`)
 - Increment the version on every deployed change
 - `SAVE_VERSION` in `pokeprof.html` must be incremented whenever `state` structure changes
-- Current save version: `28` (bumped in v0.39.1 for the `state.aides[]` restructure — Carl Oak's singular `party`/`trainerBag`/`currentLocation`/mission-and-travel fields wrapped into `aides[0]` on migration; unchanged in v0.39.2, battle-engine/logic fixes only; bumped again in v0.39.3 to move `dex` back OUT of `aides[]` into a shared `state.dex` — see "Aide Roster & Hiring"; unchanged in v0.39.4/v0.39.5/v0.39.6, all logic-only fixes; bumped again in v0.40 for two new persisted fields, `state.avoidCappedSpecies` and per-aide `expShareActive`). v0.38→v0.39 made no schema change (Silph Tower was fully reverted in v0.39.1 anyway, and was itself runtime-only/non-persisted).
+- Current save version: `28` (bumped in v0.39.1 for the `state.aides[]` restructure — Carl Oak's singular `party`/`trainerBag`/`currentLocation`/mission-and-travel fields wrapped into `aides[0]` on migration; unchanged in v0.39.2, battle-engine/logic fixes only; bumped again in v0.39.3 to move `dex` back OUT of `aides[]` into a shared `state.dex` — see "Aide Roster & Hiring"; unchanged in v0.39.4/v0.39.5/v0.39.6, all logic-only fixes; bumped again in v0.40 for two new persisted fields, `state.avoidCappedSpecies` and per-aide `expShareActive`; unchanged in v0.41 (logic/UI fixes only) and v0.42 (`fromFormName`/`requiredGender` live on static `EVO_TREE` data, not `state`; Shedinja reuses the existing individual-Pokémon shape)). v0.38→v0.39 made no schema change (Silph Tower was fully reverted in v0.39.1 anyway, and was itself runtime-only/non-persisted).
 - **v0.20 requires SAVE_VERSION 13** due to: `nickname` field on Pokémon objects, `evolveBlocked` field on Pokémon objects, `researchLog[dexId].abilitiesObserved` field, and `researchLog[dexId].confirmedBranches` replacing singular `confirmedMethod`/`confirmedIntoId`. All four migrations run in a single combined pass on load from v12.
 - **v0.21 requires SAVE_VERSION 14** due to: fishing splitting into per-rod-tier sub-methods (`fish-old`/`fish-good`/`fish-super`) instead of a single `fish` method. Migration: any `state.locationMethodPrefs[locId]` entry containing the bare `'fish'` method (in `methods[]` or as a `weights` key) is dropped entirely for that location — it recalculates fresh defaults (all currently-unlocked methods/rod-tiers checked evenly) the next time that location is visited. No other v0.21 change requires a schema change.
 - **v0.22 stays on SAVE_VERSION 14** — no `state` schema changes in this batch (all 11 items are behavior/rendering fixes and additive read-only views).
@@ -1255,6 +1259,7 @@ Damage = floor(floor(floor(2×Level/5 + 2) × Power × A/D) / 50) + 2
 ### converter.html
 - `convertPokedex()` extended to read and pass through the 36 new columns as plain numeric/null fields (no ID casting needed).
 - **v0.34: `spriteUrl` field** — if the Excel `spriteURL` cell is a bare number, the converter now builds the full PokeAPI sprite URL automatically (`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{number}.png`); a full URL pasted directly still passes through unchanged. Converter bumped to **v8** for this (v7 was the last logic change — Trainers move-column revision).
+- **v0.43: `convertInfo()`** — new Info sheet (`category | subCategory | text`, one row per idea), grouped by `category` in first-appearance order into `{id, title, sections:[{header, text}]}`, output as `info.js`. Blank `category`/`text` rows are silently skipped unless the row has other non-blank cells, in which case a warning is surfaced with the row number. Called from `convertAll()` alongside the other converters. Converter bumped to **v9** for this.
 
 ### New Standalone Fetcher Tool (separate build, not part of converter.html)
 - Same dexId-range + single-name UX as the existing Pokedex fetcher.
@@ -1901,6 +1906,106 @@ hasLiveUnicorn(dexId)   — state.dex.some(p => p.pokedexId===dexId && p.isShiny
 **Suppression rule, confirmed:** unicorn supersedes, it doesn't stack. Check unicorn first — if true, show only 🦄. Otherwise check shiny and perfect-IV independently and show whichever apply (either, both, or neither), alongside the existing ✨/🔬 convention already in place.
 
 **Scope, confirmed "all dex pages" — applies everywhere the shiny badge currently appears, all three existing sites:** the Pokédex grid cells (`renderDexPokedexGrid()`), the evolution-chain nodes (`evoNodeHtml()`), and the species detail page header. Official Pokédex mode is unaffected — it already uses a decoupled "preview" concept (`dexOfficialShinyPreview`) rather than real ownership, and Perfect IV/Unicorn have no equivalent "official" concept to preview.
+
+---
+
+## v0.41 — Shipped
+
+All four items implemented and verified. `SAVE_VERSION` stays on 28 — no new persisted fields.
+
+### Implementation notes — deviations, real bugs found, and things worth knowing
+
+- **#2 (Gym Battle checkbox) surfaced a real bug mid-implementation, not something asked for.** The badge-aware default (checked pre-badge → unchecked post-badge, or vice versa) correctly computed and rendered to the DOM on the badge-earned transition, but was never actually persisted — `pickMethodForLocation()` reads the saved `methods[]` array, not the DOM, so the transition never actually entered the encounter pool. Fixed by having `updateMethodPrefs()` fire automatically on the transition, not just on manual toggle. Caught by a dedicated test, not by inspection.
+- **#4 (Species Detail form-selection bug) — root cause confirmed via exhaustive audit, not a one-off.** Three separate click handlers (`renderDexPokedexGrid()`, `renderDexSpecies()`, `renderDexOfficialSpeciesList()`) all hardcoded `dexSelectedFormName=null` instead of the entry's real `formName`. For any dexId with no null-form base row (confirmed 35 such dexIds across the current Pokédex, including both Nidoran species), this made every filter keyed on `(p.formName||null)===(dexSelectedFormName||null)` mismatch — held individuals and the Release modal went invisibly empty for these species. Confirmed not data loss: `dexSelectedFormName` is a transient UI variable, never written to `state`, so the fix self-heals immediately with no migration needed.
+- **Verification:** all pre-existing suites re-verified passing, plus dedicated tests for each of the 4 items.
+
+### Original settled spec
+
+### 1. Render Focus-Guard
+
+`gameTick()`'s 1-second `render()` call was destroying any focused `<input>` mid-edit via `innerHTML` rebuild — keyboard dismisses on mobile before the user can finish typing (surfaced specifically on the Species Cap input). Fix: guard at the top of `render()` — if `document.activeElement` is `INPUT` or `TEXTAREA`, skip the redraw for that tick. Game state continues normally underneath; only the DOM rebuild is skipped. Structural fix, protects every future tick-rendered input, not just this one field.
+
+### 2. Gym Battle method — badge-aware default checkbox
+
+`renderMethodPrefs()` computes Gym Battle's default checked state from a new `hasGymBadge(trainerId, trainerBag)` helper (mirrors the existing `hasChampionBadge()` pattern): unchecked pre-badge, checked post-badge, recomputed on the badge-earned transition and overriding any prior manual choice. New `gymBadgeState` field in `state.locationMethodPrefs[locId]` tracks last-rendered badge state — additive, degrades gracefully the same way v0.34's `knownMethods` does.
+
+### 3. Map: gym badge info
+
+Map detail panel (`showMapDetail()`) gains a gym block under the location name — badge sprite/name plus per-aide tier from `aide.gymProgress[trainerId]` — shown regardless of gym accessibility. Map SVG node label (`renderMap()`) gets a small (~10px) badge sprite next to the location name for any discovered gym node. No new state — reuses `BADGE_SPRITE_MAP`, `getItem()`, `getGymTrainerIdsAtLocation()`, and the existing `gymProgress`.
+
+### 4. Fix: Species Detail form-selection bug — "form-only" species invisible in box
+
+See implementation notes above for the confirmed root cause and scope. Fix: all three click handlers now use `dexSelectedFormName=entry.formName||null` instead of a hardcoded `null`. `familyChainNodeClick()` was already correct and served as the reference pattern for the fix.
+
+---
+
+## v0.42 — Shipped
+
+All three items implemented and verified. `SAVE_VERSION` stays on 28 — no new persisted fields; `fromFormName`/`requiredGender` live on `EVO_TREE` (static reference data from `evotree.js`, not part of `state`), and `shed` reuses the existing individual-Pokémon object shape.
+
+### Implementation notes — deviations, real bugs found, and things worth knowing
+
+- **#1 required a real code fix on the first attempt, not just data entry.** First implementation used `if(b.fromFormName!=null && p.formName!==b.fromFormName) return false;` — this treats a blank `fromFormName` as "skip the check" (wildcard, matches any form), not "must match null exactly." Caught by a dedicated test built specifically to catch this exact class of mistake (not a coincidence — see "The Rule" below), then made the *same* error again in the first attempted fix, writing `(b.fromFormName||null)!==(p.formName||null) && b.fromFormName!=null` — the trailing `&&` clause silently undid the exact-match logic a second time. Final, correct form has no trailing condition at all: `if((b.fromFormName||null)!==(p.formName||null)) return false;`
+- **#1 also surfaced a significantly bigger, pre-existing architectural gap, found only by testing against real species, not by auditing the enforcement code in isolation.** `checkEvolution()`'s Path 1 (flat pokedex.js columns) runs *before* Path 2 (EVO_TREE) and is completely blind to both form and gender — it resolves the species via `getPokemonEntry(p.pokedexId)` with no form argument at all. Whenever a species' flat row has an `evolveMethod`/`evolvesIntoId` using the *same trigger* as a competing EVO_TREE branch, Path 1 fires first and `return`s immediately, before Path 2's (correctly-enforced) restriction ever runs. Confirmed on four separate species during testing — Wooper, Meowth, Rockruff, and Combee all exhibited this independently, each caught only once a dedicated test was written for it. This did **not** require a structural code change in the end: every affected species' flat row was cleared (`evolveMethod`/`evolvesIntoId` set to blank) with the base-form outcome represented as an explicit `fromFormName: null` EVO_TREE entry instead, matching the same "no single flat answer, all branches in EVO_TREE" treatment already established for true multi-path species (Eevee, Kubfu, Applin). **This is a real, general risk for any future branching species entered by hand** — a species with two branches sharing the same trigger method needs its flat row cleared, or Path 1 will silently override Path 2's restriction no matter how correct the EVO_TREE data is. Worth checking for on every new branching species going forward, not just the four found this pass.
+- **The Rule, worth stating plainly since it was arrived at the hard way, over several corrections:** `fromFormName` only belongs on a branch when the *source* species genuinely has that form as a real, separately-existing thing — not just because the target does. Confirmed via direct research that Pikachu, Koffing, Mime Jr., Dartrix, Dewott, Bergmite, Petilil, Rufflet, and Goomy all correctly have `fromFormName: null` on their form-producing branches, because none of those species has a regional pre-evolution at all (there is no "Alolan Pikachu" — a single, ordinary Pikachu can become either Raichu). Setting `fromFormName` to the target's form name in these cases wouldn't just be unnecessary, it would make that branch permanently unreachable, since no real individual could ever carry a matching `formName`. Contrast with Voltorb, Growlithe, Wooper, Sneasel, Zorua, and Sliggoo, where both the pre-evolution and evolution genuinely exist as separate forms — there, the restriction is required.
+- **#2's column is `requiredGender`, not `requireGender`** — renamed from the original Excel column name before this code shipped; confirmed correct spelling used throughout.
+- **#3 (Shedinja) — real mechanic simplified deliberately, not by oversight.** The actual games require an empty party slot *and* a spare Poké Ball (consumed on creation); this implementation checks party space only. Hooked into all five successful-evolution exit points in `checkEvolution()` (Path 1's level/friendship/use-move/in-party, and Path 2), keyed off `getEvolutions(prevDexId)` finding a `shed`-method entry — not hardcoded to Nincada's dexId, so any future species with the same mechanic works without another code change. New individual is created via the normal `makePokemon()` path (correct ability roll, nature, equipped moves) then has `level`/`ivs` overwritten with the evolving individual's own values and `recalcStats()` re-run — reuses existing, tested stat math rather than duplicating it.
+- **A real data inconsistency was found and flagged, not fixed here (Jack's side):** `pokedex.js` has Rockruff's special form as `"Own tempo"` while `evotree.js`'s Dusk branch specifies `"Own Tempo"` — exact-string matching means this casing mismatch would silently prevent that evolution from ever resolving correctly, the same way it broke the dedicated test written for it.
+- **Verification:** dedicated tests for all three items (9 total, including regression coverage for the exact-match fix using Meowth's Kantonian/Galarian split, gender exclusion/inclusion via Combee, and both the free-slot and full-party Shedinja cases), plus the full pre-existing regression suite re-verified passing.
+
+### Original settled spec
+
+### 1. Enforce `fromFormName` in branch-matching
+
+New `EVO_TREE` column, blank by default. Restricts a branch to individuals currently in a specific form — confirmed necessary for Wooper→Clodsire (Paldean-only) and, once the Path 1 bypass above was found, for Meowth's Galarian branch and Rockruff's Dusk branch as well. Enforced in both `professorAutoTestEvolutions()`'s item-candidate filter and `checkEvolution()`'s Path 2 branch-qualifying filter — see implementation notes for the exact formula and the mistake made getting there.
+
+### 2. Enforce `requiredGender` in branch-matching
+
+Same treatment, new column, same two enforcement points: `if(branch.requiredGender && p.gender!==branch.requiredGender) return false;`. Covers Kirlia→Gallade, Snorunt→Froslass, Burmy's two branches, Combee→Vespiquen, and Salandit→Salazzle.
+
+### 3. New `shed` evolution method — Shedinja creation
+
+Nincada evolving into Ninjask via the normal level-20 path also creates a second individual, Shedinja, as a side effect — not a branch choice between competing outcomes, both happen at once. `'shed'` added to `EVOLUTION_METHODS`' base list so Nincada's species page can register full research completion. See implementation notes for the exact hook location and simplification made versus the real mechanic.
+
+---
+
+## v0.43 — Settled Spec (Locked, Pending Build)
+
+### 1. Wander Ignores Discovery
+
+New `getWanderReachableLocations(fromId, trainerBag)` — same BFS as `getReachableDiscoveredLocations`, minus every `state.discoveredLocations` check. `buildTravelPath()` gains a 4th param `ignoreDiscovery=false` (default preserves every existing caller); when `true`, both internal BFS branches skip the discovery check. `evaluateWanderTarget()` and `selectWanderMode()` switch to the new reachable-pool function and pass `ignoreDiscovery=true`. Connection-level `requiresItem` gates (Surf, Cut, Flash, Strength, Bicycle, Silph Scope, Safari Pass, Coin Case, SS Ticket) still fully apply — only discovery is dropped. Manual "dispatch to a specific location" stays discovery-gated, out of scope. `arriveAtLocation()`/`advanceTravelPath()` need no changes — arrival-time discovery already fires per-waypoint regardless of how the aide got there, and a never-visited location already scores 0 on both Wander metrics for free.
+
+### 2. Form Sprites — Shiny-Aware `spriteUrl` Resolution
+
+`getSpriteUrl()`'s early-return path (`if(entry&&entry.spriteUrl) return entry.spriteUrl;`) ignored `isShiny` once a row had a populated `spriteUrl`. Fixed to `return isShiny?entry.spriteUrl.replace('/pokemon/','/pokemon/shiny/'):entry.spriteUrl;`. Dormant until Jack populates `spriteURL` values (in progress), but required before shiny form sprites can ever work correctly. Confirmed the only read site of `entry.spriteUrl` in the codebase.
+
+### 3. Missing-Item Gates in Map Detail Panel
+
+`showMapDetail()` gains a new `getMissingItemGatesForLocation(locId)` helper — scans `CONNECTIONS_DATA` for any row touching `locId` where `requiresItem` is set and the same `gatedOwned` ownership check `renderMap()`'s line-coloring already uses evaluates false. Renders one `🔒 Requires: {getItem(itemId).name}` line per missing item, listed regardless of whether another already-open connection also reaches the node. Direct connections only (matches the map's existing line-coloring scope, not a full path trace).
+
+### 4. Bidirectional Dex Sorting
+
+New ▲/▼ toggle button next to the existing `#sort-select` dropdown in both dex tabs. New `DEX_SORT_DEFAULT_DIR` lookup (per-field defaults, unchanged from today: `id`/`dexid`/`family` asc, everything else desc) plus `dexCatchesSortDir`/`dexSpeciesSortDir` state. Selecting a *different* field resets direction to that field's own default; the toggle button flips the *current* field's direction. Both `renderDexViewAll()` and `renderDexOfficialSpeciesList()` comparators rewritten to a canonical ascending expression per field, wrapped `dir==='asc'?cmp:-cmp`, including `family`'s dexId tie-break.
+
+### 5. Custom Log View
+
+Third `logViewMode='custom'` tab. `addLog(msg, type, category, aideId)` — every existing call site (113 total) gets a `category` tag from a fixed 15-value set (Catches, Wild Encounters, Evolutions, Level Ups & EXP, Gym Battles & Badges, Travel & Discovery, Healing, Fainting, Item Usage, Shop Purchases, Day Care/Breeding, Roster Management, Move/TM Management, Aide Management, System/Errors) and an `aideId` (`aide.id`, or `null`/`'general'` when not attributable to one aide — funds, Professor's-bag purchases, species-cap changes, validation errors). `state.logCustomFilters={categories:{},aides:{}}`, persisted in save data, all `false` by default. Filter semantics: **category group** — empty selection shows nothing, checking any OR's together; **aide group** — empty selection means no additional narrowing (any aide), checking one or more AND-narrows the category results down to just those aides/General. Reuses the existing `dex-filter-modal` checkbox-popup styling.
+
+### 6. Level Range in Mission Destination List
+
+`renderDestList()`'s per-location button label appends a combined level range, e.g. `Route 1 (Lv 2-7)`, computed via `buildRouteTable(loc, aide.trainerBag)` (already respects rod/item gating) — `Math.min`/`Math.max` across all currently-valid rows' `minLv`/`maxLv`. One combined range across all encounter methods, not broken out per method. Single-level locations show `Lv 5`, not `Lv 5-5`. Locations with zero valid rows show no range. Applies uniformly across all four sort modes; no change to Wander buttons or the map detail panel.
+
+### 7. Extract `INFO_TOPICS` to `info.js` + Converter Support
+
+New **Info** Excel tab, one row per idea: `category | subCategory | text`. `converter.html` gets `convertInfo()`, grouping rows by `category` in first-appearance order into `{id: category, title: category, sections: [{header: subCategory||null, text}]}`, output as `info.js`'s `const INFO_TOPICS = [...]`; called from `convertAll()`. `text` stored/rendered as raw HTML (author `<br><br>` directly in the cell for line breaks, matching today's hardcoded convention). Initial `info.js` ships with today's exact 10-topic content unchanged. The hardcoded `const INFO_TOPICS=[...]` block is deleted from the inline script; `showInfoMenu()`/`renderInfoTopicList()`/`renderInfoTopicPage()` and the hardcoded "🎨 Display" tile (which stays first, unaffected — it's not part of `INFO_TOPICS`) are otherwise unchanged. Converter version label bumped per the standing pre-delivery gate.
+
+### 8. Rattata #1 (Starter) Can Never Be Released
+
+`removePokemonFromBoxAndParty(id)` — the shared low-level function every release path already calls — gets `if(id===1) return;` at the top, structurally protecting all four current call sites (`checkSpeciesCap()` auto-release, `sweepSpeciesToCap()` cap-lowering sweep, `confirmReleaseSelected()` manual release, `performCheatReplace()` cheat release-and-replace) and any future one. `checkSpeciesCap()`'s weakest-picker additionally excludes `id===1` from candidacy so cap enforcement keeps working correctly (releases the next-weakest instead of silently no-op'ing). `sweepSpeciesToCap()` needs no logic change (id 1 is always the lowest possible id, already always kept) but gets a dedicated test confirming it. `showReleaseModal()` also excludes `id===1` from ever appearing as a checkable candidate, even when unassigned.
+
+### 9. Shiny/Normal Question in the CheatN Creator
+
+New `showCheatShinyPicker(catchId, targetDexId, formName)` modal — "✨ Shiny" / "Normal" buttons, each calling `performCheatReplace(catchId, targetDexId, formName, isShiny)`. Shown for **every** CheatN invocation, including single-form species (which previously replaced instantly with zero questions). `performCheatReplace()` gains a 4th param `isShiny=false`, setting `replacement.isShiny=isShiny` post-creation (purely cosmetic, no `makePokemon()` signature change needed) and adjusting the log message when true. Flow becomes: single-form → shiny choice → replace; multi-form → form choice → shiny choice → replace. Nothing is created until the final choice is made, matching the existing form-picker's cancel-safe guarantee.
 
 ---
 

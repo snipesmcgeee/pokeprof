@@ -2929,14 +2929,15 @@ function rollEncounter(idx=0){
   const aide=state.aides[idx];
   const locId=aide.currentLocation;
   const table=buildRouteTable(locId,aide.trainerBag);
-  // v0.40 — gym eligibility and method-selection are no longer gated on atDest (current location
-  // === final mission destination). Gym battles are now available at ANY location the aide
-  // currently occupies with a gym, not just the final destination — this is what makes
-  // "challenge a gym while just passing through en route to somewhere else" (including while
-  // wandering) actually work, per Jack's explicit request. isGymGrindEligible() is now identical
-  // to isGymAccessible() (see there) — reachable at the correct current-progression tier on a
-  // first attempt, not rematch-only.
-  const gymTrainerIds=getGymTrainerIdsAtLocation(locId).filter(t=>isGymAccessible(t,aide.trainerBag)&&isGymGrindEligible(t,aide.trainerBag));
+  // v0.44 fix — gym encounters no longer roll while the aide is physically AT their mission
+  // origin (missionOrigin, set once at confirmMission() and never updated by Wander redirects —
+  // see DESIGN.md). Previously, a party wipe anywhere on a Wander route recalled the aide to
+  // their lastHealLocation, which is very often the same place the mission started from; if that
+  // location also had a checked Gym Battle method, the aide would immediately re-fight it before
+  // ever leaving again, and another loss/wipe sent it right back — an unbreakable loop requiring
+  // manual intervention. Gym battles remain available at every OTHER location the aide passes
+  // through or is dispatched to, exactly as v0.40 intended — this only exempts the starting point.
+  const gymTrainerIds=(locId===aide.missionOrigin)?[]:getGymTrainerIdsAtLocation(locId).filter(t=>isGymAccessible(t,aide.trainerBag)&&isGymGrindEligible(t,aide.trainerBag));
 
   if(!table.length&&!gymTrainerIds.length) return null;
 

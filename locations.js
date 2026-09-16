@@ -1,6 +1,6 @@
 // PokeProf — Locations Database
-// Auto-generated: 9/5/2026, 11:20:22 PM
-// Entries: 111
+// Auto-generated: 9/15/2026, 7:16:03 PM
+// Entries: 123
 
 const LOCATIONS = [
   {
@@ -8,7 +8,7 @@ const LOCATIONS = [
     "name": "Pallet Town",
     "region": "Kanto",
     "heals": true,
-    "shopTier": "lab",
+    "shopTier": "full",
     "travelTime": 1,
     "mapCol": 111,
     "mapRow": 97,
@@ -1223,6 +1223,138 @@ const LOCATIONS = [
     "mapCol": null,
     "mapRow": null,
     "defaultEncounterMethod": "cave"
+  },
+  {
+    "locationId": "rubyPath",
+    "name": "Ruby Path 1F",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 5,
+    "mapCol": null,
+    "mapRow": null,
+    "defaultEncounterMethod": "cave"
+  },
+  {
+    "locationId": "rubyPathB1F",
+    "name": "Ruby Path B1F",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 4,
+    "mapCol": null,
+    "mapRow": null,
+    "defaultEncounterMethod": "cave"
+  },
+  {
+    "locationId": "rubyPathB2F",
+    "name": "Ruby Path B2F",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 3,
+    "mapCol": null,
+    "mapRow": null,
+    "defaultEncounterMethod": "cave"
+  },
+  {
+    "locationId": "rubyPathB3F",
+    "name": "Ruby Path B3F",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 6,
+    "mapCol": null,
+    "mapRow": null,
+    "defaultEncounterMethod": "cave"
+  },
+  {
+    "locationId": "rubyPathB4F",
+    "name": "Ruby Path B4F",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 3,
+    "mapCol": null,
+    "mapRow": null,
+    "defaultEncounterMethod": "cave"
+  },
+  {
+    "locationId": "rubyPathB5F",
+    "name": "Ruby Path B5F",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 1,
+    "mapCol": null,
+    "mapRow": null,
+    "defaultEncounterMethod": "cave"
+  },
+  {
+    "locationId": "twoIsland",
+    "name": "Two Island",
+    "region": null,
+    "heals": true,
+    "shopTier": "basic",
+    "travelTime": 1,
+    "mapCol": null,
+    "mapRow": null,
+    "defaultEncounterMethod": "cave"
+  },
+  {
+    "locationId": "capeBrink",
+    "name": "Cape Brink",
+    "region": null,
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 4,
+    "mapCol": null,
+    "mapRow": null,
+    "defaultEncounterMethod": "grass"
+  },
+  {
+    "locationId": "threeIslePort",
+    "name": "Three Isle Port",
+    "region": null,
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 2,
+    "mapCol": null,
+    "mapRow": null,
+    "defaultEncounterMethod": "grass"
+  },
+  {
+    "locationId": "threeIsland",
+    "name": "Three Island",
+    "region": null,
+    "heals": true,
+    "shopTier": "basic",
+    "travelTime": 1,
+    "mapCol": null,
+    "mapRow": null,
+    "defaultEncounterMethod": "grass"
+  },
+  {
+    "locationId": "bondBridge",
+    "name": "Bond Bridge",
+    "region": null,
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 12,
+    "mapCol": null,
+    "mapRow": null,
+    "defaultEncounterMethod": "grass"
+  },
+  {
+    "locationId": "berryForest",
+    "name": "Berry Forest",
+    "region": null,
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 17,
+    "mapCol": null,
+    "mapRow": null,
+    "defaultEncounterMethod": "grass"
   }
 ];
 

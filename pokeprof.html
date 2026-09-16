@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.43</title>
+<title>PokeProf v0.44</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -143,7 +143,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span style="font-size:11px;color:var(--main-text-muted);">v0.43</span></h1>
+  <h1>PokeProf <span style="font-size:11px;color:var(--main-text-muted);">v0.44</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">100.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -709,7 +709,8 @@ function makeAide(id,name,emoji,startLocation){
     gymProgress:{},
     lastHealLocation:startLocation,
     wanderMode:false, wanderMetric:'encounters', // v0.33/v0.35, per-aide — each aide independently wanders or not
-    expShareActive:false // v0.40 — per-aide EXP Share toggle, only meaningful once the item is owned
+    expShareActive:false, // v0.40 — per-aide EXP Share toggle, only meaningful once the item is owned
+    researchMode:false, researchPair:null // v0.44 — Day Care Research Mode, see updateResearchModePairs()
   };
 }
 
@@ -2047,6 +2048,11 @@ function getResearch(dexId){
     const r=state.researchLog[dexId];
     if(!speciesHasEvolveMethod(dexId,'use-move')) r.testedMethods.push('use-move');
     if(!speciesHasEvolveMethod(dexId,'in-party')) r.testedMethods.push('in-party');
+    // v0.44 — 'shed' (Nincada->Shedinja) has the same problem: nothing in the game will ever
+    // naturally confirm or deny it for any OTHER species, permanently blocking their "fully
+    // tested" status. Same structural rule-out pattern, generic via speciesHasEvolveMethod()
+    // (not hardcoded to Nincada's dexId).
+    if(!speciesHasEvolveMethod(dexId,'shed')) r.testedMethods.push('shed');
   }
   return state.researchLog[dexId];
 }
@@ -2213,6 +2219,11 @@ function applySpeciesSwap(p,newEntry){
 // exists. testedMethods is only marked for this item+species pair once EVERY branch has
 // been resolved (confirmed or, for the whole pair, ruled out) — a branch with no candidate
 // yet keeps the pair open for retry rather than closing off future testing.
+// v0.44 — Party-Priority Reservation: available stock for the box-only research pipeline is bag
+// qty minus whatever's currently reserved for an open party batch-evolve modal (see buyItem()).
+function getAvailableItemQty(itemId){
+  return (state.professorBag[itemId]||0)-(itemReservations[itemId]||0);
+}
 function professorAutoTestEvolutions(){
   if(!state.professorBag) return;
   const knownDexIds=Object.keys(state.dexHistory).map(Number).filter(id=>id>0);
@@ -2220,7 +2231,7 @@ function professorAutoTestEvolutions(){
   let anyChange=false;
 
   const evoItemIds=Object.keys(state.professorBag).filter(itemId=>{
-    if((state.professorBag[itemId]||0)<=0) return false;
+    if(getAvailableItemQty(itemId)<=0) return false;
     const item=getItem(itemId);
     return item&&(item.effect==='evolve-stone'||item.effect==='evolve-trade');
   });
@@ -2231,7 +2242,7 @@ function professorAutoTestEvolutions(){
     const itemName=item.name;
 
     for(const dexId of knownDexIds){
-      if((state.professorBag[itemId]||0)<=0) break; // out of stock
+      if(getAvailableItemQty(itemId)<=0) break; // out of stock (or fully reserved)
 
       const r=getResearch(dexId);
       if(r.testedMethods.includes(itemName)) continue; // already fully resolved this item+species pair
@@ -2261,7 +2272,7 @@ function professorAutoTestEvolutions(){
 
       let allResolved=true;
       for(const br of branches){
-        if((state.professorBag[itemId]||0)<=0){ allResolved=false; break; } // ran out mid-species
+        if(getAvailableItemQty(itemId)<=0){ allResolved=false; break; } // ran out mid-species (or fully reserved)
 
         const alreadyConfirmed=r.confirmedBranches.some(b=>b.method===itemName&&b.intoId===br.toDexId&&(b.toFormName||null)===br.toFormName);
         if(alreadyConfirmed) continue; // resolved on an earlier run
@@ -3053,8 +3064,11 @@ function getEffectiveSpeciesCap(dexId){
 // Missed in the original v0.39.3 fix because that fix's search pattern was `aide.dex` specifically;
 // these three lines use the arrow-param name `a`, not `aide`. state.dex is already the full
 // combined pool, so this simplifies to filtering it directly — no per-aide loop needed at all.
+// v0.44 — Universal Species-Cap Enforcement: box membership means neither held NOR breeding.
+// Same gap as checkSpeciesCap() below had — a breeding individual could previously be swept when
+// lowering the global cap.
 function sweepSpeciesToCap(dexId,cap){
-  const allBoxed=state.dex.filter(p=>p.pokedexId===dexId&&!p.isShiny&&!p.holder);
+  const allBoxed=state.dex.filter(p=>p.pokedexId===dexId&&!p.isShiny&&!p.holder&&!p.breeding);
   if(allBoxed.length<=cap) return 0;
   allBoxed.sort((a,b)=>a.id-b.id);
   const toRelease=new Set(allBoxed.slice(cap).map(p=>p.id));
@@ -3096,11 +3110,14 @@ function sweepSpeciesToCap(dexId,cap){
 // trigger release of) an individual sitting in Carl Oak's box, and vice versa.
 // v0.39.5 CRITICAL FIX — same `a.dex` bug as sweepSpeciesToCap() above, same fix: state.dex is
 // already the full combined pool, filter it directly.
+// v0.44 — Universal Species-Cap Enforcement: exemption is holder OR breeding (was holder only),
+// and the box-pool filter adds the same &&!p.breeding. Box membership means neither — see
+// DESIGN.md "Universal Species-Cap Enforcement — Box Membership Only".
 function checkSpeciesCap(individual,idx=0){
   if(individual.isShiny) return; // shinies never released
-  if(individual.holder) return; // v0.38 — party members are exempt from the cap entirely
+  if(individual.holder||individual.breeding) return; // party AND breeding are exempt from the cap entirely
   const cap=getEffectiveSpeciesCap(individual.pokedexId);
-  const liveNonShinyBox=state.dex.filter(p=>p.pokedexId===individual.pokedexId&&!p.isShiny&&!p.holder);
+  const liveNonShinyBox=state.dex.filter(p=>p.pokedexId===individual.pokedexId&&!p.isShiny&&!p.holder&&!p.breeding);
   if(liveNonShinyBox.length<=cap) return;
   const familyIds=getFamilyDexIds(individual.pokedexId);
   const pool=state.dex.filter(p=>p.id!==individual.id&&familyIds.includes(p.pokedexId));
@@ -3571,6 +3588,7 @@ function gameTick(){
   // testing: replaces the old event-triggered design (buy item / catch new species) which missed
   // three other catch-creation paths and Day Care hatching entirely — see professorAutoTestEvolutions().
   professorAutoTestEvolutions();
+  updateResearchModePairs(); // v0.44 — Day Care Research Mode, same "runs unconditionally every tick" pattern
   incomeTick();
   // v0.26 — idle removed: research runs continuously wherever an Aide is, so friendship ticks
   // and each aide's encounter loop both always run — no more missionActive gate. Friendship is a
@@ -3670,7 +3688,7 @@ let missionSortDir='asc';
 // Celadon City, 58 purchasable items) — basic/lab tier shops stay flat lists (see DESIGN.md
 // "Shop UI"). null = showing category tiles; a key below = showing that category's item list.
 let missionShopCategory=null;
-const SHOP_CATEGORY_MAP={evolutionItem:'evoItems',keyItem:'keyItems',hm:'keyItems',rod:'keyItems',tool:'keyItems',ball:'consumables',consumable:'consumables',tm:'consumables'};
+const SHOP_CATEGORY_MAP={evolutionItem:'evoItems',keyItem:'keyItems',hm:'keyItems',rod:'keyItems',tool:'keyItems','aide-hire':'keyItems',ball:'consumables',consumable:'consumables',tm:'consumables'};
 const SHOP_CATEGORY_LABELS={evoItems:'🧪 Evolution Items',keyItems:'🔑 Key Items',consumables:'🎒 Consumables'};
 const SHOP_CATEGORY_ORDER=['evoItems','keyItems','consumables'];
 
@@ -3732,6 +3750,28 @@ function computeLocationMetric(locId,metric){
 // locations can never ping-pong the aide. A redirect only fires when the current waypoint's own
 // count climbs high enough that some other already-known eligible location becomes STRICTLY
 // lower (ties among eligible locations keep the current target, avoiding churn).
+// v0.44 — Wander tie-break: max level across every currently-valid encounter row at a location
+// (same buildRouteTable() source the mission-modal level range and Encounters-sort filter use).
+function getLocationMaxLevel(locId,trainerBag){
+  const table=buildRouteTable(locId,trainerBag);
+  if(!table.length) return Infinity; // defensive — callers already pre-filter to length>0
+  return Math.max(...table.map(r=>r.maxLv));
+}
+// v0.44 — deterministic 3-key comparison shared by selectWanderMode() (initial pick) and
+// evaluateWanderTarget() (ongoing re-routing): (1) metric count ascending, (2) max level in the
+// area ascending, (3) location name alphabetical (natural/numeric-aware) as final tie-break.
+// Replaces the old "ties keep whatever was already best" behavior — a tie can now redirect the
+// aide away from their current spot, since leaving adds an encounter/catch there.
+function compareWanderCandidates(a,b,metric,trainerBag){
+  const ca=computeLocationMetric(a,metric), cb=computeLocationMetric(b,metric);
+  if(ca!==cb) return ca-cb;
+  const ma=getLocationMaxLevel(a,trainerBag), mb=getLocationMaxLevel(b,trainerBag);
+  if(ma!==mb) return ma-mb;
+  const locA=typeof LOCATIONS!=='undefined'?getLocation(a):null;
+  const locB=typeof LOCATIONS!=='undefined'?getLocation(b):null;
+  const nameA=(locA?locA.name:a), nameB=(locB?locB.name:b);
+  return nameA.localeCompare(nameB,undefined,{numeric:true,sensitivity:'base'});
+}
 function evaluateWanderTarget(idx=0){
   const aide=state.aides[idx];
   if(!aide.wanderMode) return;
@@ -3752,14 +3792,8 @@ function evaluateWanderTarget(idx=0){
   const reachable=getWanderReachableLocations(currentLoc,aide.trainerBag).filter(locId=>buildRouteTable(locId,aide.trainerBag).length>0);
   if(!reachable.length) return; // nothing reachable can ever have an encounter — nothing to do
   const metric=aide.wanderMetric||'encounters'; // v0.35 — 'encounters'|'catches', set at dispatch
-  const currentIsEligible=reachable.includes(aide.missionDestination);
-  let best=currentIsEligible?aide.missionDestination:reachable[0];
-  let bestCount=computeLocationMetric(best,metric);
-  reachable.forEach(locId=>{
-    const c=computeLocationMetric(locId,metric);
-    if(c<bestCount){ best=locId; bestCount=c; }
-  });
-  if(best===aide.missionDestination) return; // current target still eligible and lowest (or tied) — no redirect
+  const best=[...reachable].sort((a,b)=>compareWanderCandidates(a,b,metric,aide.trainerBag))[0];
+  if(best===aide.missionDestination) return; // current target is still the deterministic best — no redirect
   // v0.43 — ignoreDiscovery=true: best may be an undiscovered location, and the path may cross
   // undiscovered waypoints too — both fine now, only requiresItem gates still block a route.
   const path=buildTravelPath(currentLoc,best,aide.trainerBag,true);
@@ -3844,7 +3878,11 @@ function renderDestList(){
           const name=locData?locData.name:loc;
           // v0.39 — universal selection highlight: 2px accent border on the chosen destination.
           const isSel=state._missionDest===loc;
-          const selStyle=isSel?'border:2px solid var(--accent);color:var(--accent-light);':'border-color:var(--main-border);color:var(--main-text-secondary);';
+          // v0.44 — idle border reflects shop/heal status (matching the map), overridden by the
+          // existing 2px accent "selected" style when this destination is the current pick.
+          const markerColor=getDestMarkerColor(locData);
+          const idleStyle=markerColor?('border-color:'+markerColor+';color:var(--main-text-secondary);'):'border-color:var(--main-border);color:var(--main-text-secondary);';
+          const selStyle=isSel?'border:2px solid var(--accent);color:var(--accent-light);':idleStyle;
           // v0.43 — combined level range across every currently-valid encounter row at this
           // location (respects the aide's trainerBag, same rod/item gating buildRouteTable()
           // already applies). One combined min-max across all methods, not broken out per method.
@@ -3855,7 +3893,13 @@ function renderDestList(){
             const maxLv=Math.max(...routeTable.map(r=>r.maxLv));
             levelStr=' (Lv '+minLv+(minLv!==maxLv?'-'+maxLv:'')+')';
           }
-          return '<button onclick="selectMissionDest(\''+loc+'\')" style="display:block;width:100%;margin-bottom:6px;padding:10px;text-align:left;'+selStyle+'">'+name+levelStr+'</button>';
+          // v0.44 — gym locations show that badge's sprite next to the name, regardless of
+          // whether it's been earned yet (see getGymBadgeItemIdForLocation()).
+          const gymBadgeId=getGymBadgeItemIdForLocation(loc);
+          const badgeHtml=gymBadgeId?(BADGE_SPRITE_MAP[gymBadgeId]
+            ?'<img src="'+BADGE_SPRITE_MAP[gymBadgeId]+'" style="width:14px;height:14px;vertical-align:middle;margin-left:5px;" onerror="this.style.display=\'none\'">'
+            :'<span style="margin-left:5px;">🏆</span>'):'';
+          return '<button onclick="selectMissionDest(\''+loc+'\')" style="display:block;width:100%;margin-bottom:6px;padding:10px;text-align:left;'+selStyle+'">'+name+levelStr+badgeHtml+'</button>';
         }).join('')
       : '<div style="color:#e67e22;font-size:11px;padding:8px 0;">No destinations reachable from here.</div>';
   }
@@ -3881,7 +3925,10 @@ function showMissionModal(){
   const wanderButtonHtml=
     '<button onclick="selectWanderMode(\'encounters\')" id="wander-select-btn-encounters" style="width:100%;padding:8px;margin-bottom:4px;font-size:11px;border-color:var(--main-border);color:var(--main-text-secondary);">🧭 Wander (lowest encounters)</button>'+
     '<button onclick="selectWanderMode(\'catches\')" id="wander-select-btn-catches" style="width:100%;padding:8px;margin-bottom:8px;font-size:11px;border-color:var(--main-border);color:var(--main-text-secondary);">🧭 Wander (lowest catches)</button>';
-  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;"><div style="color:var(--accent);font-size:13px;font-weight:bold;margin-bottom:12px;">🗺 Choose Destination</div><div style="font-size:10px;color:var(--main-text-muted);margin-bottom:8px;">From: '+currentLoc+'</div>'+wanderButtonHtml+sortButtonsHtml+'<div id="dest-list-container" style="max-height:220px;overflow-y:auto;"></div><div id="mission-summary" style="color:var(--main-text-secondary);font-size:11px;margin:10px 0;min-height:18px;"></div><div id="method-prefs"></div><div id="shop-section-container"></div><div style="display:flex;gap:8px;"><button onclick="document.getElementById(\'mission-modal\').remove()" style="flex:1;">✕ Cancel</button><button id="confirm-mission" onclick="confirmMission()" class="primary" style="flex:1;" disabled>▶ Dispatch</button></div></div>';
+  // v0.44 — Day Care Research Mode: a standing per-aide setting, not a mission parameter, so it
+  // takes effect immediately on toggle via toggleResearchMode() rather than waiting for Dispatch.
+  const researchModeHtml='<label style="display:flex;align-items:center;gap:8px;padding:6px 0 10px;font-size:11px;color:var(--main-text-secondary);cursor:pointer;"><input type="checkbox" '+(state.aides[missionModalAideIndex].researchMode?'checked':'')+' onchange="toggleResearchMode()"> 🔬 Day Care Research Mode (auto-breeds random box pairs whenever this aide is at the Day Care)</label>';
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;"><div style="color:var(--accent);font-size:13px;font-weight:bold;margin-bottom:12px;">🗺 Choose Destination</div><div style="font-size:10px;color:var(--main-text-muted);margin-bottom:8px;">From: '+currentLoc+'</div>'+researchModeHtml+wanderButtonHtml+sortButtonsHtml+'<div id="dest-list-container" style="max-height:220px;overflow-y:auto;"></div><div id="mission-summary" style="color:var(--main-text-secondary);font-size:11px;margin:10px 0;min-height:18px;"></div><div id="method-prefs"></div><div id="shop-section-container"></div><div style="display:flex;gap:8px;"><button onclick="document.getElementById(\'mission-modal\').remove()" style="flex:1;">✕ Cancel</button><button id="confirm-mission" onclick="confirmMission()" class="primary" style="flex:1;" disabled>▶ Dispatch</button></div></div>';
   document.body.appendChild(modal);
   renderDestList();
   renderShopSection(currentLoc);
@@ -3902,11 +3949,9 @@ function selectWanderMode(metric){
   // initial pick and ongoing re-routing.
   const reachable=getWanderReachableLocations(currentLoc,state.aides[missionModalAideIndex].trainerBag).filter(locId=>buildRouteTable(locId,state.aides[missionModalAideIndex].trainerBag).length>0);
   if(!reachable.length){ addLog('No reachable destinations with possible encounters for Wander mode.','fail','systemErrors',state.aides[missionModalAideIndex].id); return; }
-  let best=reachable[0], bestCount=computeLocationMetric(reachable[0],metric);
-  reachable.forEach(locId=>{
-    const c=computeLocationMetric(locId,metric);
-    if(c<bestCount){ best=locId; bestCount=c; }
-  });
+  // v0.44 — same 3-key comparator as evaluateWanderTarget(), so the initial pick and the first
+  // re-evaluation never disagree with each other.
+  const best=[...reachable].sort((a,b)=>compareWanderCandidates(a,b,metric,state.aides[missionModalAideIndex].trainerBag))[0];
   state._missionDest=best;
   state._wanderSelected=true;
   state._wanderMetric=metric;
@@ -3931,9 +3976,36 @@ function selectWanderMode(metric){
 // list (basic/lab tier) and the category item-list view (full tier).
 function buildShopItemRowHtml(item){
   const itemDef=getItem(item.itemId);
+  const displayPrice=isAdminModeActive()?0:item.shopPrice; // v0.32 — AdminMode cheat code
+  // v0.44 — hire-aide: single button, no bag display, calls hireAide() directly (not buyItem() —
+  // hireAide() already independently handles its own funds check and the confirmHireAide()
+  // emoji-picker flow, unchanged). Disabled once state.aides.length>1 — the same one-time-ever
+  // gate as before, just relocated from the old dedicated button into the shop.
+  if(itemDef&&itemDef.effect==='hire-aide'){
+    const alreadyHired=state.aides.length>1;
+    return '<div style="margin-bottom:8px;background:var(--main-bg);border-radius:4px;padding:8px;">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">'
+      +'<span style="color:var(--main-text);font-size:11px;">'+item.name+'</span>'
+      +'<span style="color:var(--main-text-secondary);font-size:10px;">$'+displayPrice+'</span>'
+      +'</div>'
+      +'<button '+(alreadyHired?'disabled':'')+' onclick="hireAide()" style="width:100%;padding:5px 2px;font-size:10px;border-color:#f4d03f;color:#f4d03f;'+(alreadyHired?'opacity:0.4;':'')+'">'+(alreadyHired?'Hired':'Hire')+'</button>'
+      +'</div>';
+  }
   const isTrainer=itemDef&&itemDef.bagType&&itemDef.bagType.toLowerCase()==='trainer';
   const bagQty=(isTrainer?state.aides[missionModalAideIndex].trainerBag:state.professorBag)[item.itemId]||0;
-  const displayPrice=isAdminModeActive()?0:item.shopPrice; // v0.32 — AdminMode cheat code
+  // v0.44 — Once-Per-Aide Purchase Limit: single Buy button (no ×100/×1000 — never useful for a
+  // non-stacking one-per-aide item), disabled with an "Owned" label once already owned.
+  const isKeyItem=itemDef&&SHOP_CATEGORY_MAP[itemDef.itemCategory]==='keyItems';
+  if(isKeyItem){
+    const owned=isTrainer&&bagQty>=1;
+    return '<div style="margin-bottom:8px;background:var(--main-bg);border-radius:4px;padding:8px;">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">'
+      +'<span style="color:var(--main-text);font-size:11px;">'+item.name+'</span>'
+      +'<span style="color:var(--main-text-secondary);font-size:10px;">$'+displayPrice+'</span>'
+      +'</div>'
+      +'<button '+(owned?'disabled':'')+' onclick="buyItem(\''+item.itemId+'\',1)" style="width:100%;padding:5px 2px;font-size:10px;border-color:#f4d03f;color:#f4d03f;'+(owned?'opacity:0.4;':'')+'">'+(owned?'Owned':'Buy')+'</button>'
+      +'</div>';
+  }
   return '<div style="margin-bottom:8px;background:var(--main-bg);border-radius:4px;padding:8px;">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">'
     +'<span style="color:var(--main-text);font-size:11px;">'+item.name+'</span>'
@@ -4360,6 +4432,22 @@ function buyItem(itemId, qty){
   qty=parseInt(qty)||1;
   const item=getItem(itemId);
   if(!item||!item.shopPrice) return;
+  // v0.44 — hire-aide is never bought via buyItem(); the shop row calls hireAide() directly
+  // (see buildShopItemRowHtml()), which independently handles its own funds check and the
+  // confirmHireAide() flow. Defensive guard in case anything else ever tries to route through here.
+  if(item.effect==='hire-aide') return;
+  const isTrainerItem=item.bagType&&item.bagType.toLowerCase()==='trainer';
+  // v0.44 — Once-Per-Aide Purchase Limit: every Key Items item is bagType Trainer, so "already
+  // purchased by this aide" is fully answered by that aide's own trainerBag count. Defensive
+  // backstop (the shop row's Buy button is already disabled once owned) — also clamps qty to 1.
+  const isKeyItem=SHOP_CATEGORY_MAP[item.itemCategory]==='keyItems';
+  if(isKeyItem&&isTrainerItem){
+    if((state.aides[missionModalAideIndex].trainerBag[itemId]||0)>=1){
+      addLog('Already own '+item.name+'!','fail','shopPurchases',state.aides[missionModalAideIndex].id);
+      return;
+    }
+    qty=1;
+  }
   const adminMode=isAdminModeActive(); // v0.32 — "AdminMode" cheat code, see isAdminModeActive()
   const price=adminMode?0:parseFloat(item.shopPrice);
   let actualQty, totalCost;
@@ -4381,7 +4469,6 @@ function buyItem(itemId, qty){
   // (Bicycle, Rods, Safari Pass, HMs) for Faraday was buying into CARL OAK's bag while the
   // visible "Bag: X" count (reading Faraday's, untouched) silently failed to reflect it at all.
   // missionModalAideIndex is already a module-level variable — read directly, no signature change.
-  const isTrainerItem=item.bagType&&item.bagType.toLowerCase()==='trainer';
   const targetBag=isTrainerItem?state.aides[missionModalAideIndex].trainerBag:state.professorBag;
   if(!targetBag) return;
   targetBag[itemId]=(targetBag[itemId]||0)+actualQty;
@@ -4392,6 +4479,9 @@ function buyItem(itemId, qty){
   const bagEl=document.getElementById('bag-'+itemId);
   if(bagEl) bagEl.textContent=targetBag[itemId];
   renderBagDisplay();
+  // v0.44 — Key Items rows show an Owned/disabled state once purchased, which a plain bag-count
+  // text update can't express — refresh the whole shop section so that button updates too.
+  if(isKeyItem) renderShopSection(state.aides[missionModalAideIndex].currentLocation);
   if(actualQty<qty){
     addLog('Bought '+actualQty+'× '+item.name+' ($'+totalCost.toFixed(2)+') — could not afford full qty','info','shopPurchases',state.aides[missionModalAideIndex].id);
   } else {
@@ -4400,12 +4490,19 @@ function buyItem(itemId, qty){
   // v0.33 — explicit trigger removed here; professorAutoTestEvolutions() now runs unconditionally
   // at the top of every gameTick() instead — one source of truth (see gameTick()).
   saveGame();
-  // v0.38 — party-only batch evolve prompt: fires only for evolve-stone/evolve-trade items, only
-  // if the party actually has an eligible individual right now (showBatchEvolveModal() no-ops
-  // silently otherwise, so this is safe to always call). See DESIGN.md "Party-Only Batch
-  // Evolution Prompt on Item Purchase."
+  // v0.44 — Party-Priority Reservation: 0 eligible -> unchanged (box research proceeds normally
+  // next tick). Exactly 1 -> auto-evolve immediately, no modal. 2+ -> show the checkbox modal and
+  // reserve the full purchased quantity so professorAutoTestEvolutions() can't spend it on a box
+  // mon before the modal resolves. See DESIGN.md "Party-Priority Reservation for Evolution-Item
+  // Research" (supersedes v0.38 "Party-Only Batch Evolution Prompt on Item Purchase").
   if(item.effect==='evolve-stone'||item.effect==='evolve-trade'){
-    showBatchEvolveModal(itemId,actualQty);
+    const eligible=getPartyEligibleForItem(itemId);
+    if(eligible.length===1){
+      autoEvolvePartySingle(itemId,eligible[0]);
+    } else if(eligible.length>=2){
+      itemReservations[itemId]=(itemReservations[itemId]||0)+actualQty;
+      showBatchEvolveModal(itemId,actualQty);
+    }
   }
 }
 
@@ -4416,42 +4513,79 @@ function buyItem(itemId, qty){
 // v0.39.5 FIX — was always state.aides[0].party. Always called immediately after a purchase (via
 // buyItem() -> showBatchEvolveModal()), by whichever aide is actually shopping — now checks that
 // same aide's party via missionModalAideIndex instead of always Carl Oak's.
+// v0.44 — was state.aides[missionModalAideIndex].party only. Now scans EVERY aide's party, since
+// Party-Priority Reservation (see DESIGN.md "Party-Priority Reservation for Evolution-Item
+// Research") needs to know the total eligible-party count across the whole roster, not just the
+// shopping aide's, to decide between auto-evolve/modal/no-op.
 function getPartyEligibleForItem(itemId){
   const item=getItem(itemId);
   if(!item) return [];
   const itemName=item.name;
   const results=[];
-  state.aides[missionModalAideIndex].party.forEach(p=>{
-    if(p.evolveBlocked) return;
-    const entry=getPokemonEntry(p.pokedexId,p.formName);
-    const branches=[];
-    if(entry&&entry.evolveMethod==='use-item'&&entry.evolveItem===itemName&&entry.evolvesIntoId){
-      branches.push({toDexId:entry.evolvesIntoId,toFormName:null});
-    }
-    getEvolutions(p.pokedexId).filter(b=>b.evolveMethod==='use-item'&&b.evolveItem===itemId&&b.toDexId).forEach(b=>{
-      branches.push({toDexId:b.toDexId,toFormName:b.toFormName||null});
+  state.aides.forEach(aide=>{
+    aide.party.forEach(p=>{
+      if(p.evolveBlocked) return;
+      const entry=getPokemonEntry(p.pokedexId,p.formName);
+      const branches=[];
+      if(entry&&entry.evolveMethod==='use-item'&&entry.evolveItem===itemName&&entry.evolvesIntoId){
+        branches.push({toDexId:entry.evolvesIntoId,toFormName:null});
+      }
+      getEvolutions(p.pokedexId).filter(b=>b.evolveMethod==='use-item'&&b.evolveItem===itemId&&b.toDexId).forEach(b=>{
+        branches.push({toDexId:b.toDexId,toFormName:b.toFormName||null});
+      });
+      if(!branches.length) return;
+      const lock=getNicknameEvolveLock(p);
+      let eligibleBranches=branches;
+      if(lock) eligibleBranches=branches.filter(b=>b.toDexId===lock.toDexId&&(b.toFormName||null)===(lock.toFormName||null));
+      if(!eligibleBranches.length) return;
+      // One row per eligible individual — if multiple branches simultaneously qualify (rare, no
+      // nickname lock narrowing it down), the first is used; batch-evolve keeps a single
+      // branch-per-individual UX, matching the checkbox-list design.
+      results.push({p,branch:eligibleBranches[0]});
     });
-    if(!branches.length) return;
-    const lock=getNicknameEvolveLock(p);
-    let eligibleBranches=branches;
-    if(lock) eligibleBranches=branches.filter(b=>b.toDexId===lock.toDexId&&(b.toFormName||null)===(lock.toFormName||null));
-    if(!eligibleBranches.length) return;
-    // One row per eligible individual — if multiple branches simultaneously qualify (rare, no
-    // nickname lock narrowing it down), the first is used; batch-evolve keeps a single
-    // branch-per-individual UX, matching the checkbox-list design.
-    results.push({p,branch:eligibleBranches[0]});
   });
   return results;
 }
+// v0.44 — evolves a single party individual immediately and synchronously (no modal), used when
+// exactly one eligible party individual exists across the whole roster. Same effect pipeline as
+// confirmBatchEvolve() below, for a single {p,branch} pair.
+function autoEvolvePartySingle(itemId,elig){
+  const {p,branch}=elig;
+  if((state.professorBag[itemId]||0)<=0) return;
+  const item=getItem(itemId);
+  const itemName=item?item.name:itemId;
+  const toEntry=getPokemonEntry(branch.toDexId,branch.toFormName);
+  if(!toEntry) return;
+  state.professorBag[itemId]--;
+  if(state.professorBag[itemId]<=0) delete state.professorBag[itemId];
+  const fromDexId=p.pokedexId, preLevel=p.level, old=getDisplayName(p);
+  recordEvolution(fromDexId,branch.toDexId,itemName,preLevel,branch.toFormName);
+  applySpeciesSwap(p,toEntry);
+  addLog(old+' #'+p.id+' evolved into '+getDisplayName(p)+' using '+itemName+'!','evolve','evolutions',(state.aides.find(a=>a.name===p.holder)||{}).id||'general');
+  saveGame(); render();
+}
+// v0.44 — Party-Priority Reservation: transient (non-saved) map of itemId -> quantity currently
+// reserved for an open batch-evolve modal, invisible to professorAutoTestEvolutions()'s box-only
+// research so a freshly-bought stone can't be spent on a box mon before the party modal resolves.
+let itemReservations={};
 // v0.38 — party-only batch evolve modal: checkbox list capped by the quantity just purchased.
 // No-ops silently if there are zero eligible party individuals (purchase completes as before).
 function showBatchEvolveModal(itemId,maxQty){
   const item=getItem(itemId); if(!item) return;
   const eligible=getPartyEligibleForItem(itemId);
   if(!eligible.length) return;
-  const existing=document.getElementById('batch-evolve-modal'); if(existing) existing.remove();
+  // v0.44 — replacing an already-open modal (a second evolve-item purchase before the first
+  // modal is dismissed) releases the OLD modal's reservation first, keyed off its own itemId,
+  // so a second purchase never leaves a permanently stuck reservation behind.
+  const existing=document.getElementById('batch-evolve-modal');
+  if(existing){
+    const oldItemId=existing.dataset.itemId;
+    if(oldItemId) delete itemReservations[oldItemId];
+    existing.remove();
+  }
   const modal=document.createElement('div');
   modal.id='batch-evolve-modal';
+  modal.dataset.itemId=itemId;
   modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
   const rowsHtml=eligible.map(({p,branch})=>{
     const toEntry=getPokemonEntry(branch.toDexId,branch.toFormName);
@@ -4466,7 +4600,7 @@ function showBatchEvolveModal(itemId,maxQty){
     +'<div id="batch-evolve-count" style="color:var(--main-text-secondary);font-size:10px;margin-bottom:8px;">0 / '+maxQty+' selected</div>'
     +rowsHtml
     +'<div style="display:flex;gap:8px;margin-top:12px;">'
-    +'<button onclick="document.getElementById(\'batch-evolve-modal\').remove()" style="flex:1;">Skip</button>'
+    +'<button onclick="skipBatchEvolve(\''+itemId+'\')" style="flex:1;">Skip</button>'
     +'<button onclick="confirmBatchEvolve(\''+itemId+'\','+maxQty+')" class="primary" style="flex:1;">Evolve Selected</button>'
     +'</div></div>';
   modal.onclick=(e)=>{ if(e.target===modal) modal.remove(); };
@@ -4506,8 +4640,15 @@ function confirmBatchEvolve(itemId,maxQty){
     applySpeciesSwap(p,toEntry);
     addLog(old+' #'+p.id+' evolved into '+getDisplayName(p)+' using '+itemName+'!','evolve','evolutions',(state.aides.find(a=>a.name===p.holder)||{}).id||'general');
   });
+  delete itemReservations[itemId]; // v0.44 — release the reservation now that the modal resolved
   const modal=document.getElementById('batch-evolve-modal'); if(modal) modal.remove();
   saveGame(); render();
+}
+// v0.44 — Skip releases the Party-Priority reservation (see buyItem()) before closing, so a
+// skipped modal doesn't leave the purchased quantity permanently invisible to box research.
+function skipBatchEvolve(itemId){
+  delete itemReservations[itemId];
+  const modal=document.getElementById('batch-evolve-modal'); if(modal) modal.remove();
 }
 
 // ── DAY CARE / BREEDING (v0.26, location moved v0.27) ──
@@ -4669,47 +4810,30 @@ function updateDaycareQueue(slotIndex){
 // v0.28 — collects ALL queued eggs in one batch, each individually through the normal catch
 // pipeline (per-species cap release still applies per-egg). The slot is NOT cleared — the pair
 // stays assigned and keeps breeding automatically until manually pulled via releaseDaycarePair().
-function collectDaycareSlot(slotIndex){
-  // v0.40 — was state.aides[0] only.
-  if(!state.aides.some(a=>a.currentLocation===DAYCARE_LOCATION_ID)){ addLog('An Aide must be at the Day Care to collect.','fail','daycare','general'); return; }
-  ensureDaycareSlots();
-  const rec=state.daycareSlots.slots[slotIndex];
-  if(!rec){ return; }
-  updateDaycareQueue(slotIndex);
-  const count=rec.eggsQueued||0;
-  if(!count){ addLog('Not ready yet.','fail','daycare','general'); return; }
+// v0.44 — shared egg-hatching pipeline, extracted from collectDaycareSlot() (behavior unchanged)
+// so Day Care Research Mode's collectResearchPair() can reuse the exact same
+// catch/shiny-roll/species-cap/log-tally pipeline instead of duplicating it.
+function hatchEggsFromResultDexId(resultDexId,count){
   // v0.36 — "breeding tested" for the hatched species: one successful hatch confirms its
   // lineage either way (whether it produces itself or a distinct baby form) — see "Unconfirmed
   // Predecessor via Breeding". getResearch() ensures the record exists if this is a brand-new dexId.
-  getResearch(rec.resultDexId).breedingTested=true;
+  getResearch(resultDexId).breedingTested=true;
   let kept=0, released=0;
-  // v0.37 — tallies for the enriched batch-summary line below (see the missing-log-events fix
-  // note just under this loop).
   let newSpeciesCount=0, unicornCount=0, perfectCount=0, shinyCount=0;
   for(let n=0;n<count;n++){
-    const resultEntry=getPokemonEntry(rec.resultDexId);
+    const resultEntry=getPokemonEntry(resultDexId);
     const gender=(resultEntry&&resultEntry.genderMalePct!=null)?(Math.random()*100<resultEntry.genderMalePct?'M':'F'):null;
-    const baby=makePokemon(resultEntry?resultEntry.name:'Egg',1,gender,null,rec.resultDexId);
-    // v0.30 — Day Care eggs now roll for shiny, same odds as wild encounters. Rolled here, at
-    // pickup, not at incubation — eggsQueued is a plain counter with no per-egg record, so no
-    // Pokemon object (and thus no shiny flag) exists until this makePokemon() call. A batch
-    // collection rolls independently per egg, all at the moment of collection.
+    const baby=makePokemon(resultEntry?resultEntry.name:'Egg',1,gender,null,resultDexId);
+    // v0.30 — Day Care eggs roll for shiny, same odds as wild encounters, at pickup not incubation.
     if(Math.random()<(1/4096)) baby.isShiny=true;
     state.dex.push(baby);
     state.dexHistory[baby.pokedexId]=(state.dexHistory[baby.pokedexId]||0)+1;
     recordAbilityObserved(baby.pokedexId,baby.ability);
     recordGenderObserved(baby.pokedexId,baby.gender);
-    // v0.37 fix — this loop never called recordNewSpecies() or logCaptureRarity(), so breeding
-    // results were effectively invisible in the Log tab: baby-form species only discoverable via
-    // breeding (eggs skip the normal encounter/sighting phase) never fired "🆕 New Species", and
-    // shiny/Perfect-IV/Unicorn hatches produced zero Condensed-log entry. recordCapture() below
-    // was already correct and is unchanged.
     const wasFirstSeenBefore=!!(state.researchLog[baby.pokedexId]&&state.researchLog[baby.pokedexId].firstSeen);
     recordNewSpecies(baby.pokedexId,baby.species);
     if(!wasFirstSeenBefore) newSpeciesCount++;
     recordCapture(baby.pokedexId,baby.species);
-    // false — matches the existing offline-catch pattern (silent, tallied into the summary line
-    // below) rather than per-egg Full-log spam, which would flood the log on a large batch.
     logCaptureRarity(baby,false);
     if(baby.isShiny&&isPerfectIV(baby)) unicornCount++;
     else if(baby.isShiny) shinyCount++;
@@ -4719,15 +4843,29 @@ function collectDaycareSlot(slotIndex){
     // check whether THIS baby survived it to tally an accurate kept-vs-released split.
     if(state.dex.find(p=>p.id===baby.id)) kept++; else released++;
   }
-  rec.eggsQueued=0;
-  // v0.37 — batch summary enriched with non-zero tallies instead of per-egg Full-log lines.
+  return {kept,released,newSpeciesCount,unicornCount,perfectCount,shinyCount};
+}
+function buildHatchSummaryExtras(t){
   const extras=[];
-  if(newSpeciesCount>0) extras.push(newSpeciesCount+' new species');
-  if(unicornCount>0) extras.push(unicornCount+' unicorn'+(unicornCount>1?'s':''));
-  if(perfectCount>0) extras.push(perfectCount+' perfect IV');
-  if(shinyCount>0) extras.push(shinyCount+' shiny'+(shinyCount>1?'ies':''));
-  const extrasStr=extras.length?' — '+extras.join(', ')+'!':'';
-  addLog('Collected '+count+' egg'+(count>1?'s':'')+' at the Day Care!'+(released>0?' ('+kept+' kept, '+released+' released — species cap)':'')+extrasStr,'catch','daycare','general');
+  if(t.newSpeciesCount>0) extras.push(t.newSpeciesCount+' new species');
+  if(t.unicornCount>0) extras.push(t.unicornCount+' unicorn'+(t.unicornCount>1?'s':''));
+  if(t.perfectCount>0) extras.push(t.perfectCount+' perfect IV');
+  if(t.shinyCount>0) extras.push(t.shinyCount+' shiny'+(t.shinyCount>1?'ies':''));
+  return extras.length?' — '+extras.join(', ')+'!':'';
+}
+function collectDaycareSlot(slotIndex){
+  // v0.40 — was state.aides[0] only.
+  if(!state.aides.some(a=>a.currentLocation===DAYCARE_LOCATION_ID)){ addLog('An Aide must be at the Day Care to collect.','fail','daycare','general'); return; }
+  ensureDaycareSlots();
+  const rec=state.daycareSlots.slots[slotIndex];
+  if(!rec){ return; }
+  updateDaycareQueue(slotIndex);
+  const count=rec.eggsQueued||0;
+  if(!count){ addLog('Not ready yet.','fail','daycare','general'); return; }
+  const tallies=hatchEggsFromResultDexId(rec.resultDexId,count);
+  rec.eggsQueued=0;
+  const extrasStr=buildHatchSummaryExtras(tallies);
+  addLog('Collected '+count+' egg'+(count>1?'s':'')+' at the Day Care!'+(tallies.released>0?' ('+tallies.kept+' kept, '+tallies.released+' released — species cap)':'')+extrasStr,'catch','daycare','general');
   saveGame(); render(); showMapDetail(DAYCARE_LOCATION_ID);
 }
 function releaseDaycarePair(slotIndex){
@@ -4741,7 +4879,98 @@ function releaseDaycarePair(slotIndex){
   const pA=state.dex.find(p=>p.id===rec.parentAId), pB=state.dex.find(p=>p.id===rec.parentBId);
   [pA,pB].forEach(p=>{ if(p) p.breeding=false; });
   state.daycareSlots.slots[slotIndex]=null;
+  // v0.44 — same box-membership check unassignPokemon() got: both parents may now be over cap in
+  // the box together (e.g. same species, cap=1). Checked after both are cleared, so the box pool
+  // correctly includes both before either is evaluated.
+  [pA,pB].forEach(p=>{ if(p) checkSpeciesCap(p); });
   saveGame(); render(); showMapDetail(DAYCARE_LOCATION_ID);
+}
+
+// ── DAY CARE RESEARCH MODE (v0.44) ──
+// Per-aide automatic breeding-testing, toggled from the mission modal. Tracked entirely separately
+// from daycareSlots (never counts against purchased slot capacity) via aide.researchMode/researchPair.
+// See DESIGN.md "Day Care Research Mode".
+
+// Random valid pair from the box-only pool, preferring an untested result species; falls back to
+// any valid pair if none are untested; null if no valid pair exists at all. Shuffled scan rather
+// than an exhaustive uniform-random selection among every valid pair — acceptable at this game's
+// scale, and still returns immediately on the first untested match found.
+function findResearchPair(){
+  const pool=state.dex.filter(p=>!p.holder&&!p.breeding);
+  if(pool.length<2) return null;
+  const shuffled=[...pool].sort(()=>Math.random()-0.5);
+  let fallback=null;
+  for(let i=0;i<shuffled.length;i++){
+    for(let j=i+1;j<shuffled.length;j++){
+      const a=shuffled[i], b=shuffled[j];
+      if(!canBreedPair(a,b).ok) continue;
+      const resultDexId=getBreedResultDexId(a,b);
+      if(!getResearch(resultDexId).breedingTested) return {parentAId:a.id,parentBId:b.id,resultDexId};
+      if(!fallback) fallback={parentAId:a.id,parentBId:b.id,resultDexId};
+    }
+  }
+  return fallback;
+}
+// Attempts to give an aide with researchMode on (and no active pair) a fresh pair. Locks both
+// parents (p.breeding=true) exactly like a manual Day Care pair. No-ops if one is already active
+// or none can be found right now — the next tick (or the next switch) tries again.
+function attemptResearchPairSelection(aide){
+  if(aide.researchPair) return;
+  const found=findResearchPair();
+  if(!found) return;
+  const pA=state.dex.find(p=>p.id===found.parentAId), pB=state.dex.find(p=>p.id===found.parentBId);
+  if(!pA||!pB) return;
+  pA.breeding=true; pB.breeding=true;
+  const hatchMinutes=getHatchMinutes(found.resultDexId);
+  aide.researchPair={parentAId:found.parentAId,parentBId:found.parentBId,resultDexId:found.resultDexId,nextReadyAt:Date.now()+hatchMinutes*60000,eggsQueued:0};
+}
+// The "switch": fires only when the aide is physically at the Day Care with >=1 egg queued (see
+// updateResearchModePairs()). Collects through the exact same pipeline collectDaycareSlot() uses,
+// releases both parents (with the same checkSpeciesCap() call releaseDaycarePair() gets — see
+// "Universal Species-Cap Enforcement"), clears the pair, then — only if researchMode is STILL on
+// at this moment — immediately selects a new pair. This is how unchecking the box takes effect:
+// not mid-cycle, only at the next physical-presence switch.
+function collectResearchPair(aide){
+  const rec=aide.researchPair;
+  if(!rec) return;
+  const count=rec.eggsQueued||0;
+  if(count>0){
+    const tallies=hatchEggsFromResultDexId(rec.resultDexId,count);
+    const extrasStr=buildHatchSummaryExtras(tallies);
+    addLog('🔬 '+aide.name+"'s Research Mode collected "+count+' egg'+(count>1?'s':'')+'!'+(tallies.released>0?' ('+tallies.kept+' kept, '+tallies.released+' released — species cap)':'')+extrasStr,'catch','daycare',aide.id);
+  }
+  const pA=state.dex.find(p=>p.id===rec.parentAId), pB=state.dex.find(p=>p.id===rec.parentBId);
+  [pA,pB].forEach(p=>{ if(p) p.breeding=false; });
+  [pA,pB].forEach(p=>{ if(p) checkSpeciesCap(p); });
+  aide.researchPair=null;
+  if(aide.researchMode) attemptResearchPairSelection(aide);
+}
+// Called once per tick (see gameTick()), for every aide, regardless of location — the clock always
+// runs. Attempts selection for any researchMode aide lacking a pair, advances every active pair's
+// egg queue with the same remainder-preserving interval loop updateDaycareQueue() uses, and fires
+// the switch once the aide is physically present with eggs ready.
+function updateResearchModePairs(){
+  state.aides.forEach(aide=>{
+    if(aide.researchMode&&!aide.researchPair) attemptResearchPairSelection(aide);
+    if(!aide.researchPair) return;
+    const rec=aide.researchPair;
+    const intervalMs=getHatchMinutes(rec.resultDexId)*60000;
+    while(Date.now()>=rec.nextReadyAt){
+      rec.eggsQueued=(rec.eggsQueued||0)+1;
+      rec.nextReadyAt+=intervalMs;
+    }
+    if(aide.currentLocation===DAYCARE_LOCATION_ID&&rec.eggsQueued>=1){
+      collectResearchPair(aide);
+    }
+  });
+}
+// Mission-modal checkbox handler — takes effect immediately, independent of dispatching a mission.
+function toggleResearchMode(){
+  const aide=state.aides[missionModalAideIndex];
+  aide.researchMode=!aide.researchMode;
+  addLog(aide.name+"'s Day Care Research Mode turned "+(aide.researchMode?'on':'off')+'.','info','daycare',aide.id);
+  if(aide.researchMode) attemptResearchPairSelection(aide);
+  saveGame();
 }
 // Builds the Day Care section HTML for showMapDetail() — Pokemon Daycare location only (v0.27).
 function buildDaycareHtml(){
@@ -4789,6 +5018,27 @@ function buildDaycareHtml(){
   if(!isCurrent){
     html+='<div style="color:#e67e22;font-size:10px;margin-top:6px;">Aide must be here to drop off or collect.</div>';
   }
+  // v0.44 — Day Care Research Mode: read-only display, no manual buttons — fully automatic.
+  const researching=state.aides.filter(a=>a.researchPair);
+  if(researching.length){
+    html+='<div style="color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin:14px 0 6px;">🔬 Research Pairs</div>';
+    researching.forEach(aide=>{
+      const rec=aide.researchPair;
+      const resultEntry=getPokemonEntry(rec.resultDexId);
+      const known=seenDexIds.has(rec.resultDexId);
+      const resultLabel=known?(resultEntry?resultEntry.name:'?'):'?';
+      const remainingMs=Math.max(0,rec.nextReadyAt-Date.now());
+      const remainingMin=Math.floor(remainingMs/60000), remainingSec=Math.floor((remainingMs%60000)/1000);
+      const queued=rec.eggsQueued||0;
+      const pA=state.dex.find(p=>p.id===rec.parentAId), pB=state.dex.find(p=>p.id===rec.parentBId);
+      const spriteRow=(pA&&pB)?daycareSpriteRowHtml(pA,pB,rec.resultDexId,known):'';
+      html+='<div style="background:var(--main-bg);border-radius:4px;padding:8px;margin-bottom:6px;">'
+        +'<div style="color:var(--main-text);font-size:11px;margin-bottom:4px;">'+aide.emoji+' '+aide.name+' — → '+resultLabel+'</div>'
+        +spriteRow
+        +'<div style="color:'+(queued>0?'#2ecc71':'var(--main-text-secondary)')+';font-size:10px;">'+(queued>0?queued+' egg'+(queued>1?'s':'')+' ready · ':'')+'next in '+remainingMin+':'+remainingSec.toString().padStart(2,'0')+'</div>'
+        +'</div>';
+    });
+  }
   return html;
 }
 // Every owned Pokémon not currently reserved by another Day Care slot — party or box both eligible.
@@ -4813,8 +5063,14 @@ function daycareFamilySortKey(p){
   const evoOrder=members.findIndex(m=>m.dexId===p.pokedexId);
   return [familyId,evoOrder<0?9999:evoOrder,p.pokedexId||0];
 }
+// v0.44 — Ditto always sorts first, unconditionally, ahead of the existing family -> evolution-
+// order -> dexId three-key sort. Applies identically to both the Parent A and Parent B pickers,
+// since both route through this shared function.
 function sortDaycareList(list){
   return list.slice().sort((a,b)=>{
+    const dittoA=isDitto(a.pokedexId), dittoB=isDitto(b.pokedexId);
+    if(dittoA&&!dittoB) return -1;
+    if(dittoB&&!dittoA) return 1;
     const ka=daycareFamilySortKey(a), kb=daycareFamilySortKey(b);
     for(let i=0;i<ka.length;i++){ if(ka[i]!==kb[i]) return ka[i]-kb[i]; }
     return 0;
@@ -4947,6 +5203,10 @@ function unassignPokemon(catchId){
   p.holder=null;
   owner.party=owner.party.filter(x=>x.id!==catchId);
   addLog(getDisplayName(p)+' #'+p.id+' unassigned.','info','roster',owner.id);
+  // v0.44 — the moment a Pokemon stops being party-exempt, re-check the species cap: it may have
+  // been sitting at (or over) cap in the box the whole time, invisible while this one was held.
+  // See DESIGN.md "Universal Species-Cap Enforcement — Box Membership Only".
+  checkSpeciesCap(p);
   saveGame(); render();
   const m=document.getElementById('poke-modal'); if(m) m.remove();
 }
@@ -5509,8 +5769,7 @@ function toggleAideCollapse(idx){
 function renderParty(){
   const container=document.getElementById('aide-roster');
   if(!container) return;
-  container.innerHTML=state.aides.map((aide,idx)=>renderAideSectionHtml(aide,idx)).join('')
-    +buildHireAideButtonHtml();
+  container.innerHTML=state.aides.map((aide,idx)=>renderAideSectionHtml(aide,idx)).join('');
   state.aides.forEach((aide,idx)=>{
     renderAidePartySprites(aide,idx); // always — collapsed sections must still show party, per spec
     if(!collapsedAides.has(idx)) renderAidePartyDetail(aide,idx);
@@ -5519,28 +5778,11 @@ function renderParty(){
   renderBagDisplay();
 }
 
-// v0.39.1 — Hire Second Aide. Max 1 ever, enforced here (state.aides.length===1 check) since no
-// existing item pattern enforces a hard one-time-only purchase cap — this is new logic, not reused
-// from elsewhere. Deliberately NOT routed through the generic shop/buyItem() UI: shopTier:'lab' is
-// referenced in code comments elsewhere but was never actually wired to any location or to
-// getShopItems()'s tierOrder (confirmed dormant — see the pre-existing "duplicate poke-ball,
-// shopTier:lab" bug history). Rather than risk touching the shared shop-rendering system for this
-// one narrow, one-time special purchase, it gets its own dedicated button + flow here.
-// v0.39.2 — gated to Pallet Town, per Jack's request. Checking currentLocation directly for now
-// (not shopTier) — Pallet Town's existing shopTier:'basic' already drives its normal field shop,
-// and shopTier is a single value, not a list, so setting it to a Lab-specific tier would silently
-// remove that basic shop. Flagged separately; trivial to swap to a shopTier check once resolved.
-function buildHireAideButtonHtml(){
-  if(state.aides.length>1) return ''; // already hired — max 1 ever
-  const anyAideAtLab=state.aides.some(a=>a.currentLocation==='palletTown');
-  if(!anyAideAtLab) return '';
-  const item=getItem('aide-hire-2');
-  const price=item?item.shopPrice:100;
-  return '<div style="padding:10px 12px;text-align:center;">'
-    +'<button onclick="hireAide()" style="padding:8px 16px;font-size:11px;border-color:var(--accent);color:var(--accent-light);">🧑\u200d🔬 Hire Second Aide — $'+price+'</button>'
-    +'</div>';
-}
-
+// v0.44 — the dedicated buildHireAideButtonHtml() (Pallet Town, currentLocation-gated) is removed:
+// aide-hire-2 now lives in the generic shop's Key Items category (Pallet Town is shopTier:'full'
+// as of this version — see DESIGN.md "Pallet Town -> Full Shop"), rendered via
+// buildShopItemRowHtml()'s hire-aide special case above. hireAide() itself is unchanged — it still
+// independently handles its own funds check and the confirmHireAide() emoji-picker flow.
 function hireAide(){
   if(state.aides.length>1){ addLog('Already hired your second aide.','fail','aideManagement','general'); return; }
   const item=getItem('aide-hire-2');
@@ -5684,7 +5926,7 @@ let dexSelectedFormName=null; // v0.36 — in-page-only, not persisted; resets t
 let dexOfficialShinyPreview=false; // v0.37 — Official Pokédex only, forces every sprite to shiny palette when true
 // v0.37 — All Catches sort/filter/search state (transient, not persisted, same convention as the old sort-select/filter-select)
 let dexCatchesSort='id';
-let dexCatchesFilters={all:true,unassigned:false,assigned:false,shiny:false,perfect:false,type:null,moveType:null};
+let dexCatchesFilters={all:true,unassigned:false,assigned:false,shiny:false,perfect:false,hasNickname:false,type:null,moveType:null};
 let dexCatchesSearch='';
 // v0.37 — Species tab (Official Pokédex only) sort/filter/search state
 let dexSpeciesSort='dexid';
@@ -6499,6 +6741,7 @@ function renderDexFilterPopupContent(){
     rows+=cb('assigned','Assigned');
     rows+=cb('shiny','✨ Shiny');
     rows+=cb('perfect','💥 Perfect IV');
+    rows+=cb('hasNickname','🏷️ Has Nickname'); // v0.44 — simple boolean, not a has/doesn't-have pair
   }
   rows+='<div style="'+dim+'padding:6px 0;"><button onclick="openDexTypePicker(\'type\')" style="width:100%;font-size:11px;text-align:left;">Type: '+(f.type||'Any')+'</button></div>';
   rows+='<div style="'+dim+'padding:6px 0;"><button onclick="openDexTypePicker(\'moveType\')" style="width:100%;font-size:11px;text-align:left;">Move Type: '+(f.moveType||'Any')+'</button></div>';
@@ -6548,6 +6791,7 @@ function matchesCatchesFilters(p,f){
   }
   if(f.shiny&&!p.isShiny) return false;
   if(f.perfect&&!isPerfectIV(p)) return false;
+  if(f.hasNickname&&!p.nickname) return false; // v0.44
   if(f.type){
     const entry=getPokemonEntry(p.pokedexId,p.formName);
     if(!entry||(entry.type1!==f.type&&entry.type2!==f.type)) return false;
@@ -6599,7 +6843,7 @@ function renderDexViewAll(){
     const statusText=p.breeding?'At Day Care':(p.holder?'Held by: '+p.holder:'Unassigned');
     const entry=getPokemonEntry(p.pokedexId,p.formName);
     const typesHtml=entry?(typeBadgeHtml(entry.type1)+typeBadgeHtml(entry.type2)):'';
-    d.innerHTML='<div style="display:flex;align-items:center;gap:8px;"><img src="'+sprite+'" style="width:36px;height:36px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div class="dex-header"><span class="dex-name">#'+(p.pokedexId||'?')+' '+getDisplayName(p)+(getRarityBadge(p)?'<span class="shiny-badge">'+getRarityBadge(p)+'</span>':'')+' '+typesHtml+'(catch #'+p.id+')</span><span class="dex-id">'+statusIcon+'</span></div><div class="dex-details">Lv'+p.level+' · '+p.gender+' · HP '+p.currentHP+'/'+p.maxHP+' · BST '+calcBST(p.species,p.level,p)+'</div><div class="dex-holder">'+statusText+'</div></div></div>';
+    d.innerHTML='<div style="display:flex;align-items:center;gap:8px;"><img src="'+sprite+'" style="width:36px;height:36px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div class="dex-header"><span class="dex-name">#'+(p.pokedexId||'?')+' '+getDisplayName(p)+(getRarityBadge(p)?'<span class="shiny-badge">'+getRarityBadge(p)+'</span>':'')+' '+typesHtml+'(catch #'+p.id+')</span><span class="dex-id">'+statusIcon+'</span></div><div class="dex-details">Lv'+p.level+' · '+p.gender+' · HP '+p.currentHP+'/'+p.maxHP+' · BST '+calcBST(p.species,p.level,p)+' · Friendship:'+(p.friendship||0)+'</div><div class="dex-holder">'+statusText+'</div></div></div>';
     d.onclick=()=>showPokemonDetail(p.id);
     c.appendChild(d);
   });
@@ -6924,7 +7168,7 @@ const SAVE_KEY='pokeprof_save';
 // batch-evolve prompt, offline friendship parity, dual-root family breeding, Ditto
 // breeding-placeholder fix, Family IV Inheritance pool fix) is a bug fix or UI/logic-only, no
 // additional schema impact.
-const SAVE_VERSION=28;
+const SAVE_VERSION=29; // v0.44 — new per-aide researchMode/researchPair fields (Day Care Research Mode)
 let saveTimer=0;
 
 function saveGame(){
@@ -6966,7 +7210,7 @@ function loadGame(){
 
     // ── SAVE_VERSION 28 MIGRATION ──
     // Accepts v11-v27 saves and migrates them; rejects anything older.
-    if(data.version!==SAVE_VERSION&&data.version!==27&&data.version!==26&&data.version!==25&&data.version!==24&&data.version!==23&&data.version!==22&&data.version!==21&&data.version!==20&&data.version!==19&&data.version!==18&&data.version!==17&&data.version!==16&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
+    if(data.version!==SAVE_VERSION&&data.version!==28&&data.version!==27&&data.version!==26&&data.version!==25&&data.version!==24&&data.version!==23&&data.version!==22&&data.version!==21&&data.version!==20&&data.version!==19&&data.version!==18&&data.version!==17&&data.version!==16&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
     const s=data.state;
     // v0.39.1 — aide-owned fields (party/dex/trainerBag/currentLocation/mission-and-travel/
     // gymProgress/lastHealLocation/wanderMode) now live in state.aides[]. A pre-v26 save has them
@@ -7043,6 +7287,7 @@ function loadGame(){
       dexHistory:s.dexHistory??{},
       freeSkipsRemaining:s.freeSkipsRemaining??0,
       wanderMode:src0.wanderMode??false, wanderMetric:src0.wanderMetric??'encounters', significantLog:s.significantLog??[], // v0.33/v0.35
+      researchMode:src0.researchMode??false, researchPair:src0.researchPair??null, // v0.44
       expShareActive:src0.expShareActive??false, // v0.40
       logCustomFilters:s.logCustomFilters??{categories:{},aides:{}} // v0.43 — absent on any pre-v0.43 save
     });
@@ -7173,6 +7418,18 @@ function loadGame(){
         r.testedMethods=r.testedMethods.filter(m=>m!==entry.evolveItem);
       }
     });
+    // v0.44 — unconditional backfill: any species whose research record was created before this
+    // version's getResearch() fix will be permanently missing 'shed' from testedMethods (it only
+    // populates at record-creation time). Same check, applied retroactively — idempotent, safe to
+    // run on every load, matching the v0.22/v0.26 unconditional-migration convention (no
+    // SAVE_VERSION bump needed for a logic correction, not a schema change).
+    Object.keys(state.researchLog).forEach(dexIdStr=>{
+      const dexId=Number(dexIdStr);
+      const r=state.researchLog[dexIdStr];
+      if(r&&!r.testedMethods.includes('shed')&&!speciesHasEvolveMethod(dexId,'shed')){
+        r.testedMethods.push('shed');
+      }
+    });
     // v0.28 migration — Day Care slots: legacy single-use `readyAt` becomes `nextReadyAt` +
     // `eggsQueued:0`, so a pre-v0.28 slot picks up continuous batch hatching seamlessly (the
     // egg already in progress just becomes the first entry in its new queue).
@@ -7243,18 +7500,27 @@ function loadGame(){
         travelCyclesRemaining:state.travelCyclesRemaining,
         gymProgress:state.gymProgress, lastHealLocation:state.lastHealLocation,
         wanderMode:state.wanderMode, wanderMetric:state.wanderMetric,
-        expShareActive:state.expShareActive // v0.40
+        expShareActive:state.expShareActive, // v0.40
+        researchMode:state.researchMode, researchPair:state.researchPair // v0.44
       });
       // any aide beyond Carl Oak, copied through verbatim — except a stray leftover `dex` field
       // from a pre-v39.3 save, which no longer belongs on an aide object at all (see above).
       const otherAides=(s.aides||[]).slice(1).map(a=>{ const {dex,...rest}=a; return rest; });
       state.aides=[carlAide,...otherAides];
+      // v0.44 — explicit backfill for any aide (Carl Oak included, belt-and-suspenders) missing
+      // the new fields from a pre-v29 save. Not strictly required (undefined reads falsy
+      // everywhere these are checked) but kept explicit for clarity in the saved shape.
+      state.aides.forEach(aide=>{
+        if(aide.researchMode===undefined) aide.researchMode=false;
+        if(aide.researchPair===undefined) aide.researchPair=null;
+      });
       state.activeAideIndex=0;
       delete state.party; delete state.trainerBag; delete state.currentLocation;
       delete state.missionDestination; delete state.missionBehavior; delete state.missionOrigin;
       delete state.missionElapsed; delete state.currentEncounter; delete state.nextEncounterIn;
       delete state.travelPath; delete state.travelPathIndex; delete state.travelCyclesRemaining;
       delete state.gymProgress; delete state.lastHealLocation; delete state.wanderMode; delete state.wanderMetric; delete state.expShareActive;
+      delete state.researchMode; delete state.researchPair; // v0.44
       // v0.39.4 — the earlier "Re-link party entries to canonical dex objects" pass above only
       // ever ran against the temporary flat state.party (Carl Oak's), before this wrap-up existed.
       // Any additional aide's party (Faraday's, copied through verbatim from the save) was never
@@ -7371,6 +7637,24 @@ function getMapNodeStyle(locData){
   if(locData&&locData.shopTier) return MAP_COLORS.city;
   if(locData&&(locData.heals===true||locData.heals==='TRUE'||locData.heals==='true')) return MAP_COLORS.town;
   return MAP_COLORS.route;
+}
+// v0.44 — Mission Modal location markers, mirroring getMapNodeStyle()'s shop/heal precedence
+// (shop wins on combined heal+shop locations) but WITHOUT the route-blue fallback the map uses —
+// routes/other stay the default idle border in the mission modal, per DESIGN.md "Mission Modal —
+// Location Markers to Match Map".
+function getDestMarkerColor(locData){
+  if(!locData) return null;
+  if(locData.shopTier) return MAP_COLORS.city.stroke;
+  if(locData.heals===true||locData.heals==='TRUE'||locData.heals==='true') return MAP_COLORS.town.stroke;
+  return null;
+}
+// v0.44 — the gym leader's badge for a location, if any: a TRAINERS_DATA row at this locationId,
+// not part of a gauntlet (Elite Four members share a badgeItemId with the Champion but aren't the
+// gym itself), with a badgeItemId set. Not gated on whether the badge has been earned yet.
+function getGymBadgeItemIdForLocation(locId){
+  if(typeof TRAINERS_DATA==='undefined') return null;
+  const row=TRAINERS_DATA.find(t=>t.locationId===locId&&!t.isGauntlet&&t.badgeItemId);
+  return row?row.badgeItemId:null;
 }
 
 let mapSelectedLoc = null;

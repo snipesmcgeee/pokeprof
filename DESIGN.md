@@ -74,7 +74,7 @@ There is no survival element. Aides do not need food, sleep, or anything like th
 - The `<h1>` tag always shows the current version (e.g. `PokeProf v0.18`)
 - Increment the version on every deployed change
 - `SAVE_VERSION` in `pokeprof.html` must be incremented whenever `state` structure changes
-- Current save version: `28` (bumped in v0.39.1 for the `state.aides[]` restructure — Carl Oak's singular `party`/`trainerBag`/`currentLocation`/mission-and-travel fields wrapped into `aides[0]` on migration; unchanged in v0.39.2, battle-engine/logic fixes only; bumped again in v0.39.3 to move `dex` back OUT of `aides[]` into a shared `state.dex` — see "Aide Roster & Hiring"; unchanged in v0.39.4/v0.39.5/v0.39.6, all logic-only fixes; bumped again in v0.40 for two new persisted fields, `state.avoidCappedSpecies` and per-aide `expShareActive`; unchanged in v0.41 (logic/UI fixes only) and v0.42 (`fromFormName`/`requiredGender` live on static `EVO_TREE` data, not `state`; Shedinja reuses the existing individual-Pokémon shape)). v0.38→v0.39 made no schema change (Silph Tower was fully reverted in v0.39.1 anyway, and was itself runtime-only/non-persisted).
+- Current save version: `28` (bumped in v0.39.1 for the `state.aides[]` restructure — Carl Oak's singular `party`/`trainerBag`/`currentLocation`/mission-and-travel fields wrapped into `aides[0]` on migration; unchanged in v0.39.2, battle-engine/logic fixes only; bumped again in v0.39.3 to move `dex` back OUT of `aides[]` into a shared `state.dex` — see "Aide Roster & Hiring"; unchanged in v0.39.4/v0.39.5/v0.39.6, all logic-only fixes; bumped again in v0.40 for two new persisted fields, `state.avoidCappedSpecies` and per-aide `expShareActive`; unchanged in v0.41 (logic/UI fixes only) and v0.42 (`fromFormName`/`requiredGender` live on static `EVO_TREE` data, not `state`; Shedinja reuses the existing individual-Pokémon shape)). v0.38→v0.39 made no schema change (Silph Tower was fully reverted in v0.39.1 anyway, and was itself runtime-only/non-persisted). **v0.44 will require SAVE_VERSION 29** for two new persisted per-aide fields, `researchMode` (boolean, default `false`) and `researchPair` (object or `null`, default `null`) — see "Day Care Research Mode." No other v0.44 item changes `state` shape.
 - **v0.20 requires SAVE_VERSION 13** due to: `nickname` field on Pokémon objects, `evolveBlocked` field on Pokémon objects, `researchLog[dexId].abilitiesObserved` field, and `researchLog[dexId].confirmedBranches` replacing singular `confirmedMethod`/`confirmedIntoId`. All four migrations run in a single combined pass on load from v12.
 - **v0.21 requires SAVE_VERSION 14** due to: fishing splitting into per-rod-tier sub-methods (`fish-old`/`fish-good`/`fish-super`) instead of a single `fish` method. Migration: any `state.locationMethodPrefs[locId]` entry containing the bare `'fish'` method (in `methods[]` or as a `weights` key) is dropped entirely for that location — it recalculates fresh defaults (all currently-unlocked methods/rod-tiers checked evenly) the next time that location is visited. No other v0.21 change requires a schema change.
 - **v0.22 stays on SAVE_VERSION 14** — no `state` schema changes in this batch (all 11 items are behavior/rendering fixes and additive read-only views).
@@ -2009,6 +2009,72 @@ New `showCheatShinyPicker(catchId, targetDexId, formName)` modal — "✨ Shiny"
 
 ---
 
+## v0.44 — Settled Spec (Locked, Pending Build)
+
+### 1. Party-Priority Reservation for Evolution-Item Research
+
+On purchase of an evolve-stone/evolve-trade item, `buyItem()` scans all aides' parties (not just the shopping aide's) via an extended `getPartyEligibleForItem()` for eligible individuals — confirmed or unconfirmed branches both count, same exclusions as today (`evolveBlocked`, nickname-lock narrowing). 0 eligible → unchanged, `professorAutoTestEvolutions()` proceeds normally next tick. Exactly 1 → evolves it immediately and synchronously (same evolve pipeline `confirmBatchEvolve()` uses), no modal, 1 unit consumed. 2+ → shows the existing checkbox modal and adds the full purchased quantity to a new transient (non-saved) `itemReservations[itemId]` map; `professorAutoTestEvolutions()`'s box-eligibility check is updated to treat available stock as `(professorBag[itemId]||0) - (itemReservations[itemId]||0)`. The reservation is released (subtracted back out) when the modal resolves via either Skip or Evolve Selected. Replacing an already-open modal with a new one (a second evolve-item purchase before the first modal is dismissed) releases the old modal's reservation first, keyed off the old modal's own itemId, to prevent a permanently stuck reservation.
+
+### 2. Mission Modal — Location Markers to Match Map
+
+`renderDestList()`'s per-destination button gets an idle border color derived the same way `getMapNodeStyle()` already derives map node colors: shop-tier locations `#2ecc71` (green), heal-only locations `#e63946` (red), shop wins on combined heal+shop locations, routes/other unchanged. Gym locations — any location with a `TRAINERS_DATA` row matching its `locationId`, `!isGauntlet`, and a `badgeItemId` — show that badge's sprite next to the location name via the existing `BADGE_SPRITE_MAP` (+ emoji fallback) pattern already used in the aide panel, shown regardless of whether that badge has been earned yet. The existing 2px accent "selected" border still overrides the idle color when that destination is the current pick.
+
+### 3. Wander Tie-Break by Lowest Max Level
+
+`evaluateWanderTarget()`'s best-target selection becomes a deterministic 3-key comparison across all reachable locations, for both the Encounters and Catches metrics: (1) metric count ascending, (2) max level in the area ascending (`Math.max(...buildRouteTable(locId, aide.trainerBag).map(r=>r.maxLv))`), (3) location name alphabetical (same natural/numeric-aware comparator the Alphabetical sort uses) as final tie-break. This replaces today's implicit "ties always keep the current destination" behavior — a tie can now redirect the aide away from their current spot, since leaving adds an encounter/catch at the new location.
+
+### 4. Auto Rule-Out `shed` for Non-Applicable Species
+
+`getResearch()`'s structural rule-out block — which already handles `use-item`/`in-party` this way — gains `if(!speciesHasEvolveMethod(dexId,'shed')) r.testedMethods.push('shed');`, generic via the existing `speciesHasEvolveMethod()` helper (checks live `EVO_TREE` data, currently only Nincada dexId 290 has a `shed`-method branch; not hardcoded). `loadGame()` gets an unconditional backfill sweep over `state.researchLog` applying the same check retroactively (matches the existing v0.22/v0.26 unconditional-migration convention — no `SAVE_VERSION` bump, this is a logic correction, not a schema change).
+
+### 5. Friendship on Dex "View All" Catches
+
+`renderDexViewAll()`'s per-catch detail line gains `· Friendship:X` (`p.friendship||0`), matching the exact format `renderDexDetail()` already shows on the species-detail individuals list, appended after the existing BST readout.
+
+### 6. "Has Nickname" Filter on All Catches
+
+New boolean checkbox in `renderDexFilterPopupContent()`'s All Catches filter popup — `cb('hasNickname','🏷️ Has Nickname')`, positioned after Perfect IV, before the Type/Move Type pickers. `matchesCatchesFilters()` gains `if(f.hasNickname&&!p.nickname) return false;`. A simple boolean, not a mutually-exclusive has/doesn't-have pair like Assigned/Unassigned. `dexCatchesFilters` is transient UI state (not persisted), so no schema impact.
+
+### 7. Ditto Always First in Day Care Pickers
+
+`sortDaycareList()`'s comparator gains a leading key: any Ditto entry sorts first, unconditionally, ahead of the existing family → evolution-order → dexId three-key sort. Applies identically to both the Parent A and Parent B pickers, since both route through this shared function.
+
+### 8. Day Care Research Mode
+
+New per-aide checkbox in the mission modal, backed by a new persisted `aide.researchMode` boolean (**requires `SAVE_VERSION` bump — see below**). Toggling it on immediately attempts pair selection if none is active. New per-aide `aide.researchPair` field (`{parentAId, parentBId, resultDexId, nextReadyAt, eggsQueued}` or `null`), functionally parallel to a `daycareSlots.slots[]` entry but tracked separately and never counted against `daycareSlots.purchased` capacity.
+
+Selection pool is box-only (`!p.holder && !p.breeding`), restricted to `canBreedPair()`-compatible pairs, preferring a pairing whose result species isn't yet `breedingTested`; falls back to any valid compatible pair if none are untested; stays `null` (inactive) if no valid pair exists at all in the box. Selected parents are locked (`p.breeding=true`) exactly like a manual pair.
+
+A new `updateResearchModePairs()`, called once per aide at the top of `gameTick()` alongside `professorAutoTestEvolutions()`: for every aide with `researchMode` and no active `researchPair`, attempts selection. For every aide with an active `researchPair`, advances its egg queue using the same remainder-preserving interval loop `updateDaycareQueue()` uses (`getHatchMinutes(resultDexId)*60000`) — this runs regardless of the aide's location, so the clock never pauses. When that aide is physically at the Day Care (`currentLocation===DAYCARE_LOCATION_ID`) and `eggsQueued>=1`, the switch fires: collect all queued eggs through the exact same pipeline `collectDaycareSlot()` uses (catch/shiny-roll/species-cap/log), set `breedingTested` for the result species, release both parents (`p.breeding=false`, plus the new `checkSpeciesCap()` call from item #9 below), clear `researchPair` to `null`, then — only if `researchMode` is still `true` at that moment — immediately select a new random pair. This is how unchecking the box takes effect: it doesn't stop anything mid-cycle, it just prevents the next pair from being picked once the aide is next physically present for a switch.
+
+Read-only "Research Pairs" section added to the Day Care screen (`buildDaycareHtml()`) — sprite row (reusing `daycareSpriteRowHtml()`) + live countdown per aide with an active `researchPair`, no manual buttons; fully automatic.
+
+Multiple aides can run Research Mode in parallel as independent pairs — naturally non-colliding since a locked individual (`p.breeding`) can't be selected by a second aide's pair-selection pass.
+
+**`SAVE_VERSION` bump required**: new persisted fields `aide.researchMode` (default `false`) and `aide.researchPair` (default `null`) on every existing aide object. Migration: both fields initialized to their defaults on load for any aide missing them.
+
+### 9. Universal Species-Cap Enforcement — Box Membership Only
+
+`checkSpeciesCap()`'s exemption guard becomes `if(individual.holder||individual.breeding) return;` (was `holder` only), and its `liveNonShinyBox` filter adds `&&!p.breeding` alongside the existing `!p.holder`. `sweepSpeciesToCap()` (the global cap-lowering sweep) gets the identical `&&!p.breeding` addition to its `allBoxed` filter — it had the same gap. New `checkSpeciesCap(p)` calls added at every point a Pokémon becomes box-eligible (`holder` and `breeding` both become falsy) that's currently missing one: `unassignPokemon()` (after `p.holder=null` — the originally-reported bug) and `releaseDaycarePair()` (after `p.breeding=false`, for both `pA`/`pB`). No call needed on the reverse transition (into party or into breeding) — that direction can only hold steady or reduce a species' box count, never push it over cap. Item #8's Research Mode pair-release step must include this same call on both freed parents, since it's functionally identical to `releaseDaycarePair()`.
+
+### 10. Nature Mint Category Fix
+
+`natureMint`'s `itemCategory` changed from `"tool"` to `"consumable"` in `items.js` — its `isConsumable` flag was already correctly `true` (confirmed via `confirmNatureChange()`, which already decrements bag stock on use), but it was shop-grouped alongside genuinely reusable tools instead of the Consumables section. Data-only change, no code change required (already implemented by Jack directly in `items.js`).
+
+### 11. Pallet Town → Full Shop; `aide-hire-2` Relocated to Key Items
+
+`locations.js`: Pallet Town's `shopTier` changed from `"lab"` to `"full"`. `items.js`: `aide-hire-2`'s `shopTier` changed from `"lab"` to `"full"` (`itemCategory` stays `"aide-hire"`, unchanged). Both already implemented directly by Jack in the data files.
+
+`SHOP_CATEGORY_MAP` gains `'aide-hire':'keyItems'` — the only mapping needed to surface it in the shop's existing Key Items tile alongside `hm`/`keyItem`/`rod`/`tool`. `buildShopItemRowHtml()` special-cases `item.effect==='hire-aide'`: renders a single button calling `hireAide()` directly (not `buyItem()` — `hireAide()` already independently handles its own funds check and the `confirmHireAide()` emoji-picker flow, unchanged), no ×1/×100/×1000, no bag-count display, disabled/hidden once `state.aides.length>1` (the same one-time-ever gate as today, unchanged, just relocated). `buildHireAideButtonHtml()` and its call in `renderParty()` are removed entirely, since the shop listing fully replaces it.
+
+This makes the previously-outstanding "New, v0.39.2: `hasLab` boolean field" item (see "Not Yet Implemented," below) moot — Pallet Town now uses the real `shopTier:'full'` mechanism instead of a hardcoded `currentLocation==='palletTown'` check. Struck from that list below.
+
+### 12. Once-Per-Aide Purchase Limit for Key Items
+
+Applies to every item where `SHOP_CATEGORY_MAP[item.itemCategory]==='keyItems'` except the hire-aide item (governed entirely by #11 instead). Confirmed every other item in that group (`hm-*`, `pokeFlute`, `safariPass`, `silphScope`, `sSTicket`, `goodRod`/`oldRod`/`superRod`, `bicycle`/`coinCase`/`expShare`) is `bagType:"Trainer"` and `isConsumable:false`, so "already purchased by this aide" is fully answered by the existing `aide.trainerBag[itemId]` count — no new state needed. `buildShopItemRowHtml()` renders a single "Buy" button for these (no ×100/×1000 — never useful for a non-stacking one-per-aide item), showing a disabled "Owned" state once `(aide.trainerBag[itemId]||0)>=1` for the currently-shopping aide. `buyItem()` gets the identical check as a defensive backstop and clamps `qty` to 1 for these items regardless of the value passed in.
+
+---
+
  (playback variant chosen — see "Watched Gym Battle — Aide Card Trigger"; true player-controlled move selection remains undone/not implemented).
 - Gauntlet-style sub-trainers within regular gyms (mainline-game precedent) — deferred from v0.25.
 - Trainer innate abilities / type affinities
@@ -2019,7 +2085,7 @@ New `showCheatShinyPicker(catchId, targetDexId, formName)` modal — "✨ Shiny"
 - Distribution charts for height/weight on species detail page
 - `swarm` encounter method — future-proofing only; mechanic undefined (possible time/rotation-based active swarm). Not implemented.
 - `honey` encounter method — future-proofing only; would require `requiresItem: honey`-type item placed on a tree, possibly with a wait/return timer. Not implemented.
-- **New, v0.39.2: `hasLab` boolean field on location data** (Pallet Town specifically), so the Hire Second Aide button can gate on a real Lab shop tier concept instead of a hardcoded `currentLocation==='palletTown'` check — without displacing Pallet Town's existing `shopTier:'basic'` field shop, since `shopTier` is single-value. Confirmed by Jack as a real idea worth doing eventually, not urgent.
+- ~~**`hasLab` boolean field on location data**~~ — **resolved v0.44.** Pallet Town's `shopTier` changed to `'full'` directly (see v0.44 #11); the Hire Second Aide button was removed and its purchase relocated into the generic shop's Key Items category, gated by the existing `state.aides.length>1` check instead of a hardcoded `currentLocation==='palletTown'` check.
 - **New, v0.39.2: aide-aware Pokédex rendering, and nickname/nature/move-editing.** Currently all still hardcoded to `aides[0]` (default-param fallback) — Jack confirmed fine to defer, to be revisited later. *(Daycare/breeding specifically resolved v0.40 — see above.)*
 
 ---

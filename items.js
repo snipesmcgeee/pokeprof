@@ -1,5 +1,5 @@
 // PokeProf — Items Database
-// Auto-generated: 9/5/2026, 11:52:58 PM
+// Auto-generated: 9/15/2026, 7:16:03 PM
 // Entries: 81
 
 const ITEMS_DATA = [
@@ -12,7 +12,7 @@ const ITEMS_DATA = [
     "effectValue": null,
     "shopPrice": 100,
     "sellPrice": null,
-    "shopTier": "lab",
+    "shopTier": "full",
     "isConsumable": true,
     "catchRateModifier": null,
     "requiresTarget": false,
@@ -1428,7 +1428,7 @@ const ITEMS_DATA = [
   {
     "itemId": "natureMint",
     "name": "Nature Mint",
-    "itemCategory": "tool",
+    "itemCategory": "consumable",
     "description": "Changes a Pokémon's Nature when used.",
     "effect": "change-nature",
     "effectValue": null,

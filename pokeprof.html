@@ -729,6 +729,7 @@ let state={
   professorBag:{},
   speciesCap:6, // v0.26 — editable per-species catch cap (1-6)
   avoidCappedSpecies:false, // v0.40 — global toggle, skip ball-throw attempts at capped species
+  gymBattleDefaultPreference:false, // v0.44 — new-player preamble choice, starting default for any location's Gym Battle checkbox that hasn't been manually touched yet
   speciesCapOverrides:{}, // v0.38 — per-species cap overrides {dexId:number}
   daycareSlots:{purchased:1,slots:[]}, // v0.26 — Day Care / Breeding
   researchLog:{}, pendingFindings:[],
@@ -2929,15 +2930,20 @@ function rollEncounter(idx=0){
   const aide=state.aides[idx];
   const locId=aide.currentLocation;
   const table=buildRouteTable(locId,aide.trainerBag);
-  // v0.44 fix — gym encounters no longer roll while the aide is physically AT their mission
-  // origin (missionOrigin, set once at confirmMission() and never updated by Wander redirects —
-  // see DESIGN.md). Previously, a party wipe anywhere on a Wander route recalled the aide to
-  // their lastHealLocation, which is very often the same place the mission started from; if that
-  // location also had a checked Gym Battle method, the aide would immediately re-fight it before
-  // ever leaving again, and another loss/wipe sent it right back — an unbreakable loop requiring
-  // manual intervention. Gym battles remain available at every OTHER location the aide passes
-  // through or is dispatched to, exactly as v0.40 intended — this only exempts the starting point.
-  const gymTrainerIds=(locId===aide.missionOrigin)?[]:getGymTrainerIdsAtLocation(locId).filter(t=>isGymAccessible(t,aide.trainerBag)&&isGymGrindEligible(t,aide.trainerBag));
+  // v0.44 fix — gym encounters no longer roll while the aide is physically at their mission
+  // origin OR their last heal location. missionOrigin is set once at confirmMission() and never
+  // updated by Wander redirects; lastHealLocation is the one that actually tracks the aide's
+  // current progress (updated in arriveAtLocation() every time they reach a heals:true city) —
+  // Pewter -> Cerulean -> Saffron -> Vermillion, etc. Excluding only missionOrigin meant every
+  // NEW city reached via Wander was unprotected until the player manually re-dispatched from it
+  // (which resets missionOrigin to wherever they're standing) — explaining why re-checking the
+  // gym box and re-confirming "fixed" it once per city, then broke again at the next one. A party
+  // wipe anywhere on a Wander route recalls the aide to lastHealLocation and rebuilds the same
+  // path; if that location's gym could still fire, the aide re-fights it before ever leaving
+  // again, an unbreakable loop requiring manual intervention every time progress advances a city.
+  // Gym battles remain available at every OTHER location the aide passes through or is dispatched
+  // to, exactly as v0.40 intended — this only exempts wherever the aide is currently "based."
+  const gymTrainerIds=(locId===aide.missionOrigin||locId===aide.lastHealLocation)?[]:getGymTrainerIdsAtLocation(locId).filter(t=>isGymAccessible(t,aide.trainerBag)&&isGymGrindEligible(t,aide.trainerBag));
 
   if(!table.length&&!gymTrainerIds.length) return null;
 
@@ -2946,7 +2952,7 @@ function rollEncounter(idx=0){
   // configured locationMethodPrefs — entirely). Side effect worth knowing about, not itself the
   // goal: waypoints now also respect locationMethodPrefs for that location where before they
   // ignored it in favor of the flat default — more consistent, not a regression.
-  const method=pickMethodForLocation(locId,table,gymTrainerIds);
+  const method=pickMethodForLocation(locId,table,gymTrainerIds,aide.trainerBag);
 
   if(method==='gym'){
     const trainerId=gymTrainerIds[0]; // v0.25 — one gym per location; first match wins if ever >1
@@ -2960,16 +2966,28 @@ function rollEncounter(idx=0){
   return rollFromTable(rollTable);
 }
 
-function pickMethodForLocation(locId,table,gymTrainerIds){
+function pickMethodForLocation(locId,table,gymTrainerIds,trainerBag){
   gymTrainerIds=gymTrainerIds||[];
-  const availableMethods=[...new Set(table.map(e=>e.method))];
-  if(gymTrainerIds.length) availableMethods.push('gym');
+  const wildMethods=[...new Set(table.map(e=>e.method))];
   const prefs=state.locationMethodPrefs[locId];
   if(!prefs||!prefs.methods||!prefs.methods.length){
-    // Default: even split — pick randomly from available
-    return availableMethods[Math.floor(Math.random()*availableMethods.length)];
+    // v0.44 fix — no saved prefs yet for this location (never manually opened in the mission
+    // modal — the normal case for anywhere Wander carries the aide to on its own). This used to
+    // include 'gym' unconditionally in the random pool here, regardless of what its own
+    // default-checked state would actually be — battling a gym the player never even saw the
+    // checkbox for. Mirrors renderMethodPrefs()'s own gymChecked default: gym joins the default
+    // pool once that badge is already earned (the grind/rematch case), OR — new in this version —
+    // if the player chose "YES" to a more idle experience in the New Player Preamble's Gym Battle
+    // Default question (state.gymBattleDefaultPreference; false/NO for any save predating it).
+    const defaultMethods=[...wildMethods];
+    if(gymTrainerIds.length&&(hasGymBadge(gymTrainerIds[0],trainerBag)||state.gymBattleDefaultPreference)){
+      defaultMethods.push('gym');
+    }
+    return defaultMethods[Math.floor(Math.random()*defaultMethods.length)];
   }
   // Filter to only checked methods that actually have rows
+  const availableMethods=[...wildMethods];
+  if(gymTrainerIds.length) availableMethods.push('gym');
   const active=prefs.methods.filter(m=>availableMethods.includes(m));
   if(!active.length) return availableMethods[Math.floor(Math.random()*availableMethods.length)];
   // Weighted roll
@@ -4071,9 +4089,37 @@ function showPreambleModal(){
     +'You are in full control of your aides\' movements, though they will research for you around the clock whether you have the game open or not. They will keep researching the same area until you direct them to move to a new location.<br><br>'
     +'If you would like to learn more about any aspects of the game, press the "Info" button in the bottom right of the screen.'
     +'</div>'
-    +'<button onclick="document.getElementById(\'preamble-modal\').remove()" class="primary" style="width:100%;padding:10px;">✔ Let\'s Go</button>'
+    +'<button onclick="document.getElementById(\'preamble-modal\').remove();showGymDefaultModal();" class="primary" style="width:100%;padding:10px;">✔ Let\'s Go</button>'
     +'</div>';
   document.body.appendChild(modal);
+}
+// v0.44 — New Player Preamble, part 2: one-time choice (new-save only, chained right after the
+// Welcome modal) setting the STARTING default for any location's Gym Battle checkbox that hasn't
+// been manually touched yet (state.locationMethodPrefs[locId] doesn't exist). Not a master switch
+// — every city's checkbox remains individually overridable afterward via the mission modal, same
+// as always; this only decides what an untouched city starts as. No dismiss-by-clicking-outside —
+// requires an explicit NO/YES choice, same pattern as the Welcome modal requiring its own button.
+function showGymDefaultModal(){
+  const existing=document.getElementById('gym-default-modal'); if(existing) existing.remove();
+  const modal=document.createElement('div');
+  modal.id='gym-default-modal';
+  modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:1300;display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:18px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;">'
+    +'<div style="color:var(--accent);font-size:14px;font-weight:bold;margin-bottom:12px;">Gym Battle Default</div>'
+    +'<div style="color:var(--main-text);font-size:12px;line-height:1.7;margin-bottom:16px;">'
+    +'Select one of the following:<br><br>'
+    +'<span style="color:var(--main-text-secondary);font-size:11px;">Note: if you want to manually fight each gym for the first time, select NO. If you want a more idle experience, select YES.</span>'
+    +'</div>'
+    +'<div style="display:flex;gap:8px;">'
+    +'<button onclick="setGymBattleDefault(false)" style="flex:1;padding:10px;">NO</button>'
+    +'<button onclick="setGymBattleDefault(true)" class="primary" style="flex:1;padding:10px;">YES</button>'
+    +'</div></div>';
+  document.body.appendChild(modal);
+}
+function setGymBattleDefault(val){
+  state.gymBattleDefaultPreference=!!val;
+  const modal=document.getElementById('gym-default-modal'); if(modal) modal.remove();
+  saveGame();
 }
 
 // ── INFO MENU (v0.27) ──
@@ -4193,11 +4239,16 @@ function renderMethodPrefs(locId){
   // the current live status (badge was just earned since the last render), the default is
   // recomputed fresh — overriding whatever the player had manually set beforehand. Between
   // transitions, the player's manual choice is respected and persists like any other method.
+  // v0.44 — while unearned, the default is now the player's own New Player Preamble choice
+  // (state.gymBattleDefaultPreference, set once at new-game creation, defaults false/NO for any
+  // save that predates this question) instead of always false. Once earned, default is always
+  // checked, unaffected by this preference (that's the intended grind/rematch case).
   let gymChecked=false, gymBadgeState=null;
   if(gymTrainerIds.length){
     const gymHasBadge=hasGymBadge(gymTrainerIds[0],state.aides[missionModalAideIndex].trainerBag);
     gymBadgeState=gymHasBadge?'earned':'unearned';
-    gymChecked=(!prefs||prefs.gymBadgeState!==gymBadgeState)?gymHasBadge:prefs.methods.includes('gym');
+    const defaultChecked=gymHasBadge||!!state.gymBattleDefaultPreference;
+    gymChecked=(!prefs||prefs.gymBadgeState!==gymBadgeState)?defaultChecked:prefs.methods.includes('gym');
   }
 
   let html='<div style="margin-top:10px;border-top:1px solid var(--main-card);padding-top:10px;">';
@@ -7178,7 +7229,7 @@ const SAVE_KEY='pokeprof_save';
 // batch-evolve prompt, offline friendship parity, dual-root family breeding, Ditto
 // breeding-placeholder fix, Family IV Inheritance pool fix) is a bug fix or UI/logic-only, no
 // additional schema impact.
-const SAVE_VERSION=29; // v0.44 — new per-aide researchMode/researchPair fields (Day Care Research Mode)
+const SAVE_VERSION=30; // v0.44 — new global gymBattleDefaultPreference field (New Player Preamble's Gym Battle Default question)
 let saveTimer=0;
 
 function saveGame(){
@@ -7196,6 +7247,7 @@ function saveGame(){
         professorBag:state.professorBag||{},
         speciesCap:state.speciesCap||6,
         avoidCappedSpecies:!!state.avoidCappedSpecies, // v0.40
+        gymBattleDefaultPreference:!!state.gymBattleDefaultPreference, // v0.44
         speciesCapOverrides:state.speciesCapOverrides||{}, // v0.38
         daycareSlots:state.daycareSlots||{purchased:1,slots:[]},
         discoveredLocations:[...state.discoveredLocations],
@@ -7220,7 +7272,7 @@ function loadGame(){
 
     // ── SAVE_VERSION 28 MIGRATION ──
     // Accepts v11-v27 saves and migrates them; rejects anything older.
-    if(data.version!==SAVE_VERSION&&data.version!==28&&data.version!==27&&data.version!==26&&data.version!==25&&data.version!==24&&data.version!==23&&data.version!==22&&data.version!==21&&data.version!==20&&data.version!==19&&data.version!==18&&data.version!==17&&data.version!==16&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
+    if(data.version!==SAVE_VERSION&&data.version!==29&&data.version!==28&&data.version!==27&&data.version!==26&&data.version!==25&&data.version!==24&&data.version!==23&&data.version!==22&&data.version!==21&&data.version!==20&&data.version!==19&&data.version!==18&&data.version!==17&&data.version!==16&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
     const s=data.state;
     // v0.39.1 — aide-owned fields (party/dex/trainerBag/currentLocation/mission-and-travel/
     // gymProgress/lastHealLocation/wanderMode) now live in state.aides[]. A pre-v26 save has them
@@ -7286,6 +7338,7 @@ function loadGame(){
       gymProgress:src0.gymProgress??{},
       speciesCap:s.speciesCap??6,
       avoidCappedSpecies:!!s.avoidCappedSpecies, // v0.40
+      gymBattleDefaultPreference:!!s.gymBattleDefaultPreference, // v0.44
       speciesCapOverrides:s.speciesCapOverrides??{}, // v0.38
       daycareSlots:s.daycareSlots??{purchased:1,slots:[]},
       travelPath:src0.travelPath??[], travelPathIndex:src0.travelPathIndex??0,
@@ -7609,6 +7662,7 @@ if(!hasSave){
     professorBag:{},
     speciesCap:6,
     avoidCappedSpecies:false, // v0.40
+    gymBattleDefaultPreference:false, // v0.44 — set by the New Player Preamble's Gym Battle Default question
     speciesCapOverrides:{}, // v0.38
     daycareSlots:{purchased:1,slots:[]},
     researchLog:{}, pendingFindings:[],

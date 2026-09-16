@@ -710,7 +710,8 @@ function makeAide(id,name,emoji,startLocation){
     lastHealLocation:startLocation,
     wanderMode:false, wanderMetric:'encounters', // v0.33/v0.35, per-aide — each aide independently wanders or not
     expShareActive:false, // v0.40 — per-aide EXP Share toggle, only meaningful once the item is owned
-    researchMode:false, researchPair:null // v0.44 — Day Care Research Mode, see updateResearchModePairs()
+    researchMode:false, researchPair:null, // v0.44 — Day Care Research Mode, see updateResearchModePairs()
+    wipeRecallLocation:null // v0.44 — set only by an actual party-wipe recall (endMission('faint')); cleared the moment the aide genuinely leaves that spot. See rollEncounter().
   };
 }
 
@@ -982,6 +983,10 @@ function getWanderReachableLocations(fromId,trainerBag=state.aides[0].trainerBag
 
 function arriveAtLocation(locId,aide=state.aides[0]){
   aide.currentLocation=locId;
+  // v0.44 — a genuine arrival anywhere other than the wipe-recall spot means the aide has
+  // actually left; the gym-battle guard in rollEncounter() only needs to hold for this one
+  // immediate escape, not forever.
+  if(aide.wipeRecallLocation&&locId!==aide.wipeRecallLocation) aide.wipeRecallLocation=null;
   const locData=typeof LOCATIONS!=='undefined'?getLocation(locId):null;
   const locName=locData?locData.name:locId;
   addLog('📍 '+aide.name+' arrived at '+locName+'!','info','travel',aide.id);
@@ -2930,20 +2935,16 @@ function rollEncounter(idx=0){
   const aide=state.aides[idx];
   const locId=aide.currentLocation;
   const table=buildRouteTable(locId,aide.trainerBag);
-  // v0.44 fix — gym encounters no longer roll while the aide is physically at their mission
-  // origin OR their last heal location. missionOrigin is set once at confirmMission() and never
-  // updated by Wander redirects; lastHealLocation is the one that actually tracks the aide's
-  // current progress (updated in arriveAtLocation() every time they reach a heals:true city) —
-  // Pewter -> Cerulean -> Saffron -> Vermillion, etc. Excluding only missionOrigin meant every
-  // NEW city reached via Wander was unprotected until the player manually re-dispatched from it
-  // (which resets missionOrigin to wherever they're standing) — explaining why re-checking the
-  // gym box and re-confirming "fixed" it once per city, then broke again at the next one. A party
-  // wipe anywhere on a Wander route recalls the aide to lastHealLocation and rebuilds the same
-  // path; if that location's gym could still fire, the aide re-fights it before ever leaving
-  // again, an unbreakable loop requiring manual intervention every time progress advances a city.
-  // Gym battles remain available at every OTHER location the aide passes through or is dispatched
-  // to, exactly as v0.40 intended — this only exempts wherever the aide is currently "based."
-  const gymTrainerIds=(locId===aide.missionOrigin||locId===aide.lastHealLocation)?[]:getGymTrainerIdsAtLocation(locId).filter(t=>isGymAccessible(t,aide.trainerBag)&&isGymGrindEligible(t,aide.trainerBag));
+  // v0.44 fix, round 2 — gym encounters are excluded only at aide.wipeRecallLocation: the exact
+  // spot a party wipe (endMission('faint')) just sent the aide back to, and ONLY until they
+  // genuinely leave it (cleared in arriveAtLocation()). The earlier version of this fix excluded
+  // gym at missionOrigin and lastHealLocation unconditionally — but lastHealLocation updates on
+  // EVERY arrival at any heals:true city, not just after a wipe, so it ended up permanently
+  // blocking gym battles at nearly every gym city (they're almost always also heal locations),
+  // even in a game that had never wiped once. This version only ever blocks the one immediate
+  // re-fight right after a wipe, and never touches gym battling otherwise — including on the
+  // very first attempt at a fresh city, which should (and now does) work exactly like before.
+  const gymTrainerIds=(locId===aide.wipeRecallLocation)?[]:getGymTrainerIdsAtLocation(locId).filter(t=>isGymAccessible(t,aide.trainerBag)&&isGymGrindEligible(t,aide.trainerBag));
 
   if(!table.length&&!gymTrainerIds.length) return null;
 
@@ -4396,6 +4397,11 @@ function endMission(reason='faint',idx=0){
   document.getElementById('enc-body').textContent=msg;
   addLog(msg,reason==='recall'?'info':'faint',reason==='recall'?'travel':'fainting',state.aides[idx].id);
   aide.currentLocation=returnLocId;
+  // v0.44 — marks this exact spot as "just recalled here by a wipe" so rollEncounter() can skip
+  // gym battles here until the aide genuinely leaves (see arriveAtLocation() for where this
+  // clears). A deliberate 'recall' isn't a wipe and doesn't set this — the aide chose to stop,
+  // there's no risk of an unwanted immediate re-fight to guard against.
+  if(reason==='faint') aide.wipeRecallLocation=returnLocId;
   if(isHealLocation(returnLocId)){
     const needsHeal=aide.party.some(p=>p.currentHP<p.maxHP||p.currentHP<=0);
     if(needsHeal){

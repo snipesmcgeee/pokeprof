@@ -2041,7 +2041,7 @@ New boolean checkbox in `renderDexFilterPopupContent()`'s All Catches filter pop
 
 ### 8. Day Care Research Mode
 
-New per-aide checkbox in the mission modal, backed by a new persisted `aide.researchMode` boolean (**requires `SAVE_VERSION` bump — see below**). Toggling it on immediately attempts pair selection if none is active. New per-aide `aide.researchPair` field (`{parentAId, parentBId, resultDexId, nextReadyAt, eggsQueued}` or `null`), functionally parallel to a `daycareSlots.slots[]` entry but tracked separately and never counted against `daycareSlots.purchased` capacity.
+New per-aide checkbox, backed by a new persisted `aide.researchMode` boolean (**requires `SAVE_VERSION` bump — see below**). Lives inside `renderMethodPrefs()`'s Encounter Methods panel, scoped to when the Day Care itself is the selected destination — not a global toggle near the Wander buttons, since it's only meaningful in that context. Toggling it on immediately attempts pair selection if none is active, independent of hitting Dispatch. New per-aide `aide.researchPair` field (`{parentAId, parentBId, resultDexId, nextReadyAt, eggsQueued}` or `null`), functionally parallel to a `daycareSlots.slots[]` entry but tracked separately and never counted against `daycareSlots.purchased` capacity.
 
 Selection pool is box-only (`!p.holder && !p.breeding`), restricted to `canBreedPair()`-compatible pairs, preferring a pairing whose result species isn't yet `breedingTested`; falls back to any valid compatible pair if none are untested; stays `null` (inactive) if no valid pair exists at all in the box. Selected parents are locked (`p.breeding=true`) exactly like a manual pair.
 

@@ -3925,10 +3925,7 @@ function showMissionModal(){
   const wanderButtonHtml=
     '<button onclick="selectWanderMode(\'encounters\')" id="wander-select-btn-encounters" style="width:100%;padding:8px;margin-bottom:4px;font-size:11px;border-color:var(--main-border);color:var(--main-text-secondary);">🧭 Wander (lowest encounters)</button>'+
     '<button onclick="selectWanderMode(\'catches\')" id="wander-select-btn-catches" style="width:100%;padding:8px;margin-bottom:8px;font-size:11px;border-color:var(--main-border);color:var(--main-text-secondary);">🧭 Wander (lowest catches)</button>';
-  // v0.44 — Day Care Research Mode: a standing per-aide setting, not a mission parameter, so it
-  // takes effect immediately on toggle via toggleResearchMode() rather than waiting for Dispatch.
-  const researchModeHtml='<label style="display:flex;align-items:center;gap:8px;padding:6px 0 10px;font-size:11px;color:var(--main-text-secondary);cursor:pointer;"><input type="checkbox" '+(state.aides[missionModalAideIndex].researchMode?'checked':'')+' onchange="toggleResearchMode()"> 🔬 Day Care Research Mode (auto-breeds random box pairs whenever this aide is at the Day Care)</label>';
-  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;"><div style="color:var(--accent);font-size:13px;font-weight:bold;margin-bottom:12px;">🗺 Choose Destination</div><div style="font-size:10px;color:var(--main-text-muted);margin-bottom:8px;">From: '+currentLoc+'</div>'+researchModeHtml+wanderButtonHtml+sortButtonsHtml+'<div id="dest-list-container" style="max-height:220px;overflow-y:auto;"></div><div id="mission-summary" style="color:var(--main-text-secondary);font-size:11px;margin:10px 0;min-height:18px;"></div><div id="method-prefs"></div><div id="shop-section-container"></div><div style="display:flex;gap:8px;"><button onclick="document.getElementById(\'mission-modal\').remove()" style="flex:1;">✕ Cancel</button><button id="confirm-mission" onclick="confirmMission()" class="primary" style="flex:1;" disabled>▶ Dispatch</button></div></div>';
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;"><div style="color:var(--accent);font-size:13px;font-weight:bold;margin-bottom:12px;">🗺 Choose Destination</div><div style="font-size:10px;color:var(--main-text-muted);margin-bottom:8px;">From: '+currentLoc+'</div>'+wanderButtonHtml+sortButtonsHtml+'<div id="dest-list-container" style="max-height:220px;overflow-y:auto;"></div><div id="mission-summary" style="color:var(--main-text-secondary);font-size:11px;margin:10px 0;min-height:18px;"></div><div id="method-prefs"></div><div id="shop-section-container"></div><div style="display:flex;gap:8px;"><button onclick="document.getElementById(\'mission-modal\').remove()" style="flex:1;">✕ Cancel</button><button id="confirm-mission" onclick="confirmMission()" class="primary" style="flex:1;" disabled>▶ Dispatch</button></div></div>';
   document.body.appendChild(modal);
   renderDestList();
   renderShopSection(currentLoc);
@@ -4143,6 +4140,18 @@ function selectMissionDest(locId){
 // Methods present but requiresItem not owned by aide = disabled.
 function renderMethodPrefs(locId){
   const el=document.getElementById('method-prefs'); if(!el) return;
+  // v0.44 — Day Care Research Mode lives in the Encounter Methods panel, scoped to when the Day
+  // Care itself is the selected destination — moved here from a global always-visible toggle near
+  // Wander, since it's meaningful only in that context, same as any other location's methods.
+  // Takes effect immediately via toggleResearchMode(), independent of hitting Dispatch.
+  if(locId===DAYCARE_LOCATION_ID){
+    const aide=state.aides[missionModalAideIndex];
+    el.innerHTML='<div style="margin-top:10px;border-top:1px solid var(--main-card);padding-top:10px;">'
+      +'<div style="color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Encounter Methods</div>'
+      +'<label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:11px;color:var(--main-text-secondary);cursor:pointer;"><input type="checkbox" '+(aide.researchMode?'checked':'')+' onchange="toggleResearchMode()"> 🔬 Day Care Research Mode (auto-breeds random box pairs whenever this aide is at the Day Care)</label>'
+      +'</div>';
+    return;
+  }
   // All encounters at this location
   const allEncs=typeof ENCOUNTERS!=='undefined'?ENCOUNTERS.filter(e=>e.locationId===locId):[];
   // v0.25 — Gym Battle is a synthetic method, not sourced from ENCOUNTERS.js; only appears

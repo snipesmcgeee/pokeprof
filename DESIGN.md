@@ -2112,6 +2112,58 @@ Sets a new global, persisted `state.gymBattleDefaultPreference` boolean (`false`
 
 ---
 
+### 15. Wander Could Make Zero Progress Forever — Stale Destination + Missing `ignoreDiscovery` on Wipe Recovery
+
+**Bug** (reported post-build): an aide left Wandering overnight made zero progress — no balls used, no exp gained, despite a healthy 6-Pokémon party that wasn't wiping every single battle. The log showed the exact same two lines repeating forever: "arrived at Route 2 - South" and "changes course — new destination: Diglett's Cave," alternating with nothing else ever happening.
+
+**Root cause, part 1 (stale destination during departure dwell)**: `evaluateWanderTarget()`'s "departure dwell" (`travelPathIndex===-1`, added in v0.34) deliberately leaves `aide.missionDestination` **stale** — still showing the old target — until the dwell finishes and the new journey officially begins (see that function's own comments for why). Both `endMission('faint', idx)` and its duplicate in `processAideOfflineTime()` (the function that actually processes an offline/overnight gap) decide "is the aide already at their destination?" by comparing the wipe-recall point against `aide.missionDestination` directly. If a party wipe landed during that exact departure-dwell window, this read the stale value — which, since the aide hadn't physically left yet, equals the recall point itself — concluding "already home" and silently discarding the freshly-computed real target (e.g. Diglett's Cave) entirely, resetting cleanly back to "no plan" at the heal location (in this case, Route 4 West, which has `heals:true` but no encounters of its own).
+
+**Root cause, part 2 (missing `ignoreDiscovery`)**: once reset, Wander immediately recomputes and re-queues the identical redirect toward the same far-off target — but the wipe-recovery rebuild call to `buildTravelPath()` (in both `endMission()` and `processAideOfflineTime()`) was missing the `ignoreDiscovery=true` flag that `evaluateWanderTarget()`'s own call already carries. Since v0.43 explicitly permits Wander to route through undiscovered territory, but this recovery call required the *entire* path to already be discovered, any wipe occurring while genuinely exploring new ground made the rebuild fail every time — permanently truncating progress back to the heal point, since the retry attempt was exploring that exact same undiscovered territory and just as likely to wipe again before completing it.
+
+Together, these two bugs meant: the first wipe deep in unexplored territory could reset progress to zero, and every subsequent attempt carried the same risk of resetting again before ever finishing — with enough wipes over a long offline gap, guaranteed to happen, exactly matching "zero progress overnight."
+
+**Fix**: both `endMission()` and `processAideOfflineTime()` now resolve the *true* pending destination before deciding — `(aide.travelPathIndex===-1 && aide.travelPath.length) ? aide.travelPath[aide.travelPath.length-1] : aide.missionDestination` — and immediately collapse `aide.missionDestination` to that resolved value, since the wipe is interrupting those plans regardless. Both wipe-recovery rebuild calls to `buildTravelPath()` now pass `ignoreDiscovery=true`, matching `evaluateWanderTarget()`'s own permission model exactly.
+
+Verified via direct reproduction of the race condition (wipe injected mid-departure-dwell) and a 20,000-tick end-to-end simulation: previously frozen at 2 locations forever with 0 catches; after the fix, 11 unique locations visited, 17 discovered, 26 catches (with Poké Balls available), and no permanent oscillation — remaining time spent at Mt. Moon reflects the level-15 tier-1 cap (needs the first badge to raise), not a technical loop.
+
+---
+
+## v0.44.1 — Shipped
+
+Versioning correction starting here: every prior delivery in the v0.44 line after the initial build was mislabeled "v0.44" instead of incrementing — this is the first properly-numbered follow-up. See workflow.md for the standing rule going forward.
+
+### 16. Newly-Unlocked Encounter Methods Silently Excluded Forever (Stale `locationMethodPrefs`)
+
+**Bug** (reported post-build): an aide at Celadon City — a fishing/Surf-only location, all 16 encounter rows item-gated — only ever battled the gym, despite the aide already holding at least two of the required items and every other method showing as checked in the mission modal.
+
+**Root cause**: `state.locationMethodPrefs[locId]` is saved once and then read directly at roll time by `pickMethodForLocation()`. If that location's prefs were saved *before* the aide acquired the relevant item (e.g. a rod bought after Wander had already passed through once), the newly-unlocked method becomes genuinely available and even *displays* as checked by default in `renderMethodPrefs()` (correct — it uses `knownMethods` to detect "never offered before" and defaults those to checked) — but that display default was never being persisted into the saved `prefs.methods` array unless the player happened to manually interact with some control on that exact location's panel afterward, which triggers `updateMethodPrefs()`. Since Wander routes through and past locations without ever reopening their panels, the stale saved array — missing the newly-unlocked method — was what `pickMethodForLocation()` actually read, forever, regardless of what the UI displayed. Matches Jack's own recollection of previously "fixing" this by manually re-toggling a location's checkboxes — that manual interaction was exactly what forced the persist.
+
+**Fix, two parts**: `renderMethodPrefs()` now also treats a newly-available non-gym method (present in `availMethods` but absent from `knownMethods`) as a reason to immediately call `updateMethodPrefs()` and persist the corrected defaults — the same trigger the gym-badge-transition case already had, just extended to cover this case too. More importantly, `pickMethodForLocation()` itself now self-heals at roll time, independent of whether the panel ever re-renders: a method that's available right now but isn't in `prefs.knownMethods` is treated as checked by default directly in the roll pool, exactly mirroring the display-side default — so a method a player has never explicitly unchecked is never silently excluded just because the save predates owning the item. A method the player genuinely did uncheck (present in `knownMethods` but absent from `methods`) still correctly stays excluded — this only rescues real new unlocks, not deliberate opt-outs.
+
+### 17. Gym Battle EXP Batched to One Line Per Pokémon
+
+**Reported**: a single gym win could produce a wall of near-identical "+X EXP" log lines — one per enemy KO per party member, so a 5-Pokémon gym roster with EXP Share on and a 6-Pokémon party produced up to 30 lines for one battle.
+
+**Fix**: `giveExp()`'s per-call logging is replaced, for gym battles specifically, by a new `applyExpBatched()`/`emitExpSummary()` pair — EXP from every KO in the battle accumulates into a `{catchId: total}` map instead of logging immediately, and exactly one summary line per Pokémon ("Name #id +TOTAL EXP") is emitted once the whole battle concludes. Level-up transitions still log individually — those remain distinct, meaningful events, not routine spam. `distributeExp()` and `awardPerKOExp()` both gained an optional trailing `totals` parameter; every other existing caller (ordinary wild-encounter EXP) omits it and is completely unaffected, falling through to the original per-call `giveExp()`/`giveExpSilent()` behavior unchanged. `runOneGymBattleSilent()` (the offline-catch-up variant, already fully silent) is untouched. The Elite Four/Champion gauntlet's 5-leg loop gets one summary per leg automatically, since each leg is its own `runOneGymBattle()` call — no separate change needed there.
+
+---
+
+## v0.44.2 — Shipped
+
+### 1. Battle Gym Button Permanently Disappears After a Fully-Wiped Watched Battle
+
+**Bug**: clicking "Battle Gym" while the whole party is fainted permanently hides the button — recalling doesn't fix it, only a full page reload does.
+
+**Root cause**: `runWatchedBattleLeg()` has an early-exit branch for an empty `playerSnapshot` (every party member at 0 HP) that calls `finishWatchedBattle()` directly, but `finishWatchedBattle()` reads `document.getElementById('battle-result-area')` — an element that only exists once `showBattleScreen()` has run, which this early-exit path skips entirely. So nothing renders: no result screen, no "Close" button. Since `watchedBattle` (the in-memory flag `updateBattleGymButton()` checks to decide whether the button should show) is only ever cleared by that same Close button's `closeWatchedBattle()` call, it stays stuck non-null indefinitely. Being a plain `let` variable (never part of `state`, never saved), only a full page reload — which re-initializes it to `null` — clears it; a `recall`, which never touches `watchedBattle` at all, does nothing. Once triggered anywhere, the button is broken everywhere (it's a global flag, not per-location), which is why it can look like it "carried over" from one gym to the next.
+
+**Fix, two parts**:
+1. `startWatchedGymBattle()` gains an upfront check: if the party has no conscious Pokémon (mirroring the same `getLeadPokemon()`-style check already used elsewhere before a wild encounter), refuse to start and show a clear "team needs to heal first" message instead of entering the flow at all.
+2. `runWatchedBattleLeg()`'s empty-team early-exit is fixed as a backstop regardless of (1): it now calls `showBattleScreen()` (or an equivalent minimal result render) before `finishWatchedBattle()`, so `#battle-result-area` always exists and the Close button is always reachable, closing off any other path that could leave `watchedBattle` stuck.
+
+**Related improvement, same root cause**: gym battles (both the watched flow and the automatic/idle roll path) don't heal the party immediately after concluding today — healing only happens on the next regular tick's heal check. A loss that wipes the whole team leaves it sitting at 0 HP until that next tick, and clicking Battle Gym again inside that window is exactly the scenario that triggers the bug above. Both `finishWatchedBattle()` and the automatic gym-battle resolution path now call the existing party-heal logic immediately once a battle concludes (win or lose), rather than waiting for the next tick. This also shortens the window that contributed to the earlier overnight Wander-loop issue (item 15 in the v0.44 spec), though that issue's own root causes are already fixed independently.
+
+---
+
  (playback variant chosen — see "Watched Gym Battle — Aide Card Trigger"; true player-controlled move selection remains undone/not implemented).
 - Gauntlet-style sub-trainers within regular gyms (mainline-game precedent) — deferred from v0.25.
 - Trainer innate abilities / type affinities

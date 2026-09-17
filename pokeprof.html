@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.44</title>
+<title>PokeProf v0.44.2</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -143,7 +143,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span style="font-size:11px;color:var(--main-text-muted);">v0.44</span></h1>
+  <h1>PokeProf <span style="font-size:11px;color:var(--main-text-muted);">v0.44.2</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">100.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -1543,7 +1543,7 @@ function healPartyFullBeforeGauntletLeg(idx=0){
 // later faints in the same battle). giveExpFn is giveExp (live) or giveExpSilent (offline).
 // v0.40 — takes a `silent` boolean now instead of a giveExpFn reference, routing through
 // distributeExp() so gym-battle EXP respects EXP Share the same as wild-encounter EXP does.
-function awardPerKOExp(result,enemyTeam,silent,idx=0){
+function awardPerKOExp(result,enemyTeam,silent,idx=0,totals=null){
   if(result.winner!=='player') return;
   const aide=state.aides[idx];
   result.log.forEach((entry,i)=>{
@@ -1556,7 +1556,7 @@ function awardPerKOExp(result,enemyTeam,silent,idx=0){
     if(!attackerReal) return;
     const entryData=getPokemonEntry(enemy.pokedexId);
     const exp=Math.floor(((entryData&&entryData.baseExpYield?entryData.baseExpYield:51)*enemy.level)/7);
-    distributeExp(attackerReal,exp,idx,silent);
+    distributeExp(attackerReal,exp,idx,silent,totals);
   });
 }
 
@@ -1573,7 +1573,11 @@ function runOneGymBattle(enemyTeam,idx=0){
     const real=aide.party.find(p=>p.id===pt.id);
     if(real) real.currentHP=pt.currentHP;
   });
-  awardPerKOExp(result,enemyTeam,false,idx);
+  // v0.44 fix — batches every KO's EXP award into one summary line per Pokemon (see
+  // applyExpBatched()/emitExpSummary()) instead of one line per KO per party member.
+  const expTotals={};
+  awardPerKOExp(result,enemyTeam,false,idx,expTotals);
+  emitExpSummary(expTotals,idx);
   return result;
 }
 
@@ -1601,6 +1605,7 @@ function runGymEncounter(trainerId,tier,idx=0){
       document.getElementById('enc-body').textContent='Lost gym battle at '+gymName+'.';
     }
     aide.currentEncounter=null;
+    checkLocationHeal(idx); // v0.44.2 — immediately, not on the next tick (see closeWatchedBattle())
     advanceTravelPath(idx);
     saveGame();
     return;
@@ -1616,6 +1621,7 @@ function runGymEncounter(trainerId,tier,idx=0){
       addLog('⚔ '+aide.name+' lost the Elite Four/Champion gauntlet at leg '+leg+'/5 — attempt reset.','fail','gymBadges',aide.id);
       document.getElementById('enc-body').textContent='Lost the gauntlet at leg '+leg+'/5. Try again.';
       aide.currentEncounter=null;
+      checkLocationHeal(idx); // v0.44.2
       advanceTravelPath(idx);
       saveGame();
       return;
@@ -1626,6 +1632,7 @@ function runGymEncounter(trainerId,tier,idx=0){
   awardGymWin(trainerId,tier,idx);
   document.getElementById('enc-body').textContent='🏆 Champion defeated at '+gymName+'!';
   aide.currentEncounter=null;
+  checkLocationHeal(idx); // v0.44.2
   advanceTravelPath(idx);
   saveGame();
 }
@@ -1750,6 +1757,14 @@ function updateBattleGymButton(idx=0){
 
 function startWatchedGymBattle(trainerId,aideIndex=0){
   if(watchedBattle) return; // already mid-flow
+  // v0.44.2 fix — starting the flow with a fully-fainted party used to lead to a dead end: the
+  // battle would resolve with an empty player team, skip ever showing a result screen, and leave
+  // `watchedBattle` stuck non-null forever (only a page reload cleared it — see
+  // runWatchedBattleLeg()'s companion fix below for the full root cause). Refuse up front instead.
+  if(!getLeadPokemon(aideIndex)){
+    addLog('Your whole team has fainted — heal up before challenging a gym.','fail','gymBadges',state.aides[aideIndex].id);
+    return;
+  }
   const tier=getForcedTier(trainerId,state.aides[aideIndex].trainerBag);
   if(tier==null) return;
   const isGauntlet=isIndigoTrainer(trainerId)&&(tier===9||tier===10);
@@ -1858,7 +1873,15 @@ function runWatchedBattleLeg(){
   // Snapshot BEFORE the battle mutates currentHP — used only to drive the playback's starting
   // HP bars; the actual outcome is untouched by anything here.
   const playerSnapshot=aide.party.filter(p=>p.currentHP>0).map(p=>({id:p.id,pokedexId:p.pokedexId,formName:p.formName||null,level:p.level,maxHP:p.maxHP,startHP:p.currentHP,isShiny:p.isShiny||false}));
-  if(!playerSnapshot.length||!enemyTeam.length){ finishWatchedBattle({winner:'enemy',log:[]}); return; }
+  if(!playerSnapshot.length||!enemyTeam.length){
+    // v0.44.2 fix — this used to call finishWatchedBattle() directly without ever creating the
+    // battle modal, so finishWatchedBattle()'s document.getElementById('battle-result-area') found
+    // nothing: no result screen, no Close button, and watchedBattle stayed stuck non-null forever
+    // (see startWatchedGymBattle()'s companion fix, which should make this branch unreachable in
+    // practice now — kept as a backstop in case anything else ever routes here with an empty team).
+    showBattleScreen(playerSnapshot,enemyTeam,{winner:'enemy',log:[]});
+    return;
+  }
   const result=runOneGymBattle(enemyTeam,idx);
   showBattleScreen(playerSnapshot,enemyTeam,result);
 }
@@ -1987,7 +2010,14 @@ function finishWatchedBattle(result){
 }
 function closeWatchedBattle(){
   const modal=document.getElementById('battle-modal'); if(modal) modal.remove();
+  const aideIndex=watchedBattle?(watchedBattle.aideIndex||0):0;
   watchedBattle=null;
+  // v0.44.2 — checkLocationHeal() deliberately suppresses itself while watchedBattle is set (see
+  // its own comment), so the free heal-location heal previously only ever applied on the NEXT
+  // regular tick after this point — up to a full 1/10/30s action-rate interval of sitting at 0 HP,
+  // during which clicking Battle Gym again hit the fully-wiped-team dead end above. Apply it
+  // immediately now that watchedBattle is cleared, instead of waiting.
+  checkLocationHeal(aideIndex);
   render();
 }
 
@@ -2560,8 +2590,41 @@ function maybeCreateShedFriend(prevDexId,evolvedPokemon){
 // unchanged. Integer-truncated at each step (standard convention, matches how EXP thresholds
 // are compared elsewhere) — a few fractional points can be lost to rounding in the split,
 // same tradeoff any real Exp Share implementation makes.
-function distributeExp(pokemon,amount,idx,silent){
-  const applyFn=silent?giveExpSilent:giveExp;
+// v0.44 fix — accumulates each Pokemon's total EXP earned across an entire battle instead of
+// logging one line per individual per-KO award. A multi-enemy gym roster with EXP Share on could
+// previously produce dozens of near-identical "+X EXP" lines for a single win (one per KO per
+// party member). totals is a {catchId: cumulativeAmount} accumulator the caller creates once per
+// battle and passes through every award in it; level-up transitions still log individually, since
+// those remain distinct meaningful events, not routine spam.
+function applyExpBatched(pokemon,amount,idx,totals){
+  totals[pokemon.id]=(totals[pokemon.id]||0)+amount;
+  pokemon.exp+=amount;
+  while(true){
+    const s=getPokemonEntry(pokemon.pokedexId,pokemon.formName)||SPECIES[pokemon.species+'|'+(pokemon.formName||'')]||SPECIES[pokemon.species];
+    const gr=pokemon.growthRate||(s?s.growthRate:null)||'mediumFast';
+    const need=expToLevel(pokemon.level+1,gr);
+    if(pokemon.exp>=need&&pokemon.level<getLevelCap(state.aides[idx].trainerBag)){
+      pokemon.level++;
+      const om=pokemon.maxHP; recalcStats(pokemon);
+      pokemon.currentHP=Math.min(pokemon.maxHP,pokemon.currentHP+(pokemon.maxHP-om));
+      addLog(getDisplayName(pokemon)+' #'+pokemon.id+' -> Lv'+pokemon.level+'!','evolve','levelExp',(state.aides.find(a=>a.name===pokemon.holder)||{}).id||'general');
+      checkEvolution(pokemon); saveGame();
+      checkMethodRuleOut(pokemon.pokedexId,pokemon.level,pokemon.friendship);
+    } else break;
+  }
+}
+// Emits the one-line-per-Pokemon batched summary once a battle's totals are fully accumulated.
+function emitExpSummary(totals,idx){
+  const aide=state.aides[idx];
+  Object.keys(totals).forEach(catchIdStr=>{
+    const catchId=Number(catchIdStr);
+    const p=aide.party.find(x=>x.id===catchId)||state.dex.find(x=>x.id===catchId);
+    if(!p) return;
+    addLog(getDisplayName(p)+' #'+p.id+' +'+totals[catchId]+' EXP','exp','levelExp',aide.id);
+  });
+}
+function distributeExp(pokemon,amount,idx,silent,totals){
+  const applyFn=totals?(p,amt,i)=>applyExpBatched(p,amt,i,totals):(silent?giveExpSilent:giveExp);
   const aide=state.aides[idx];
   if(!aide||!aide.expShareActive){ applyFn(pokemon,amount,idx); return; }
   const others=aide.party.filter(p=>p.id!==pokemon.id);
@@ -2748,13 +2811,33 @@ function processAideOfflineTime(idx,secsAway,summary){
       // matches live endMission()'s faint path: heal at lastHealLocation, then rebuild the travel
       // path back to whatever missionDestination was in progress and resume — it does NOT just
       // park research at the heal location, since that would silently abandon the mission.
+      // v0.44 fix — same staleness bug endMission() had: evaluateWanderTarget()'s departure dwell
+      // (travelPathIndex===-1) leaves aide.missionDestination stale until the dwell completes. A
+      // wipe landing in that window here (very plausible — this loop runs many iterations rapidly
+      // during a long offline gap) used the stale value, concluding "already home" and discarding
+      // the real pending target — see endMission() for the full writeup. Resolve the true pending
+      // destination the same way before deciding.
+      const effectiveDestination=(aide.travelPathIndex===-1&&aide.travelPath&&aide.travelPath.length)
+        ?aide.travelPath[aide.travelPath.length-1]
+        :aide.missionDestination;
+      aide.missionDestination=effectiveDestination;
       const returnLocId=aide.lastHealLocation||aide.missionOrigin||'palletTown';
       aide.party.forEach(p=>{ p.currentHP=p.maxHP; });
       aide.currentLocation=returnLocId;
       if(returnLocId===aide.missionDestination){
         aide.travelPath=[]; aide.travelPathIndex=0; aide.travelCyclesRemaining=0;
       } else {
-        aide.travelPath=buildTravelPath(returnLocId,aide.missionDestination,aide.trainerBag);
+        // v0.44 fix — was missing ignoreDiscovery=true, unlike evaluateWanderTarget()'s own call.
+        // Wander (v0.43) is explicitly permitted to route through undiscovered territory, but this
+        // rebuild-after-a-wipe call required the ENTIRE path to already be discovered — so any
+        // wipe partway through freshly-explored territory could never successfully rebuild back
+        // toward the same target (the undiscovered remainder made buildTravelPath fail every
+        // time), permanently truncating progress back to the heal point on every single wipe.
+        // Combined with the staleness bug above, this is what let an entire offline/overnight
+        // session make zero progress: any wipe deep in new territory reset cleanly to square one,
+        // and the retry attempt — exploring that exact same undiscovered territory again — was
+        // just as likely to wipe again before ever completing it.
+        aide.travelPath=buildTravelPath(returnLocId,aide.missionDestination,aide.trainerBag,true);
         aide.travelPathIndex=0;
         if(aide.travelPath.length>0){ arriveAtLocation(aide.travelPath[0],aide); }
         else { aide.missionDestination=returnLocId; } // unreachable — fall back to researching here
@@ -2989,7 +3072,18 @@ function pickMethodForLocation(locId,table,gymTrainerIds,trainerBag){
   // Filter to only checked methods that actually have rows
   const availableMethods=[...wildMethods];
   if(gymTrainerIds.length) availableMethods.push('gym');
-  const active=prefs.methods.filter(m=>availableMethods.includes(m));
+  // v0.44 fix — a method that's available right now but was never even offered as a toggle
+  // before (the player acquired the item this row requires — e.g. a rod or Surf — AFTER this
+  // location's prefs were last saved, most commonly because Wander carried the aide here without
+  // the player ever manually reopening this location's Encounter Methods panel) is treated as
+  // checked by default here too, exactly matching renderMethodPrefs()'s own newly-unlocked-method
+  // default. Previously this only self-corrected once the panel happened to re-render (see
+  // renderMethodPrefs()'s newMethodUnlocked check) — meaning a method could display as checked in
+  // the UI while the actual roll silently kept excluding it forever, since prefs.methods (the
+  // array actually read here) was never updated. Reported: an aide already holding the Good Rod
+  // and Surf HM still only ever battled the gym at a fishing/surf-only city.
+  const knownMethods=prefs.knownMethods||prefs.methods||[];
+  const active=availableMethods.filter(m=>knownMethods.includes(m)?prefs.methods.includes(m):true);
   if(!active.length) return availableMethods[Math.floor(Math.random()*availableMethods.length)];
   // Weighted roll
   const weights=prefs.weights||{};
@@ -4276,12 +4370,16 @@ function renderMethodPrefs(locId){
   el.innerHTML=html;
 
   // Initialise prefs in state if not set, OR if Gym Battle's badge-state default just changed
-  // (see gymChecked/gymBadgeState above) — without this, the freshly-recomputed default is only
-  // ever visible in the DOM checkbox until the player happens to touch some other control on this
-  // panel; pickMethodForLocation() reads the SAVED methods[] array at encounter-roll time, not the
-  // DOM, so an un-persisted transition would silently never actually enter the weighted pool.
+  // (see gymChecked/gymBadgeState above), OR if a non-gym method just became newly available
+  // since prefs were last saved (e.g. the player just acquired the item a fishing row or Surf
+  // requires) — without this, the freshly-recomputed default is only ever visible in the DOM
+  // checkbox until the player happens to touch some other control on this panel;
+  // pickMethodForLocation() reads the SAVED methods[] array at encounter-roll time, not the DOM,
+  // so an un-persisted transition would silently never actually enter the weighted pool. This is
+  // the same gap the gym-transition check already existed for — it just didn't cover this case.
   const gymTransitioned=gymTrainerIds.length&&(!prefs||prefs.gymBadgeState!==gymBadgeState);
-  if(!prefs||gymTransitioned) updateMethodPrefs(locId);
+  const newMethodUnlocked=!!prefs&&availMethods.some(m=>m!=='gym'&&!knownMethods.includes(m));
+  if(!prefs||gymTransitioned||newMethodUnlocked) updateMethodPrefs(locId);
 }
 
 function updateMethodPrefs(locId){
@@ -4390,6 +4488,21 @@ function endMission(reason='faint',idx=0){
   const aide=state.aides[idx];
   aide.currentEncounter=null;
   if(reason==='recall'){ aide.wanderMode=false; aide.wanderMetric=null; } // v0.33/v0.35 — Wander is per-mission, cleared on recall like missionDestination
+  // v0.44 fix — evaluateWanderTarget()'s "departure dwell" (travelPathIndex===-1) deliberately
+  // leaves aide.missionDestination STALE (still the OLD target) until the dwell finishes — see
+  // that function's comments. If a party wipe lands in that exact narrow window, using the stale
+  // value here made this function think "we're already at our destination" (since the aide
+  // hadn't physically left yet) and silently discard the freshly-computed path to the REAL new
+  // target, resetting cleanly back to square one at the heal location. Wander would then
+  // immediately recompute and re-queue the identical redirect — and if a wipe ever landed in that
+  // same narrow window twice in a row, progress reset to zero forever (reported: an entire
+  // overnight session, zero balls used, zero exp gained). The real pending target during that
+  // window is the LAST element of the already-built travelPath, not the stale field — resolve it
+  // here and collapse the ambiguity immediately, since the wipe is interrupting those plans anyway.
+  const effectiveDestination=(aide.travelPathIndex===-1&&aide.travelPath&&aide.travelPath.length)
+    ?aide.travelPath[aide.travelPath.length-1]
+    :aide.missionDestination;
+  aide.missionDestination=effectiveDestination;
   const returnLocId=aide.lastHealLocation||aide.missionOrigin||'palletTown';
   const originLoc=typeof LOCATIONS!=='undefined'?getLocation(returnLocId):null;
   const originName=originLoc?originLoc.name:returnLocId;
@@ -4413,7 +4526,9 @@ function endMission(reason='faint',idx=0){
     if(returnLocId===aide.missionDestination){
       aide.travelPath=[]; aide.travelPathIndex=0; aide.travelCyclesRemaining=0;
     } else {
-      aide.travelPath=buildTravelPath(returnLocId,aide.missionDestination,aide.trainerBag);
+      // v0.44 fix — was missing ignoreDiscovery=true, unlike evaluateWanderTarget()'s own call
+      // (see processAideOfflineTime()'s identical fix for the full writeup).
+      aide.travelPath=buildTravelPath(returnLocId,aide.missionDestination,aide.trainerBag,true);
       aide.travelPathIndex=0;
       if(aide.travelPath.length>0){ arriveAtLocation(aide.travelPath[0],aide); }
       else { aide.missionDestination=returnLocId; } // unreachable — fall back to researching here

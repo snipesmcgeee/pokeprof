@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.44.2</title>
+<title>PokeProf v0.44.3</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -2805,6 +2805,29 @@ function processAideOfflineTime(idx,secsAway,summary){
         if(needsHeal){ aide.party.forEach(p=>{ p.currentHP=p.maxHP; }); summary.heals++; }
       }
     }
+    // v0.44.3 fix — revive/heal now runs unconditionally every iteration, not gated behind
+    // `if(enc)` (previously nested inside it below — a null roll, or a gym encounter, skipped
+    // this entirely). Also now revives every currently-fainted member each cycle, not just one.
+    // Identical fix to processAideTick()'s live-side change — see that comment for the full
+    // writeup. Running this before the lead/full-wipe check below also means a revive here can
+    // turn what would have been a full-wipe relocation into an ordinary continued cycle.
+    {
+      const fainted=aide.party.filter(p=>p.currentHP<=0).sort((a,b)=>a.level-b.level);
+      fainted.forEach(fp=>{
+        if((state.professorBag['revive']||0)>0) useItemFromBag('revive',fp);
+        else if((state.professorBag['max-revive']||0)>0) useItemFromBag('max-revive',fp);
+      });
+    }
+    {
+      const preLead=getLeadPokemon(idx);
+      if(preLead){
+        while(true){
+          const potionId=getWeakestEffectivePotion(preLead);
+          if(!potionId) break;
+          useItemFromBag(potionId,preLead);
+        }
+      }
+    }
     const enc=rollEncounter(idx); const lead=getLeadPokemon(idx);
     if(!lead){
       // v0.26 — mandatory auto-repeat (previously gated behind state.autoRepeat, now always-on),
@@ -2885,21 +2908,8 @@ function processAideOfflineTime(idx,secsAway,summary){
         continue;
       }
 
-      // v0.30 — parity fix: offline never had potion/revive healing at all (only the
-      // heal-location full-heal check above). Now matches live step order exactly: opportunistic
-      // revive first, then uncapped potion healing, before ball/attack resolution.
-      {
-        const fainted=aide.party.filter(p=>p.currentHP<=0).sort((a,b)=>a.level-b.level);
-        for(const fp of fainted){
-          if((state.professorBag['revive']||0)>0){ useItemFromBag('revive',fp); break; }
-          if((state.professorBag['max-revive']||0)>0){ useItemFromBag('max-revive',fp); break; }
-        }
-      }
-      while(true){
-        const potionId=getWeakestEffectivePotion(lead);
-        if(!potionId) break;
-        useItemFromBag(potionId,lead);
-      }
+      // v0.44.3 — revive (all fainted) and potion-heal-to-full now happen unconditionally,
+      // above, before this encounter was even rolled. Not repeated here.
 
       // v0.30 — routes through the same real turn-based engine as live, entirely silently
       // (no per-round log/DOM writes, tallied into summary instead) — see DESIGN.md
@@ -3440,27 +3450,10 @@ function resolveEncounterStep(idx=0){
     aide.currentEncounter=null; advanceTravelPath(idx); saveGame(); return;
   }
 
+  // v0.44.3 — revive (all fainted, not just one) and potion-heal-to-full now happen
+  // unconditionally in processAideTick(), right before this encounter was even rolled, not here.
+  // Re-fetch lead rather than trust a value from before that healing ran.
   const lead=getLeadPokemon(idx); if(!lead){ endMission('faint',idx); return; }
-
-  // Step 2: Opportunistic revive — any fainted party member, any time a Revive is available
-  // (v0.22 fix: previously gated on lead.currentHP<=0, which getLeadPokemon() already guarantees
-  // is never true — that gate made this block permanently dead code. Now fires independent of lead.)
-  {
-    const fainted=aide.party.filter(p=>p.currentHP<=0).sort((a,b)=>a.level-b.level);
-    for(const fp of fainted){
-      if((state.professorBag['revive']||0)>0){ useItemFromBag('revive',fp); break; }
-      if((state.professorBag['max-revive']||0)>0){ useItemFromBag('max-revive',fp); break; }
-    }
-  }
-
-  // Step 3 (v0.30 — uncapped): repeat the smallest-effective-potion rule until the lead is at
-  // full HP or no usable potion remains — was a single application pre-v0.30. Still strictly
-  // between encounters, never mid-fight (the new turn loop below has no healing interruption).
-  while(true){
-    const potionId=getWeakestEffectivePotion(lead);
-    if(!potionId) break;
-    useItemFromBag(potionId,lead);
-  }
 
   // Step 4 (v0.30): the real turn-based wild encounter loop — replaces the old speed-check +
   // single ball-throw-or-fight model. See DESIGN.md "Wild Encounter Turn Loop".
@@ -3734,6 +3727,32 @@ function processAideTick(idx){
   if(aide.currentEncounter){ resolveEncounterStep(idx); return; }
   if(aide.nextEncounterIn<=0){
     checkLocationHeal(idx);
+    // v0.44.3 fix — revive/heal now runs unconditionally at every encounter-cycle boundary,
+    // not gated behind an encounter actually rolling (previously lived inside
+    // resolveEncounterStep(), only reachable once currentEncounter existed — a tick that rolled
+    // no encounter, or was still mid-travel, skipped this entirely). Also now revives every
+    // currently-fainted party member each cycle, not just one (the old `break` after the first
+    // successful revive left additional fainted members queued for a future cycle). Both gaps
+    // were harmless live, where a present player can always intervene manually, but left a
+    // partially-fainted team stuck for long stretches during unattended/offline play — see
+    // DESIGN.md's Live/Offline Parity discussion and processAideOfflineTime()'s identical fix.
+    {
+      const fainted=aide.party.filter(p=>p.currentHP<=0).sort((a,b)=>a.level-b.level);
+      fainted.forEach(fp=>{
+        if((state.professorBag['revive']||0)>0) useItemFromBag('revive',fp);
+        else if((state.professorBag['max-revive']||0)>0) useItemFromBag('max-revive',fp);
+      });
+    }
+    {
+      const preLead=getLeadPokemon(idx);
+      if(preLead){
+        while(true){
+          const potionId=getWeakestEffectivePotion(preLead);
+          if(!potionId) break;
+          useItemFromBag(potionId,preLead);
+        }
+      }
+    }
     aide.currentEncounter=rollEncounter(idx); aide.nextEncounterIn=getEncounterInterval(true);
     if(!aide.currentEncounter){
       advanceTravelPath(idx);
@@ -6335,11 +6354,6 @@ function evoPlaceholderHtml(){
 // vertical space already sitting empty next to the 40px sprites).
 function evoArrowHtml(label){
   return '<div style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;margin:0 4px;flex-shrink:0;max-width:60px;"><div style="color:var(--main-text-secondary);font-size:12px;">→</div><div style="font-size:10px;color:var(--main-text-muted);text-align:center;">'+label+'</div></div>';
-}
-// v0.36 — down-arrow variant, unlabeled, used to introduce a branch point's vertical stack (see
-// "Branch Line-Break").
-function evoArrowDownHtml(){
-  return '<div style="display:flex;justify-content:center;margin:2px 0;"><div style="color:var(--main-text-secondary);font-size:12px;">↓</div></div>';
 }
 // v0.37 — down-arrow variant WITH a method label sitting just above the arrow, used per-branch
 // in the 2+ simultaneous branches stack below (see "Split Forms — Vertical Down-Arrow Layout").

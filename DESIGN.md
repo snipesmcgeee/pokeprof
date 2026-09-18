@@ -6,6 +6,111 @@ Do not change any mechanic marked **SETTLED** without explicit approval from the
 
 ---
 
+## Document Maintenance Rules (SETTLED)
+
+This document holds three kinds of content:
+- **Settled Rule** — terse statement of current behavior/design. No narrative.
+- **Implementation Note** — attached directly beneath the rule it explains,
+  only when a non-obvious invariant exists that a naive rewrite would
+  silently break. Written as a generalized rule ("X must Y because Z"),
+  never as a bug story.
+- **Resolved Bug Index entry** — one line: title + version fixed, no
+  root-cause narrative. Lives in a single index section, not scattered inline.
+
+Filing rules:
+1. Bug fix, no ongoing gotcha → Resolved Bug Index only. Full narrative
+   stays in git commit messages (see Code Style).
+2. Bug fix revealing a non-obvious invariant → Implementation Note,
+   generalized, under the relevant Settled Rule.
+3. Exception: SAVE_VERSION/schema migration history stays as current-state
+   fact (table form) even though chronological — that migration code still
+   runs for old saves. Ordering dependencies between migrations must be
+   stated explicitly in the table, not implied by row order.
+4. Default on close calls: file to the Resolved Bug Index, not as a note.
+   A relearned gotcha costs one git-log lookup; an undisciplined default
+   is how this document got to 2,191 lines.
+
+---
+
+## Resolved Bug Index
+
+One line each: title + version fixed. Full root-cause narrative lives in
+git commit messages, not here. This section grows as the design-doc audit
+proceeds; new entries are appended in the version order they were fixed.
+
+- Doc-only: `trainers.js` script tag was already live in `<head>` but missing from this doc's listing — corrected v0.43
+- Mobile keyboard dismissed mid-edit by tick-render rebuilding the focused input — fixed v0.41 (Render Focus-Guard)
+- Mission Modal alphabetical sort used lexicographic (not natural) string comparison — fixed v0.33
+- Whole-party-faint outcome mislogged as "[species] fled." — fixed v0.36
+- Offline encounters could never roll shiny (`isShiny` hardcoded `false` in `processOfflineTime()`) — fixed v0.22
+- Offline wild encounters had no potion-heal loop or revive logic at all (live-only) — extended to offline for parity, v0.30
+- Auto-revive gate (`lead.currentHP<=0`) was structurally impossible since `getLeadPokemon()` only ever returns a conscious member — Revives/Max Revives were never consumable by this path; fixed pre-v0.22
+- `getFamilyDexIds()` walked `EVO_TREE` edges only (27 rows, branching cases only) — Family IV Inheritance donation pool was silently empty for ~90% of the dex (every single-path evolution line) — fixed v0.38
+- `applySpeciesSwap()` (evolution path) never checked the species cap, only `catchPokemon()` did — an evolution could push a species over cap unchecked — fixed v0.35
+- Three Species Detail entry handlers hardcoded `dexSelectedFormName=null`, hiding boxed "form-only" species (e.g. Nidoran) from Species Detail/Release despite cap enforcement working correctly underneath — fixed v0.41
+- `isUndiscoveredOnly()` checked for literal `'Undiscovered'` but the real data value is `'No eggs'` — the undiscovered-egg-group breeding block never fired — fixed v0.37
+- Non-Ditto breeding within a dual-root family (Nidoran♀/♂) could only ever produce the first-listed root regardless of lineage — fixed v0.38 (dedicated random-selection rule)
+- Day Care slots produced exactly one baby per drop-off with no repeat/offline-accumulation loop, unlike missions — fixed v0.28 (Continuous Batch Hatching)
+- `collectDaycareSlot()` never called `logCaptureRarity()` or `recordNewSpecies()` — shiny/Perfect-IV/Unicorn hatches and new-species-via-breeding produced no log entry — fixed v0.37
+- Day Care eggs never rolled for shiny at all (`collectDaycareSlot()` had no check) — fixed v0.30
+- Dex Held/Boxed status checked only `p.holder`, so a Pokémon breeding at the Day Care displayed identically to one idle in the box — fixed v0.30
+- Wander could get permanently stuck (e.g. Pallet Town on a new game) because the tie-break treated an all-item-gated location as a genuine tied-lowest instead of ineligible — fixed immediately post-v0.33 release
+- Wander redirect bypassed travel time entirely, including a self-target loophole that cashed in the aide's own current (climbing-in-rank) location as a free instant "arrival" — fixed v0.34
+- `getReachableDiscoveredLocations()` gated only display, not BFS traversal through undiscovered intermediates, unlike `buildTravelPath()` — destination picker could offer a path confirming into a dead end (surfaced via Diglett's Cave North) — fixed v0.28
+- `processOfflineTime()`'s wipe handling unconditionally aborted the rest of the away period on a full party wipe — fixed pre-v0.20
+- Newly-unlocked encounter methods (Surf, rod tiers, etc.) defaulted unchecked forever once a location's prefs were first saved — fixed v0.34 (`knownMethods`, render-time only), then fixed completely v0.44.1 (roll-time self-heal, since Wander routes past locations without ever re-rendering their panels)
+- Pokédex grid "Seen" state only populated on successful catch, not on sighting/flee/loss — showed `?` instead of a silhouette — fixed v0.24
+- `isDexPageComplete()` hardcoded the evolution-methods-tested threshold as a stale magic number (34, already wrong pre-v0.24) instead of reading `EVOLUTION_METHODS.length` live — fixed v0.24
+- Evolution-item auto-test was event-triggered only from `buyItem()`/first-catch and missed four other Pokémon-creation paths (shiny auto-catch live/offline, offline regular catch, Day Care hatch) — fixed v0.33 (moved to unconditional per-tick check)
+- Item-evolution matching keyed on `item.effect` (`evolve-stone`/`evolve-trade`) instead of `evolveMethod`+`evolveItem` — trade-style items (Link Cable) could never match once the data standardized on a single `evolveMethod` value, silently marking them ruled out (surfaced via Haunter/Kadabra) — fixed v0.26
+- v0.33's confirmed-research migration wipe ran unconditionally on every load instead of being gated to pre-v0.33 saves only — confirmed research kept getting silently wiped and re-earned every session (surfaced via repeated silent Magneton evolution) — fixed v0.35
+- Species Detail's evolution-methods dropdown appeared to self-close every ~10s — actually the whole panel being torn down and redrawn collapsed on every tick-driven re-render, since its expand/collapse state lived only in the DOM — fixed v0.33
+- `EVOLUTION_METHODS` was a hand-maintained array that drifted out of sync with `items.js` (8 items missing), inflating `testedMethods.length` past the real total and risking false "fully researched" status — fixed v0.33 (now derived live)
+- `checkEvolution()` never had a branch that read `p.friendship` at all — no Pokémon could evolve via friendship regardless of data — fixed v0.20
+- `evolveItem` was mistakenly `numVal()`-cast to a number in `convertEvoTree()` on the false premise that `professorBag` keys were numeric — silently broke every EVO_TREE `use-item` branch (Eevee's stone evolutions included), each ruled out forever with no retry — fixed v0.24
+- Evolution chain root selection required the root itself to be in `seenDexIds` — an unseen structural root (e.g. Pichu) zeroed the entire family's root list and hid the whole chain, not just that node — fixed v0.26
+- Item-based branch confirmation compared `confirmedBranches[].method` against the edge's generic `"use-item"` string instead of the actual item name `recordEvolution()` stores — every item-based evolution failed this comparison unconditionally (surfaced via Eevee) — fixed v0.26
+- Evolution chain drew the same evolution twice for 9 species (Pikachu/Raichu, Eevee, Gloom, Poliwhirl, Slowpoke, Scyther, Exeggcute, Cubone, Koffing) that have both a legacy flat `evolvesIntoId` and matching `EVO_TREE` rows — fixed v0.35
+- Unconfirmed-predecessor placeholder's auto-skip check used a different (buggy) egg-group test than the actual breeding block, so structurally unbreedable species (Mewtwo) incorrectly showed the placeholder — fixed v0.37
+- Ditto showed a permanently unresolvable "confirm via breeding" placeholder, since it can structurally never produce itself as a breeding result — fixed v0.38 (explicit exclusion)
+- Self-KO moves (Self-Destruct/Explosion/Final Gambit) inflated TM-upgrade caps to 200+ since the battle system has no way to represent their drawback — fixed v0.26 (flat 120 clamp)
+- Gym battle EXP was pooled and awarded in full to every survivor regardless of who landed the KO, letting the strongest survivor absorb credit it didn't earn — fixed v0.32 (per-KO attribution via battle log)
+- Elite Four/Champion gauntlet's five members were five independent `trainerId`s with `gauntletOrder` never populated — every leg resolved an empty roster, instant loss at leg 1 every attempt — fixed v0.28 (consolidated to one shared `trainerId`)
+- Passive per-tick location heal fully healed the party for free throughout Elite Four/Champion gauntlets, since Indigo Plateau is itself a heal location — bypassed the items-only gauntlet healing rule — fixed v0.32
+- Gauntlet inter-leg healing applied at most one potion per Pokémon (no loop) — a party missing significant HP got little or no visible healing — fixed v0.36
+- Map colors were swept into theme tokens by the v0.35 theming pass without being added to the Fixed Constants list — route-type nodes matched the page background, making most of the map invisible under the default theme — fixed v0.36
+- Nature Mint button/modal hardcoded `#9b59b6` instead of `var(--accent)` in three spots, and used the native `disabled` attribute so clicking at 0 Nature Mints gave no feedback — fixed v0.37
+- Nickname evolution lock only won among branches that had already passed their own natural condition check, so mutually-exclusive conditions (day/night) meant only one branch was ever a candidate — a lock could never actually override anything (surfaced via Eevee) — fixed v0.36
+- Kantonian/Alolan Raichu's `confirmedBranches` duplicate-guard compared only `{method, intoId}` — sharing both, the Alolan branch was silently dropped as a false duplicate, and its manual evolve button never appeared — fixed v0.33 (form-aware guard, part of Same-DexId Branching Form Evolutions)
+- Several `getPokemonEntry(dexId)` call sites (move picker, move-slot power caps, battle damage/speed, watched-battle display, evolution display text) still silently fell back to base-form data after v0.33's form fix shipped — fixed v0.36 (threaded `.formName`/`toFormName` through each)
+- Live-combat EXP calc's `baseExp` fallback had an operator-precedence bug (`s_?s_.baseExpYield||s_.baseExp:51`) that produced `NaN` EXP for any species with a falsy `baseExpYield` (e.g. Mega Venusaur) instead of the intended default — live and offline EXP math had quietly diverged — fixed v0.31
+- AdminMode additionally gated on `pokedexId===19` (Rattata) — using species identity where permanent catch-order identity (`p.id`) was the actual intent, it silently stopped working the moment Catch #1 evolved into Raticate — fixed v0.33
+- `playerSnapshot` (watched-battle screen) never carried `p.isShiny` from the real party object, and `renderBattleFrame()` hardcoded `getSpriteUrl(..., false)` regardless — shiny sprites rendered as non-shiny in battle — fixed v0.32
+- Log Tab's Condensed sub-tab displayed backwards (stray `.reverse()` on an already newest-first array) — fixed v0.34
+- Poke-modal title duplicated the form label (e.g. "Raichu (Alolan) (Alolan)") — fixed v0.34
+- `showPokemonDetail()`'s type/height/weight read the base form's data for form-variant individuals — another instance of the missing-`.formName` pattern — fixed v0.34
+- `pokedex.js` dexId 659–784 (126 species) had every row's content shifted +1 relative to its label from a manual Excel paste misalignment — fixed v0.39 (full re-fetch, verified via dex-wide diff)
+- `saveGame()` briefly still wrote the pre-v26 flat single-aide shape after `aides[]` existed, which would have silently discarded any hired aide's save on autosave — fixed during v0.39.1 implementation
+- `loadGame()` referenced removed DOM elements post-migration, throwing and getting silently swallowed by its own try/catch — a valid, correctly-migrated save still reported "load failed" — fixed during v0.39.1 implementation
+- The v27-vs-v26 save-migration format check inferred format from `s.aides` presence (true on every save from v26 onward) instead of checking `s.dex` directly — every reload of an already-migrated save silently wiped the box — fixed v0.39.4
+- The party↔dex reference re-link after a JSON round-trip only ever covered the first aide's party — a second aide's party held disconnected copies, not shared references — fixed v0.39.4
+- Comprehensive Carl-Oak-hardcoding audit (v0.39.5) found ~10 subsystems still assuming a single aide after the aides[] refactor: species-cap checking (crashed on virtually any catch), level-cap lookup, the bag/inventory modal, wild-encounter log attribution, mission-modal summary text, the Findings Report title, the watched gym battle system, route-table/pathfinding item gating, the `in-party` evolution condition, and shop purchases — all fixed v0.39.5, see the Implementation Note there
+- `assignDaycarePair()`'s party-unassignment logic still assumed Carl Oak — an 11th instance of the same hardcoding pattern, missed by the v0.39.5 audit — fixed v0.40
+- Gym Battle's badge-aware default checkbox computed and rendered correctly on a badge-earned transition but was never persisted to `prefs.methods` — `pickMethodForLocation()` reads the saved array, not the DOM — fixed v0.41 (`updateMethodPrefs()` fires automatically on the transition)
+- `fromFormName` branch-matching was implemented with a wildcard bypass for blank values not once but twice in successive attempts, before landing on the correct exact-match-with-null comparison — fixed v0.42
+- Wander deadlock: gym battles kept firing at newly-reached cities right after a wipe recall, with two successive fix attempts (`missionOrigin`, then `lastHealLocation`) each reusing an existing multi-purpose field with the wrong update semantics — fixed v0.44 (dedicated `aide.wipeRecallLocation` flag)
+- Wander could make zero progress across an entire offline gap: a wipe landing during the departure-dwell window read a deliberately-stale `missionDestination` and discarded real progress, and the recovery rebuild was missing `ignoreDiscovery=true` so any wipe in undiscovered territory reset to the heal point every time — fixed v0.44
+- A single gym win could produce up to 30 near-identical "+X EXP" log lines (one per KO per party member) — fixed v0.44.1 (batched to one summary line per Pokémon)
+- "Battle Gym" button permanently disappeared after a fully-wiped watched battle — the flag controlling its visibility was a plain unsaved `let` variable only cleared by a Close-button path that an empty-team early-exit skipped entirely, requiring a full page reload to recover — fixed v0.44.2
+- 18 evolution items were missing from the Items sheet — resolved, verified v0.28 (all confirmed present with correct slugs and wiring)
+- King's Rock and Black Augurite were listed as orphaned/unreferenced items, but were actually already wired into `evotree.js` — the note was simply never updated after they were wired up — corrected v0.33
+- Duplicate `poke-ball` entry in `items.js` (dormant `shopTier:"lab"` row) — removed v0.31
+- `natureMint`'s Items-sheet row (originally flagged as an outstanding v0.36 data task) — confirmed added; the v0.44 "Nature Mint Category Fix" already edits its `itemCategory` directly in `items.js`, which wouldn't be possible otherwise
+- Rockruff casing mismatch (`pokedex.js` `"Own tempo"` vs `evotree.js` `"Own Tempo"`, found v0.42) — resolved; confirmed via cross-file audit that both files now agree exactly on `"Own Tempo"`
+- `aide-hire-2` was added directly to `items.js` outside the normal Excel/`converter.html` pipeline — resolved, confirmed via cross-file audit and Jack's confirmation that JS files exactly mirror their Excel-tab source, so the row's presence in `items.js` means Excel has it too
+
+---
+
 ## Concept
 
 You are a Pokémon Professor whose lab data was stolen by Team Rocket. You must rebuild your Pokédex from scratch. Carl Oak is your first Lab Aide — he goes into the field, catches Pokémon, and returns findings to you. As your research grows, you attract more aides and funding.
@@ -42,15 +147,16 @@ There is no survival element. Aides do not need food, sleep, or anything like th
   - `connections.js` — travel graph
   - `items.js` — item definitions
   - `evotree.js` — evolution branches
-  - `formtriggers.js` — form change conditions
   - `typechart.js` — type effectiveness
   - `info.js` — Info-menu topic/section content (v0.43)
-- Dev tools: `converter.html` (Excel → JS), `fetcher.html` (PokéAPI data fetcher)
+- Dev tools: `converter.html` (Excel → JS), `fetcher.html` (PokéAPI sprite/data fetcher), `MoveFetcher.html` (cross-game learnset fetcher — see "MoveFetcher.html — Cross-Game Learnset Tool" under Trainer Battle System), `FullFetcher.html` (exists, out of scope for now — see below)
 - Hosted on GitHub Pages; all DB files are uploaded there after conversion
 - Desktop and mobile friendly
 
+**`FullFetcher.html` — confirmed out of scope for now.** It exists as a real, titled tool in the live file set ("PokeProf — Full Fetcher") but Jack's current audit scope is limited to the data files, `pokeprof.html`, and the markdown docs — not the fetcher tools. Parked, not investigated.
+
 ### CRITICAL: External Script Tags (SETTLED — do not omit in rewrites)
-- All 10 data files are loaded via **relative path `<script src="filename.js">` tags in `<head>`** — no CDN, no absolute URLs
+- All 9 data files are loaded via **relative path `<script src="filename.js">` tags in `<head>`** — no CDN, no absolute URLs
 - They must appear in this order, before the closing `</head>` tag:
   ```html
   <script src="pokedex.js"></script>
@@ -59,13 +165,13 @@ There is no survival element. Aides do not need food, sleep, or anything like th
   <script src="connections.js"></script>
   <script src="typechart.js"></script>
   <script src="evotree.js"></script>
-  <script src="formtriggers.js"></script>
   <script src="items.js"></script>
   <script src="trainers.js"></script>
   <script src="info.js"></script>
   ```
   *(`trainers.js` corrected into this list v0.43 — it was already present in the live `pokeprof.html` `<head>` but had been missing from this doc's listing.)*
-- Omitting these tags causes total game failure: no sprites, no destinations, no encounters. This has happened in rewrites — verify these are present before deploying any rewrite.
+- Omitting any of these 9 causes total game failure: no sprites, no destinations, no encounters. This has happened in rewrites — verify these are present before deploying any rewrite.
+- **`formtriggers.js` — corrected out of this list (found during cross-file audit):** the live `<head>` still has a stale `<script src="formtriggers.js"></script>` tag, but no `formtriggers.js` file exists in the live file set, and nothing in `pokeprof.html` ever reads any constant from it (confirmed by a full-file search — no `FORM_TRIGGERS` or similar reference anywhere). The tag is dead weight, not load-bearing — Jack confirmed the file/feature was scrapped some time ago and this is just a leftover `<script>` tag the removal never cleaned up. Not a "10th required file" as this document previously (incorrectly) claimed. Removing the dead tag from `pokeprof.html` is a trivial, safe cleanup whenever a version touches the `<head>` next — not urgent on its own.
 
 ---
 
@@ -74,26 +180,53 @@ There is no survival element. Aides do not need food, sleep, or anything like th
 - The `<h1>` tag always shows the current version (e.g. `PokeProf v0.18`)
 - Increment the version on every deployed change
 - `SAVE_VERSION` in `pokeprof.html` must be incremented whenever `state` structure changes
-- Current save version: `28` (bumped in v0.39.1 for the `state.aides[]` restructure — Carl Oak's singular `party`/`trainerBag`/`currentLocation`/mission-and-travel fields wrapped into `aides[0]` on migration; unchanged in v0.39.2, battle-engine/logic fixes only; bumped again in v0.39.3 to move `dex` back OUT of `aides[]` into a shared `state.dex` — see "Aide Roster & Hiring"; unchanged in v0.39.4/v0.39.5/v0.39.6, all logic-only fixes; bumped again in v0.40 for two new persisted fields, `state.avoidCappedSpecies` and per-aide `expShareActive`; unchanged in v0.41 (logic/UI fixes only) and v0.42 (`fromFormName`/`requiredGender` live on static `EVO_TREE` data, not `state`; Shedinja reuses the existing individual-Pokémon shape)). v0.38→v0.39 made no schema change (Silph Tower was fully reverted in v0.39.1 anyway, and was itself runtime-only/non-persisted). **v0.44 will require SAVE_VERSION 29** for two new persisted per-aide fields, `researchMode` (boolean, default `false`) and `researchPair` (object or `null`, default `null`) — see "Day Care Research Mode." No other v0.44 item changes `state` shape.
-- **v0.20 requires SAVE_VERSION 13** due to: `nickname` field on Pokémon objects, `evolveBlocked` field on Pokémon objects, `researchLog[dexId].abilitiesObserved` field, and `researchLog[dexId].confirmedBranches` replacing singular `confirmedMethod`/`confirmedIntoId`. All four migrations run in a single combined pass on load from v12.
-- **v0.21 requires SAVE_VERSION 14** due to: fishing splitting into per-rod-tier sub-methods (`fish-old`/`fish-good`/`fish-super`) instead of a single `fish` method. Migration: any `state.locationMethodPrefs[locId]` entry containing the bare `'fish'` method (in `methods[]` or as a `weights` key) is dropped entirely for that location — it recalculates fresh defaults (all currently-unlocked methods/rod-tiers checked evenly) the next time that location is visited. No other v0.21 change requires a schema change.
-- **v0.22 stays on SAVE_VERSION 14** — no `state` schema changes in this batch (all 11 items are behavior/rendering fixes and additive read-only views).
-- **v0.23 requires SAVE_VERSION 15** due to: `equippedMoves[]` field added to Pokémon objects (up to 4 `{type, category, power}` slots for the new Battle System). Migration assigns each existing Pokémon a single default move on load: type1 slot (random Physical/Special if both exist) → else type2 → else Normal-Physical fallback. Slots 2–4 start empty for all pre-v0.23 saves.
-- **v0.24 requires SAVE_VERSION 16** due to: `state.freeSkipsRemaining` field added (onboarding encounter-skip pool — see "Free Onboarding Encounter Skips"). Migration: new saves initialize to `50`; existing saves migrate in at `0` (onboarding-only, not retroactive).
-- **Bug fixed post-release (v0.24):** the same SAVE_VERSION 16 migration also backfills `researchLog[dexId].firstSeen`/`firstCaught` (new v0.24 fields — see "Pokédex Grid View" seen-but-not-caught fix) for every pre-existing research-log entry. Without this, any save from before v0.24 would see a false "🎯 Captured" finding fire on the *next* catch of every already-known species (even ones caught hundreds of times), since those two fields were simply `undefined` on anything researched pre-v0.24 and `!r.firstCaught` reads as true. Backfill logic: if a `researchLog` entry exists at all, `firstSeen` is set `true` (it's definitely been seen); `firstCaught` is set `true` only if that dexId is also present in `dexHistory` (definitely already caught).
-- **v0.25 requires SAVE_VERSION 17** due to: badge entries added to `aide.bag` (new `itemCategory: badge` items) and a new per-gym highest-tier-reached tracker on aide objects (likely `aide.gymProgress[gymId] = highestTier`) — see "Gym / Trainer Battle System — Triggers, Badges, Level Cap". Migration: existing saves initialize both to empty on load (no badges held, no gym progress recorded).
-- **v0.30 stays on SAVE_VERSION 19** — no `state` schema changes. Every change this version either reads existing fields (`catchRate`, `breeding`, `professorBag` contents) in new ways, or is UI/behavior-only.
-- **v0.32 stays on SAVE_VERSION 20** — no `state` schema changes. Every change this version either reads/mutates existing fields (`p.ivs`, `p.currentHP`, `state.party`, `state.professorBag`/`trainerBag`, `state.funds`) in new ways, or is pure logic/UI — no new fields, no migration needed.
-- **v0.26 requires SAVE_VERSION 18** due to: `state.daycareSlots` (new — see "Day Care / Breeding System"), `state.speciesCap` (new — see "Editable Per-Species Cap"), and a one-time `testedMethods` cleanup pass (see "Trade/Item-Evolution Matching Fix"). All three migrations run in a single combined pass on load from v17. `state.autoRepeat` is retired (no longer read anywhere — see "Idle State Removal") but requires no migration, since removing a field needs no backfill.
-- **v0.27 stays on SAVE_VERSION 18** — no `state` schema changes in this batch (onboarding modal, Info menu, shop condensing, purchase quantity buttons, and badge sprite display are all UI/rendering-only; the Day Care location move repoints an existing constant, it doesn't touch `state` shape).
-- **v0.28 requires SAVE_VERSION 19** due to: Day Care slot record reshaped for continuous batch hatching (`eggsQueued` count + `nextReadyAt` anchor replacing single-use `readyAt`) — see "Day Care / Breeding System" below. Migration: any existing slot with the legacy `readyAt` field converts to `nextReadyAt: readyAt, eggsQueued: 0` on load.
-- **v0.33 requires SAVE_VERSION 21 (20 → 21)** due to: `p.formName` on every Pokémon object (see "Same-DexId Branching Form Evolutions"), `state.wanderMode` (see "Mission Modal — Wander Mode"), `state.significantLog` (see "Log Tab — Full/Condensed Sub-Tabs"), and a `confirmedBranches`/`testedMethods` reset for any item that has a real matching branch (see "Professor Auto-Test Loop — Confirmation Requires a Live Candidate"). All migrations run in a single combined pass on load from v20, in that order — `p.formName` backfill and the research-log reset both need to complete before any subsequent `recalcStats()` call.
-- **v0.34 stays on SAVE_VERSION 21** — no `state` schema changes. `locationMethodPrefs[locId]` gains an additive `knownMethods` field (degrades gracefully on old saves — see "Mission Modal — Method Selection" below), and every other change is display logic, travel-state handling, or converter-only.
-- **v0.35 requires SAVE_VERSION 22 (21 → 22)** due to: `state.wanderMetric` (new — see "Mission Modal — Wander Mode"). Migration: existing saves default to `'encounters'`. All other v0.35 changes (evolution-chain dedup, migration-gating fix, species-cap-on-evolution, theming) are bug fixes or UI/display-only — no additional schema impact.
-- **v0.36 requires SAVE_VERSION 23 (22 → 23)** due to: `researchLog[dexId].gendersObserved` (new — see "Research & Pokédex — Persistent Gender-Observation Tracking") and `researchLog[dexId].breedingTested` (new — see "Evolution Chain Visual — Unconfirmed Predecessor via Breeding"). Both migrations run in a single combined pass on load from v22. Every other v0.36 change is a bug fix or UI/display-only.
-- **v0.37 requires SAVE_VERSION 24 (23 → 24)** due to: `researchLog[dexId].gendersObserved` changing from boolean flags (`{M:true,F:true}`) to running counts (`{M:0,F:0}`) — see "Research & Pokédex — Gender Ratio Display." Migration: existing boolean-flag records convert to counts via best-effort backfill from currently-held `state.dex` individuals only (historical released/evolved-away individuals aren't recoverable — same limitation as the original v0.36 backfill this replaces). Every other v0.37 change is a bug fix or UI/display-only.
-- **v0.38 requires SAVE_VERSION 25 (24 → 25)** due to: `state.speciesCapOverrides` (new — see "Per-Species Cap Overrides") and `p.abilitySlot` on every Pokémon object (new — see "Ability Slot Tracking"). Migration: `speciesCapOverrides` defaults to `{}`; `abilitySlot` is backfilled per-individual by matching current ability against current species, re-rolling (against current species) where no match is found — the ability-loss bug's own existing mismatched cases. All other v0.38 changes (map connection colors, box-only species cap, party-only batch-evolve prompt, offline friendship parity, dual-root family breeding, Ditto breeding-placeholder fix, Family IV Inheritance pool fix) are bug fixes or UI/logic-only, no additional schema impact.
-- **v0.41 stays on SAVE_VERSION 28** — no `state` schema changes. The focus-guard fix, the Gym Battle checkbox default fix, the map gym-badge display, and the Species Detail form-selection fix are all logic/UI-only — the one new per-location tracking field (`gymBadgeState`, see "Mission Modal — Method Selection" below) is additive/degrades-gracefully, same pattern as v0.34's `knownMethods` field, and `dexSelectedFormName` is confirmed transient/unsaved (never written to `state`).
+- **Current save version: 28.** v0.44 will require **30**, across two bumps (see table).
+
+### SAVE_VERSION History
+
+Kept as current-state fact, not changelog — the migration code below still
+runs for old saves on load. The **Ordering** column preserves sequencing
+dependencies between migrations within one version; where blank, migrations
+in that row's Change column are independent of each other.
+
+| Version | SAVE_VERSION | Change | Migration | Ordering |
+|---|---|---|---|---|
+| v0.19 | →12 | Two-inventory split: `state.professorBag` + per-aide `trainerBag` replace single `state.bag` | Pre-v12 `state.bag` contents migrated per item's `bagType`: `Professor`→`state.professorBag`, `Trainer`→Carl Oak's `trainerBag` | — |
+| v0.20 | 12→13 | `nickname`, `evolveBlocked` on Pokémon objects; `researchLog[dexId].abilitiesObserved`; `confirmedBranches` replaces `confirmedMethod`/`confirmedIntoId` | All four run in a single combined pass on load from v12 | — |
+| v0.21 | 13→14 | Fishing splits into per-rod-tier sub-methods (`fish-old`/`fish-good`/`fish-super`) | Any `locationMethodPrefs[locId]` entry with bare `'fish'` (in `methods[]` or as a `weights` key) is dropped for that location; fresh defaults recalculate on next visit | — |
+| v0.22 | 14 (no change) | — | — | — |
+| v0.23 | 14→15 | `equippedMoves[]` (4 `{type,category,power}` slots) on Pokémon objects | Each existing Pokémon gets one default move on load: type1 slot (random Phys/Spec if both exist) → else type2 → else Normal-Physical fallback; slots 2–4 start empty | — |
+| v0.24 | 15→16 | `state.freeSkipsRemaining`; `researchLog[dexId].firstSeen`/`firstCaught` | New saves init `freeSkipsRemaining=50`, existing saves at `0` (onboarding-only). **Load-bearing:** any existing `researchLog` entry → `firstSeen:true`; `firstCaught:true` only if also in `dexHistory` — without this, pre-v0.24 saves false-fire "🎯 Captured" on the next catch of any already-known species | — |
+| v0.25 | 16→17 | Badge entries in `aide.trainerBag` (`itemCategory: badge`); per-gym highest-tier tracker (`aide.gymProgress[gymId]`) | Existing saves init both to empty | — |
+| v0.26 | 17→18 | `state.daycareSlots`; `state.speciesCap`; one-time `testedMethods` cleanup; `state.autoRepeat` retired | First three migrate in a single combined pass from v17; retiring a field needs no backfill | — |
+| v0.27 | 18 (no change) | — | — | — |
+| v0.28 | 18→19 | Day Care slot reshaped for continuous batch hatching: `eggsQueued` count + `nextReadyAt` anchor replaces single-use `readyAt` | Any slot with legacy `readyAt` converts to `nextReadyAt: readyAt, eggsQueued: 0` | — |
+| v0.30 | 19 (no change) | — | — | — |
+| v0.31 | 19→20 | `ivs`, `nature` fields on Pokémon objects | Every existing party/dex Pokémon gets `ivs`/`nature` rolled retroactively (single roll, not the 10× dex-complete advantage — that only applies going forward at creation time), then `recalcStats()` runs; `currentHP` set to the new `maxHP` (full heal) since `maxHP` shifts | — |
+| v0.32 | 20 (no change) | — | — | — |
+| v0.33 | 20→21 | `p.formName` on every Pokémon object; `state.wanderMode`; `state.significantLog`; `confirmedBranches`/`testedMethods` reset for any item with a real matching branch | All migrate in a single combined pass from v20 | **`p.formName` backfill and the research-log reset must both complete before any subsequent `recalcStats()` call** |
+| v0.34 | 21 (no change) | `locationMethodPrefs[locId]` gains additive `knownMethods` field | Degrades gracefully on old saves | — |
+| v0.35 | 21→22 | `state.wanderMetric` | Existing saves default to `'encounters'` | — |
+| v0.36 | 22→23 | `researchLog[dexId].gendersObserved`; `researchLog[dexId].breedingTested` | Single combined pass from v22 | — |
+| v0.37 | 23→24 | `researchLog[dexId].gendersObserved` changes from boolean flags (`{M:true,F:true}`) to running counts (`{M:0,F:0}`) | Best-effort backfill from currently-held `state.dex` individuals only — historical released/evolved-away individuals aren't recoverable | — |
+| v0.38 | 24→25 | `state.speciesCapOverrides`; `p.abilitySlot` on every Pokémon object | `speciesCapOverrides` defaults to `{}`; `abilitySlot` backfilled per-individual by matching current ability against current species, re-rolling where no match is found | — |
+| v0.39 (base) | 25 (no change) | — | Silph Tower feature fully reverted in v0.39.1 anyway; was itself runtime-only/non-persisted | — |
+| v0.39.1 | 25→26 | `state.aides[]` restructure — Carl Oak's singular `party`/`trainerBag`/`currentLocation`/mission-and-travel fields wrapped into `aides[0]` | — | — |
+| v0.39.2 | 26 (no change) | Battle-engine/logic fixes only | — | — |
+| v0.39.3 | 26→27 | `dex` moved back OUT of `aides[]` into shared `state.dex` | See "Aide Roster & Hiring" | — |
+| v0.39.4–v0.39.6 | 27 (no change) | Logic-only fixes | — | — |
+| v0.40 | 27→28 | `state.avoidCappedSpecies`; per-aide `expShareActive` | — | — |
+| v0.41 | 28 (no change) | New per-location `gymBadgeState` field is additive/degrades-gracefully (same pattern as v0.34's `knownMethods`); `dexSelectedFormName` confirmed transient/unsaved | — | — |
+| v0.42 | 28 (no change) | `fromFormName`/`requiredGender` live on static `EVO_TREE` data, not `state`; Shedinja reuses existing individual-Pokémon shape | — | — |
+| v0.44 | 28→29 | Two new persisted per-aide fields: `researchMode` (boolean, default `false`), `researchPair` (object or `null`, default `null`) | See "Day Care Research Mode" | — |
+| v0.44 | 29→30 | `state.gymBattleDefaultPreference` (boolean, default `false`) | See "Gym Battle Default Question" under Onboarding | — |
+
+*Previous gap resolved:* the 19→20 bump was v0.31 (IVs/Nature), documented
+far downstream under its own feature section rather than here — now folded
+into this table as the row above. That scattered-SAVE_VERSION pattern
+recurs at least twice more further into the document (Gym System, Same-DexId
+Branching Forms); each will get folded into this table as the audit reaches
+that section, rather than left as a second source of truth.
 
 ---
 
@@ -127,12 +260,32 @@ There is no survival element. Aides do not need food, sleep, or anything like th
 - Scales: +$0.01/min per 100 total catches
 - Runs every tick regardless of mission state
 
-### Render Focus-Guard (SETTLED — v0.41, NEW)
-- **Bug:** `gameTick()` calls `render()` unconditionally every tick, and `render()` fully rebuilds whatever panel is on screen via `innerHTML` — including any `<input>`/`<textarea>` sitting inside that panel. On mobile, this destroyed and recreated the input mid-edit, which dismisses the soft keyboard the instant it starts to open. Confirmed root cause and reproduced against the Species Detail per-species cap override field (`renderDexDetail()`, called every tick while `dexView==='detail'`) — full audit of every `<input>` in the file confirmed this was the only currently-affected field (every other input lives inside a modal, rendered once on open, never touched by the tick), but the underlying rebuild-every-tick pattern is generic to any panel `render()` touches.
-- **Fix:** a single guard at the top of `render()` — if `document.activeElement` is an `INPUT` or `TEXTAREA` anywhere in the document, skip the panel rebuild for that tick entirely and return early. Scoped to `INPUT`/`TEXTAREA` only (not checkboxes/selects — those aren't subject to the mobile-keyboard failure mode, and no current checkbox/select lives in a tick-rebuilt panel anyway).
-- **What still runs during a skipped tick:** everything upstream of `render()` inside `gameTick()` — encounter rolls, travel, income, friendship, evolution testing — is untouched. Only the DOM redraw pauses. The moment the input loses focus (blur, or the player navigates away), the very next tick's `render()` call fires normally and the display catches up immediately — no state is ever stale for more than one tick's worth of visible time.
-- **Structural, not a one-off patch** — this is the single choke point every tick-driven render already passes through, so it protects the Species Cap field today and any input added to any panel in the future, without needing a matching guard added at each individual render function.
-- No `SAVE_VERSION` impact — pure rendering-loop logic, nothing persisted.
+### Live/Offline Parity (Implementation Note)
+- Per-encounter logic (shiny rolls, potion healing, revives, and anything
+  else resolved inside a single encounter) is implemented separately for
+  the live path (`resolveEncounterStep()`) and the offline catch-up path
+  (`processOfflineTime()`) — they are two independent code paths that do
+  **not** share fixes automatically. Any new per-encounter mechanic must
+  be explicitly added to both, or it will silently only work live (or
+  only offline). See Resolved Bug Index for three past incidents of this
+  exact gap (shiny, potion-heal, revive).
+
+### Render Focus-Guard (SETTLED — v0.41)
+- `render()` is a single choke point every tick-driven redraw already
+  passes through: if `document.activeElement` is an `INPUT` or
+  `TEXTAREA` anywhere in the document, `render()` skips the panel
+  rebuild for that tick and returns early. Scoped to `INPUT`/`TEXTAREA`
+  only — checkboxes/selects are unaffected and already render once on
+  open, never mid-tick.
+- Everything upstream of `render()` inside `gameTick()` (encounter rolls,
+  travel, income, friendship, evolution testing) still runs normally on
+  a skipped tick — only the DOM redraw pauses, and it catches up on the
+  next tick once the input loses focus.
+- **Implementation Note:** this guard is structural, not tied to any one
+  field — it protects any current or future `<input>`/`<textarea>` living
+  inside a tick-rebuilt panel without needing a matching guard added per
+  render function. Do not add per-panel guards; extend this one instead.
+- No `SAVE_VERSION` impact.
 
 ---
 
@@ -167,13 +320,19 @@ There is no survival element. Aides do not need food, sleep, or anything like th
 ### Mission Modal — Destination Sorting (SETTLED — v0.21, revised v0.35)
 - Four sort buttons appear above the destination list: **Distance**, **Alphabetical**, **Encounters**, **Catches** (v0.35, new).
 - **Distance** = sum of `travelTime` for every waypoint in `buildTravelPath(currentLoc, destId)` **strictly before** the destination itself — i.e. it excludes the destination's own `travelTime`, consistent with the settled `travelTime` rule above (a destination's own travel time never delays arrival there). A one-hop destination sorts as distance `0`.
-- **Alphabetical** = location display name, A–Z. **v0.33 fix:** previously compared names as plain lowercased strings, which sorts lexicographically — "Route 11" landed before "Route 2" (character-wise, `'1' < '2'`). Now uses `localeCompare(..., {numeric:true})`, a natural sort that treats embedded digit runs as numbers: Route 2 → Route 9 → Route 11 → Route 23. Distance/Encounters/Catches sorts were already numeric and unaffected.
+- **Alphabetical** = location display name, A–Z, via `localeCompare(..., {numeric:true})` — a natural sort that treats embedded digit runs as numbers: Route 2 → Route 9 → Route 11 → Route 23.
 - **Encounters** = sightings (`seen`) count summed across all species logged at that location, from `state.locationEncounterLog[locId]` — locations never visited sort as `0`.
 - **Catches** (v0.35, new) = caught (`caught`) count summed across all species logged at that location, from the same `state.locationEncounterLog[locId]` — new helper `computeLocationCatches(locId)`, sibling to the existing `computeLocationSightings(locId)`. Locations never visited (or never yielding a catch) sort as `0`.
 - First click on any of the four buttons sorts **ascending** (Distance: nearest first; Alphabetical: A–Z; Encounters/Catches: fewest first). A second click on the **same** button reverses to descending. Clicking a **different** button resets to ascending for the new criterion.
 - Sort state is transient UI-only — not persisted to `state`, not saved. The list has no default sort order when the modal opens; it resets each time.
 - No SAVE_VERSION bump (no schema change).
 - **v0.28:** while sorted by **Encounters** specifically, locations with zero wild encounter table rows (`buildRouteTable(locId).length===0`) are filtered from the list entirely — these can never contribute a nonzero encounter count and were only cluttering that sort (Day Care, pure shop towns, Indigo Plateau pre-8-badges, etc.). Gym-trainer presence is not considered by this filter — only wild-table rows. **v0.35:** the same filter applies to **Catches** for the same reason. Distance and Alphabetical sorts show the full reachable list, unchanged.
+
+### Mission Modal — Level Range Display (SETTLED — v0.43)
+Each destination button's label appends a combined level range, e.g. `Route 1 (Lv 2-7)`, computed via `buildRouteTable(loc, aide.trainerBag)` (already respects rod/item gating) — `Math.min`/`Math.max` across all currently-valid rows' `minLv`/`maxLv`. One combined range across all encounter methods, not broken out per method. Single-level locations show `Lv 5`, not `Lv 5-5`. Locations with zero valid rows show no range. Applies uniformly across all four sort modes; no change to Wander buttons or the map detail panel.
+
+### Mission Modal — Location Markers to Match Map (SETTLED — v0.44)
+Each destination button's idle border color is derived the same way `getMapNodeStyle()` derives map node colors: shop-tier `#2ecc71` (green), heal-only `#e63946` (red), shop wins on combined heal+shop locations, routes/other unchanged. Gym locations (any location with a `TRAINERS_DATA` row, `!isGauntlet`, and a `badgeItemId`) show that badge's sprite next to the location name via the existing `BADGE_SPRITE_MAP` (+ emoji fallback) pattern, shown regardless of whether the badge has been earned yet. The existing 2px accent "selected" border still overrides the idle color for the current pick.
 
 ### Mission Modal — "Wander" Mode (SETTLED — v0.33, NEW; bug fixed post-release; revised v0.34, v0.35)
 - New mode alongside manual destination selection: the aide continuously travels toward whichever **reachable, discovered, encounter-capable** location currently has the fewest lifetime encounters *or* catches (metric-dependent, see below), re-evaluating on an ongoing basis rather than being dispatched once to a fixed target.
@@ -182,13 +341,14 @@ There is no survival element. Aides do not need food, sleep, or anything like th
 - **Shared re-evaluation helper** (`evaluateWanderTarget()`), single implementation called from two places:
   - the top of `gameTick()` (live play, every 1s base tick)
   - inside `processOfflineTime()`'s catch-up loop (every simulated encounter-interval) — offline time actively re-routes too, not just live play, by explicit design decision.
-- **Bug (found immediately post-release) — permanently stuck in Pallet Town on a new game:** every reachable location starts at 0 sightings, and the original tie-break rule ("keep the current target unless something is *strictly* lower") meant nothing could ever beat a tied 0 — compounded by Pallet Town's only encounter rows being fish/surf, all `requiresItem`-gated (Good Rod, Super Rod, etc.) that a brand-new save doesn't own yet, so `buildRouteTable('palletTown')` correctly returns 0 *currently-triggerable* rows — not because Pallet Town structurally lacks encounters (it doesn't — it has real rows in `encounters.js`), but because none of them are reachable with the aide's current items. Its own sightings count could never move off 0 either way. The aide never left.
-- **Fix:** the candidate pool (in both `evaluateWanderTarget()` and the initial pick in `selectWanderMode()`) is filtered to `buildRouteTable(locId).length>0` — the same live, item-aware filter already established for the Encounters sort mode (see "Mission Modal — Destination Sorting" above). Additionally, the current target no longer automatically wins ties if it isn't itself in that eligible pool — this forces an initial move to somewhere currently reachable instead of stalling forever. Because `buildRouteTable()` re-checks the aide's current items on every call, a rod/Surf-gated location becomes eligible again automatically the moment the required item is obtained — no further code change needed.
-- **Redirect logic:** only evaluated while the aide is stably at its current destination (`state.travelPath.length===0`) — a redirect never interrupts a journey already in progress. Among eligible locations, if any reachable location other than the current target is *strictly* lower, retargeting begins. If the current target is still eligible and tied for lowest, it's kept — no redirect purely from equal rankings, avoiding needless churn.
-- **Bug (found v0.34) — redirect bypassed travel time entirely:** the original redirect immediately rebuilt `state.travelPath` from the aide's current location and called `arriveAtLocation()` on the new path's first waypoint at once — a true instant teleport, zero cost. Worse, because sightings accumulate wherever the aide currently stands, a location being passed through would climb in ranking the longer the aide dwelled there; once it became the single lowest, Wander would redirect *to the aide's own current spot*, hitting the `currentLoc===best` shortcut that zeroed `travelCyclesRemaining` outright — cashing in an already-standing-still location as a free "arrival" and letting the aide dodge real travel time indefinitely.
-- **Fix (v0.34):** a redirect no longer jumps straight to the new path. The current location — now ceasing to be the destination — first has to be *departed*: `state.travelCyclesRemaining` is set to that location's own `travelTime` (same dwell mechanic every pass-through waypoint already uses, including full normal research encounters there, not the limited pass-through method — matching how it already generates encounters during travel), `state.travelPath` holds the newly built path, and `state.travelPathIndex` is set to a `-1` sentinel meaning "departure in progress, haven't started the new path yet." `advanceTravelPath()` counts this down like any other dwell; once it hits 0, `travelPathIndex` advances to `0`, `state.missionDestination` updates to the new target, and `arriveAtLocation()` fires normally for the first real waypoint of the new journey. No new persisted fields — `-1` is just a new valid value for the existing `travelPathIndex` number, so no `SAVE_VERSION` impact.
-- **Mutually exclusive with manual destination selection** for a given mission — choosing Wander replaces the destination picker in the modal. Recalling the mission clears `state.wanderMode` (and, v0.35, `state.wanderMetric` alongside it), the same way it already clears `state.missionDestination` today; starting a new mission requires re-selecting Wander.
-- **Log visibility (v0.35: metric-aware):** a redirect logs `"🧭 <Aide name> changes course — new lowest-encounter destination: <name>."` when `state.wanderMetric==='encounters'`, or `"...new lowest-catch destination: <name>."` when `'catches'` — matching the existing dispatch-log style — live inline, and batched into the offline-return summary when triggered during offline processing.
+- **Candidate pool** (used both by `evaluateWanderTarget()` and the initial pick in `selectWanderMode()`) is filtered to `buildRouteTable(locId).length>0` — the same live, item-aware filter used for the Encounters sort mode. **Implementation Note:** a location can have real rows in `encounters.js` yet still return 0 from `buildRouteTable()` if every row is currently item-gated (rod/Surf not yet owned) — ranking/tie-break logic must treat that as ineligible, not as a genuine 0-sightings location, or Wander can get permanently stuck (Pallet Town on a new game is the canonical case: fish/surf-only, all item-gated). The current target does not automatically win ties if it has dropped out of this eligible pool.
+- **Redirect logic:** only evaluated while the aide is stably at its current destination (`state.travelPath.length===0`) — a redirect never interrupts a journey already in progress. Among eligible locations, if any reachable location other than the current target is *strictly* lower, retargeting begins; a tie keeps the current target (no redirect purely from equal rankings).
+- **Departure mechanic (Implementation Note):** a redirect must depart the current location through the normal `travelTime` dwell mechanic (`state.travelCyclesRemaining` set to that location's own `travelTime`, `state.travelPathIndex` set to a `-1` "departure in progress" sentinel until it counts down) — never jump straight to rebuilding `state.travelPath` and calling `arriveAtLocation()` on the new path. Since sightings accumulate wherever the aide currently stands, a location being passed through climbs in ranking the longer the aide dwells there; without the dwell-first departure, Wander can redirect *to the aide's own current spot* and cash it in as a free instant "arrival," skipping travel time indefinitely. `-1` is just a new valid value for the existing `travelPathIndex` number — no `SAVE_VERSION` impact.
+- **Mutually exclusive with manual destination selection** for a given mission — choosing Wander replaces the destination picker in the modal. Recalling the mission clears `state.wanderMode` (and `state.wanderMetric`), the same way it already clears `state.missionDestination`; starting a new mission requires re-selecting Wander.
+- **Log visibility (metric-aware):** a redirect logs `"🧭 <Aide name> changes course — new lowest-encounter destination: <name>."` when `state.wanderMetric==='encounters'`, or `"...new lowest-catch destination: <name>."` when `'catches'` — live inline, and batched into the offline-return summary when triggered during offline processing.
+- **Ignores discovery (SETTLED — v0.43):** `getWanderReachableLocations(fromId, trainerBag)` — same BFS as `getReachableDiscoveredLocations`, minus every `state.discoveredLocations` check — is what both `evaluateWanderTarget()` and `selectWanderMode()` use for their candidate pool, via a 4th `buildTravelPath()` param `ignoreDiscovery=false` (default preserves every existing caller; Wander passes `true`). Connection-level `requiresItem` gates (Surf, Cut, Flash, Strength, Bicycle, Silph Scope, Safari Pass, Coin Case, SS Ticket) still fully apply — only discovery is dropped. Manual "dispatch to a specific location" stays discovery-gated. `arriveAtLocation()`/`advanceTravelPath()` need no changes — arrival-time discovery already fires per-waypoint regardless of how the aide got there.
+- **Deterministic tie-break (SETTLED — v0.44):** best-target selection is a 3-key comparison for both metrics: (1) metric count ascending, (2) max level in the area ascending (`Math.max(...buildRouteTable(locId, aide.trainerBag).map(r=>r.maxLv))`), (3) location name alphabetical as final tie-break. Replaces the earlier implicit "ties always keep the current destination" — a tie can now redirect the aide away from their current spot, since leaving adds an encounter/catch at the new location.
+- **Stale-destination resolution on wipe recovery (SETTLED — v0.44):** both `endMission()` and `processAideOfflineTime()` resolve the *true* pending destination before deciding whether the aide is "already home" — `(aide.travelPathIndex===-1 && aide.travelPath.length) ? aide.travelPath[aide.travelPath.length-1] : aide.missionDestination` — and collapse `aide.missionDestination` to that resolved value immediately, since a wipe interrupts those plans regardless. Both wipe-recovery rebuild calls to `buildTravelPath()` pass `ignoreDiscovery=true`, matching Wander's own permission model above. **Implementation Note:** two distinct invariants are in play here — (1) any code checking "where is this aide really heading" must resolve through the departure-dwell case (`travelPathIndex===-1`) specially, since `aide.missionDestination` is deliberately left stale during that window (by design, since v0.34); a direct read during a wipe landing in that window reads the old target and wrongly concludes "already home," discarding real progress. (2) a path-rebuild call replacing an interrupted journey must carry the same permission flags as the original call it's replacing — omitting `ignoreDiscovery=true` here meant any wipe while exploring undiscovered territory reset progress to the heal point every time, with each retry just as likely to wipe again before completing. Verified via a 20,000-tick simulation: previously frozen at 2 locations forever with 0 catches; after the fix, 11 unique locations visited, 26 catches, no permanent oscillation.
 
 ### Travel HUD — Total Encounters to Destination (SETTLED — v0.28)
 - The mid-travel HUD text (`'📍 X (→ Dest, N enc left) · Next: ...'`) previously showed only `state.travelCyclesRemaining` — the cycles left in the *current* waypoint only, not the full trip.
@@ -203,14 +363,12 @@ There is no survival element. Aides do not need food, sleep, or anything like th
 - **v0.26:** research now resumes immediately at the heal location after either path, instead of stopping — see "Mission System" for the full Idle State Removal writeup
 
 ### Offline Heal-Check Parity (SETTLED — v0.22)
-- **Bug:** `checkLocationHeal()` (full-party heal when standing at a `heals:true` location) is called every encounter cycle in live `gameTick()`, but was never called anywhere inside `processOfflineTime()`. Missions dwelling in or passing through a healing city took real, un-healed damage offline that they wouldn't take live.
-- **Fix:** `processOfflineTime()`'s simulated-encounter loop now runs the same heal-check before each simulated encounter, mirroring live order exactly.
-- **No per-encounter log spam offline** (consistent with offline processing's existing batched-summary design) — heals are tallied silently as `summary.heals`, shown in the existing offline-return summary banner alongside encounters/catches/wins/income.
+- `checkLocationHeal()` (full-party heal when standing at a `heals:true` location) runs on every simulated encounter cycle inside `processOfflineTime()`, mirroring live `gameTick()` order exactly — an instance of the Live/Offline Parity note above.
+- No per-encounter log spam offline — heals tallied silently as `summary.heals`, shown in the offline-return summary banner alongside encounters/catches/wins/income.
 
-### Offline Friendship Tick Parity (SETTLED — v0.38 fix, NEW)
-- **Bug:** `processOfflineTime()` applied friendship as a single bulk pre-check (`friendshipTicks = floor(secsAway/180)`, gated once by `p.currentHP>0` evaluated *before* any offline simulation ran) instead of tracking it across the offline period the way EXP/leveling already does. A party member fainted at the moment the app closed got **zero** friendship for the entire offline gap — even the portions during which it would've been healed and alive — while a member healthy at close-time got full credit for the whole gap. Level, by contrast, was already correctly simulated throughout via the encounter loop's per-iteration heal-checks, so a long offline gap could produce a badly lopsided friendship split (e.g. two members far ahead, others barely moved) despite identical leveling.
-- **Fix:** friendship now advances via the same rolling `state._friendshipTick` counter live `gameTick()` uses, incremented per offline-loop iteration by that iteration's elapsed time (10s/30s, matching `ENC_INTERVAL_OPEN`/`CLOSED`) instead of one second at a time — firing +1 friendship per currently-alive party member at each 180-crossing, checked at the correct point in simulated time (mirroring live's ordering: friendship evaluates *before* that interval's heal/encounter resolution). Any trailing leftover time (loop exits early via `OFFLINE_LOOP_CAP`, or a final partial interval) still gets folded into the same counter using final HP state — same accepted tradeoff the encounter loop already has for that edge case.
-- **Accepted granularity difference:** offline advances in 10s/30s chunks (matching the encounter-interval constants) rather than live's exact 1-second ticks — intentional, since simulating every individual second offline isn't practical at scale. Everything else about offline friendship now mirrors live as closely as possible.
+### Offline Friendship Tick Parity (SETTLED — v0.38)
+- Friendship advances offline via the same rolling `state._friendshipTick` counter live `gameTick()` uses, incremented per offline-loop iteration by that iteration's elapsed time (10s/30s, matching `ENC_INTERVAL_OPEN`/`CLOSED`) — firing +1 friendship per currently-alive party member at each 180-crossing, evaluated at the correct point in simulated time (mirroring live: friendship before that interval's heal/encounter resolution). Any trailing leftover time (loop exits early via `OFFLINE_LOOP_CAP`, or a final partial interval) folds into the same counter using final HP state — same accepted tradeoff the encounter loop already has for that edge case. Another Live/Offline Parity instance — this one is more subtle than a missing call, since a naive single bulk pre-check (gating once on HP evaluated before any offline simulation ran) silently mis-splits friendship between party members who faint/heal at different points in a long offline gap.
+- **Accepted granularity difference:** offline advances in 10s/30s chunks rather than live's exact 1-second ticks — intentional, offline can't simulate every second at scale.
 - No SAVE_VERSION impact — reuses the existing `state._friendshipTick` field.
 
 ---
@@ -227,16 +385,14 @@ There is no survival element. Aides do not need food, sleep, or anything like th
 - Party order: Pokémon with the **lowest level leads**; fainted Pokémon go to the back; ties broken by inertia
 - Party re-sort happens at `getLeadPokemon()` call and at the start of every new mission via `confirmMission()`
 
-### Pathfinding & Reachability (SETTLED — v0.19 fix, v0.26 revision, v0.28 fix)
-- `buildTravelPath()` restricts its BFS traversal to nodes in `state.discoveredLocations` — this part was already correct.
-- **v0.26:** `getReachableDiscoveredLocations()`'s BFS no longer pre-seeds `visited` with the current location — see "Current location is now a valid destination" above.
-- **Bug (found v0.28) — picker/pathfinding mismatch:** despite the note above, `getReachableDiscoveredLocations()` only gated *whether to display* a node on `state.discoveredLocations` — it did **not** gate BFS traversal *through* undiscovered intermediate nodes the way `buildTravelPath()` does. This let the destination picker report a location as reachable via a path that actually ran through undiscovered waypoints, which `buildTravelPath()` then correctly refused to walk — so the destination showed up as selectable, but confirming the mission produced an empty path and the aide never moved. Surfaced via a real report: Diglett's Cave North (Cut-gated entrance) got marked "discovered" via the scouting-preview rule the moment its Route 2 neighbor was visited, and the picker found it "reachable" by routing through the undiscovered South/B1F entrance — a path `buildTravelPath()` would never actually take.
-- **Fix (v0.28):** `getReachableDiscoveredLocations()`'s BFS filter gets the identical discovery-gate `buildTravelPath()` already has: `if(!state.discoveredLocations.has(c.toLocationId)) return false;` alongside the existing `requiresItem` check. The two functions now agree exactly — the picker only ever shows destinations `buildTravelPath()` can actually walk to.
+### Pathfinding & Reachability (SETTLED — v0.19, revised v0.26, v0.28)
+- `buildTravelPath()` restricts its BFS traversal to nodes in `state.discoveredLocations`.
+- `getReachableDiscoveredLocations()`'s BFS no longer pre-seeds `visited` with the current location (v0.26) — see "Current location is now a valid destination" above.
+- **Implementation Note:** `getReachableDiscoveredLocations()` (which decides what the destination picker shows) and `buildTravelPath()` (which actually walks the path) must apply the identical discovery-gate check on every intermediate node, not just the endpoint — `if(!state.discoveredLocations.has(c.toLocationId)) return false;` alongside the existing `requiresItem` check, in both functions. If the two ever diverge, the picker can offer a destination reachable only through an undiscovered waypoint, which `buildTravelPath()` correctly refuses to walk — the mission confirms but produces an empty path and the aide never moves.
 
-### Offline Wipe & Auto-Repeat (SETTLED — v0.20 fix, mandatory as of v0.26)
-- **Bug (pre-v0.20):** `processOfflineTime()`'s catch-up loop unconditionally `break`s the moment `getLeadPokemon()` returns `null` (full party wipe), regardless of the repeat setting. This silently abandons the rest of the away period.
-- **Fix (v0.20):** on a wipe during offline simulation, heal the party at `state.lastHealLocation`, rebuild `state.travelPath` from `lastHealLocation` → the mission destination, reset `travelPathIndex` to 0, set `currentLocation` to `lastHealLocation`, and continue the loop — mirrors live `endMission()`'s relocate-heal-resume path, with no time cost for the heal/redispatch itself.
-- **v0.26:** this is now the *only* behavior — there is no longer a non-repeating branch, since auto-repeat is mandatory (see above). The old `state.autoRepeat` branch is removed from this loop.
+### Offline Wipe & Auto-Repeat (SETTLED — v0.20, mandatory as of v0.26)
+- On a wipe during offline simulation: heal the party at `state.lastHealLocation`, rebuild `state.travelPath` from `lastHealLocation` → the mission destination, reset `travelPathIndex` to 0, set `currentLocation` to `lastHealLocation`, and continue the loop — mirrors live `endMission()`'s relocate-heal-resume path, with no time cost for the heal/redispatch itself.
+- This is the *only* behavior since v0.26 — there is no non-repeating branch, since auto-repeat is mandatory (see Mission System above).
 - No repeat cap needed — the outer `while(remaining>=nextIn)` loop is already bounded by `secsAway`, so each wipe cycle still consumes real simulated time via `ENC_INTERVAL_CLOSED` ticks.
 
 ---
@@ -252,10 +408,10 @@ The full set of valid `encounterMethod` values in `encounters.js`:
 | `surf` | Water surface encounters |
 | `fish` | Fishing encounters (requires rod in aide inventory). **v0.21: split into three independently-selectable sub-methods in the mission modal** — see "Fishing Rod-Tier Split" below. The underlying `encounterMethod` value in `encounters.js` rows stays `fish`; the split is derived at runtime from each row's `requiresItem`. |
 | `cave` | Cave/dungeon encounters |
-| `headbutt` | Headbutt tree encounters |
+| `headbutt` | Not actually implemented, despite being in this enum — no rows in `encounters.js` use it, and no code path is confirmed to handle it. Future-proofing only, same status as `swarm`/`honey` below, do not rely on it working. |
 | `rock-smash` | Rock smash encounters |
-| `gift` | Fixed gift Pokémon |
-| `static` | Fixed overworld encounters |
+| `gift` | Not actually implemented — same status as `headbutt` above. Future-proofing only, do not rely on it working. |
+| `static` | Not actually implemented — same status as `headbutt` above. Future-proofing only, do not rely on it working. |
 | `swarm` | Future-proofing only — mechanic undefined, do not implement |
 | `honey` | Future-proofing only — requires honey item, possibly wait/return timer, do not implement |
 
@@ -269,20 +425,20 @@ The full set of valid `encounterMethod` values in `encounters.js`:
 - Must be generalized so any method can fire
 - `requiresItem` gate in `buildRouteTable()` must continue to be honored — item-gated methods (e.g. fishing requiring a Rod in the aide's per-aide inventory) remain correctly restricted
 
-### Mission Modal — Method Selection (SETTLED — v0.19 implementation pending)
+### Mission Modal — Method Selection (SETTLED — v0.19, revised v0.34, v0.44.1)
 - Mission modal gains **per-location method checkboxes** built from `buildRouteTable()` results for that location — only methods that actually have encounter rows at this location are shown at all
 - Methods with encounter rows but whose `requiresItem` the aide doesn't currently own are shown as **disabled** (visible but uncheckable)
 - Methods with no encounter rows at this location are **invisible entirely** — not shown, not disabled
 - Player can optionally assign **relative weights** across checked methods (e.g. 70% fish / 30% grass); if no weights set, defaults to **even split** across all checked methods
 - Selection and weights **persist per location** — remembered on return, not re-prompted each mission
 - **Default on first visit:** all available (non-disabled) methods checked, evenly distributed
-- **Bug (found v0.34) — newly-unlocked methods default unchecked:** once `state.locationMethodPrefs[locId]` exists at all (saved from any prior visit), it was trusted completely — a method absent from the saved list was treated identically whether the player had deliberately unchecked it *or* it simply didn't exist yet. So Surf, a rod tier, Poke Flute-gated rows, or the gym-battle synthetic method unlocking later would render unchecked by default and stay that way. Not method-specific — applies to anything that can unlock after a location's prefs are first saved.
-- **Fix (v0.34):** `state.locationMethodPrefs[locId]` gains an additive `knownMethods` field — every available (non-locked) method ever actually offered as a toggle at that location, independent of its checked state. A method missing from `knownMethods` is treated as genuinely new and defaults to checked; a method already in `knownMethods` respects whatever the player last set. Old saves lacking the field fall back to treating their existing checked-list as the known set — meaning any method not in that old list defaults to checked on first load post-fix, including ones that were previously available but deliberately unchecked. This is a one-time reset (re-uncheck if undesired); the alternative is the bug persisting indefinitely. No `SAVE_VERSION` bump — purely additive, degrades gracefully.
+- `state.locationMethodPrefs[locId]` gains an additive `knownMethods` field — every available (non-locked) method ever actually offered as a toggle at that location, independent of its checked state. A method missing from `knownMethods` is treated as genuinely new and defaults to checked at render time; a method already in `knownMethods` respects whatever the player last set.
+- **Implementation Note (roll-time self-heal, v0.44.1):** the `knownMethods` render-time default above only persists into the saved `prefs.methods` array if the panel actually re-renders and the player interacts with some control on it — Wander routes an aide through and past locations without ever reopening their panels, so a newly-unlocked method could display as checked but never get saved as checked, and `pickMethodForLocation()` would keep reading the stale array forever. Fixed structurally: `pickMethodForLocation()` itself now treats any method available right now but absent from `prefs.knownMethods` as checked by default directly in the roll pool, independent of whether the panel ever re-renders — mirroring the display-side default at the point where it actually matters. A method the player genuinely unchecked (present in `knownMethods` but absent from `methods`) still correctly stays excluded. Both the render-time default and this roll-time self-heal must be kept — the first is what the player sees, the second is what actually fires when they never look.
 - In-route resolution is **two-stage**: roll for method first (per player's checked set and weights), then roll within that method's weighted encounter table for the actual Pokémon
 - **Encounter method by location role — applies both live and during offline simulation:**
   - **Passthrough waypoints** (locations the aide travels through en route to the destination): always use `defaultEncounterMethod` from `locations.js` — player method preferences are not applied to waypoints
   - **Destination location** (where the aide is stationed): use `state.locationMethodPrefs[locId]` (or `defaultEncounterMethod` if no preference has been set yet for this location)
-- Stored in `state.locationMethodPrefs[locationId]` as `{ methods: ['grass','fish'], weights: {'grass':30,'fish':70} }` — this is a new state field requiring SAVE_VERSION bump
+- Stored in `state.locationMethodPrefs[locationId]` as `{ methods: ['grass','fish'], weights: {'grass':30,'fish':70}, knownMethods: [...] }` — `knownMethods` is additive/degrades gracefully on old saves, no separate SAVE_VERSION bump beyond the field's original introduction.
 
 ### Gym Battle — Badge-Aware Default Checkbox (SETTLED — v0.41, NEW)
 - **Problem:** the Gym Battle checkbox in the mission modal followed the same generic "all available methods default checked" rule as every other method (see the v0.34 `knownMethods` default above). Since v0.40 made gym eligible for the idle/passive method-selection roll as soon as it's *accessible* (not gated on the badge already being held — see "4. Gym battles available passively/idly at current tier" below), this meant a fresh, unbadged gym defaulted to checked the moment it became reachable — mixing badge-earning attempts into the passive weighted roll by default, with no signal to the player that this was happening.
@@ -370,51 +526,73 @@ Each round, while the encounter is still active:
 - Old `fight()` function (flat `(enc.level/lead.level) × 0.5 × maxHP` formula) remains
   removed, per v0.30.
 
-### Faint-Switch Behavior (SETTLED — v0.26, unchanged by v0.30, message fixed v0.36)
+### Faint-Switch Behavior (SETTLED — v0.26)
 - On lead faint mid-encounter: if `getLeadPokemon()` returns another Pokémon, log
   "X fainted! Y was sent out!" and continue the same encounter against the new lead.
-  Only when the whole party is down does the encounter end via `endMission()`.
-- **Log message fix (v0.36):** this outcome — the player's whole party fainting — was
-  previously logged as `"[species] fled."`, which is factually wrong (the wild
-  Pokémon didn't escape; the player's team was defeated). Fixed to report the actual
-  outcome in both `if(!next){...}` blocks in `runWildEncounterLoop()`.
-  Difficulty/mechanics unchanged — catch odds, HP floors, and the encounter loop are
-  untouched; this is a message-text correction only. No SAVE_VERSION impact.
+  Only when the whole party is down does the encounter end via `endMission()`, logging
+  the actual party-wipe outcome (not a flee message).
 
-### Shiny Auto-Catch (SETTLED — unchanged by v0.30)
-- Shiny check fires **before** anything else in `resolveEncounterStep()` — before lead fetch, before ball selection
-- Chance: 1/4096
+### Shiny Auto-Catch (SETTLED)
+- Shiny check fires **before** anything else in both `resolveEncounterStep()` (live)
+  and `processOfflineTime()` (offline) — before lead fetch, before ball selection
+- Chance: 1/4096, independently rolled on each path (see Live/Offline Parity note)
 - Auto-caught with no ball consumed
-- `makePokemon()` must **never** roll shiny — shiny is set explicitly at the call site in `resolveEncounterStep()`
-- **Bug (pre-v0.22):** this shiny roll only ever existed in `resolveEncounterStep()` (live path). `processOfflineTime()`'s inline catch logic called `catchPokemon(lead, enc, false)` with `isShiny` hardcoded `false` — offline/AFK encounters could never produce a shiny, no matter how long the away period.
-- **Fix (v0.22):** `processOfflineTime()` now rolls the same `Math.random()<1/4096` check before the ball-catch-rate check on each simulated encounter, auto-catching as shiny with no ball consumed — mirrors live Step 1 exactly.
-- **No per-encounter log spam offline** — tallied silently as `summary.shinies`, shown in the offline-return summary banner.
+- `makePokemon()` must **never** roll shiny — shiny is set explicitly at each call site
+- No per-encounter log spam offline — tallied silently as `summary.shinies`, shown in
+  the offline-return summary banner
 
-### Pre-Encounter Healing (SETTLED — revised v0.30)
-- **v0.30 change:** `getWeakestEffectivePotion()` now applies **repeatedly** — as many
-  potions as needed until the lead is at full HP or no usable potion remains in
-  `state.professorBag` — instead of firing once. Still strictly **between**
-  encounters, never mid-fight (consistent with the new turn loop above having no
-  mid-combat healing interruption point).
-- **Correction (discovered mid-build, v0.30):** an earlier draft of this note claimed
-  this step "applies identically live and offline, since both already share this
-  step" — that was **wrong**. `processOfflineTime()` never called
-  `getWeakestEffectivePotion()` at all; offline wild encounters have only ever had the
-  heal-*location* full-heal check (arriving at a `heals:true` location), no potion
-  healing and no revive logic. **Decision: extend both to offline as part of v0.30**,
-  for parity — offline wild encounters now get the same uncapped potion-heal loop and
-  the same opportunistic-revive check as live, applied once per encounter cycle before
-  ball/attack resolution, matching live step order exactly.
-- `useItemFromBag()` is the canonical item use function — all item use must route through it, never inline
+### Pre-Encounter Healing (SETTLED, timing revised v0.44.3)
+- `getWeakestEffectivePotion()` applies **repeatedly** — as many potions as needed
+  until the lead is at full HP or no usable potion remains in `state.professorBag`.
+  Strictly **between** encounters, never mid-fight.
+- **v0.44.3:** now runs at the start of every encounter-cycle boundary,
+  unconditionally — previously ran only after an encounter had already been
+  rolled (nested inside the encounter-resolution path), meaning a cycle that
+  rolled no encounter, or was mid-travel, skipped healing entirely that cycle.
+- Applied identically live and offline, in the same step order — an explicit
+  case of the Live/Offline Parity note above, not an automatic consequence of it.
+- `useItemFromBag()` is the canonical item use function — all item use must route
+  through it, never inline
 
-### Revive Logic (SETTLED — revised v0.30)
-- **Bug (pre-v0.22):** the auto-revive check in `resolveEncounterStep()` gated on `lead.currentHP<=0` — but `lead` comes from `getLeadPokemon()`, which by definition only ever returns a **conscious** party member. The condition could never be true; Revives and Max Revives were never actually consumed by this path. There was no other way to use a Revive in the game.
-- **Fix:** the impossible gate is removed. Auto-revive is now **opportunistic** — it fires any time a party member is fainted and a Revive/Max Revive is available, regardless of the current lead's state.
-- Cheapest revive used first (Revive before Max Revive), applied to the lowest-level fainted Pokémon first.
-- **v0.30:** this opportunistic-revive check is now also applied offline, once per encounter cycle in `processOfflineTime()`, matching live — see "Pre-Encounter Healing" correction above. Previously offline had no revive logic at all.
+### Revive Logic (SETTLED, materially fixed v0.44.3)
+- **Implementation Note:** `getLeadPokemon()` by definition only ever returns a
+  **conscious** party member — any gate written as `lead.currentHP<=0` is structurally
+  impossible and will never fire. Revive logic must instead check the whole party for
+  fainted members directly, independent of `lead`.
+- **v0.44.3 fix — two real limitations found and corrected, not just a doc update:**
+  1. Previously only revived **one** fainted party member per cycle (stopped after
+     the first successful use). Now revives **every** currently-fainted member each
+     cycle, subject to available Revives/Max Revives — a multi-faint doesn't queue
+     behind a one-at-a-time bottleneck anymore.
+  2. Previously only ran when an encounter had **already rolled** that cycle
+     (nested inside encounter resolution). Now runs unconditionally at the start
+     of every encounter-cycle boundary, before the roll — same fix as Pre-Encounter
+     Healing above, and for the same reason: a cycle with no roll, or a
+     still-mid-travel aide, previously never got a healing check at all.
+- **Why this mattered in practice, not just in theory:** live play has an
+  invisible backstop (a present player can just manually use an item), so
+  neither limitation was very visible there. Offline/idle play has no such
+  backstop — the same rate limit that's harmless when watched could leave a
+  partially-fainted team stuck fainted for a large fraction of an idle session,
+  with zero friendship accrual for that whole stretch (friendship checks skip
+  fainted members with no proration — see the friendship-tick discussion above).
+  Confirmed via direct testing: reviving 4 simultaneously-fainted party members
+  now happens in one cycle instead of four, and a party sitting fainted between
+  otherwise-empty rolls now gets healed on the very next cycle instead of
+  waiting for one to actually produce an encounter.
+- Cheapest revive used first (Revive before Max Revive), applied lowest-level
+  fainted Pokémon first, same as before.
+- Applied identically live and offline, at the same point in each cycle (see
+  Live/Offline Parity note above).
 
 ### EXP Formula (SETTLED — unchanged by v0.30)
 - `Math.floor((baseExpYield * enc.level) / 7)`
+
+### EXP Share Item (SETTLED — v0.40)
+- New item, `bagType: "Trainer"` (per-aide — each aide needs their own copy), **$100**, one-time purchase (not consumed, `isConsumable: false`), persistent per-aide toggle once owned. Backed by `aide.expShareActive` (default `false`).
+- **Formula:** whoever actually earns the EXP (won a fight, made a catch) gets 50%. The other 50% splits evenly across every *other* party member of that same aide, fainted or not. Solo party (nobody to split with) → the battler gets the full normal amount, nothing lost. A recipient already at that aide's level cap still accrues the EXP normally — no special case needed.
+- **Implementation:** `distributeExp(pokemon, amount, idx, silent)` is the single entry point every EXP-awarding call site goes through (7 sites: 3 live, 3 offline/silent, plus `awardPerKOExp()` for gym battles). `giveExp()`/`giveExpSilent()` themselves are unchanged; the wrapper calls them multiple times per the split, using `Math.floor()` at each step (a few fractional EXP points can be lost to rounding — standard tradeoff, matches real Exp Share implementations too).
+- **UI:** a button next to each aide's row of 6 party sprites, reading `Exp Share: ON`/`OFF` (accent-colored when on, muted when off) — only rendered once that aide's `trainerBag` actually contains the item.
 
 ---
 
@@ -424,17 +602,17 @@ Each round, while the encounter is still active:
 The single `state.bag` is replaced with two separate inventories:
 
 - **Professor's inventory** (`state.professorBag`): heals (potions, revives), Poké Balls, evolution stones and items, and similar consumables/research items
-- **Per-aide inventory** (`aide.bag` on the aide object): badges, HMs, Bicycle, Rods (Old/Good/Super), Safari Pass, and similar field-equipment items
+- **Per-aide inventory** (`aide.trainerBag` on the aide object): badges, HMs, Bicycle, Rods (Old/Good/Super), Safari Pass, and similar field-equipment items
 
 ### `bagType` Field on Items
-- Every item in `items.js` has a `bagType` column: `"professor"` or `"trainer"`
+- Every item in `items.js` has a `bagType` column: `"Professor"` or `"Trainer"`
 - This is the authoritative routing field — shop purchases, item consumption, and `requiresItem` checks all reference `bagType`
 - Adding a new item requires explicitly setting `bagType` in the spreadsheet
 
 ### `requiresItem` Checks
 - `requiresItem` on **encounter rows** (`encounters.js`) checks the **active aide's per-aide inventory**
 - `requiresItem` on **connection rows** (`connections.js`) checks the **active aide's per-aide inventory**
-- **Safari Pass** follows the same rule — it is an aide-held item (`bagType: "trainer"`)
+- **Safari Pass** follows the same rule — it is an aide-held item (`bagType: "Trainer"`)
 - Pokémon inside the Safari Zone are caught with regular Poké Balls from the Professor's inventory
 
 ### Per-Aide Inventory
@@ -445,8 +623,9 @@ The single `state.bag` is replaced with two separate inventories:
 - `buyItem()` must route purchases into the correct inventory based on the item's `bagType`
 
 ### Save Migration
-- SAVE_VERSION bump to 12 required
-- On load from a pre-v12 save, existing `state.bag` contents are migrated based on each item's `bagType` field: `professor` items go to `state.professorBag`, `trainer` items go to Carl Oak's `bag`
+- SAVE_VERSION 12 (see Versioning table, v0.19 row). On load from a pre-v12 save,
+  existing `state.bag` contents migrate based on each item's `bagType` field:
+  `professor` items go to `state.professorBag`, `trainer` items go to Carl Oak's `bag`
 
 ---
 
@@ -464,6 +643,20 @@ The single `state.bag` is replaced with two separate inventories:
 - When a catch would exceed the cap: **catch-then-release** — the catch is fully processed (ball consumed, EXP awarded, `state.dexHistory` incremented, `totalCatches` incremented, `recordNewSpecies` called if applicable) before the overflow individual is silently released
 - Cap applies to **live held Pokémon only** — `dexHistory` counts are unaffected by and not involved in the cap check
 - The prior "no releasing or selling Pokémon" rule is **superseded** by this mechanic for overflow non-shinies only; manual releasing is still not a player action, except via the explicit cap-lowering sweep above
+
+### Ball-Avoid Toggle for Capped Species (SETTLED — v0.40)
+- Global (not per-aide) — lives next to the species-cap setting. When ON: a wild encounter of a species already at its effective cap (respecting per-species overrides via `getEffectiveSpeciesCap()`) still resolves as a normal fight for EXP — the aide just never attempts a catch.
+- Shiny individuals are entirely unaffected regardless of the toggle — the shiny auto-catch check fires before the normal ball-throw decision logic is ever reached.
+- **Confirmation on enable only** (no downside to warn about on disable) — a themed modal, not a native browser confirm, explaining that income scales with total catches and that stronger IVs pass down to existing Pokémon on release. Cancelling leaves the toggle off.
+
+### Select Pokémon to Release (SETTLED — v0.40)
+Button beneath the per-species cap override control on Species Detail. Opens a modal with checkboxes for every **boxed** (`!p.holder`) individual of that exact species+form — held/party members excluded entirely. Shinies included and selectable (the player's explicit choice here, unlike cap-overflow auto-release). "Release Selected" requires a confirmation prompt before anything is removed; removal reuses the existing `removePokemonFromBoxAndParty(id)` mechanism per selected individual.
+
+### Rattata #1 (Starter) Can Never Be Released (SETTLED — v0.43)
+`removePokemonFromBoxAndParty(id)` — the shared low-level function every release path calls — has `if(id===1) return;` at the top, structurally protecting all current call sites (`checkSpeciesCap()` auto-release, `sweepSpeciesToCap()` cap-lowering sweep, `confirmReleaseSelected()` manual release, `performCheatReplace()` cheat release-and-replace) and any future one. `checkSpeciesCap()`'s weakest-picker additionally excludes `id===1` from candidacy so cap enforcement keeps working correctly (releases the next-weakest instead of silently no-op'ing). `showReleaseModal()` also excludes `id===1` from ever appearing as a checkable candidate, even when unassigned.
+
+### Universal Species-Cap Enforcement — Box Membership Only (SETTLED — v0.44)
+`checkSpeciesCap()`'s exemption guard is `if(individual.holder||individual.breeding) return;` (not `holder` alone), and its `liveNonShinyBox` filter excludes both `p.holder` and `p.breeding`. `sweepSpeciesToCap()` (the global cap-lowering sweep) has the identical exclusion on its `allBoxed` filter. `checkSpeciesCap(p)` is called at every point a Pokémon becomes box-eligible (`holder` and `breeding` both become falsy): `unassignPokemon()` (after `p.holder=null`), `releaseDaycarePair()` (after `p.breeding=false`, both parents), and Day Care Research Mode's pair-release step (functionally identical to `releaseDaycarePair()`). No call needed on the reverse transition (into party or into breeding) — that direction can only hold steady or reduce a species' box count, never push it over cap.
 
 ### Family IV Inheritance on Species-Cap Overflow (SETTLED — v0.32, NEW)
 - **Trigger:** only when a catch of species X would exceed `state.speciesCap` for
@@ -484,11 +677,9 @@ The single `state.bag` is replaced with two separate inventories:
   4. If no pool member qualifies (wild's IV total ≤ everyone's): wild is released as
      before — unchanged catch-then-release/overflow behavior, no change.
 - **IV total** = sum of all 6 IV stats (`hp+atk+def+spatk+spdef+spd`, max 186).
-- **New helper required:** `getFamilyDexIds(dexId)` — walks `EVO_TREE` in both
-  directions to build the full connected-component set of dexIds for a family. Did not
-  exist prior to v0.32.
+- **`getFamilyDexIds(dexId)`** — returns every dexId in a species' evolutionary family, by calling `getFamilyMembers(entry.familyId)` (never a raw `EVO_TREE` walk — see the Implementation Note below for why). Did not exist prior to v0.32.
 - **v0.37:** now also triggers for perfect-IV incoming individuals, since they're no longer exempt from `checkSpeciesCap()` entirely (see "Perfect-IV Species-Cap Exemption" below). A donor that isn't itself perfect can never make a recipient perfect — donation copies IVs wholesale, so this can't manufacture additional perfect-IV individuals beyond ones directly rolled at creation.
-- **Bug fixed v0.38 — donation pool was empty for ~90% of the dex.** `getFamilyDexIds()` built its family pool by walking `EVO_TREE` edges only — but `EVO_TREE` contains just 27 rows covering the special branching-evolution cases (Eeveelutions, Gloom, Poliwhirl, Slowpoke, Nidoran M/F, etc.). Every ordinary single-path evolution line (the large majority of the Kanto dex — Rattata/Raticate, the Pidgey/Caterpie/Weedle/Charmander/Squirtle/Bulbasaur/Abra/Machop/Geodude lines, and more) is defined purely through the flat `evolvesIntoId` field in `pokedex.js` and never appears in `EVO_TREE` at all — so for any of those species, `getFamilyDexIds()` returned just `[dexId]` (itself), meaning the donation pool was silently always empty and every overflow fell straight to the release path, never the intended IV-donation path. **Fix:** `getFamilyDexIds()` is rewritten to derive family membership from `getFamilyMembers(entry.familyId)` — the same correct, data-driven grouping the Family Chain display already uses successfully — instead of the EVO_TREE-only walk. Restores IV-donation as a real possibility across the full dex, not just the ~27-row branching subset.
+- **Implementation Note:** family-pool lookups (here and anywhere else that needs "every dexId in this evolutionary family") must go through `getFamilyMembers(familyId)`, never a raw `EVO_TREE` edge-walk — `EVO_TREE` only holds the ~27 rows for branching-evolution special cases; ordinary single-path lines are defined purely via `evolvesIntoId` in `pokedex.js` and are invisible to an EVO_TREE-only walk. See Data Architecture / Species Identity and Resolved Bug Index.
 
 ### Per-Species Cap Overrides (SETTLED — v0.38, NEW)
 - New `state.speciesCapOverrides = {dexId: number}` map (default `{}`) — lets a specific species' effective cap differ from `state.speciesCap`, in either direction (higher or lower).
@@ -499,26 +690,23 @@ The single `state.bag` is replaced with two separate inventories:
 - **Lowering an override** (including deleting one that drops the effective cap) triggers the same confirm-and-sweep behavior as lowering the global cap dropdown — box-only, shiny-exempt.
 - Part of the SAVE_VERSION 24 → 25 bump (see Versioning). Migration: `speciesCapOverrides:{}` defaulted on every load.
 
-### Species Cap Enforcement on Evolution + Release Priority (SETTLED — v0.35, NEW)
-- **Bug:** `applySpeciesSwap()` — called by every evolution path — never checked the species cap; only wild catches did (`checkSpeciesCap()`, called from `catchPokemon()` paths only). An evolution could push a species over cap with no check at all.
-- **Fix:** cap check now fires after both catches and evolutions, via a unified helper. Priority order:
+### Species Cap Enforcement on Evolution + Release Priority (SETTLED — v0.35)
+- Cap check fires after both catches and evolutions, via a unified helper (`applySpeciesSwap()`, called by every evolution path, is included — not just `catchPokemon()`). Priority order:
   1. **IV-donation** (unchanged existing logic) — if any family-tree member has a lower IV total than the new/evolved individual, donate IVs to it and discard the newcomer.
   2. **Otherwise, release the weakest individual across the full same-species *boxed* pool** (v0.38: box-only, was previously the full pool including party) — compare by **total equipped-move power** (sum of all 4 `equippedMoves[].power` slots), releasing the **lowest** total. Ties broken by **catch order** (`p.id`, ascending = earlier): the **later** catch is released, keeping the original/longest-held individual.
 - This replaces the old "always release the newcomer on overflow" fallback for both catches and evolutions — an existing weaker individual can now be released instead of the new arrival.
 - No SAVE_VERSION impact.
 
-### Species Detail Form-Selection Bug — "Form-Only" Species Invisible in Box (SETTLED — v0.41, bug fix)
-- **Bug:** three separate "click into Species Detail" handlers (`renderDexPokedexGrid()`, `renderDexSpecies()`, `renderDexOfficialSpeciesList()`) hardcoded `dexSelectedFormName=null` on entry, instead of reading the clicked entry's actual `formName`. Harmless for the overwhelming majority of species, whose base/default form genuinely has `formName:null` — but **"form-only" species, whose only Pokédex row already has a non-null `formName` with no null-form sibling row at all** (confirmed 35 affected dexIds across the full dataset; Nidoran♀/♂ — dexId 29/32 — are the only two currently reachable in this Kanto-scoped game), got force-set to the wrong form on every entry. Every filter keyed on `(p.formName||null)===(dexSelectedFormName||null)` — the Species Detail held-count display and the "Select Pokémon to Release" candidate list (see backlog item 5, "Original settled spec" under v0.40) — then mismatched against the real individuals' actual `formName` and came up empty, even when the box genuinely held some.
-- **Not a data-loss bug.** `checkSpeciesCap()` filters only by `pokedexId` (no formName check), so cap enforcement continued working correctly against the real box contents throughout — confirmed via a live save where a full box of aged Nidoran was correctly being maintained at cap while every *new* Nidoran catch was being immediately released as the visible "overflow," with the existing boxed individuals completely hidden from Species Detail/Release the whole time. `dexSelectedFormName` is transient, page-local UI state — explicitly never written to `state` (see its own inline comment) — so nothing in any save file was ever corrupted; the fix self-heals every existing save immediately on load, no migration needed.
-- **Fix:** all three handlers now set `dexSelectedFormName=entry.formName||null` — reading the actual clicked entry's form, same pattern the one already-correct handler (`familyChainNodeClick()`, via evolution-chain node clicks) used all along. Structural fix, not species-specific — resolves the bug for all 35 affected dexIds uniformly, not just Nidoran.
-- No SAVE_VERSION impact.
+### Species Detail Form Selection (SETTLED — v0.41)
+- Every "click into Species Detail" handler must set `dexSelectedFormName=entry.formName||null` — reading the clicked entry's actual form, never hardcoding `null` — because "form-only" species (whose only Pokédex row already has a non-null `formName`, with no null-form sibling row at all; 35 dexIds dataset-wide, Nidoran♀/♂ are the only two reachable in this Kanto-scoped game) get force-mismatched against every filter keyed on `(p.formName||null)===(dexSelectedFormName||null)` otherwise.
+- `dexSelectedFormName` is transient, page-local UI state, never written to `state` — no SAVE_VERSION impact, and a fix here self-heals every existing save on load.
 
 ---
 
 ## Day Care / Breeding System (SETTLED — v0.26, revised v0.27, v0.28, v0.29)
 
 ### Location & Slots (revised v0.27)
-- **v0.27:** Day Care is now its own standalone map location — `locationId: pokemonDaycare` ("Pokemon Daycare"), connected only to Route 5 (`travelTime: 1`, `heals: true`, `mapCol: 121`, `mapRow: 94`, no `defaultEncounterMethod`). The `DAYCARE_LOCATION_ID` constant points at `pokemonDaycare` instead of `route5`. This was a discoverability fix — the feature existed correctly in v0.26 but was buried inside Route 5's generic location panel with no indication it was there.
+- **v0.27:** Day Care is its own standalone map location — `locationId: pokemonDaycare` ("Pokemon Daycare"), connected only to Route 5 (`travelTime: 1`, `heals: true`, `mapCol: 121`, `mapRow: 94`). `defaultEncounterMethod` is populated (`"cave"`, an Excel-template artifact) but functionally inert — the Daycare has zero `encounters.js` rows, so the value is never read. `DAYCARE_LOCATION_ID` points at `pokemonDaycare` instead of `route5` (previously buried inside Route 5's generic location panel).
 - The Day Care section still renders inside `showMapDetail()` for whichever location `DAYCARE_LOCATION_ID` currently points to, alongside the existing Shop-style section pattern — no change to that rendering logic itself, only to which location triggers it.
 - 1 free slot by default, purchasable up to 3 total, **$100 per additional slot** (`state.funds`).
 - `state.daycareSlots` field (introduced v0.26) tracks slot count purchased and the current occupants/state of each slot — unaffected by the v0.27 location move.
@@ -532,13 +720,26 @@ The single `state.bag` is replaced with two separate inventories:
 - Once assigned, both are reserved/unavailable for Aide missions until collected — same restriction as being actively assigned to the Aide.
 - The Aide must physically travel to the Day Care to drop off a pair and again to collect completed eggs — the normal travel-time mechanic, same as visiting any other location. Once dropped off, incubation runs indefinitely in the background — it does **not** block the Aide from being dispatched elsewhere in the meantime; only the drop-off/collect actions themselves require the Aide's physical presence at the Day Care.
 
+### Multi-Aide Access (SETTLED — v0.40)
+The facility (`state.daycareSlots`) is global/shared — no per-aide state exists there at all. Any aide physically present at the Day Care can manage breeding (breeding-pair selection, egg pickup, etc.) — the deciding check is "is *this* aide at `DAYCARE_LOCATION_ID`," not a hardcoded Carl Oak check. Both aides can be at the Day Care simultaneously with zero conflict, since nothing about the feature is aide-scoped once past the "who unlocked the UI" gate.
+
 ### Pair Selection UI (SETTLED — v0.28, revised v0.29)
 - The old two-`<select>` dropdown pair-picker is replaced with a **two-step sprite-row picker**, same row style as the All Catches list (sprite + name + level + gender + held/box icon).
 - **Step 1:** lists Parent A candidates (`getDaycareEligiblePokemon()` — everyone not already `breeding`) as tappable rows.
 - **Step 2:** header shows the chosen Parent A; list re-renders showing only Parent B candidates passing `canBreedPair(parentA, candidate).ok` — incompatible candidates (wrong egg group, same gender, already breeding, etc.) are **hidden entirely**, not grayed out. A "← Back" control returns to step 1.
 - Tapping a Parent B row shows the existing result preview and a "Drop Off Pair" confirm button, same as before — only the selection mechanism changed, not the confirm/preview logic.
 - **v0.29: both steps now sort by family number → evolution order → dex number**, instead of catch order — reuses the same family-grouping logic as `getFamilyMembers()` (Families tab), for readability only. No visual dividers between families, just sort order.
+- **Ditto always first (v0.44):** `sortDaycareList()`'s comparator gains a leading key ahead of the family/evolution/dexId sort — any Ditto entry sorts first, unconditionally. Applies identically to both Parent A and Parent B pickers.
 - Display/interaction-only — no `state` schema change.
+
+### Day Care Research Mode (SETTLED — v0.44)
+New per-aide checkbox, backed by persisted `aide.researchMode` (boolean, default `false`) and `aide.researchPair` (`{parentAId, parentBId, resultDexId, nextReadyAt, eggsQueued}` or `null`) — **requires the SAVE_VERSION 28→29 bump**, see central Versioning table. Lives inside `renderMethodPrefs()`'s Encounter Methods panel, scoped to when the Day Care itself is the selected destination, not a global toggle. Toggling it on immediately attempts pair selection if none is active, independent of hitting Dispatch. `researchPair` is functionally parallel to a `daycareSlots.slots[]` entry but tracked separately and never counted against `daycareSlots.purchased` capacity.
+
+Selection pool is box-only (`!p.holder && !p.breeding`), restricted to `canBreedPair()`-compatible pairs, preferring a pairing whose result species isn't yet `breedingTested`; falls back to any valid compatible pair if none are untested; stays `null` if no valid pair exists at all. Selected parents are locked (`p.breeding=true`) exactly like a manual pair.
+
+`updateResearchModePairs()`, called once per aide at the top of `gameTick()` alongside `professorAutoTestEvolutions()`: for every aide with `researchMode` and no active `researchPair`, attempts selection. For every aide with an active `researchPair`, advances its egg queue using the same remainder-preserving interval loop `updateDaycareQueue()` uses — this runs regardless of the aide's location, so the clock never pauses. When that aide is physically at the Day Care and `eggsQueued>=1`, the switch fires: collect all queued eggs through the exact same pipeline `collectDaycareSlot()` uses, set `breedingTested` for the result species, release both parents (including the `checkSpeciesCap()` call from "Universal Species-Cap Enforcement" under Pokémon Storage), clear `researchPair` to `null`, then — only if `researchMode` is still `true` — immediately select a new random pair. Unchecking the box takes effect this way: it doesn't stop anything mid-cycle, it just prevents the next pair from being picked once the aide is next physically present for a switch.
+
+Read-only "Research Pairs" section on the Day Care screen — sprite row (reusing `daycareSpriteRowHtml()`) + live countdown per aide with an active `researchPair`, no manual buttons; fully automatic. Multiple aides can run Research Mode in parallel, naturally non-colliding since a locked individual (`p.breeding`) can't be selected by a second aide's pair-selection pass.
 
 ### Breeding Sprite Preview — F + M = C (SETTLED — v0.29, NEW)
 - **Result Preview (step 2, pre-drop-off):** the existing text prediction gains a sprite row — Parent A sprite + Parent B sprite = predicted Child sprite, using the same `?` placeholder as before if the result species hasn't been seen yet (no new silhouette asset).
@@ -553,13 +754,12 @@ The single `state.bag` is replaced with two separate inventories:
 - Two Dittos together → not breedable.
 - Genderless non-Ditto species → can only pair with Ditto.
 - **Cross-family breeding is fully supported** — two different families can interbreed if they share an egg group; this is not restricted to same-family pairs.
-- **Bug fixed v0.37:** the "Undiscovered egg group → not breedable" rule above was never actually enforced. `isUndiscoveredOnly()` checked for the literal string `'Undiscovered'`, but the real data value across all 136 non-breeding species is `'No eggs'` — the check silently never matched anything, so `canBreedPair()`'s intended block on Day Care pairing never fired. Fixed by correcting the string literal to `'No eggs'`.
+- **Implementation Note:** egg-group and breedability checks must match the data's actual string values, not an assumed/mainline-style label — `isUndiscoveredOnly()` matches literal `'No eggs'` in this dataset, not `'Undiscovered'`.
 
 ### Result Species
 - The result is always the **lowest-evolution root** of the **female** parent's family (or the non-Ditto parent's family, if Ditto is involved) — mirrors the mainline "mother determines species" rule.
 - **Dual-root family exception (v0.38, NEW):** a small number of families have no shared baby stage at all — two (or more) independent roots instead (currently just Nidoran♀/Nidoran♂ in this dex's data). For these, species determination is **random among the family's roots** (50/50 for a 2-root family), regardless of which parent, gender, or Ditto involvement produced the egg — matching the real games' handling of this specific case, which is an explicit exception to "mother determines species," not an application of it. Generalizes automatically to any future dual-root family (derived from the data, not hardcoded to Nidoran specifically) — single-root families are completely unaffected.
-- **Bug fixed v0.38:** prior to this fix, non-Ditto breeding within a dual-root family could *only* ever produce the first-listed root (Nidoran♀), since the mother is always structurally drawn from one specific line, and the fallback for "which root wins" simply grabbed whichever root happened to be first — even Ditto-paired breeding with an *evolved* member of the other line (e.g. Nidoking) incorrectly fell through to that same fallback instead of respecting its own lineage. The dedicated random-selection rule above supersedes and fixes both cases at once.
-- **No incense mechanic, no variability** — this was explored and deliberately dropped in favor of a fully deterministic result, since the incense-based design didn't generalize well across families and added complexity without a clear payoff. *(v0.38 note: this "deterministic" framing now has the one explicit dual-root exception above.)*
+- **No incense mechanic, no variability** — explored and deliberately dropped in favor of a fully deterministic result (the one explicit dual-root exception above aside).
 
 ### Result Preview
 - Shows the real predicted species name if it has already been seen by any means (`seenDexIds`) — reuses existing dex-tracking infrastructure, no new "confirmed breeding result" system.
@@ -570,45 +770,28 @@ The single `state.bag` is replaced with two separate inventories:
 - **Hatch time formula:** `minutes = max(1, round(eggCycles × 0.176))`, derived from each species' existing `eggCycles` field (already present in the data — no new column needed). Calibrated so a ~20-cycle species lands at ~5 minutes; range across the actual data (5–120 cycles) works out to roughly 1–21 minutes.
 - Processed like a mission — live countdown while the app is open, offline catch-up on return.
 
-### Continuous Batch Hatching (SETTLED — v0.28)
-- **Bug (pre-v0.28):** a slot produced exactly one baby, then went empty and required manually re-selecting and re-dropping-off the same pair to continue breeding — no repeat/offline-accumulation loop existed, unlike missions.
-- **Fix:** slot record fields change from a single-use `readyAt` to `eggsQueued` (int, starts 0) + `nextReadyAt` (an ongoing anchor that keeps advancing, doesn't reset until pulled).
-- New helper `updateDaycareQueue(slotIndex)`: while `Date.now() >= rec.nextReadyAt`, increments `eggsQueued` and advances `rec.nextReadyAt += hatchMinutes*60000` — a remainder-preserving loop, same pattern as `processOfflineTime()`'s mission catch-up (no partial progress toward the next egg is ever lost). Called on `buildDaycareHtml()` render and at the top of `collectDaycareSlot()`, so it's correct whether the app was open or closed.
-- **Collection:** `collectDaycareSlot()` runs the queue update, then hatches **all** queued babies in one go, each individually through the existing `makePokemon` → `dexHistory` → `recordAbilityObserved` → `recordCapture` → `checkSpeciesCap` pipeline (per-species cap release still applies per-egg). The slot is **not** cleared — `eggsQueued` resets to 0, the pair stays assigned, and `nextReadyAt` keeps counting from where it left off. Log line becomes a batch summary (e.g. "Collected 20 eggs at the Day Care! (18 kept, 2 released — species cap)").
-- **Uncapped** — however many intervals fit in the elapsed time, same philosophy as mission offline catch-up (also uncapped).
-- `releaseDaycarePair()` ("Pull Out") is unchanged — still ends the loop and returns parents to the box, forfeiting any uncollected `eggsQueued`. Confirm dialog gets a one-line addition warning about this if `eggsQueued > 0` at the time.
-- `buildDaycareHtml()` slot display replaces the old "Ready to collect! / N min remaining" with a live queue count (e.g. "3 eggs ready · next in 1:24") — Collect button enabled whenever `eggsQueued > 0`.
-- **SAVE_VERSION 19 migration:** any slot with the legacy `readyAt` field converts to `nextReadyAt: readyAt, eggsQueued: 0` on load.
-- **Bug fixed v0.37 — missing log events on collection.** `collectDaycareSlot()` never called `logCaptureRarity()` (shiny/Perfect-IV/Unicorn hatches produced zero Condensed-log entry) or `recordNewSpecies()` (baby-form species only discoverable via breeding never fired "🆕 New Species," since eggs skip the normal encounter/sighting phase). `recordCapture()` was already correct and is unchanged. Fixed: both now fire per hatched individual (`logCaptureRarity(baby,false)` — `false` matching the existing offline-silent-tallied pattern, not per-egg Full-log spam). The batch-summary Full-log line is enriched with non-zero tallies instead: `"Collected N eggs at the Day Care! (kept/released clause) — X new species, Y unicorn, Z perfect IV, W shiny!"` — each category omitted if zero.
+### Continuous Batch Hatching (SETTLED — v0.28, log events extended v0.37)
+- Slot record fields: single-use `readyAt` replaced by `eggsQueued` (int, starts 0) + `nextReadyAt` (an ongoing anchor that keeps advancing, doesn't reset until pulled) — supports offline accumulation instead of one baby per drop-off.
+- `updateDaycareQueue(slotIndex)`: while `Date.now() >= rec.nextReadyAt`, increments `eggsQueued` and advances `rec.nextReadyAt += hatchMinutes*60000` — a remainder-preserving loop, same pattern as `processOfflineTime()`'s mission catch-up. Called on `buildDaycareHtml()` render and at the top of `collectDaycareSlot()`, so it's correct whether the app was open or closed.
+- **Collection:** `collectDaycareSlot()` runs the queue update, then hatches **all** queued babies in one go, each individually through the full pipeline: `makePokemon` → `dexHistory` → `recordAbilityObserved` → `recordCapture` → `checkSpeciesCap` → `logCaptureRarity` → `recordNewSpecies` (per-species cap release still applies per-egg). The slot is **not** cleared — `eggsQueued` resets to 0, the pair stays assigned, `nextReadyAt` keeps counting from where it left off. Log line is a batch summary, e.g. "Collected 20 eggs at the Day Care! (18 kept, 2 released — species cap) — 3 new species, 1 shiny!" (each category omitted if zero).
+- **Uncapped** — however many intervals fit in the elapsed time, same philosophy as mission offline catch-up.
+- `releaseDaycarePair()` ("Pull Out") ends the loop and returns parents to the box, forfeiting any uncollected `eggsQueued`. Confirm dialog warns about this if `eggsQueued > 0` at the time.
+- `buildDaycareHtml()` slot display shows a live queue count (e.g. "3 eggs ready · next in 1:24") — Collect button enabled whenever `eggsQueued > 0`.
+- SAVE_VERSION 19 migration: any slot with the legacy `readyAt` field converts to `nextReadyAt: readyAt, eggsQueued: 0` on load.
+- **Implementation Note:** any acquisition pathway that bypasses the normal wild-encounter flow (breeding is the current example) must explicitly call the full side-effect pipeline above — `logCaptureRarity()` and `recordNewSpecies()` are not fired automatically just because `recordCapture()` ran, since eggs skip the normal encounter/sighting phase entirely.
 
-### Shiny Rolls at Hatching (SETTLED — v0.30, NEW)
-- Day Care eggs now roll for shiny — previously `collectDaycareSlot()` never checked
-  at all, so every hatched egg was guaranteed non-shiny.
-- Same odds/mechanic as wild encounters: `Math.random() < 1/4096` per egg, no ball
-  consumed (not applicable here regardless).
+### Shiny Rolls at Hatching (SETTLED — v0.30)
+- Day Care eggs roll for shiny: `Math.random() < 1/4096` per egg, no ball consumed.
 - **Rolled at pickup, not at incubation** — `eggsQueued` is a plain counter with no
   per-egg record, so no Pokémon object (and thus no shiny flag) exists until
   `collectDaycareSlot()` calls `makePokemon()` for each egg. Collecting a large batch
   at once rolls shiny independently for each egg in that same batch, all at the moment
   of collection — not spread out chronologically as each egg finished incubating.
 
-### Dex Display — Breeding Status (SETTLED — v0.30, NEW)
-- **Bug (pre-v0.30):** the Dex's Held/Boxed status display checked only `p.holder` — a
-  Pokémon actively breeding at the Day Care (`p.breeding === true`, `p.holder === null`)
-  displayed identically to one genuinely idle in the box: "📦 Unassigned."
-- **Exactly three display sites, confirmed by function name (not four — an earlier draft
-  of this note miscounted):**
-  1. `renderDexViewAll()` — the "All Catches" tab
-  2. `renderDexDetail()` — the "Your Catches" list on a single species' detail page
-  3. `showPokemonDetail()` — the individual Pokémon detail modal's "Holder:" line
-  - The other Dex views (`renderDexPokedexGrid()`, `renderDexFamilies()`,
-    `renderDexSpecies()`) don't show per-individual Held/Boxed status at all — nothing
-    to fix there.
-- **Fix:** all three sites now check `p.breeding` first, ahead of the
-  `holder`/unassigned fallback. When true, shows **"🥚 At Day Care"** in place of
-  "📦 Unassigned" / "Held by: —". Does **not** receive the dimmed `.unassigned` CSS
-  styling, since it isn't idle. Reads the existing `p.breeding` field — no schema
-  change, no SAVE_VERSION impact.
+### Dex Display — Breeding Status (SETTLED — v0.30)
+- Three display sites check `p.breeding` first, ahead of the `holder`/unassigned fallback, and show **"🥚 At Day Care"** in place of "📦 Unassigned" / "Held by: —" (no dimmed `.unassigned` styling, since it isn't idle): `renderDexViewAll()` (All Catches tab), `renderDexDetail()` (a species' "Your Catches" list), `showPokemonDetail()` (individual Pokémon modal's "Holder:" line).
+- The other Dex views (`renderDexPokedexGrid()`, `renderDexFamilies()`, `renderDexSpecies()`) don't show per-individual Held/Boxed status at all — nothing to change there.
+- Reads the existing `p.breeding` field — no schema change, no SAVE_VERSION impact.
 
 ### Interaction with the Families Tab Root-Placeholder Fix
 - Day Care is the primary intended path for filling in a family's previously-unseen root (e.g. Pichu) — see "Evolution Chain Visual" for the display-side fix this feeds into. No special-cased interaction is needed: once a bred Pokémon is collected, it's logged into `seenDexIds` exactly like any other catch, which is what resolves the root placeholder.
@@ -618,7 +801,7 @@ The single `state.bag` is replaced with two separate inventories:
 ## Nicknames (SETTLED — v0.20)
 - New optional field `nickname` on individual Pokémon objects (`state.dex` entries, referenced by `state.party`)
 - **Trigger:** editable only via poke-modal detail view — no prompt on catch
-- **Display rule:** anything referring to a specific Pokémon instance uses `getDisplayName(p)` (returns `p.nickname || p.species`); anything species-wide (Family/Species cards, route encounter tables, shop, evolution method lists) continues to use the species name directly. `getDisplayName()` replaces raw `p.species` at every instance-level display/log site: party list, poke-modal header, all `addLog()` calls referencing a specific Pokémon (catch, faint, win, EXP, level-up, evolution, revive)
+- **Display rule:** anything referring to a specific Pokémon instance uses `getDisplayName(p)` — `p.nickname` if set; otherwise `p.species`, with `" ("+p.formName+")"` appended for a form-variant individual (e.g. "Raichu (Alolan)"); anything species-wide (Family/Species cards, route encounter tables, shop, evolution method lists) continues to use the species name directly. `getDisplayName()` replaces raw `p.species` at every instance-level display/log site: party list, poke-modal header, all `addLog()` calls referencing a specific Pokémon (catch, faint, win, EXP, level-up, evolution, revive)
 - **Input:** plain text input in poke-modal, max length 30, no other character constraints
 - **Clearing:** submitting an empty/whitespace-only input sets `nickname` back to `null` (reverts display to species name)
 - **Evolution:** nickname persists unchanged across evolution — only the underlying `species`/`pokedexId` change
@@ -684,10 +867,9 @@ The single `state.bag` is replaced with two separate inventories:
   - **Unknown** (neither): `?` placeholder, no sprite fetch
 - Tapping a Captured or Seen cell navigates straight to Species Detail (Layer 3), skipping the Family Card layer. `?` cells are inert — no tap action.
 - **v0.23:** Captured/Seen cells display the species name alongside the dex number on one line (`#27 Sandshrew`), instead of number-only. Unknown (`?`) cells unaffected — no name shown, preserving no-spoiler behavior.
-- **Bug fixed v0.24 — Seen state never populated for non-catches:** `isSpeciesKnown(dexId)` reads `state.researchLog[dexId]`, which was only ever written by `recordSighting()`/`recordNewSpecies()` — and both were only called from inside successful-catch code paths (`catchPokemon()`, shiny auto-catch, offline-catch branches), never at encounter generation. A flee, loss, or missed ball updated the separate per-location `state.locationEncounterLog` counter but never touched `researchLog`, so the grid showed `?` instead of a silhouette for anything only ever seen, not caught.
-  - **Fix:** `recordSighting()`/`recordNewSpecies()` moved to fire at encounter generation — both in `resolveEncounterStep()` (live) and `processOfflineTime()` (offline) — regardless of catch outcome. Fleeing/losing an encounter now counts as "seen."
-  - **New field:** `researchLog[dexId].firstCaught` — fires a new finding, **"🎯 Captured: [name]"**, on first successful catch (distinct from "🆕 New Species", which now fires on first *sighting* instead of first catch).
-  - **Findings report dedupe:** findings are tagged with `dexId`. If a species has both a "seen" and "captured" finding pending in the same `showFindingsReport()` batch, only "🎯 Captured" renders — capture overwrites seen within that batch (covers an encounter caught immediately, or an offline batch that sees-then-catches within the same window).
+- **New field:** `researchLog[dexId].firstCaught` — fires a new finding, **"🎯 Captured: [name]"**, on first successful catch (distinct from "🆕 New Species", which fires on first *sighting* instead of first catch).
+- **Implementation Note:** `recordSighting()`/`recordNewSpecies()` must fire at encounter generation (`resolveEncounterStep()` live, `processOfflineTime()` offline) regardless of catch outcome — a flee/loss/missed-ball still counts as "seen." Gating these on catch success alone silently breaks the Seen state for anything only ever encountered, not caught.
+- **Findings report dedupe:** findings are tagged with `dexId`. If a species has both a "seen" and "captured" finding pending in the same `showFindingsReport()` batch, only "🎯 Captured" renders.
 
 ### All Catches View — Sorting, Filtering, Search (SETTLED — v0.22, extended v0.36, overhauled v0.37)
 - `sort-select` gains a `family` option alongside Catch #/Dex #/Level/HP/BST — sorts by `familyId` (via `getPokemonEntry(p.pokedexId).familyId`), with `dexId` as a secondary tiebreaker so same-family members stay grouped and ordered sensibly.
@@ -703,6 +885,9 @@ The single `state.bag` is replaced with two separate inventories:
   - **Type badge on each entry:** shows both of the individual's type(s) — using their actual **form's** type, not base species — as colored rounded-rectangle badges (same component as Species Detail), positioned after the name and before the catch #.
   - Shared `typeBadgeHtml()` helper extracted to global scope (previously duplicated as a locally-scoped arrow function inside `renderDexDetail()`/`showPokemonDetail()`) so it can be reused across this list, the Species tab (see "Official Pokédex / Your Pokédex" below), and the new Type/Move Type popups.
   - No SAVE_VERSION impact — sort/filter/search state is transient UI state, same as before.
+- **Bidirectional sorting (v0.43):** a ▲/▼ toggle button sits next to the sort dropdown, backed by `DEX_SORT_DEFAULT_DIR` (per-field defaults: `id`/`dexid`/`family` ascending, everything else descending) plus transient `dexCatchesSortDir`/`dexSpeciesSortDir` state. Selecting a *different* field resets to that field's own default direction; the toggle flips the *current* field's direction. Both `renderDexViewAll()` and `renderDexOfficialSpeciesList()` comparators are rewritten to a canonical ascending expression per field, wrapped `dir==='asc'?cmp:-cmp`.
+- **Friendship display (v0.44):** each catch's detail line shows `· Friendship:X` (`p.friendship||0`), matching the format `renderDexDetail()` already shows on the species-detail individuals list, appended after the BST readout.
+- **"Has Nickname" filter (v0.44):** new boolean checkbox in `renderDexFilterPopupContent()`'s filter popup, positioned after Perfect IV, before the Type/Move Type pickers — `matchesCatchesFilters()` gains `if(f.hasNickname&&!p.nickname) return false;`. A simple boolean, not a mutually-exclusive has/doesn't-have pair like Assigned/Unassigned. `dexCatchesFilters` is transient UI state, not persisted — no schema impact.
 
 ### Family Grouping — `getFamilyMembers()` (SETTLED — v0.18 fix)
 - Returns one entry per unique `dexId` within a family, preferring the `formName: null` row where one exists, but **including dexIds whose only database rows have a non-null `formName`** (gender-locked base species like Nidoran♂/♀, which have no null-form sibling)
@@ -725,9 +910,8 @@ The single `state.bag` is replaced with two separate inventories:
 - **Encounters:** `state.totalSightings` — total wild encounters ever, online + offline
 - **Species:** count of keys in `state.dexHistory` — unique dexIds ever discovered (caught or evolved into)
 - **Dex Pages Completed:** count of species where BOTH are true:
-  - Evolution research complete: `testedMethods.length >= EVOLUTION_METHODS.length` (read live — see "Evolution Method Enum" above)
+  - Evolution research complete: `testedMethods.length >= EVOLUTION_METHODS.length` (read live — see "Evolution Method Enum" above). `isFullyTested()` already reads this live and is the canonical check — `isDexPageComplete()` reuses the same pattern rather than a separate hardcoded threshold.
   - All ability slots observed: every non-null ability the species has (`ability1`, `ability2`, `hiddenAbility`) has been seen at least once, per `researchLog[dexId].abilitiesObserved`
-- **Bug fixed v0.24:** this check (`isDexPageComplete()`) previously hardcoded the threshold as `testedMethods.length === 34` — a stale magic number, already incorrect pre-v0.24 (should have been 35) and would have drifted further with `in-party`'s addition (36). A separate function, `isFullyTested()`, already read `EVOLUTION_METHODS.length` live and was unaffected. `isDexPageComplete()` is now aligned to the same dynamic pattern.
 - **New field:** `researchLog[dexId].abilitiesObserved` — tracks which ability slots (`ability1`/`ability2`/`hiddenAbility`) have been observed at least once for that species. Written whenever a Pokémon is caught or evolves into that species, checking its `p.ability` value against the species' ability slots. Survives releases and cap overflow — never decremented.
 - **Save migration:** backfills `abilitiesObserved` by scanning all current `state.dex` individuals' `ability` field against their species at load time (best-effort — cannot recover abilities from Pokémon already released before v0.20)
 
@@ -745,7 +929,7 @@ The single `state.bag` is replaced with two separate inventories:
 - **v0.36:** same problem existed for the Gender line as the ability fix above, except there was no persistent flag at all to begin with. New `recordGenderObserved(dexId, gender)`, mirroring `recordAbilityObserved()`, added at all 7 of its existing call sites (4 catch paths, evolution's `applySpeciesSwap`, Day Care hatch, load-time backfill sweep). New persisted field `researchLog[dexId].gendersObserved = {M: bool, F: bool}`, displayed as "Seen"/"Unknown."
 - **v0.37 — replaced with running counts and a percentage display.** `gendersObserved` changes shape to `{M: count, F: count}`; `recordGenderObserved()` increments instead of setting a flag. Once at least one individual of either gender has been recorded, Species Detail shows `Male: X% · Female: Y%`, computed as `Male% = round(M/(M+F)*100)`, `Female% = 100 - Male%` (always sums to 100, no decimals). If one gender has 0 recorded and the other has ≥1, the 0-count gender shows `0%` immediately, not "Unknown."
 - Stays combined across all forms per dexId (unchanged convention, matches the Abilities section), only for genders the species can actually have (per `genderMalePct`); fully genderless species show nothing.
-- Species with `genderMalePct: null` on every form (e.g. Meowstic, where gender is defined by which form you have rather than a per-individual roll) continue to skip this section entirely — pre-existing, correct exclusion, unaffected by this change.
+- Species with `genderMalePct: null` on every form (genderless species — Ditto, legendaries, several golems) continue to skip this section entirely — pre-existing, correct exclusion, unaffected by this change.
 - Part of the SAVE_VERSION 23 → 24 bump (see Versioning). Migration: booleans convert to counts, best-effort backfill from currently-held individuals only (same limitation as the original v0.36 backfill — historical released/evolved-away individuals aren't recoverable).
 
 ### Evolution Doesn't Log New Species as Captured (SETTLED — v0.36 fix)
@@ -799,11 +983,10 @@ After the while loop: `if(levelled) renderDex();`
 
 ### Evolution Research System (SETTLED intent — v0.19 implementation pending)
 
-#### Evolution Method Enum (SETTLED — v0.33 revision: derived live, never hardcoded)
-- **Bug (found v0.33):** `EVOLUTION_METHODS[]` was a hardcoded array, manually kept in sync with `items.js` by hand. It drifted — 8 items already present in `items.js` with `effect: 'evolve-stone'` or `effect: 'evolve-trade'` (King's Rock, Black Augurite, Sweet Treat, Leader's Crest, Prism Scale, Scroll of Darkness, Scroll of Waters, Magmarizer) were missing from the array entirely. The Professor's auto-test loop tested against these items anyway (it reads live from `state.professorBag`, not from `EVOLUTION_METHODS`), pushing their names into a species' `testedMethods[]` regardless — inflating `testedMethods.length` past `EVOLUTION_METHODS.length` (surfaced as "38/36 Methods Tested"). Because the "fully tested / does not evolve" check (`nonEvolutionConfirmed`, see below) was a pure length comparison, this could falsely mark a species fully researched — including "Does not evolve" — while a genuine method (e.g. `level`) had never actually been tested.
-- **Fix (v0.33):** `EVOLUTION_METHODS` is no longer a static array. It's computed live at load time (after `items.js` loads, before it's ever referenced — confirmed safe by script-tag order): the 6 non-item methods (`level`, `friendship`, `friendship-day`, `friendship-night`, `use-move`, `in-party`) plus the name of every item in `ITEMS_DATA` where `effect==='evolve-stone'` or `effect==='evolve-trade'`. New total: **44** (was 36). Any future item added to `items.js` with either effect is picked up automatically — this class of drift can no longer happen.
-- **All UI/logic referencing the total continues to read `EVOLUTION_METHODS.length` live**, unchanged principle from prior versions — only the array's construction changed, not how it's consumed.
-- **Documentation correction (v0.33):** "Outstanding Data Tasks" previously listed King's Rock and Black Augurite as orphaned/unreferenced items. Both are in fact wired into `evotree.js` (King's Rock: Poliwhirl→Politoed, Slowpoke→Slowking; Black Augurite: Scyther→Kleavor) as of some point after that note was written — the note was simply never updated. Corrected below.
+#### Evolution Method Enum (SETTLED — v0.33: derived live, never hardcoded)
+- `EVOLUTION_METHODS` is computed live at load time (after `items.js` loads, before it's ever referenced): the 7 non-item methods (`level`, `friendship`, `friendship-day`, `friendship-night`, `use-move`, `in-party`, `shed` — `shed` added v0.42 for Shedinja) plus the name of every item in `ITEMS_DATA` where `effect==='evolve-stone'` or `effect==='evolve-trade'`. Current total: **51**.
+- **Implementation Note:** never hand-maintain this (or any similarly derived) enum as a static array kept "in sync" with `items.js` by hand — it will drift the moment an item is added with a matching `effect` and the array isn't also updated, and any completeness check built on `.length` (e.g. `nonEvolutionConfirmed`, above) will silently miscount as a result. Always derive live from the actual data.
+- All UI/logic referencing the total reads `EVOLUTION_METHODS.length` live, unchanged principle from prior versions — only the array's construction differs.
 
 #### Professor Auto-Test Loop
 - Evolution stones and items live in the **Professor's inventory** (`state.professorBag`)
@@ -811,9 +994,12 @@ After the while loop: `if(levelled) renderDex();`
 - **v0.24 — `use-move` and `in-party` added to the same auto-confirm treatment as level/friendship:** both are checked on level-up (not via the Professor's item-test loop) and confirmed automatically when observed — see "Move-Based Evolution" and "Party-Based Evolution" below for the condition checks themselves.
 - **v0.20:** `professorAutoTestEvolutions()` is extended to also test EVO_TREE `use-item` branches (branching species only), matching directly by itemId. Confirmed branches are appended to `confirmedBranches`, not overwritten.
 
-##### Trigger — Per-Tick Passive Check (SETTLED — v0.33 revision, replaces event-triggered testing)
-- **Bug (found v0.33):** testing was event-triggered — fired only (a) when a new item entered `state.professorBag` (from `buyItem()`), or (b) when a species was caught for the first time ever (`catchPokemon()`'s `newToDexHistory` check). Both triggers were duplicated inline at their call sites rather than centralized. Three other creation paths that also add a Pokémon to `state.dex` — live shiny auto-catch, offline shiny auto-catch, and offline regular battle-catch (`processOfflineTime()`) — never called the trigger at all, and neither did Day Care egg hatching. A species whose first individual arrived via any of these four paths could sit with items already in the bag and never get tested until some unrelated later purchase or catch happened to fire the trigger.
-- **Fix (v0.33):** `professorAutoTestEvolutions()` moves to the very top of `gameTick()` — runs unconditionally on every 1-second base tick, before any of that function's early `return`s, regardless of how or where a Pokémon was created. The explicit triggers in `catchPokemon()` and `buyItem()` are removed as redundant — one source of truth, and no future creation path can silently omit it again. Cheap in steady-state: already-tested species×item pairs are skipped via `testedMethods.includes()`.
+##### Trigger — Per-Tick Passive Check (SETTLED — v0.33)
+- `professorAutoTestEvolutions()` runs unconditionally at the very top of `gameTick()`, on every 1-second base tick, before any of that function's early `return`s — regardless of how or where a Pokémon was created. Cheap in steady-state: already-tested species×item pairs are skipped via `testedMethods.includes()`.
+- **Implementation Note:** this must be a single centralized per-tick check, not an explicit call at each Pokémon-creation site — a species' first individual can arrive via wild catch, shiny auto-catch (live or offline), offline regular battle-catch, or Day Care hatching, and any creation path that instead relies on someone remembering to call the trigger explicitly will eventually miss one.
+
+##### Party-Priority Reservation (SETTLED — v0.44)
+On purchase of an evolve-stone/evolve-trade item, `buyItem()` scans all aides' parties (not just the shopping aide's) via an extended `getPartyEligibleForItem()` for eligible individuals — confirmed or unconfirmed branches both count, same exclusions as today (`evolveBlocked`, nickname-lock narrowing). 0 eligible → unchanged, `professorAutoTestEvolutions()` proceeds normally next tick. Exactly 1 → evolves it immediately and synchronously (same pipeline `confirmBatchEvolve()` uses), no modal, 1 unit consumed. 2+ → shows the existing checkbox modal and adds the full purchased quantity to a transient (non-saved) `itemReservations[itemId]` map; `professorAutoTestEvolutions()`'s box-eligibility check treats available stock as `(professorBag[itemId]||0) - (itemReservations[itemId]||0)`. The reservation releases when the modal resolves via either Skip or Evolve Selected. Replacing an already-open modal with a new one (a second evolve-item purchase before the first resolves) releases the old modal's reservation first, keyed off its own itemId, to prevent a permanently stuck reservation.
 
 ##### Confirmation Requires a Live Candidate — Test and Apply Are One Event (SETTLED — v0.33 revision)
 - **Design correction (v0.33):** a species×item combination splits into two structurally different kinds of "knowing," previously conflated:
@@ -824,13 +1010,13 @@ After the while loop: `if(levelled) renderDex();`
 - The manual per-Pokémon evolve button (see Manual Evolution Trigger below) is unaffected — it still exists for additional individuals of an already-confirmed species, or a different branch of a branching species.
 - **Migration (v0.33, folded into the SAVE_VERSION 21 bump):** existing saves cannot retroactively distinguish a legitimately-earned confirmation from a phantom one under the old rule — the old data doesn't track which. For every species' research log, any `testedMethods`/`confirmedBranches` entry for an item that **has** a real matching branch is wiped; entries for items correctly ruled out (no matching branch) are left untouched, since those were never phantom. Non-item methods (`level`, `friendship`, `friendship-day`, `friendship-night`, `use-move`, `in-party`) are untouched — those were already gated on real individual state via other mechanisms and were never phantom. This is a real, visible loss of dex research completion for existing saves — most of it self-heals quickly post-update since the per-tick check immediately re-evaluates every species against whatever is already sitting in the bag.
 - **v0.21 — shared apply-logic (unchanged by v0.33):** the species-swap block (species/dexId swap, `maxHP` recalc, `SPECIES` registration, `recordNewSpecies`, `recordAbilityObserved`, `dexHistory` increment) is extracted into one helper, `applySpeciesSwap(p, newEntry)`. All call sites — `checkEvolution()`'s three branches, `applyItemEvolution()`, and the auto-apply path above — call this helper instead of duplicating the block. Do not re-duplicate this logic in future changes. **v0.33 addition:** also writes `p.formName` from the target entry — see "Same-DexId Branching Form Evolutions" below.
-- **Bug (pre-v0.26) — trade-style item evolutions could never match:** the single-target (Path 1) match required `item.effect==='evolve-stone'` specifically (`evolvesByStone`) or `entry.evolveMethod==='trade'` (`evolvesByTrade`, for `item.effect==='evolve-trade'`). Once the Pokédex data standardized on `evolveMethod: use-item` for *every* item-based evolution — including trade-style ones like Link Cable, which use `use-item` + `evolveItem: "Link Cable"` rather than a literal `'trade'` method value — `evolvesByTrade` could never match anything (no species uses `'trade'` anymore), and `evolvesByStone` only matched when the item's `effect` was specifically `evolve-stone`. Any `evolve-trade` item (Link Cable) fell through both checks and was silently marked ruled out the first time it was tested against any species that should have matched — Haunter and Kadabra were the case that surfaced this.
-- **Fix (v0.26) — unified item matching:** Path 1's matching collapses to a single check, independent of the item's `effect` field: `entry.evolveMethod==='use-item' && entry.evolveItem===itemName`. This covers stones and Link Cable-style items identically — `effect: evolve-stone` vs `effect: evolve-trade` no longer has any functional difference anywhere in the codebase as a result (confirmed by audit — both values were already OR'd together at every other read site).
-- **Data audit (v0.26, ongoing — not a code fix):** a full pass of every unique `evolveMethod`/`evolveLevel`/`evolveItem` triple against the matching code turned up 18 evolution items referenced in the Pokédex sheet with no corresponding row in the Items sheet at all — see "Outstanding Data Tasks" at the end of this document for current status.
+- **Fix (v0.26) — unified item matching:** Path 1's matching is a single check, independent of the item's `effect` field: `entry.evolveMethod==='use-item' && entry.evolveItem===itemName`. This covers stones and Link Cable-style items identically — `effect: evolve-stone` vs `effect: evolve-trade` has no functional difference anywhere in the codebase as a result.
+- **Implementation Note:** never key evolution-item matching on the item's `effect` field alone (`evolve-stone`/`evolve-trade`) — match on `evolveMethod==='use-item'` + `evolveItem` name. Once the data standardizes on a single `evolveMethod` value for all item-based evolutions, an `effect`-keyed check silently stops matching anything for whichever `effect` it doesn't cover.
+- **Data audit (v0.26, ongoing — not a code fix):** a full pass of every unique `evolveMethod`/`evolveLevel`/`evolveItem` triple against the matching code turned up 18 evolution items referenced in the Pokédex sheet with no corresponding row in the Items sheet at all — resolved and verified v0.28, see Resolved Bug Index.
 
-##### Migration-Wipe Bug — Wiped Research on Every Load, Not Just Once (SETTLED — v0.35 fix)
-- **Bug:** the v0.33 migration that wipes `testedMethods`/`confirmedBranches` for use-item evolutions (see above) was never gated to run only when migrating a pre-v0.33 save — it ran unconditionally in `loadGame()` on every single load, including saves already fully current. Any species with an un-evolved individual + the matching item in `professorBag` would have its confirmation wiped, get silently re-tested and re-confirmed (evolving one individual) on the very next tick, every single time the game loaded — compounding indefinitely across sessions with zero manual action. Surfaced via a report of 13 Magnezone from repeated silent Magneton evolution.
-- **Fix:** the migration block is gated behind `data.version<21` — it now runs exactly once, only for saves genuinely predating v0.33's confirmation-semantics change. No SAVE_VERSION impact (bug fix only, no schema change).
+##### Migration-Wipe Gating (SETTLED — v0.35)
+- The v0.33 migration that wipes `testedMethods`/`confirmedBranches` for use-item evolutions (see above) is gated behind `data.version<21` — it runs exactly once, only for saves genuinely predating v0.33's confirmation-semantics change.
+- **Implementation Note:** any one-time data migration must be gated on the save's version, never run unconditionally in `loadGame()` on every load. An ungated migration silently re-fires on every single load — including already-current saves — which for this one meant confirmed research kept getting wiped and immediately re-earned (evolving a fresh individual) every session, compounding indefinitely with zero manual action.
 
 #### Research State per Species (`state.researchLog[dexId]`)
 Each species tracks:
@@ -864,7 +1050,7 @@ N-1 Ruled Out
 
 A new species with nothing tested shows **"0/N Evolution Methods Tested"** and all N methods listed as `?`.
 
-**Bug (found v0.33) — dropdown self-closing every ~10s:** the expand/collapse state (`toggleEvoSection()`) lived only in the DOM (`section.style.display`), with no backing JS state. `gameTick()` calls `render()`→`renderDex()` on every encounter roll (`ENC_INTERVAL_OPEN`, 10s), which fully rebuilds the Species Detail panel from scratch via `renderDexDetail()` — always starting collapsed. The dropdown wasn't auto-collapsing; it was being torn down and redrawn collapsed on a ~10s cadence. **Fix (v0.33):** expand/collapse state moves into JS state, keyed per dexId, so `renderDexDetail()` restores the correct open/closed state on every rebuild instead of defaulting to collapsed. Audited for other instances of the same pattern (a local `style.display` toggle with no backing state variable, vulnerable to periodic re-render) — none found; the offline banner, skip-encounter button, Battle Gym button, and Map Detail panel are all either correctly re-derived from live state on every render or never touched by periodic re-render at all.
+**Implementation Note:** expand/collapse (and similar) UI toggle state must be backed by JS state keyed appropriately (e.g. per dexId), never by DOM alone (`section.style.display` with no backing variable) — any panel subject to periodic re-render (here, Species Detail rebuilt every `ENC_INTERVAL_OPEN` tick via `renderDex()`) will silently reset a DOM-only toggle to its default on every rebuild, which looks like the UI "auto-collapsing" but is actually the whole panel being torn down and redrawn. `renderDexDetail()` now restores toggle state from JS on every rebuild instead of defaulting to collapsed.
 
 #### Manual Evolution Trigger
 - **Level-up evolutions remain fully automatic** — `checkEvolution()` fires after every level-up as before, no player action required
@@ -909,16 +1095,17 @@ A new species with nothing tested shows **"0/N Evolution Methods Tested"** and a
   5. **Unicorn Capture** — `caught.isShiny && isPerfectIV(caught)` (both at once — same condition already backing the existing 🦄 `getRarityBadge()` badge, see "Perfect-IV / Shiny+Perfect Badges"). Logs **only** the Unicorn line, not also separately as Shiny and Perfect IV, to avoid three lines for one catch.
   6. **Badge Earned** — existing `addLog('🎖 Badge earned...')` call site gains the paired `addSignificantLog()`.
 - SAVE_VERSION 21 migration: `state.significantLog` defaults to `[]` for existing saves, folded into the same combined migration pass as the other v0.33 schema additions.
+- **Custom log view (v0.44):** third `logViewMode='custom'` tab. `addLog(msg, type, category, aideId)` — every existing call site gets a `category` tag from a fixed 15-value set (Catches, Wild Encounters, Evolutions, Level Ups & EXP, Gym Battles & Badges, Travel & Discovery, Healing, Fainting, Item Usage, Shop Purchases, Day Care/Breeding, Roster Management, Move/TM Management, Aide Management, System/Errors) and an `aideId` (`aide.id`, or `null`/`'general'` when not attributable to one aide — funds, Professor's-bag purchases, species-cap changes, validation errors). `state.logCustomFilters={categories:{},aides:{}}`, persisted, all `false` by default. Filter semantics: **category group** — empty selection shows nothing, checking any OR's together; **aide group** — empty selection means no additional narrowing (any aide), checking one or more AND-narrows the category results down to just those aides/General. Reuses the existing `dex-filter-modal` checkbox-popup styling.
+- Both Full and Condensed sub-tabs display newest-first (`renderLogPanel()` reads `state.log`/`state.significantLog` directly — both are already newest-first via `.unshift()`; no `.reverse()` anywhere in the render path).
 
 ---
 
-## Friendship Evolutions (SETTLED — v0.20 fix)
-- **Bug (pre-v0.20):** `p.friendship` was tracked (ticks up every 180s online, and offline via `friendshipTicks`) but `checkEvolution()` had no branch that ever read it — no Pokémon could evolve via friendship, regardless of data.
-- **Fix:** `checkEvolution()`'s SPECIES (single-target) path gains a friendship branch parallel to the existing level branch: `s.evolveMethod==='friendship' && s.evolvesIntoId && p.friendship>=FRIENDSHIP_THRESHOLD`
-- `FRIENDSHIP_THRESHOLD = 220` — new top-level constant, alongside `ENC_INTERVAL` and similar
+## Friendship Evolutions (SETTLED — v0.20)
+- `checkEvolution()`'s SPECIES (single-target) path has a friendship branch parallel to the level branch: `s.evolveMethod==='friendship' && s.evolvesIntoId && p.friendship>=FRIENDSHIP_THRESHOLD`
+- `FRIENDSHIP_THRESHOLD = 220` — top-level constant, alongside `ENC_INTERVAL` and similar
 - `p.friendship` has **no cap** — it may continue climbing past 255 indefinitely; the threshold check is `>=220`, not `===220`
 - On success: identical apply-logic to the level branch (species swap, HP recalc, `recordEvolution(prevDexId, newEntry.dexId, 'friendship', p.level)`, `recordNewSpecies`, `dexHistory` increment, log message) — reuse, don't duplicate
-- **Known separate data issue:** some species (e.g. Golbat) are mislabeled in `pokedex.js` as `evolveMethod: "level"` with `evolveLevel: null`, causing `p.level >= null` to coerce to `p.level >= 0` (always true) — an instant-evolve bug. This is an Excel/`converter.html`-side data correction, not a `pokeprof.html` code fix, and is Jack's task to audit and correct at the source.
+- **Known separate data issue:** `evolveMethod: "level"` with `evolveLevel: null` coerces to `p.level >= 0` (always true) — an instant-evolve bug. **Open Excel task for Jack:** Charjabug (dexId 737) currently has this exact data shape — needs `evolveMethod: "use-item"` with `evolveItem: "Thunder Stone"` instead. This is an Excel/`converter.html`-side data correction, not a `pokeprof.html` code fix.
 
 ---
 
@@ -936,13 +1123,13 @@ A new species with nothing tested shows **"0/N Evolution Methods Tested"** and a
 
 ### Scope
 - Species in scope for v0.20: **Eevee** — Vaporeon (Water Stone), Jolteon (Thunder Stone), Flareon (Fire Stone), Leafeon (new "Leaf Stone" substitute item), Glaceon (new "Ice Stone" substitute item), Espeon (`friendship-day`), Umbreon (`friendship-night`)
-- **Sylveon — deferred v0.20 through v0.23, activated v0.24.** Its placeholder `use-move` row in `evotree.js` (`133→700`) is now functional — see "Move-Based Evolution (`use-move`)" below. Values: `evolveItem: fairy-special`, `evolveLevel: 40`. This is a simplified stand-in for the real game's combined Fairy-move + high-friendship requirement — this game checks move qualification only, no friendship component.
+- **Sylveon — deferred v0.20 through v0.23, activated v0.24.** Its placeholder `use-move` row in `evotree.js` (`133→700`) is now functional — see "Move-Based Evolution (`use-move`)" below. Values: `evolveItem: fairy-special`, `evolveLevel: null` (no power requirement). This is a simplified stand-in for the real game's combined Fairy-move + high-friendship requirement — this game checks move qualification only, no friendship component.
 - **Leafeon/Glaceon rationale:** the real games use location-based triggers (Mossy Rock/Icy Rock); this game has no location-flag mechanic, so these are implemented as item-based substitutes instead, reusing the existing stone system. "Leaf Stone" and "Ice Stone" are new items Jack will add to the Excel `Items` sheet (`bagType: professor`, `effect: evolve-stone`) — not part of the `pokeprof.html` code change.
 - **Espeon/Umbreon day/night:** no in-game time-of-day system exists — day/night is derived from the **client's real-world system clock**: 6am–6pm = day, 6pm–6am = night. No new state field.
 
 ### Data (`evotree.js` / EvoTree sheet)
 - The EvoTree sheet's `evolveItem` column stores an **itemId slug string** (e.g. `"fire-stone"`) for `use-item` branches — matched against `state.professorBag`'s keys, which are always string slugs, never numeric. This differs from the single-target `pokedex.js` `evolveItem` field, which stores the item **display name** as a string for `use-item` (e.g. `"Fire Stone"`). Both are strings; neither is ever numeric. The two evolution paths intentionally use two different string formats for that method; code must handle both.
-- **Bug history — corrected v0.24 (second pass):** an earlier fix mistakenly `numVal()`-cast `evolveItem` to a number for `use-item` branches in `convertEvoTree()`, on the false premise that `professorBag` keys were numeric. They are not — `Number("fire-stone")` is `NaN` → stored as `null`, which silently and permanently broke **every EVO_TREE `use-item` branch** (Eevee's stone evolutions among them): `professorAutoTestEvolutions()` compares against `Object.keys(state.professorBag)` (always strings), so `null === "fire-stone"` never matched, and a failed match is marked ruled-out forever with no retry. **Final fix:** `evolveItem` is never `numVal()`-cast in `convertEvoTree()`, for any method — always passed through raw via `val()`, exactly like `convertPokedex()` already does. Only `fromDexId`/`toDexId`/`evolveLevel` are legitimately numeric.
+- **Implementation Note:** `evolveItem` must never be cast via `numVal()` in `convertEvoTree()`, for any method — always passed through raw via `val()`, exactly like `convertPokedex()` already does. Only `fromDexId`/`toDexId`/`evolveLevel` are legitimately numeric. (This duplicates a gotcha also tracked separately in `technical-learnings.md`, being merged into Data Architecture — flagging the overlap rather than the third copy.)
 
 ### `checkEvolution()` — EVO_TREE (Path 2) expansion
 - `level` branches: unchanged, existing behavior
@@ -953,6 +1140,13 @@ A new species with nothing tested shows **"0/N Evolution Methods Tested"** and a
 ### Research & Display
 - `researchLog[dexId].confirmedBranches` (see Research State per Species above) allows multiple simultaneously-confirmed evolutions per species
 - **Family/Species card display:** superseded v0.22 — see "Evolution Chain Visual" below. Per-branch `???` granularity now exists.
+
+### `fromFormName` and `requiredGender` Branch Restrictions (SETTLED — v0.42)
+- Two `EVO_TREE` columns, blank by default. `fromFormName` restricts a branch to individuals currently in a specific form (Wooper→Clodsire Paldean-only, Meowth's Galarian branch, Rockruff's Dusk branch). `requiredGender` restricts by gender (Kirlia→Gallade, Snorunt→Froslass, Burmy's two branches, Combee→Vespiquen, Salandit→Salazzle). Both enforced in `professorAutoTestEvolutions()`'s item-candidate filter and `checkEvolution()`'s Path 2 branch-qualifying filter: `if((b.fromFormName||null)!==(p.formName||null)) return false;` / `if(branch.requiredGender && p.gender!==branch.requiredGender) return false;`
+- **Implementation Note:** an exact-match-with-null comparison must not carry a wildcard exception for blank values — a blank `fromFormName` means "must currently be the base form," not "skip this check." Two different attempts at this comparison each reintroduced a bypass before landing on the correct form, with no trailing condition at all.
+- **The Rule for `fromFormName`:** it only belongs on a branch when the *source* species genuinely has that form as a real, separately-existing thing — not just because the target does. Pikachu, Koffing, Mime Jr., Dartrix, Dewott, Bergmite, Petilil, Rufflet, and Goomy all correctly have `fromFormName: null` on their form-producing branches, because none of those species has a regional pre-evolution at all (there is no "Alolan Pikachu" — an ordinary Pikachu can become either Raichu form). Setting `fromFormName` to the target's form name in these cases would make that branch permanently unreachable, since no real individual could ever carry a matching `formName`. Contrast with Voltorb, Growlithe, Wooper, Sneasel, Zorua, and Sliggoo, where both the pre-evolution and evolution genuinely exist as separate forms — there, the restriction is required.
+- **Implementation Note (architectural, general risk for future branching species):** `checkEvolution()`'s Path 1 (flat `pokedex.js` columns) runs *before* Path 2 (`EVO_TREE`) and is completely blind to both form and gender — it resolves the species via `getPokemonEntry(p.pokedexId)` with no form argument. Whenever a species' flat row uses the *same trigger* as a competing EVO_TREE branch, Path 1 fires first and returns immediately, before Path 2's restriction ever runs — confirmed independently on Wooper, Meowth, Rockruff, and Combee. Resolution is always the same: clear the flat row (`evolveMethod`/`evolvesIntoId` blank) and represent the base-form outcome as an explicit `fromFormName: null` EVO_TREE entry instead — the same "no single flat answer, all branches in EVO_TREE" treatment as true multi-path species (Eevee, Kubfu, Applin). Check for this on every future branching species entered by hand.
+- The Excel column is `requiredGender`, not `requireGender`.
 
 ---
 
@@ -965,8 +1159,8 @@ A new species with nothing tested shows **"0/N Evolution Methods Tested"** and a
   - `evolveLevel` — optional power threshold. Blank/null = no power requirement, just needs the type (and category, if specified) present among equipped moves.
 - Works identically on both the single-target (`pokedex.js`) and branching (`EVO_TREE`) evolution paths.
 - **Confirmed use cases:**
-  - **Primeape** (single-target): `evolveMethod: use-move`, `evolveItem: ghost-physical`, `evolveLevel: 50`. Homebrew stand-in for the real game's Rage Fist/×20-uses mechanic — no Rage Fist move exists in this game's dataset, so the condition is generalized to "any Ghost-type Physical move reaching 50 power."
-  - **Sylveon** (branching, `EVO_TREE`, `133→700`): `evolveMethod: use-move`, `evolveItem: fairy-special`, `evolveLevel: 40`. Simplified from the real game's Fairy-move + high-friendship combo — no friendship component here.
+  - **Primeape** (single-target): `evolveMethod: use-move`, `evolveItem: ghost-physical`, `evolveLevel: null` (no power requirement — just needs a Ghost-type Physical move equipped). Homebrew stand-in for the real game's Rage Fist/×20-uses mechanic — no Rage Fist move exists in this game's dataset.
+  - **Sylveon** (branching, `EVO_TREE`, `133→700`): `evolveMethod: use-move`, `evolveItem: fairy-special`, `evolveLevel: null` (no power requirement — just needs a Fairy-type Special move equipped). Simplified from the real game's Fairy-move + high-friendship combo — no friendship component here.
 - **Auto-confirm:** same treatment as level/friendship — no Professor/manual step, confirms the instant the condition is met on level-up.
 
 ---
@@ -993,6 +1187,15 @@ Two structural gaps existed once `use-move`/`in-party` became real, functional m
 
 ---
 
+## Shedinja Creation — `shed` Evolution Method (SETTLED — v0.42, auto rule-out added v0.44)
+- Nincada evolving into Ninjask via the normal level-20 path also creates a second individual, Shedinja, as a side effect — not a branch choice between competing outcomes, both happen at once. `'shed'` is part of `EVOLUTION_METHODS`' base list so Nincada's species page can register full research completion.
+- Hooked into all five successful-evolution exit points in `checkEvolution()` (Path 1's level/friendship/use-move/in-party, and Path 2), keyed off `getEvolutions(prevDexId)` finding a `shed`-method entry — not hardcoded to Nincada's dexId, so any future species with the same mechanic works with no code change.
+- **Deliberate simplification vs. the real games:** the real mechanic requires an empty party slot *and* a spare Poké Ball (consumed on creation); this implementation checks party space only.
+- New individual is created via the normal `makePokemon()` path (correct ability roll, nature, equipped moves), then has `level`/`ivs` overwritten with the evolving individual's own values and `recalcStats()` re-run — reuses existing, tested stat math rather than duplicating it.
+- **Auto rule-out (v0.44):** `getResearch()`'s structural rule-out block — which already handles `use-item`/`in-party` this way — also marks `shed` tested/ruled-out for any species without a `shed`-method branch, via the generic `speciesHasEvolveMethod(dexId,'shed')` helper (checks live `EVO_TREE` data; not hardcoded to Nincada). `loadGame()` runs an unconditional backfill sweep over `state.researchLog` applying the same check retroactively — a logic correction, not a schema change, so no `SAVE_VERSION` bump.
+
+---
+
 ## Evolution Chain Visual (SETTLED — v0.22, revised v0.23 / v0.26)
 
 - `renderEvolutionChainVisual(famId, highlightDexId)` is a **shared component** used on both Family Cards (Layer 1) and Species Detail (Layer 3), replacing the old flat `chainParts.join(' → ')` text line on the Family Card.
@@ -1002,21 +1205,8 @@ Two structural gaps existed once `use-move`/`in-party` became real, functional m
 - Unconfirmed nodes render as a greyed `???` placeholder box in place of the sprite. **Evaluated independently per row** — one branch can show `???` while a sibling branch (or a different root, for Nidoran) is fully resolved. This replaces the old single shared `???` check for the whole card.
 - On Species Detail specifically, the node matching the currently-viewed species gets a highlight border. `buildEvoMethodsHtml()`'s collapsible "X/N Evolution Methods Tested" breakdown stays underneath, unchanged — this visual doesn't replace it, it fixes the fact that Species Detail previously showed *no* evolution summary at all (`getEvolutionDisplayText()` was never called there, only on Species Cards).
 - **v0.23 — terminal-node further-evolution indicator:** a node with **zero data-defined outgoing edges** (e.g. Sandslash, which has no further evolution in the data) previously returned silently with no `???`. Now: unless that species is ruled out (`nonEvolutionConfirmed`, computed live — see Research State per Species above), append `? → ???` after it, same visual treatment as an unconfirmed branch. This makes "no further evolution" a claim the player has to earn through exhaustive testing, not something the UI assumes from missing data.
-
-### Bug (pre-v0.26) — unseen root silently hid the entire chain
-- Root selection required the root itself to already be in `seenDexIds`: `const roots = allMembers.filter(m => !hasIncoming.has(m.dexId) && seenDexIds.has(m.dexId))`. If a family's true structural root had never been seen (e.g. Pichu, if the player only ever caught Pikachu), it failed this check — and since nothing else in the family qualifies as a root either (Pikachu has an incoming edge from Pichu), `roots.length` came out `0` and the function returned an empty string, hiding the *entire* chain, not just the root. A species with no pre-evolution (e.g. Sandshrew, which is its own root) never hit this bug, which is why it looked species-specific until traced.
-
-### Fix (v0.26) — unseen root renders as a placeholder instead of hiding everything
-- True structural roots (no incoming edge, by data alone) always render, seen or not.
-- An unseen root renders as a `?` placeholder (`evoPlaceholderHtml()`) with an arrow into the first known member — same visual treatment already used for unconfirmed downstream evolutions.
-- Resolves to a real sprite automatically once the root species is seen by any means (Day Care being the primary intended path — see "Day Care / Breeding System") — this falls directly out of the existing `seenDexIds` check, no separate "confirmed root" flag was added.
-
-### Bug (pre-v0.26) — item-based evolutions could never register as confirmed
-- Branch confirmation compared `confirmedBranches[].method` against the edge's generic EVO_TREE `evolveMethod` field. For any item-triggered evolution, `recordEvolution()` stores the **item's name** as the method (e.g. `"Water Stone"`), but the edge's `method` field is the literal string `"use-item"` — these can never be equal. Every item-based evolution failed this comparison, unconditionally, regardless of how many times it had actually happened (Eevee's stone evolutions were the case that surfaced this).
-
-### Fix (v0.26) — item-aware branch matching + seen-but-unconfirmed fallback
-- When an edge's method is `"use-item"`, the comparison uses the edge's item name instead of its generic method string: `const matchKey = e.method==='use-item' ? e.item : e.method`.
-- **Additionally:** a branch now renders its real species node if the target has been **seen by any means** (`seenDexIds`), not only if the specific evolution method was formally confirmed via `recordEvolution()` — covers species obtained via Day Care, or any other path that doesn't route through the normal evolution-checking flow. The connecting arrow shows the real method label if formally confirmed, or a generic `?` if the species is known but the method itself hasn't been tested.
+- **Root rendering (v0.26):** true structural roots (no incoming edge, by data alone) always render, seen or not — an unseen root renders as a `?` placeholder (`evoPlaceholderHtml()`) with an arrow into the first known member, resolving to a real sprite automatically once seen by any means (Day Care being the primary intended path). **Implementation Note:** root selection must not require the root itself to be in `seenDexIds` — gating on that can zero out the entire family's root list (not just that one root) when nothing else in the family qualifies structurally as a root either, hiding the whole chain instead of just the unseen node.
+- **Item-based branch confirmation (v0.26):** when an edge's method is `"use-item"`, matching uses the edge's item name instead of its generic method string (`const matchKey = e.method==='use-item' ? e.item : e.method`) — `recordEvolution()` stores the item's name as the method (e.g. `"Water Stone"`), which never equals the edge's literal `"use-item"` field. A branch also renders its real species node if the target has been **seen by any means** (`seenDexIds`), not only if the specific method was formally confirmed via `recordEvolution()` — covers species obtained via Day Care or any other path outside the normal evolution-checking flow. The connecting arrow shows the real method label if formally confirmed, or a generic `?` if the species is known but the method itself hasn't been tested.
 
 ### Clickable Sprite Nodes (SETTLED — v0.28)
 - Sprite nodes in the chain visual — in **both** the Family Card (Layer 1) and Species Detail (Layer 3) contexts — are now clickable, jumping directly to that species' own detail page. Previously, Family Card chain sprites were dead clicks (wrapped only in `event.stopPropagation()`, blocking the card's own navigate-to-species-list action with no replacement), and Species Detail chain sprites had no click handling at all.
@@ -1025,13 +1215,14 @@ Two structural gaps existed once `use-move`/`in-party` became real, functional m
 - On the Family Card, clicking elsewhere on the card (name, background, the ▶ arrow) keeps its existing behavior — navigates to that family's species list. This is purely an added shortcut on the sprite icons themselves.
 - Display/interaction-only — no `state` schema change.
 
-### Duplicate Branch on Legacy `evolvesIntoId` (SETTLED — v0.35 fix)
-- **Bug:** for any species with both a legacy flat `evolvesIntoId` (pokedex.js) and `EVO_TREE` branch rows for the same dexId, the edge-building loop in `renderEvolutionChainVisual()` counted both sources — drawing the same evolution twice (plus any genuine additional branches). Confirmed via full data audit: 9 species affected (Pikachu/Raichu, Eevee, Gloom, Poliwhirl, Slowpoke, Scyther, Exeggcute, Cubone, Koffing) — every one has a flat `evolvesIntoId` that exactly duplicates one of its own `EVO_TREE` rows.
-- **Fix:** whenever `getEvolutions(m.dexId)` returns any branch rows for a species, `EVO_TREE` is treated as the sole/authoritative edge source and the flat `evolvesIntoId` edge is skipped entirely for that species.
+### Duplicate Branch on Legacy `evolvesIntoId` (SETTLED — v0.35)
+- Whenever `getEvolutions(m.dexId)` returns any branch rows for a species, `EVO_TREE` is treated as the sole/authoritative edge source and the flat `evolvesIntoId` edge is skipped entirely for that species.
+- **Implementation Note:** a species with both a legacy flat `evolvesIntoId` (`pokedex.js`) and `EVO_TREE` branch rows for the same dexId will draw the same evolution twice (plus any genuine additional branches) if both sources are counted — `EVO_TREE` must win outright, not merge, whenever it has any rows at all for that species.
 - Display-only — `professorAutoTestEvolutions()` was never affected (already deduped via `alreadyConfirmed`). No SAVE_VERSION impact.
 
-### Branch Line-Break (SETTLED — v0.36)
-- Any node with 2+ simultaneous confirmed branches (Slowpoke, Eevee, Poliwhirl, Gloom, etc.) now renders as a vertical stack instead of one wrapped inline row: row 1 = the node + a new unlabeled down-arrow (`↓`); row 2 = each branch target with its normal right-arrow + method label, wrapping as needed. The `/` separator between simultaneous branches is removed. New helper `evoArrowDownHtml()`. Applies uniformly and recursively to every branch point. Single-branch chains are unchanged. No SAVE_VERSION impact.
+### Branch Line-Break (SETTLED — v0.36, superseded v0.37)
+- Any node with 2+ simultaneous confirmed branches (Slowpoke, Eevee, Poliwhirl, Gloom, etc.) renders as a vertical stack instead of one wrapped inline row: row 1 = the node; row 2 = each branch target with its normal right-arrow + method label, wrapping as needed. The `/` separator between simultaneous branches is removed. Applies uniformly and recursively to every branch point. Single-branch chains are unchanged. No SAVE_VERSION impact.
+- **v0.37 correction (found via code review, not previously documented):** the down-arrow connecting row 1 to row 2 carries the method label *above* the arrow itself (`evoArrowDownLabeledHtml(label)`), not the plain unlabeled arrow this section originally described. The original `evoArrowDownHtml()` (v0.36, no label) is confirmed dead code — defined but never called anywhere in the file; `evoArrowDownLabeledHtml()` is the only variant actually used, at the single real call site.
 
 ### Method Label Sizing (SETTLED — v0.36)
 - `evoArrowHtml()`'s method-label text: 7px → 10px, `white-space:nowrap` dropped in favor of a modest `max-width` so longer labels ("Dubious Disc," "Friendship (Night)") wrap to a second line — using the vertical space already sitting empty next to the 40px sprites. Sprite/species-name labels (8px) are unchanged. No SAVE_VERSION impact.
@@ -1050,8 +1241,8 @@ Two structural gaps existed once `use-move`/`in-party` became real, functional m
 - Species that already have a real predecessor row in the data (Pichu, Munchlax) are unaffected by this — that's the separate, pre-existing, already-correct mechanism.
 - No recursion: a revealed baby form (Pichu) is always treated as the true end of the line.
 - Part of the SAVE_VERSION 22 → 23 bump (see Versioning, shared with "Research & Pokédex — Persistent Gender-Observation Tracking"). Migration: `breedingTested:false` defaulted on every existing research record — no backfill possible, starts false for everyone going forward.
-- **Bug fixed v0.37:** the auto-skip condition documented above (`getEggGroups(dexId).length===0`) never actually applied to any real species, because the same `'No eggs'`/`'Undiscovered'` string mismatch (see "Compatibility — Full Egg-Group Rules") meant egg-group-less species still had a non-empty `getEggGroups()` result (`['No eggs']`, length 1) — so species like Mewtwo incorrectly rendered the unconfirmed-predecessor `?` placeholder despite being structurally unbreedable. Fixed alongside the breeding-block fix; the Families tab placeholder logic now also checks `isUndiscoveredOnly()`.
-- **Bug fixed v0.38 — Ditto showed a permanently unresolvable placeholder.** The `canBreed` check (does this root have a valid, testable egg group) didn't account for species that structurally can **never** be their own breeding result under this game's own rules — Ditto specifically: two Ditto can't pair (blocked in `canBreedPair()`), and Ditto paired with anything else always produces the *other* parent's species, never Ditto itself. `breedingTested` for Ditto could therefore never legitimately become `true`, leaving an unfixable "confirm via breeding" prompt with no way to ever satisfy it. Fixed: the root `canBreed` check now also excludes Ditto (`isDitto(root.dexId)`) alongside the existing egg-group/undiscovered-only exclusions — Ditto's chain renders as a settled root with no leading `?`, same as any species with no valid egg group.
+- **Implementation Note:** the auto-skip condition (no valid egg group) must be checked via the same `isUndiscoveredOnly()` logic as breeding compatibility itself (see "Compatibility — Full Egg-Group Rules") — a separate/divergent check here can disagree with the actual breeding block and show the placeholder on species that are structurally unbreedable (Mewtwo was the case that surfaced this, v0.37).
+- **Implementation Note:** a species that structurally can never produce itself as a breeding result must be explicitly excluded from this requirement, or the "confirm via breeding" prompt becomes permanently unsatisfiable. Ditto is the current example — two Ditto can't pair, and Ditto paired with anything else always produces the other parent's species — so the root `canBreed` check also excludes Ditto (`isDitto(root.dexId)`) alongside the egg-group/undiscovered-only exclusions (v0.38).
 
 ---
 
@@ -1092,14 +1283,17 @@ Two structural gaps existed once `use-move`/`in-party` became real, functional m
 - **Online path**: `gameTick()` increments `seen` at the moment an encounter appears; `catchPokemon()` increments `caught` on a successful catch
 - **Offline path**: `processOfflineTime()` increments `seen` for every simulated encounter, `caught` for every simulated catch
 
-### Fixed Palette Restoration (SETTLED — v0.36 fix, reverses part of v0.35 theming)
-- **Regression:** the v0.35 theming pass swept map node fills, route labels, and connector lines into theme tokens (`var(--main-bg)`/`var(--main-card)`/`var(--main-panel)`/`var(--main-text-secondary)`/`var(--main-border)`) without ever adding the map to the Theming System's "Fixed Constants" list. Since route-type nodes (the majority of the map) ended up filled with the exact same color as the map's own background, and route labels used a muted secondary-text token, most of the map became effectively invisible under the default Classic theme.
-- **Fix:** `MAP_COLORS` and all map rendering colors become fixed constants, joining type colors, HP bars, success-green, and currency-gold — see updated "Fixed Constants" list in Theming System.
-- Node fill: uniform bright navy (`#22406b`) for all location types — type is conveyed by the stroke ring alone (green/red/blue, unchanged). Current-location fill: `#245a8a` (was `#1a3a5a`).
-- Labels: uniform bright near-white (`#f0f0f0`) for all locations, replacing the old per-type label colors. Current-location label stays gold (`#f4d03f`) — state indicator, not type indicator.
-- Selected-node ring: reverts to fixed gold (`#f4d03f`) — the selected-node highlight never needed to be tied to the theme's Accent color in the first place; **undoes the v0.35 change** (see Theming System's Accent scope, updated below).
-- Default connector lines: `var(--main-border)` → fixed `#4a5a6a`. Gated/purple dashed lines unchanged.
-- Node size (r=14) and label font (9px, separately revised — see "Evolution Chain Visual") unchanged — map is adaptive/zoomable. No SAVE_VERSION impact.
+### Missing-Item Gates in Map Detail Panel (SETTLED — v0.43)
+`showMapDetail()` uses a `getMissingItemGatesForLocation(locId)` helper — scans `CONNECTIONS_DATA` for any row touching `locId` where `requiresItem` is set and the same `gatedOwned` ownership check `renderMap()`'s line-coloring already uses evaluates false. Renders one `🔒 Requires: {getItem(itemId).name}` line per missing item, listed regardless of whether another already-open connection also reaches the node. Direct connections only, matching the map's existing line-coloring scope, not a full path trace.
+
+### Fixed Palette Restoration (SETTLED — v0.36, reverses part of v0.35 theming)
+- `MAP_COLORS` and all map rendering colors are fixed constants, joining type colors, HP bars, success-green, and currency-gold — see "Fixed Constants" list in Theming System.
+- Node fill: uniform bright navy (`#22406b`) for all location types — type is conveyed by the stroke ring alone (green/red/blue). Current-location fill: `#245a8a`.
+- Labels: uniform bright near-white (`#f0f0f0`) for all locations. Current-location label stays gold (`#f4d03f`) — state indicator, not type indicator.
+- Selected-node ring: fixed gold (`#f4d03f`) — never tied to the theme's Accent color.
+- Default connector lines: fixed `#4a5a6a`. Gated/purple dashed lines unchanged.
+- Node size (r=14) and label font (9px) unchanged — map is adaptive/zoomable. No SAVE_VERSION impact.
+- **Implementation Note:** see Theming System's "Fixed Constants" section for the general rule this follows (any new subsystem's colors must be added to that list explicitly, or a theme sweep will silently absorb them) — this section is the specific incident that established the rule.
 
 ### Gym Badge Display — Map Node & Detail Panel (SETTLED — v0.41, NEW)
 - **Map node label:** any discovered location with a gym (`getGymTrainerIdsAtLocation(locId).length>0`) renders a small (~10px) badge-sprite `<image>` next to its name label in `renderMap()`. Uses the existing `BADGE_SPRITE_MAP` lookup (same source as the Aide Panel badge sprites — see "Aide Panel — Badge Sprite Display"), with the same 🏆 emoji fallback for the Champion Badge (no real sprite exists for it). Shown **regardless of whether the gym is currently accessible** — confirmed: a discovered gym location always shows its badge icon, even if the player hasn't unlocked it yet (e.g. a high-badge-count gym).
@@ -1111,13 +1305,14 @@ Two structural gaps existed once `use-move`/`in-party` became real, functional m
 ## Trainer / Aide System (SETTLED)
 
 - Carl Oak is the starting aide, comes with a level 5 Rattata
-- Each aide has their own **per-aide inventory** (`aide.bag`) containing field equipment: badges, HMs, Bicycle, Rods (Old/Good/Super), Safari Pass
+- Each aide has their own **per-aide inventory** (`aide.trainerBag`) containing field equipment: badges, HMs, Bicycle, Rods (Old/Good/Super), Safari Pass
 - Per-aide inventory is **not shared** between aides — Carl having an Old Rod doesn't give a second aide one
 - `state.trainerUnlocks` exists in the codebase as a stub — its relationship to per-aide inventory will be clarified during v0.19 inventory split implementation
 - Trainer abilities, new trainer recruitment, etc. are **future features** — do not implement yet
+- Party list entries show just the name for a non-fainted Pokémon; a fainted one gets a 💀 prefix (no 🐾 prefix on the non-fainted case).
 
 ### Aide Panel — Badge Sprite Display (SETTLED — v0.27)
-- The aide panel layout changes to two lines: **Line 1** is the aide name (e.g. "🧑‍🔬 Carl Oak") followed inline by sprite icons for every badge currently held in that aide's `aide.bag`. **Line 2** is the party Pokémon mini-sprites, moved down from their previous spot on the name line.
+- The aide panel layout changes to two lines: **Line 1** is the aide name (e.g. "🧑‍🔬 Carl Oak") followed inline by sprite icons for every badge currently held in that aide's `aide.trainerBag`. **Line 2** is the party Pokémon mini-sprites, moved down from their previous spot on the name line.
 - Badge sprites are resolved via a hardcoded `BADGE_SPRITE_MAP` in `pokeprof.html` (itemId → image URL), **not** the Items sheet's `sprite` column — that column is currently unused dead data (a slug intended for a future general item-sprite pipeline against a different base path) and doesn't fit the Kanto badge sprites' numbered (not slug-named) filenames in the source repo anyway.
   - Source: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/badges/` — `1.png`–`8.png` map to Boulder/Cascade/Thunder/Rainbow/Soul/Marsh/Volcano/Earth respectively (verified visually against Bulbapedia's official badge images).
   - `champion-badge` has no real-game sprite (it's a PokeProf-original item) — renders as a 🏆 emoji fallback instead of an image.
@@ -1130,7 +1325,7 @@ Two structural gaps existed once `use-move`/`in-party` became real, functional m
 - Removes both existing inventory displays from the Party screen: `#aide-bag-display`
   (ball count + non-ball professor items) and `#aide-bag-items` (aide/trainer bag text
   list) are deleted entirely.
-- Replaced with a single line: **"Professor: Balls | TMs | Potions | Revives"**, plus
+- Replaced with a single line: **"Balls | TMs | Potions | Revives"** (the "Professor:" label was dropped from `renderBagDisplay()` after initial release), plus
   a **Bag** button.
   - Balls = existing `getBallCount()` helper.
   - TMs = `state.professorBag['tm']`.
@@ -1170,13 +1365,29 @@ Two structural gaps existed once `use-move`/`in-party` became real, functional m
 - Species identity must always use `dexId` (integer), never name strings
 - Nidoran♂ and Nidoran♀ share a name but have unique dex IDs — name-keyed lookups collapse them
 - Resolution pattern: `getPokemonEntry(dexId)` with two-step fallback everywhere (`makePokemon`, `checkEvolution`, `giveExp`, `giveExpSilent`, `calcMaxHP`, `calcBST`, encounter speed check)
+- **This is a recurring failure class, not a one-off rule** — every instance found so far has been a variant of "something keyed or matched on the wrong identity/format": `getFamilyDexIds()` walking `EVO_TREE` edges instead of using `getFamilyMembers(familyId)` (Family IV Inheritance), `evolveItem` cast to a number instead of kept as a string slug (Branching Evolutions), `EVOLUTION_METHODS` hand-maintained instead of derived live (Evolution Method Enum), item-evolution matching keyed on `effect` instead of `evolveMethod`+`evolveItem` (Evolution Research System), `dexSelectedFormName` hardcoded instead of read from the clicked entry (Species Detail Form Selection). When adding new species/item/form lookups, check whether an existing helper already encodes the correct identity resolution before writing a new comparison by hand.
+- **`fromFormName` rule:** enforced in both branch-matching functions — applies when the source species has genuine regional varieties (Meowth/Wooper style), not to true multi-path species with one form and multiple simultaneous evolutions (Eevee). See "Same-DexId Branching Form Evolutions" below for the full mechanism this rule protects.
+
+### Sprites
+- PokeAPI form sprites use numeric IDs, not slug-based filenames.
+- Koraidon/Miraidon alternate build/mode form variants have no sprites in the source repository. *(Flagging for a look, not resolving: this game is Kanto-scoped — worth confirming whether this note is still relevant to anything reachable, or a leftover from an earlier broader-scope draft.)*
+- **Shiny-aware `spriteUrl` resolution (SETTLED — v0.43):** `getSpriteUrl()`'s early-return path for a populated `entry.spriteUrl` must still branch on `isShiny` — `return isShiny?entry.spriteUrl.replace('/pokemon/','/pokemon/shiny/'):entry.spriteUrl;` — rather than returning the stored URL unconditionally. Dormant until `spriteURL` values are populated in the data, but required before shiny form sprites can ever work correctly; this is the only read site of `entry.spriteUrl` in the codebase.
+
+### Testing Infrastructure
+- jsdom smoke testing: use `win.eval()` / `window.eval()` to work around the jsdom quirk where `let`/`const` are not attached to `window` — all data files plus the game script are combined into a single eval call.
 
 ### Excel → JS Pipeline
 - Master data lives in Excel; converted via `converter.html` into JS files
 - Never hand-edit the generated JS files directly
-- `bagType` column (`"professor"` / `"trainer"`) is required on all items in `items.js`
+- `bagType` column (`"Professor"` / `"Trainer"`) is required on all items in `items.js`
 - `defaultEncounterMethod` column is required on all locations in `locations.js` (v0.19)
 - **`Trainers` tab (v0.25)** — required for the Gym Battle System; see "Data Model — `trainers.js`" under Gym / Trainer Battle System for the full column schema. Converter bumped to **v7** (v6 added `convertTrainers()`; v7 revised the move columns to combined type+category strings).
+- **`Info` tab (v0.43)** — required for the Info Menu; see "`INFO_TOPICS` Extracted to `info.js`" under Info Menu. Converter bumped to **v9** (v8 added shiny-URL auto-building for `spriteUrl`; v9 added `convertInfo()`).
+
+### Data Corruption Incident — `pokedex.js` dexId 659–784 (v0.39)
+`pokedex.js` dexId 659–784 (126 species, Bunnelby through Kommo-o) had every row's content (stats, category, flavor text, abilities, `isLegendary`/`isMythical` flags — everything except `name`/`dexId`) shifted +1 relative to its label, from a manual Excel paste misalignment. Found via a full dex-wide diff against an independent reference dataset; fixed by re-fetching the range fresh. Re-verified clean: 0 mismatches across the full national dex.
+
+**Standing limitation surfaced by this incident (not itself resolved):** `fetcher.html` only ever produces one base-form row per species — alternate/regional/cosmetic forms are always hand-added rows. Re-fetching any dexId range collaterally wipes every manually-added alternate-form row interleaved in that same range. The v0.39 re-fetch above wiped Vivillon (18 patterns), Aegislash, Pumpkaboo/Gourgeist, Zygarde, Oricorio, Rockruff, Lycanroc, Wishiwashi, Minior, Mega Diancie, and several Hisuian forms — re-added by hand afterward. Any future range re-fetch needs the same manual re-add pass; see "Outstanding Data Tasks" at the end of this document.
 
 ---
 
@@ -1209,12 +1420,12 @@ and move-assignment rules layered on top of this shared engine.
 - **Items sheet row:** `itemId: tm`, `name: TM`, `itemCategory: tm`, `effect: modify-move`, `bagType: Professor`, `shopTier: basic`, `shopPrice: 25`, `isConsumable: TRUE`, `requiresTarget: TRUE`, `usableInField: TRUE`, `usableInBattle: FALSE`.
 
 ### Move Power Cap Fix (SETTLED — v0.26)
-- **Bug:** each slot's TM-upgrade ceiling (`powerCap`) is the highest-power move of that type+category the species/family can learn, aggregated across the whole evolution chain's learnset. Moves that KO the user on use — Self-Destruct (200), Explosion (250), Final Gambit (user's current HP) — were included in that aggregation the same as any other move, despite the battle system having no way to represent their drawback (moves are abstracted to type+category+power only, no per-move effects). Any species able to learn one of these inflated its `normalPhysical` cap to 200+, letting a TM-grinder push that slot to an absurd ceiling with zero downside.
-- **Fix:** new helper `getMoveCap(entry, type, category)` reads the raw cap and clamps it to a flat maximum of **120**, applied at both read sites — `getAvailableMoveSlots()` (the source of every displayed/usable cap) and the direct read in `openMoveSlot()`. No data or `MoveFetcher.html` change required. 120 was chosen because mainline's strongest non-drawback moves (Fire Blast/Blizzard/Hydro Pump-tier) top out around 110–120; 150+ starts overlapping with recharge-turn moves (also unmodeled, but out of scope for this fix), and 200+ is exclusively the self-KO tier this fix targets.
+- `getMoveCap(entry, type, category)` reads the raw cap (highest-power move of that type+category the species/family can learn, aggregated across the whole evolution chain) and clamps it to a flat maximum of **120**, applied at both read sites — `getAvailableMoveSlots()` (the source of every displayed/usable cap) and the direct read in `openMoveSlot()`.
+- **Implementation Note:** self-KO moves (Self-Destruct/Explosion at 200+/250, Final Gambit at the user's current HP) must not be allowed to inflate a slot's TM-upgrade ceiling — the battle system abstracts moves to type+category+power only, with no way to represent a self-KO drawback, so including them in the raw aggregation lets any species able to learn one push that slot's cap far past what the formula is balanced for. 120 was chosen because mainline's strongest non-drawback moves top out around 110–120.
 
 ### Bulk TM Upgrade (SETTLED — v0.26)
 - The single "⬆ Upgrade (1 TM)" action is replaced with a quantity dropdown + upgrade button in `openMoveSlot()`.
-- Dropdown range: 1 up to `min(TMs owned, TMs needed to reach the slot's cap)`, where TMs-to-cap = `Math.floor((cap - slot.power) / 5)` — never offers a quantity that would waste TMs past the cap.
+- Dropdown range: 1 up to `min(TMs owned, TMs needed to reach the slot's cap)`, where TMs-to-cap = `Math.max(1,Math.ceil((cap - slot.power) / 5))` — `ceil`, not `floor`: guarantees the max offered quantity actually reaches the cap even when the gap isn't a multiple of 5, consistent with "use everything I have on this slot" being the common case below.
 - **Defaults to the max useful amount**, not 1 — the common case is "use everything I have on this slot," and the dropdown can be lowered from there if a smaller amount is wanted.
 - Confirm dialog scales with the selected quantity (e.g. "Use 6 TMs to upgrade Electric Special from 40 to 70?"), and applies all selected TMs in a single action — one `state.professorBag['tm']` decrement, one power update.
 
@@ -1230,7 +1441,7 @@ Damage = floor(floor(floor(2×Level/5 + 2) × Power × A/D) / 50) + 2
        × TypeEffectiveness (existing TYPE_CHART/getTypeEffectiveness())
        × Random(0.85–1.00)
 ```
-- `A`/`D` = level-scaled stats via a new reusable `calcStat(base, level)` function — extracted from the inline `st()` helper already used in `calcBST()` (`floor((base×2×level)/100)+5`). Applies to Atk/Def (Physical) or SpAtk/SpDef (Special) on both sides.
+- `A`/`D` = level-scaled stats via `calcStat(base, level, iv, natureMod)` — see "IVs + Natures... — Stat Calculation" for the full current signature and formula (extended in v0.31; this section originally introduced it as a simpler `calcStat(base, level)` before IVs/Natures existed). Applies to Atk/Def (Physical) or SpAtk/SpDef (Special) on both sides.
 - No status, no priority, 100% accuracy, unlimited PP. (Crits added v0.30 — see below.)
 
 ### Critical Hits (SETTLED — v0.30, NEW)
@@ -1248,7 +1459,7 @@ Damage = floor(floor(floor(2×Level/5 + 2) × Power × A/D) / 50) + 2
   no-per-instance-text design.
 
 ### Battle Loop
-- Speed-based turn order, reusing the existing effective-speed formula (`floor((baseSpd×2×level)/100)+5`), evaluated every round (not once per battle), random tie-break.
+- Speed-based turn order, reusing the existing IV/nature-aware effective-speed formula (`calcStat(baseSpd, level, iv, natureMod)`, same as any other stat — see "IVs + Natures... — Stat Calculation") — an individual's actual Speed IV and nature genuinely affect turn order, not just base species speed and level. Evaluated every round (not once per battle), random tie-break.
 - Multi-Pokémon gauntlet — fainted Pokémon auto-cycle to the next non-fainted teammate on either side; battle ends when a full team of up to 6 is fainted.
 
 ### AI Move Selection
@@ -1261,13 +1472,15 @@ Damage = floor(floor(floor(2×Level/5 + 2) × Power × A/D) / 50) + 2
 - **v0.34: `spriteUrl` field** — if the Excel `spriteURL` cell is a bare number, the converter now builds the full PokeAPI sprite URL automatically (`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{number}.png`); a full URL pasted directly still passes through unchanged. Converter bumped to **v8** for this (v7 was the last logic change — Trainers move-column revision).
 - **v0.43: `convertInfo()`** — new Info sheet (`category | subCategory | text`, one row per idea), grouped by `category` in first-appearance order into `{id, title, sections:[{header, text}]}`, output as `info.js`. Blank `category`/`text` rows are silently skipped unless the row has other non-blank cells, in which case a warning is surfaced with the row number. Called from `convertAll()` alongside the other converters. Converter bumped to **v9** for this.
 
-### New Standalone Fetcher Tool (separate build, not part of converter.html)
+### MoveFetcher.html — Cross-Game Learnset Tool (BUILT — confirmed via cross-file audit; this document previously, incorrectly, described it as designed but not built)
 - Same dexId-range + single-name UX as the existing Pokedex fetcher.
 - Pulls cross-game learnsets from PokéAPI, filters out status moves, groups by `(type, damage_class)`, takes max real-world `power` per group, outputs one row in the 36-column format.
 - Output is pasted directly into the Pokedex sheet (sorted identically by dexId, no VLOOKUP/XLOOKUP due to doc-weight concerns).
 - Form variants aren't reachable via the dexId-range pull (PokéAPI indexes them by name-slug) — fetched via the single-name field.
 - Inline form-variant flagging via PokéAPI `varieties` — surfaces a one-click "fetch this form too" button when extra varieties exist beyond the base form.
 - Accepted gap: a species never re-fetched won't trigger this flag if a form is added to PokéAPI later — will show as a visibly blank row in the maintained sheet.
+- **Evolution inheritance (found in the live tool, not previously documented here):** an evolved form's power cap is automatically raised to match anything its pre-evolution could already reach, so an evolved form never shows a lower cap than what it evolved from. Walks the evolution chain backward silently as needed — fetching only a final-stage species (e.g. Steelix) also pulls its pre-evolution's data (Onix) purely to source the inheritance check, without adding that pre-evolution as its own visible row or including it in the copied output.
+- Move data is cached globally per session (`moveCache`) — a move referenced by many species (Tackle, Thunderbolt, etc.) is only fetched from PokéAPI once, not once per species that knows it.
 
 ### Explicitly Out of Scope for v0.23
 - Battle triggers (how/when a trainer battle starts — no design exists yet)
@@ -1289,6 +1502,7 @@ Builds on the v0.23 battle engine (above) with 8 regular Gyms + Indigo Plateau (
   - Blank `moveN` = that slot is empty (same rule as before).
   - `isGauntlet` — `TRUE` on **every** Indigo Plateau row, at **both** tier 9 and tier 10 (identifies "this trainer belongs to the Indigo roster," read by `isIndigoTrainer()` at any tier — it is not, by itself, what triggers 5-leg battle behavior; that's a separate runtime check, see "Elite Four/Champion Gauntlet Bug Fix" below). `gauntletOrder` (1–5) is populated on Indigo rows at both tiers and marks which of the 5 legs that slot belongs to.
   - `badgeItemId` — repeated identically on every row for a given `trainerId`, **including** `isGauntlet` rows (corrects earlier doc text claiming this was blank/null on gauntlet rows — it isn't; `awardGymWin()` relies on it being present to look up the Champion badge)
+  - **Known dead columns, found via cross-file audit:** every row also carries a `"look"` field and the full 36-column type×category power-cap schema (`normalPhysical`, `normalSpecial`, ... `fairySpecial`) copy-pasted from the Pokédex sheet's template — confirmed via full-file search that `pokeprof.html` never reads any of these 37 fields. Harmless (unread), but they shouldn't be in this sheet at all, and at least one row (Brock, tier 6, slot 3, Omanyte) has actual leaked non-null values sitting in them — worth a cleanup pass on the Trainers sheet whenever convenient, not urgent.
   - `slotIndex` — position (1–6) within that specific battle's team
 - `trainers.js` exposes `getTrainerRoster(trainerId, tier, gauntletOrder)`, `getTrainerBadge(trainerId)`, and `getAllTrainerIds()` helpers, generated by the converter.
 - **8 regular gyms**: each bound to one city location, with hand-authored rosters for tiers 1–8 (species/level/equipped moves per team slot).
@@ -1301,7 +1515,7 @@ Builds on the v0.23 battle engine (above) with 8 regular Gyms + Indigo Plateau (
 - New item type in `items.js`: `itemCategory: badge`, `bagType: trainer`, `isConsumable: FALSE`.
 - 9 badges total: 8 regular gym badges + 1 Champion badge (earned by clearing the tier-9 gauntlet).
 - **Earned on first win against a given gym, at whatever tier is currently forced at the time of that win** — there is no requirement to reach tier 8 first. Re-battling a gym after its badge is already earned has no further badge effect (tracking/grinding only).
-- Badges live in the earning aide's per-aide inventory (`aide.bag`), routed and isolated identically to HMs/Rods/Safari Pass — never shared between aides.
+- Badges live in the earning aide's per-aide inventory (`aide.trainerBag`), routed and isolated identically to HMs/Rods/Safari Pass — never shared between aides.
 
 ### Level Cap
 - **v0.33:** `cap = beatChampion ? 100 : 15 + (aide's badge count × 10)` — range 15–100. Progression: 15, 25, 35, 45, 55, 65, 75, 85, 95 (8 badges), then 100 once the Champion is beaten. The final pre-Champion→Champion step is +5 rather than the +10 of every other step, an unavoidable consequence of shifting the start while keeping the ceiling pinned at 100. Live-computed — no SAVE_VERSION impact, takes effect immediately for existing saves on next load. In-game "Level Caps" Info Menu copy updated to match (`10`→`15`).
@@ -1322,15 +1536,25 @@ Builds on the v0.23 battle engine (above) with 8 regular Gyms + Indigo Plateau (
 - Once eligible, reuses `buildRouteTable()` and existing method-weighting logic unchanged — no new trigger paradigm for this path.
 - **This path never grants a badge**, even against a gym it can technically reach (impossible in practice, since unbadged gyms are excluded) — farm-only, by design.
 
+### Passive/Idle Gym Battles at Current Tier (SETTLED — v0.40)
+- `isGymGrindEligible()` matches `isGymAccessible()` exactly (the same rule the watched-battle button uses) — idle gym-grinding is no longer gated on the badge already being held, so a first attempt (and a first badge) can happen through purely idle/Wander play, not only as a rematch mechanic. Elite Four/Champion stays correctly locked until 8 regular badges, enforced by `isGymAccessible()` itself.
+- Waypoints (locations passed through en route, not the final mission destination) go through the same weighted method-selection system (`pickMethodForLocation()`) a destination gets, rather than always using the location's flat `defaultEncounterMethod` — gym becomes available while genuinely passing through a gym city, not just upon arrival, naturally rate-limited by the normal encounter cadence. As a side effect, waypoints also start respecting any `locationMethodPrefs` configured for that location, where they previously ignored it in favor of the flat default.
+
+### Post-Wipe Gym Exclusion — Wander Deadlock Fix (SETTLED — v0.44)
+A dedicated per-aide flag, `aide.wipeRecallLocation`, is set **only** by an actual party wipe (`endMission('faint', idx)` sets it to the return location; a deliberate `'recall'` does not) and cleared the moment the aide genuinely arrives anywhere else (`arriveAtLocation(locId, aide)` clears it as soon as `locId!==aide.wipeRecallLocation`). `rollEncounter()`'s gym-eligibility check is simply `locId===aide.wipeRecallLocation` — blocking only the one immediate re-fight right after a wipe, never touching gym battling otherwise. `pickMethodForLocation()` (taking a `trainerBag` param) mirrors the checkbox's own default in its no-prefs fallback: gym only joins the random pool if `hasGymBadge()` is already true (or per the New Player Preamble preference under Onboarding), matching what the UI would show as checked by default for a city Wander reaches without ever having its panel opened. `wipeRecallLocation` is a plain property on the aide object, flowing through existing generic per-aide serialization with no dedicated migration entry.
+
+**Implementation Note:** when a fix needs to detect one *specific* transition (here: "did an aide just wipe, versus arrive normally"), reusing an existing multi-purpose location field is not equivalent to a dedicated flag scoped to that transition — two earlier attempts each reused a field with unrelated update semantics (`aide.missionOrigin`, then `aide.lastHealLocation`) and each failed differently: the first left every new city unprotected until a manual re-dispatch, the second over-corrected and blocked gym battles almost everywhere, since that field updates on every heal-location arrival, not just wipes. Verified via 15,000-tick simulation instrumentation: 2 genuine gym battles fired during ordinary idle play, 7 rolls correctly blocked in the post-wipe window.
+
 ### Watched Gym Battle — Aide Card Trigger (SETTLED — v0.29, NEW)
 - A "Battle Gym" button is always visible on the aide card whenever the aide's current location is a gym (any of the 8 regular gyms, or Indigo Plateau once accessible) — no readiness/level gating, always tappable.
 - Tapping it opens a **team-order prompt**: a draggable list of the player's current party sprites/icons, letting them set active lineup before the battle begins.
 - The battle then plays back **turn-by-turn at ~0.5 seconds per move, mandatory, no skip option.**
 - **This is the only path that can earn a badge on first win.**
-- **Battle screen layout (mainline-style):** opponent's active Pokémon sprite + name + level + HP bar at the top, player's active Pokémon sprite + name + level + HP bar at the bottom, sprites swap immediately on faint as the next non-fainted teammate cycles in. A compact move/damage text line appears each turn (e.g. "Weedle used Bug Physical — 12 dmg!"), advancing at the playback pace. The opposing trainer's name + portrait (via new `TRAINER_SPRITE_MAP`, see "Aide Panel — Badge Sprite Display") is shown **briefly at the start only**, then gives way to the Pokémon sprites for the rest of the fight.
+- **Battle screen layout (mainline-style):** opponent's active Pokémon sprite + name + level + HP bar at the top, player's active Pokémon sprite + name + level + HP bar at the bottom, sprites swap immediately on faint as the next non-fainted teammate cycles in. A compact move/damage text line appears each turn (e.g. "Weedle used Bug Physical — 12 dmg!"), advancing at the playback pace. The opposing trainer's name + portrait (via new `TRAINER_SPRITE_MAP`, see "Aide Panel — Badge Sprite Display") is shown **briefly at the start only**, then gives way to the Pokémon sprites for the rest of the fight. Sprites correctly reflect `isShiny`, same as every other sprite call site in the file. **Implementation Note:** a derived/snapshot copy of a Pokémon (here, `playerSnapshot`, built fresh for this screen) doesn't automatically carry every field the real party object has — `isShiny` was missing from an earlier version of the snapshot mapping, so shiny sprites silently rendered as non-shiny here even though the rest of the file already handled `isShiny` correctly. Any new per-battle snapshot needs to be checked against the real object's full field set, not assumed complete.
 - **Blocking flow:** once triggered, the player stays on-screen through team order → playback → result. No leaving mid-battle, for single fights and each gauntlet leg alike.
 - **Indigo Plateau gauntlet (tier 9 and tier 10) specifics:** between each of the 5 legs, team order can be reshuffled and healing items may be used (existing `getWeakestEffectivePotion()` inter-battle auto-heal logic, unchanged). No-heal-*within*-a-leg and full-reset-on-loss-resets-to-leg-1 rules are unchanged — this only opens a management window *between* legs.
 - **Indigo Plateau tier 9** (the original Elite Four/Champion clear) is always watched via this button — never offline, regardless of badge status. **Indigo Plateau tier 10** (postgame rebattle) can also be watched via this button, but isn't required to be — see the mission-modal grind path above for the offline alternative.
+- **Immediate post-battle heal (v0.44.2):** both `finishWatchedBattle()` and the automatic gym-battle resolution path call the existing party-heal logic immediately once a battle concludes (win or lose), rather than waiting for the next tick's heal check. **Implementation Note:** `startWatchedGymBattle()` refuses to start (with a "team needs to heal first" message) if the party has no conscious Pokémon, and `runWatchedBattleLeg()`'s empty-team early-exit calls `showBattleScreen()` (or an equivalent minimal result render) before `finishWatchedBattle()` as a backstop, so `#battle-result-area` always exists and the Close button is always reachable. A plain `let` module-level variable used as a UI-visibility flag (here, `watchedBattle`, checked by `updateBattleGymButton()`) is never part of `state` and never saved — if the only code path that clears it (`closeWatchedBattle()`, tied to the Close button) is guarded behind a DOM element that might not exist (an early-exit branch that skips rendering), the flag can get stuck indefinitely with no way to clear it except a full page reload. Any such flag needs either a guaranteed clear path independent of rendering, or to be recomputed from real state rather than held as an independent boolean.
 
 ### Loss / Retry Behavior (SETTLED — wording revised v0.30)
 - Regular gym battles: auto-retry, no gameplay penalty — behavior unchanged.
@@ -1345,32 +1569,16 @@ Builds on the v0.23 battle engine (above) with 8 regular Gyms + Indigo Plateau (
 ### Inter-Battle Healing
 - Reuses existing `getWeakestEffectivePotion()` auto-heal logic unchanged (smallest potion that heals without waste, no HP threshold), pulling from `state.professorBag`.
 - Fires **only before each battle instance starts** (including before each of the 5 gauntlet legs) if not at full HP. Never mid-battle — individual battles remain single-tick resolutions with no interruption point, consistent with existing wild-encounter behavior.
-- **v0.32 fix:** the passive per-tick `checkLocationHeal()` (fires on every `gameTick()`
-  encounter-roll cycle at any `heals:true` location) was silently fully-healing the
-  party for free throughout Elite Four/Champion gauntlets, since Indigo Plateau is a
-  heal location and the whole gauntlet — including downtime between legs — happens
-  while stationed there. This bypassed the "items only, no free heal" gauntlet rule
-  above. Fixed by guarding `checkLocationHeal()` with `if(watchedBattle) return;` —
-  suppresses the passive heal only while a gym/gauntlet encounter is actively in
-  progress; normal in-town heal-on-arrival/heal-on-tick behavior is unaffected
-  everywhere else.
+- `checkLocationHeal()` (the passive per-tick heal at any `heals:true` location) is guarded with `if(watchedBattle) return;` — suppresses the passive heal only while a gym/gauntlet encounter is actively in progress. **Implementation Note:** a location-based passive heal must be suppressed during any active watched battle, or it silently bypasses battle-specific healing rules — Indigo Plateau is itself a heal location, so without this guard the passive tick-heal fully healed the party for free throughout Elite Four/Champion gauntlets, including between legs, defeating the "items only, no free heal" gauntlet rule above. Normal in-town heal-on-arrival/heal-on-tick behavior is unaffected everywhere else.
 
-### Gauntlet Full-Heal Fix (SETTLED — v0.36)
-- **Bug:** `healPartyBeforeGymBattle()`/`getWeakestEffectivePotion()` applied at most **one** potion per Pokémon, no loop — a party missing significant HP before an Elite Four/Champion leg got little or no visible healing (and could return no heal at all if the missing HP didn't land on an exact potion size).
-- **Fix scope:** Elite Four/Champion gauntlet only (tier 9 and tier 10). Regular gym battles keep the original single-application logic, unchanged.
-- New `healPartyFullBeforeGauntletLeg()`, replacing the gauntlet-specific call sites only (live `runGymEncounter()`, silent/offline `runGymEncounterSilent()`, and `runWatchedBattleLeg()` conditional on `watchedBattle.isGauntlet`).
+### Gauntlet Full-Heal (SETTLED — v0.36)
+- **Scope:** Elite Four/Champion gauntlet only (tier 9 and tier 10). Regular gym battles keep the original single-application logic.
+- `healPartyFullBeforeGauntletLeg()`, replacing the gauntlet-specific call sites only (live `runGymEncounter()`, silent/offline `runGymEncounterSilent()`, and `runWatchedBattleLeg()` conditional on `watchedBattle.isGauntlet`).
 - Algorithm, looped per Pokémon until full HP or bag exhausted: strongest available potion that heals with zero waste first (Max Potion valued at 121 for this comparison — Hyper Potion 120 → Super Potion 60 → Potion 20), falling back to the weakest available potion to finish (overheal capped at max HP) once nothing fits without waste.
 - No SAVE_VERSION impact.
 
-### Per-KO EXP Attribution (SETTLED — v0.32, fixes pooled-EXP bug)
-- **Bug (pre-v0.32):** `runOneGymBattle()`/`runOneGymBattleSilent()` summed EXP across
-  every enemy Pokémon in the battle into one `totalExp`, then gave the full total to
-  every party member still conscious at the end — letting one survivor (often the
-  strongest/highest-level, since it's the one likely to survive) absorb credit for KOs
-  it never landed. Also produced a secondary symptom: a large one-shot EXP grant could
-  cascade through several level-ups, each level's HP-catch-up (`currentHP += maxHP
-  increase`) compounding into what looked like a de facto free heal.
-- **Fix:** after `runTrainerBattle()` returns, walk `result.log`. For each `{faint:X}`
+### Per-KO EXP Attribution (SETTLED — v0.32)
+- After `runTrainerBattle()` returns, walk `result.log`. For each `{faint:X}`
   entry where X belongs to the enemy team, the immediately preceding log entry's
   `attacker` field is the player Pokémon that landed that KO. Award that enemy's EXP
   (`baseExpYield×level/7`, unchanged formula) to that specific attacker via
@@ -1378,22 +1586,24 @@ Builds on the v0.23 battle engine (above) with 8 regular Gyms + Indigo Plateau (
   battle-copy) — so credit persists even if that Pokémon faints later in the same
   battle. Applies identically to both the live (`runOneGymBattle`) and offline/silent
   (`runOneGymBattleSilent`) paths.
-- **EXP banking past the level cap (confirmed intended, unchanged):** `pokemon.exp`
+- **Implementation Note:** multi-KO battle EXP must be attributed per-KO by walking the battle log for the actual attacker, never pooled into one total and handed to whoever survives — a pooled total lets the strongest/highest-level survivor absorb credit for KOs it never landed, and can produce a level-up cascade whose HP-catch-up looks like a free heal as a side effect.
+- **EXP banking past the level cap (confirmed intended):** `pokemon.exp`
   accumulates unconditionally regardless of the level cap; a capped Pokémon's excess
   EXP resolves in a burst of level-ups the moment the cap rises (e.g. a new badge). Not
-  a bug — no fix needed.
+  a bug.
+- **Batched to one log line per Pokémon (v0.44.1):** for gym battles specifically, `giveExp()`'s per-call logging is replaced by `applyExpBatched()`/`emitExpSummary()` — EXP from every KO in the battle accumulates into a `{catchId: total}` map instead of logging immediately, and exactly one summary line per Pokémon ("Name #id +TOTAL EXP") emits once the battle concludes. Level-up transitions still log individually. `distributeExp()` and `awardPerKOExp()` both take an optional trailing `totals` parameter; every other caller (ordinary wild-encounter EXP) omits it and falls through to the original per-call behavior. The Elite Four/Champion gauntlet's 5-leg loop gets one summary per leg automatically, since each leg is its own `runOneGymBattle()` call.
 
 ### Progress Tracking
 - Per-gym "highest tier reached" tracked as a **display/achievement stat only** — no gameplay effect, purely informational (trophy-style).
 
-### SAVE_VERSION Bump
-- Required. New state: badge entries in `aide.bag`; per-gym highest-tier-reached tracker (shape TBD at implementation time, likely `aide.gymProgress[gymId] = highestTier`).
-- Migration pass needed for existing saves — new fields default to empty/0 on load.
+### SAVE_VERSION
+- Badges (`aide.trainerBag`) and per-gym highest-tier tracker (`aide.gymProgress[gymId]`) are part of the v0.25 SAVE_VERSION 16→17 bump — see the central Versioning table, not repeated here.
+- **v0.29 team-order prompt and battle playback require no bump** — transient UI state only, nothing new persists across app close (a watched battle is atomic once triggered — blocking flow, no leave-mid-battle).
 
-### Elite Four/Champion Gauntlet Bug Fix (SETTLED — v0.28)
-- **Bug:** the live data had 5 separate real `trainerId`s (`agatha`, `blue`, `bruno`, `lance`, `lorelei`) instead of one shared id as the schema intends, and `gauntletOrder` — despite already being supported by `getTrainerRoster()` and `converter.html` — was never actually populated on any row. Two compounding failures: (1) `getTrainerRoster(trainerId, tier, leg)` filtered on `t.gauntletOrder === leg`, which is always `undefined === leg` → always false → every leg resolved an empty roster → instant loss at leg 1, every attempt; (2) `rollEncounter()`/`runGymEncounter()` only ever targeted `gymTrainerIds[0]` (`agatha`), so even independent of bug (1), the other four members' rosters were never reachable at all — including their tier-10 rows, which existed in the data but were equally orphaned.
-- **Fix (data, Jack's side):** all five members' rows consolidated to `trainerId: eliteFourChampion`, at **both** tier 9 and tier 10, with `gauntletOrder` 1–5 populated identically at both tiers (1=Lorelei, 2=Bruno, 3=Agatha, 4=Lance, 5=Blue). `isGauntlet: TRUE` unchanged on all these rows.
-- **Fix (code):** `runGymEncounter()` and `runGymEncounterSilent()` both change `isGauntlet=isIndigoTrainer(trainerId)&&tier===9` → `isGauntlet=isIndigoTrainer(trainerId)&&(tier===9||tier===10)`. This makes the postgame Indigo Plateau rematch a full 5-leg gauntlet at tier-10 rosters, same heal-before-leg/no-partial-credit rules as the first clear — previously the intended design (per the original comment above this code) was a single tier-10 battle, revised in v0.28 once it became clear the tier-10 data for all five members already existed and was simply unused.
+### Elite Four/Champion Gauntlet (SETTLED — v0.28)
+- All five Elite Four/Champion members' rows are consolidated to a single shared `trainerId: eliteFourChampion`, at **both** tier 9 and tier 10, with `gauntletOrder` 1–5 populated identically at both tiers (1=Lorelei, 2=Bruno, 3=Agatha, 4=Lance, 5=Blue). `isGauntlet: TRUE` on all these rows.
+- `runGymEncounter()`/`runGymEncounterSilent()`: `isGauntlet=isIndigoTrainer(trainerId)&&(tier===9||tier===10)` — the postgame Indigo Plateau rebattle is a full 5-leg gauntlet at tier-10 rosters, same heal-before-leg/no-partial-credit rules as the first clear.
+- **Implementation Note:** a schema field being supported end-to-end by the read side (`getTrainerRoster()`, `converter.html`) doesn't mean it's functional — `gauntletOrder` existed and was read correctly for years while never actually being populated in the data, because the gauntlet's five members were entered as five independent `trainerId`s instead of one shared id with the field populated. Roster-lookup code that filters on a field can fail silently (empty roster, not an error) if nothing ever populates that field.
 - No further badge/TM re-grant risk — `awardGymWin()`/`awardGymWinSilent()`'s existing "already earned" guards already prevent double-granting on repeated wins.
 
 ### Offline Gym Battle Simulation (SETTLED — v0.26, re-scoped v0.29)
@@ -1404,9 +1614,6 @@ Builds on the v0.23 battle engine (above) with 8 regular Gyms + Indigo Plateau (
 - **Repeat-win tier progression requires no new logic** — `awardGymWin()` already gates badge/TM grants to first-win-only and only advances `gymProgress` when `getForcedTier()` rises (which only happens via a genuinely new badge), so repeated offline wins at an already-cleared gym behave identically to live: no further badge, no further TM, no tier change.
 - A loss during offline catch-up has no penalty (matches live) and the loop continues to the next cycle.
 - If an offline gym result leaves the party fully wiped, it flows into the existing offline wipe/heal-relocate handling (see "Offline Wipe & Auto-Repeat") with no separate wipe-handling logic needed.
-
-### SAVE_VERSION — v0.29
-- **No bump required.** Badges and `aide.gymProgress` already exist as of v0.25/SAVE_VERSION 17. The v0.29 team-order prompt and battle playback are transient UI state only — nothing new persists across app close, since a watched battle is atomic once triggered (blocking flow, no leave-mid-battle).
 
 ---
 
@@ -1421,6 +1628,9 @@ Builds on the v0.23 battle engine (above) with 8 regular Gyms + Indigo Plateau (
   >
   > If you would like to learn more about any aspects of the game, press the "Info" button in the bottom right of the screen.
 
+### Gym Battle Default Question (SETTLED — v0.44)
+A second one-time modal chains immediately after the welcome preamble (same `!hasSave`-gated trigger, no dismiss-by-clicking-outside — requires an explicit NO/YES choice), asking whether the player wants to manually fight each gym for the first time (NO) or a more idle experience (YES). Sets a persisted `state.gymBattleDefaultPreference` boolean (`false` for NO; defaults `false` for any save predating this question). **Not a master switch** — every location's Gym Battle checkbox stays individually overridable via the mission modal afterward; it only changes what an as-yet-untouched location's checkbox starts as, for an unearned badge: `renderMethodPrefs()`'s `gymChecked` default becomes `gymHasBadge||!!state.gymBattleDefaultPreference`, and `pickMethodForLocation()`'s no-prefs roll-time fallback gets the identical addition, keeping the displayed default and actual roll-time behavior in sync. The post-wipe gym exclusion (`aide.wipeRecallLocation`, see Gym System) applies unconditionally regardless of this preference — YES makes gym battles more common everywhere, but never reintroduces the recall-and-repeat loop right after a wipe. `SAVE_VERSION` bumped to `30` for the new field.
+
 ---
 
 ## Info Menu (SETTLED — v0.27, NEW)
@@ -1430,8 +1640,11 @@ Builds on the v0.23 battle engine (above) with 8 regular Gyms + Indigo Plateau (
   - **Level 1:** a list of 9 topic tiles — titles only, no numbers: Objectives, Playable Characters, Dex Completion, Cash Generation, Level Caps, Time, Battles, Map, Wild Encounters.
   - **Level 2:** clicking a topic opens one scrollable text page for that topic. Sub-items from the source copy (e.g. "Moves" under Battles, "Evolution" under Dex Completion) render as **in-page bold headers** with their text underneath — not additional clickable tiles. A Back button returns to the topic list.
 - No `state` changes — this is UI/content only, no SAVE_VERSION impact.
-- All copy was verified against the actual live game constants before being locked in: shiny rate 1/4096, income formula ($1.00/min base + $0.01 per 100 catches), level cap formula (`10 + badges×10`, 100 post-Champion), and tick intervals (10s open / 30s closed) all match code exactly.
+- All copy was verified against the actual live game constants before being locked in: shiny rate 1/4096, income formula ($1.00/min base + $0.01 per 100 catches), and tick intervals (10s open / 30s closed) all match code exactly. **Level cap formula:** the "Level Caps" topic must track the live formula in "Level Cap" above (currently `15 + badges×10`, changed from `10 + badges×10` in v0.33) — this copy was updated to match at that time; re-verify this line whenever the Level Cap formula changes again, since it's easy for topic copy to silently drift from a game constant it merely quotes.
 - Full topic copy lives in the v0.27 change-request thread / commit message — not duplicated here to avoid drift between two copies of the same text; treat the in-code strings as canonical once implemented.
+
+### `INFO_TOPICS` Extracted to `info.js` (SETTLED — v0.43)
+`INFO_TOPICS` is generated data, not a hardcoded inline array — sourced from a dedicated Excel **Info** tab (`category | subCategory | text`, one row per idea) via `converter.html`'s `convertInfo()`, which groups rows by `category` in first-appearance order into `{id: category, title: category, sections: [{header: subCategory||null, text}]}` and outputs `info.js`'s `const INFO_TOPICS = [...]`. `text` is stored/rendered as raw HTML (`<br><br>` authored directly in the cell for line breaks). `showInfoMenu()`/`renderInfoTopicList()`/`renderInfoTopicPage()` and the hardcoded "🎨 Display" tile (first, unaffected — it's not part of `INFO_TOPICS`) are otherwise unchanged.
 
 ### Battles Topic — Copy Correction (SETTLED — v0.30)
 - The "Battles" topic's first line — *"Wild encounters are simplified and solely based
@@ -1470,7 +1683,8 @@ The following stay hardcoded regardless of theme choice, for the same legibility
 - Currency-gold
 - Log-category colors (catch/evolve/damage/etc.)
 - **v0.35 addition:** all warning/error states — fainted-Pokémon border, save-indicator error state, "Database not loaded" messages, "Need 1 TM" warnings, gym-battle-lost text. These previously reused the same red hex as the (now theme-driven) Accent color; consolidated onto the existing danger constant (`#e74c3c`, already used for damage-log/low-HP) so they read consistently as "something's wrong" independent of the player's theme.
-- **v0.36 addition:** Map System colors — node fills, location labels, connector lines, and the selected-node ring (see "Map System — Fixed Palette Restoration"). These were swept into theme tokens by the v0.35 pass without ever being added to this list, causing a legibility regression; now explicitly exempted like everything else here.
+- **v0.36 addition:** Map System colors — node fills, location labels, connector lines, and the selected-node ring (see "Map System — Fixed Palette Restoration").
+- **Implementation Note:** any new subsystem's colors must be added to this list explicitly, at the time that subsystem is built or first themed — a theme sweep pass will otherwise pull it into theme tokens by default, and if that subsystem's default colors happen to collide with the background/panel tokens (as Map System's route-node color did against the page background under v0.35's sweep), the result is a silent legibility regression rather than an error. This has already happened once (Map System, v0.36) — check this list before assuming any color is safe to leave untouched.
 
 ### Presets & Picker UI
 - **20-color preset grid**, shared list for both Main and Accent: Red, Orange, Amber, Yellow, Lime, Green, Teal, Cyan, Sky Blue, Blue, Indigo, Purple, Violet, Magenta, Pink, Rose, Brown, Gray, Black, White.
@@ -1496,6 +1710,12 @@ The following stay hardcoded regardless of theme choice, for the same legibility
 ### Purchase Quantity Buttons (SETTLED — v0.27)
 - Global change: every shop's buy buttons go from ×1 / ×10 / ×100 to **×1 / ×100 / ×1000**.
 - Applies to every shop regardless of tier — same `buyItem(itemId, qty)` call as before, which already clamps to the max affordable quantity. No logic changes required, button-value-only.
+
+### Pallet Town → Full Shop; Aide Hiring Relocated to Key Items (SETTLED — v0.44)
+Pallet Town's `shopTier` changed from `"lab"` to `"full"` in `locations.js`; `aide-hire-2`'s `shopTier` changed from `"lab"` to `"full"` in `items.js` (`itemCategory` stays `"aide-hire"`). `SHOP_CATEGORY_MAP` gains `'aide-hire':'keyItems'`, surfacing it in the shop's existing Key Items tile alongside `hm`/`keyItem`/`rod`/`tool`. `buildShopItemRowHtml()` special-cases `item.effect==='hire-aide'`: renders a single button calling `hireAide()` directly (not `buyItem()` — `hireAide()` independently handles its own funds check and the `confirmHireAide()` emoji-picker flow), no ×1/×100/×1000, no bag-count display, disabled/hidden once `state.aides.length>1` (the same one-time-ever gate as before, just relocated). `buildHireAideButtonHtml()` and its standalone call in `renderParty()` are removed entirely, since the shop listing fully replaces it. This makes the previously-outstanding "`hasLab` boolean field" idea moot — Pallet Town now uses the real `shopTier:'full'` mechanism instead of a hardcoded `currentLocation==='palletTown'` check (struck from "Things That Are Future Goals").
+
+### Once-Per-Aide Purchase Limit for Key Items (SETTLED — v0.44)
+Applies to every item where `SHOP_CATEGORY_MAP[item.itemCategory]==='keyItems'` except the hire-aide item (governed entirely by the section above instead). Every other item in that group (`hm-*`, `pokeFlute`, `safariPass`, `silphScope`, `sSTicket`, `goodRod`/`oldRod`/`superRod`, `bicycle`/`coinCase`/`expShare`) is `bagType:"Trainer"` and `isConsumable:false`, so "already purchased by this aide" is fully answered by the existing `aide.trainerBag[itemId]` count — no new state needed. `buildShopItemRowHtml()` renders a single "Buy" button for these (no ×100/×1000 — never useful for a non-stacking one-per-aide item), showing a disabled "Owned" state once `(aide.trainerBag[itemId]||0)>=1` for the currently-shopping aide. `buyItem()` gets the identical check as a defensive backstop and clamps `qty` to 1 for these items regardless of the value passed in.
 
 ### Known Issue — `shopTier` String Comparison (PENDING FIX, discovered v0.27, not in scope)
 - `getShopItems()` filters items with `i.shopTier<=loc.shopTier`, comparing tier values as **strings**, not by rank. Since `"basic"<="full"` is true lexicographically, a `full`-tier location's shop actually shows the union of `basic`-tier and `full`-tier items combined — not just its own tier, and `lab`-tier items are similarly excluded from `full` shops via the same string-ordering accident rather than deliberate rank logic.
@@ -1531,7 +1751,7 @@ IVs/Nature are rolled at the moment of capture/hatch/creation — **not** when a
 
 ### Stat Calculation
 - `calcStat(base, level, iv=0)` → `floor((2×base+iv)×level/100)+5`, then × nature modifier (1.1/0.9) if that stat is nature-boosted/-reduced, floored again.
-- `calcMaxHP(sp, lv, dexId, iv=0)` → `floor((2×base+iv)×level/100)+level+10`. Nature never applies to HP.
+- `calcMaxHP(sp, lv, dexId=null, iv=0, formName=null)` → resolves the species via `getPokemonEntry(dexId, formName)` if `dexId` given, else falls back to `SPECIES[sp]`; then `floor((2×base+iv)×level/100)+level+10`. Nature never applies to HP. (`formName` param added v0.33 for Same-DexId Branching Form Evolutions — after this section was originally written; call sites needing a specific form's base HP must pass it explicitly.)
 - Default `iv=0` param means any call site that doesn't pass one is byte-identical to pre-v0.31 output — zero regression for `calcBST()`'s species-reference usage (`entry.bst`, unaffected) and `makeWildBattler()` (ephemeral pre-catch display).
 - New central helper `recalcStats(p)` computes `p.maxHP` and `p.stats` together, called at every existing `maxHP`-recalculation site: creation, level-up, evolution (`applySpeciesSwap`), migration.
 
@@ -1568,6 +1788,11 @@ IVs/Nature are rolled at the moment of capture/hatch/creation — **not** when a
 - Applied **only** at true per-individual displays: party card, `showPokemonDetail` modal (including its standalone status line, now "💥 PERFECT IV" / "🦄 SHINY + PERFECT IV" as appropriate), Day Care parent-picker rows, both Dex list entry variants.
 - **Not** applied to species-level aggregate indicators (evolution chain nodes, Pokédex grid, Species Detail header) — those stay shiny-only via `hasLiveShiny(dexId)`, unchanged.
 
+### Pokédex-Wide Perfect IV / Unicorn Indicators (SETTLED — v0.40)
+- Species-level aggregate indicators, reusing the exact `getRarityBadge()` convention above rather than inventing new emoji: 💥 for Perfect IV, 🦄 for Unicorn (shiny AND perfect IV on the same individual). Two new aggregate functions, mirroring `hasLiveShiny()`'s "any live individual of this species" pattern: `hasLivePerfectIV(dexId)`, `hasLiveUnicorn(dexId)`.
+- **Suppression rule:** unicorn supersedes, doesn't stack — check unicorn first; if true, show only 🦄. Otherwise check shiny and perfect-IV independently.
+- **Scope — all three sites the shiny badge already appears:** Pokédex grid cells, evolution-chain nodes, species detail page header. Official Pokédex mode is unaffected — it uses a decoupled "preview" concept (`dexOfficialShinyPreview`) rather than real ownership, and Perfect IV/Unicorn have no equivalent "official" concept to preview.
+
 ### Perfect-IV Species-Cap Exemption (SETTLED — v0.31, NEW; REVERSED v0.37)
 - ~~`checkSpeciesCap()`'s auto-release-on-catch-overflow check extended from `if(caught.isShiny) return;` to also exempt `isPerfectIV(caught)` — mirrors existing shiny behavior exactly.~~
 - ~~The manual cap-lowering sweep (`onSpeciesCapChange`) gets the same exemption — perfect-IV individuals excluded from the release-eligible pool alongside shinies, regardless of how low the cap is set.~~
@@ -1575,16 +1800,17 @@ IVs/Nature are rolled at the moment of capture/hatch/creation — **not** when a
 - Confirm dialog text (see "Per-Species Catch Cap" above) updated: *"shiny/perfect-IV Pokémon excluded"* → *"shiny Pokémon excluded."*
 - Rationale: previously, a perfect-IV individual could never donate its IVs via Family IV Inheritance, since it short-circuited out of `checkSpeciesCap()` before reaching that logic — meaning a freshly-rolled perfect individual could never upgrade an existing weaker family member. Removing the exemption lets that donation actually happen.
 
-### SAVE_VERSION — v0.31 (19 → 20)
-- Migration: every existing party/dex Pokémon gets `ivs` and `nature` rolled retroactively (single roll, not the 10× dex-complete advantage — that only applies going forward at creation time), then `recalcStats()` is run. `currentHP` is set to the new `maxHP` (full heal) since `maxHP` shifts as a result of the newly-applied IV/nature.
+### SAVE_VERSION
+- 19→20 bump — see the central Versioning table for the migration (retroactive `ivs`/`nature` roll + `recalcStats()` for existing party/dex Pokémon, not repeated here).
 
-### Nature Mint (SETTLED — v0.36, NEW)
-- New item `natureMint` — Excel: `consumable` category, $100, shop tier Full, `requiresTarget: TRUE`, `bagType: Professor`.
+### Nature Mint (SETTLED — v0.36, NEW; category corrected v0.44)
+- New item `natureMint` — Excel: `consumable` category (was mis-set to `"tool"` in the data at some point after this spec, silently shop-grouped alongside reusable tools instead of Consumables; corrected v0.44, data-only, no code change), $100, shop tier Full, `requiresTarget: TRUE`, `bagType: Professor`.
 - Poke-modal's Friendship line gets a "Change Nature" button, disabled at 0 Nature Mints owned.
 - New nature-picker modal (layered like the move picker): lists all 25 `NATURES`, each labeled with its effect (e.g. "Adamant — +ATK/-DEF"). The individual's current nature is shown grayed out/disabled. Requires a confirmation step before committing.
-- On confirm: consumes 1 Nature Mint, sets `p.nature`, calls `recalcStats(p)`, logs it, refreshes the poke-modal.
+- On confirm: consumes 1 Nature Mint, sets `p.nature`, calls `recalcStats(p)`, logs it, refreshes the poke-modal. `confirmNatureChange()` already correctly decrements bag stock on use, matching its `isConsumable: true` flag.
 - No SAVE_VERSION impact (`p.nature` already exists since v0.31).
-- **Fixed v0.37 — accent theming + disabled-click messaging.** The button and its modal hardcoded `#9b59b6` (purple) in three spots instead of `var(--accent)` — a gap in Theming System's documented Accent scope (modal titles/borders), alongside the existing Map System exemption note. Also, the button previously used the native HTML `disabled` attribute when no Nature Mint was held, which silently blocks click events — clicking gave no feedback at all. Fixed: `disabled` attribute removed (visual dimming replicated manually via `opacity:0.4`, matching the global CSS default it previously inherited); clicking with 0 Nature Mints now opens a themed message modal reading **"Nature Mint Required — available in the Shop."** Behavior with ≥1 Nature Mint held is unchanged.
+- **Implementation Note:** new UI elements must use theme tokens (`var(--accent)`, `var(--main-*)`) from the start, never a hardcoded hex — this button and its modal shipped with `#9b59b6` hardcoded in three spots instead of `var(--accent)`, a gap in Theming System's Accent scope that wasn't caught until v0.37.
+- **Implementation Note:** don't use the native HTML `disabled` attribute when a control needs to give feedback on why it can't be used — `disabled` silently blocks click events, so clicking with 0 Nature Mints gave no feedback at all. Fixed (v0.37): `disabled` removed (dimming replicated manually via `opacity:0.4`), and clicking at 0 now opens a themed message modal explaining what's needed.
 
 ---
 
@@ -1592,11 +1818,11 @@ IVs/Nature are rolled at the moment of capture/hatch/creation — **not** when a
 
 - New `EvoTree` column `evolveNickname` (blank for most rows) — fully generic, species-agnostic. No dexId is ever referenced in this logic; it applies to any branch a nickname trigger is set on, present or future.
 - New "Evolution Secrets" entry in the in-game Info menu (`INFO_TOPICS`) — general hint that nicknames can lock in certain evolutions, without spoiling species or exact trigger words.
-- Jack's data task (any time, no code changes required): populate `evolveNickname` on whichever `EvoTree` rows desired — Koffing/Galarian Weezing and Espeon/Umbreon are the known first candidates, not a hardcoded list.
+- Jack's data task (any time, no code changes required): populate `evolveNickname` on whichever `EvoTree` rows desired — no hardcoded list, works on any row it's set on. Already near-comprehensive as of this audit: **86 of 109 EVO_TREE branches (79%)** have it populated, covering Raichu, Vileplume/Bellossom, Poliwrath/Politoed, Slowbro/Slowking, and most Alolan/Galarian/Hisuian form branches — well beyond the original Koffing/Weezing and Espeon/Umbreon pilot pairs.
 
 ### Full Exclusivity Lock (SETTLED — v0.36, corrects v0.31 design)
-- **Bug (found v0.36):** the original design only let a nickname match win among branches that had *already* passed their own natural condition check — for friendship-day/night specifically, since the two are mutually exclusive by real-world clock time, only one branch was ever a candidate at all, so a nickname could never actually override anything. A player naming their Eevee "Espeon" still got Umbreon if the check happened to run at night.
-- **Corrected design:** the nickname lock is purely **exclusionary**, not a substitute qualifier. `getNicknameEvolveLock(p)` returns the one branch (if any) whose `evolveNickname` is a substring of the nickname (case-insensitive, trimmed) — or `null`. A lock does **not** make its branch fire early or bypass its natural condition (day/night clock, friendship threshold, move equipped, etc.). It only removes every *other* branch from consideration until the locked branch's own real condition is met naturally.
+- The nickname lock is purely **exclusionary**, not a substitute qualifier. `getNicknameEvolveLock(p)` returns the one branch (if any) whose `evolveNickname` is a substring of the nickname (case-insensitive, trimmed) — or `null`. A lock does **not** make its branch fire early or bypass its natural condition (day/night clock, friendship threshold, move equipped, etc.). It only removes every *other* branch from consideration until the locked branch's own real condition is met naturally.
+- **Implementation Note:** an exclusivity lock must be checked before natural-condition qualification narrows the candidate list, not after — the original v0.31 design let a nickname match win only among branches that had *already* passed their own natural condition check, which meant a lock could never override anything for mutually-exclusive natural conditions (e.g. day/night): only one branch was ever a candidate at all by the time the nickname check ran.
 - Scope spans **all three** evolution touchpoints:
   - `checkEvolution()`/`applyEvolutionSilent()` — branch qualification is otherwise unchanged; the naturally-qualifying list is simply narrowed to the locked branch when a lock is active. If the locked branch isn't naturally qualifying yet, evolution just doesn't happen this check.
   - `professorAutoTestEvolutions()` — the background stone-testing sweep excludes any individual whose lock target doesn't match the item/branch being tested.
@@ -1606,10 +1832,9 @@ IVs/Nature are rolled at the moment of capture/hatch/creation — **not** when a
 
 ---
 
-## Raichu / Alolan Raichu — Player-Choice Item Evolution (SUPERSEDED v0.33 — see "Same-DexId Branching Form Evolutions" below)
+## Raichu / Alolan Raichu — Player-Choice Item Evolution (SUPERSEDED v0.33)
 
-- **v0.31 fix (kept for history):** `professorAutoTestEvolutions()` checks **all** matching branches for an item+species pair (`.filter()` instead of `.find()`), confirming every match into `confirmedBranches`. Any branch with a non-null `toFormName` was intended to confirm but never auto-apply, leaving it for a manual "🔬 Evolve" choice.
-- **What v0.31 actually missed (found v0.33):** `confirmedBranches`'s duplicate-guard compared only `{method, intoId}` — and Kantonian/Alolan Raichu share the same `intoId` (26) and the same `method` (Thunder Stone), since only `toFormName` distinguishes them. The guard treated the second branch as an "already confirmed" duplicate of the first and silently dropped it — so the Alolan branch's manual evolve button never actually appeared, and the Family Card's chain visual (which also dropped `toFormName` when building its edges) rendered two indistinguishable, colliding boxes for the same target instead of two distinct branches. See below for the full fix.
+Fully superseded by "Same-DexId Branching Form Evolutions" below — the mechanism this section originally described (per-branch confirmation via `.filter()` instead of `.find()`) is still true, but the identity-collision bug it left unfixed (Kantonian/Alolan Raichu sharing `{method, intoId}`) is what the next section's fix addresses. See the Resolved Bug Index for the specific v0.31/v0.33 history; nothing here is current behavior on its own anymore.
 
 ---
 
@@ -1618,11 +1843,8 @@ IVs/Nature are rolled at the moment of capture/hatch/creation — **not** when a
 ### Scope
 Any species where two `EVO_TREE` branches share a `toDexId` but differ by `toFormName` — confirmed affected: Raichu (Kantonian/Alolan, Thunder Stone), Sandshrew→Sandslash (Kantonian/Alolan, Leaf Stone), Marowak (Kantonian level-up/Alolan friendship-night), Weezing (Kantonian level-up/Galarian level-up). Fixed at the mechanism level — no per-species special-casing, applies automatically to any future dual-form branch pair too.
 
-### Root Cause (three compounding gaps, all keyed on dexId alone)
-1. **`confirmedBranches` duplicate-guard** compared only `{method, intoId}` — form-variant branches sharing both collided into one stored entry, silently dropping the second.
-2. **Evolution Chain Visual edge construction** dropped `toFormName` entirely when building edges, so two structurally different branches became indistinguishable duplicate edges pointing at one node — rendered as doubled/colliding boxes.
-3. **`getPokemonEntry(dexId)`** always resolved to the `formName: null` row — there was no way to fetch a specific alternate-form row at all, so even a correctly-confirmed Alolan branch would apply the Kantonian entry's data.
-4. **Individual Pokémon never tracked form.** `applySpeciesSwap()` wrote `species`/`pokedexId` only — an evolved Alolan Raichu was indistinguishable from a regular one in every downstream read (stats, sprite, display name).
+### Compounding Gaps (all keyed on dexId alone)
+Any species where two `EVO_TREE` branches share a `toDexId` but differ by `toFormName` exposed the same underlying gap in four places at once: the `confirmedBranches` duplicate-guard (compared only `{method, intoId}`, so form-variant branches collided into one entry), Evolution Chain Visual's edge construction (dropped `toFormName`, rendering colliding duplicate boxes), `getPokemonEntry(dexId)` (always resolved the `formName: null` row — no way to fetch a specific alternate-form row at all), and individual Pokémon objects themselves (`applySpeciesSwap()` wrote `species`/`pokedexId` only, so an evolved Alolan Raichu was indistinguishable from a regular one everywhere downstream). Fixed at the mechanism level below — no per-species special-casing, applies automatically to any future dual-form branch pair too.
 
 ### Fix
 - **New persisted field:** `p.formName` (string or `null`) on every Pokémon object, written by `applySpeciesSwap()` alongside `species`/`pokedexId`.
@@ -1636,11 +1858,10 @@ Any species where two `EVO_TREE` branches share a `toDexId` but differ by `toFor
 - **`SPECIES{}` name-keyed dict fix:** since form variants share the same `name` string (both are literally `"Raichu"`), the existing name-only key collides for them — this is the same class of collision already documented under "Species Identity — Always Use dexId" for Nidoran♂/♀, now confirmed to also apply to any same-name form pair. Fix: build a second, form-aware key (`name + '|' + (formName||'')`) alongside the existing name-only entry. The three fallback read sites (`renderParty()`'s growth-rate lookup; the two `getPokemonEntry(dexId)||SPECIES[p.species]` stat/speed fallbacks) build the compound key from the live Pokémon's `species`/`formName` when falling back from `getPokemonEntry()`. This gap was latent and harmless prior to v0.33 — no save could contain an alt-form individual before this fix existed to let one be created — but v0.33 is exactly what makes it reachable, so it ships in the same pass.
 - **Evolution Chain Visual:** edges preserve `toFormName`; same-`toDexId`/different-`toFormName` branches render as separate side-by-side boxes, each labeled with its form (e.g. "Raichu" / "Raichu (Alolan)"), instead of colliding into duplicate nodes.
 
-### SAVE_VERSION 21 Migration
-- Backfill `p.formName = null` for every existing individual in `state.party`/`state.dex` — accurate for every pre-v0.33 save, since no alt-form branch could ever actually be applied before this fix existed.
-- See "Professor Auto-Test Loop" above for the accompanying `confirmedBranches` reset migration (folded into the same SAVE_VERSION 21 pass, not a separate bump).
+### SAVE_VERSION
+- Part of the v0.33 SAVE_VERSION 20→21 bump — see the central Versioning table for the `p.formName` backfill migration, not repeated here. The accompanying `confirmedBranches` reset migration (see "Confirmation Requires a Live Candidate" above) is folded into the same pass, not a separate bump.
 
-### Move-Picker, Battle-Math, and Display Fixes (SETTLED — v0.36)
+### Move-Picker, Battle-Math, and Display Fixes (SETTLED — v0.36, extended v0.34/v0.40)
 - Several `getPokemonEntry(dexId)` call sites were still missing the individual's `.formName`, silently falling back to base-form data — the same class of bug this section already exists to prevent, found recurring in new areas:
   - `buildMovePickerHtml()` — TM picker showed only the base form's learnable move slots (e.g. Alolan Raichu's Psychic slot never appeared).
   - `openMoveSlot()` — viewing/upgrading a form-exclusive equipped move read the base form's power cap.
@@ -1648,14 +1869,9 @@ Any species where two `EVO_TREE` branches share a `toDexId` but differ by `toFor
   - `calcBattleDamage()`/`getBattleSpeed()` — STAB and type-effectiveness silently used base-form typing during real battles.
   - Watched-battle screen and battle-log lines — showed the base form's name mid-battle.
   - `getEvolutionDisplayText()` — a confirmed alt-form branch displayed using the base form's name.
+  - `showPokemonDetail()`'s type/height/weight — read the base form's data for a form-variant individual, despite the stat table (fetched correctly elsewhere in the same function) already reflecting the true form-specific base stats.
 - Fix: thread `.formName`/`toFormName` through all of the above. No SAVE_VERSION impact.
-
----
-
-## Bug Fixes (SETTLED — v0.31)
-
-- **`baseExp` NaN landmine** — live-combat EXP calc (lines 2218, 2418) contained `s_?s_.baseExpYield||s_.baseExp:51`, which by operator precedence evaluates as `(s_.baseExpYield||s_.baseExp):51` — since `baseExp` never exists as a field in `pokedex.js` (only `baseExpYield` does), any species with a falsy `baseExpYield` (confirmed real: Mega Venusaur, dexId 3, `baseExpYield:null`) produced `NaN` EXP instead of the intended `51` default. Fixed to `(s_?.baseExpYield||51)`, matching the already-correct offline-path pattern (line 1921). Live and offline EXP math had quietly diverged; now consistent.
-- **Removed "Professor:" label** from the party-page inventory summary line (`renderBagDisplay()`) — shows just Balls/TMs/Potions/Revives.
+- **Poke-modal title duplication (v0.34):** the title concatenated `getDisplayName(p)` — which already appends `(formName)` for un-nicknamed form-variant individuals, see Nicknames — with a second, redundant `(p.formName)` append, producing e.g. "Raichu (Alolan) (Alolan)". Fixed by removing the redundant append.
 
 ---
 
@@ -1663,7 +1879,7 @@ Any species where two `EVO_TREE` branches share a `toDexId` but differ by `toFor
 
 - Purely live-derived, nothing persisted, no SAVE_VERSION impact — matches the v0.23 shiny-badge pattern (reflects current state only, no cached flag).
 - Both cheats key on `p.id===1` — the literal first-ever catch, by permanent catch-order identity, never touched by evolution (`applySpeciesSwap()` only ever writes `species`/`pokedexId`/`formName`, never `id`) — checked against the **full `state.dex`** (every ever-owned individual, not just the active party — a boxed Catch #1 still activates either cheat), plus a nickname match (trimmed/lowercased).
-- **Bug (found v0.33) — AdminMode not evolution-proof:** `isAdminModeActive()` additionally required `pokedexId===19` (Rattata). Since `id` is permanent but `pokedexId` changes on evolution, AdminMode would silently stop working the moment Catch #1 evolved into Raticate — species identity was being used where catch-order identity was the actual intent. **Fix (v0.33):** the `pokedexId===19` check is removed entirely; `isAdminModeActive()` now checks `id===1` and the nickname only, identical in structure to TurboMode below.
+- **Implementation Note:** anything meant to persist across evolution must key on catch-order identity (`p.id`), never species identity (`pokedexId`/`dexId`) — the same class of mistake as the dexId-identity pattern in Data Architecture, but inverted: here the bug was using species identity where permanent individual identity was the actual intent. AdminMode originally also required `pokedexId===19` (Rattata) and silently stopped working the moment Catch #1 evolved into Raticate; fixed v0.33 by dropping that check entirely.
 - `isAdminModeActive()`: true if any individual in `state.dex` has `id===1` and nickname (trimmed/lowercased) equals `"adminmode"`.
   - `buyItem()`: when active, price is treated as `$0` for all shop purchases (both `professorBag` and `trainerBag` items) — funds check skipped entirely, full requested quantity granted, `state.funds` untouched.
   - Shop display shows `$0 ea` per item while active, for visible confirmation the cheat is live.
@@ -1673,20 +1889,16 @@ Any species where two `EVO_TREE` branches share a `toDexId` but differ by `toFor
 - Either cheat deactivates immediately (next check) if its nickname is changed or Catch #1 is released — no extra logic needed since nothing is cached; this is the intended "removing the nickname stops the mode" behavior, achieved for free by being purely derived.
 - Precedent-setting pattern for future cheat codes via nickname parsing (see "Things That Are Future Goals").
 
----
+### CheatN — Nickname-Triggered Release-and-Replace (SETTLED — v0.40)
+Hooked into `saveNickname(catchId)`, checked *before* the literal nickname is applied: if the trimmed input matches `/^cheat(\d+)$/i` (case-insensitive) and the captured number is a real `dexId`:
+1. If that `dexId` has more than one form in `POKEDEX_DATA`, show a picker modal listing every raw form (unfiltered — no Mega/cosmetic exclusion). Nothing is released or created until a form is chosen; cancelling leaves the original individual and its nickname-in-progress untouched.
+2. Single-form species skip the picker and proceed directly.
+3. Once the form is resolved: release the original individual (same mechanism as "Select Pokémon to Release" under Pokémon Storage), generate a replacement at the chosen `dexId`/form via `makePokemon()` **at the same level** as the one just released, taking the same held/boxed status and slot as the original.
+4. **Shiny/Normal question (v0.43):** shown for **every** CheatN invocation, including single-form species (which previously replaced instantly with zero questions) — a `showCheatShinyPicker(catchId, targetDexId, formName)` modal with "✨ Shiny" / "Normal" buttons. `performCheatReplace()` takes a 4th param `isShiny=false`, setting `replacement.isShiny` post-creation (purely cosmetic) and adjusting the log message when true. Flow: single-form → shiny choice → replace; multi-form → form choice → shiny choice → replace. Nothing is created until the final choice is made.
 
-## Bug Fixes (SETTLED — v0.32)
+If the captured number doesn't correspond to a real `dexId`, no special behavior fires — the input just applies as a literal nickname.
 
-- **🐾 emoji removed** from non-fainted party screen entries — `(fainted?'💀':'🐾')+' '` → `(fainted?'💀 ':'')`. Fainted Pokémon still show 💀 before the name; non-fainted Pokémon show just the name.
-- **Shiny sprites not rendering in the battle modal** — `renderBattleFrame()` hardcoded `getSpriteUrl(..., false)` for both the enemy and player sprite, ignoring `isShiny` entirely (every other sprite call site in the file — party screen, Dex screen, evolution screen — already passed it correctly). Additionally, `playerSnapshot` (built in `runWatchedBattleLeg()`) never carried `p.isShiny` over from the real party object at all, so even fixing the call sites alone wouldn't have worked. Fixed both: the snapshot mapping now includes `isShiny:p.isShiny||false`, and both `getSpriteUrl()` calls in `renderBattleFrame()` now pass it through. `getSpriteUrl()` itself required no change — its shiny branch was already correct (`spriteUrl` is `null` for every entry in `pokedex.js`, so it always falls through to the shiny-aware path).
-
----
-
-## Bug Fixes (SETTLED — v0.34)
-
-- **Log Tab reversed sort** — `renderLogPanel()` called `[...source].reverse()` before appending, but `state.log`/`state.significantLog` are already newest-first (built via `.unshift()`). Full Tab masked this since frequent ticks self-corrected within moments via the live-update path; Condensed Tab (rare significant events) stayed visibly backwards for long stretches. Fixed by removing the `.reverse()`.
-- **Poke-modal title duplicated form label** — the title concatenated `getDisplayName(p)` (already appends `(formName)` for un-nicknamed form-variant individuals as of v0.33) with a second, redundant `(p.formName)` append, producing e.g. "Raichu (Alolan) (Alolan)". Fixed by removing the redundant append; the nicknamed-individual case's parenthetical species reference is now form-aware too (`(Raichu (Alolan))`) rather than silently dropping form context.
-- **`showPokemonDetail()` wrong-form type/height/weight** — the modal's reference `entry` was fetched via `getPokemonEntry(p.pokedexId)` with no `formName` argument, so type badges, height, and weight always showed the base form's data even for a form-variant individual, despite the stat table (fetched correctly elsewhere in the same function) reflecting true form-specific base stats. Fixed by passing `p.formName` through, matching every other v0.33 form-aware call site.
+**Implementation Note:** required extending `makePokemon()` with an optional trailing `formName` parameter (default `null`, so all pre-existing call sites are unaffected) — it never supported spawning a specific form before this.
 
 ---
 
@@ -1714,13 +1926,6 @@ No `SAVE_VERSION` impact — purely presentational.
 ---
 
 *Generation-themed Silph Tower encounter floors were built and shipped in v0.39, then fully reverted in v0.39.1 due to a boot-time performance regression (~560ms added at every page load, worse on mobile) — not pursuing this approach again without a fundamentally different implementation.*
-
----
-
-## Bug Fixes (SETTLED — v0.39)
-
-- **Pre-existing data corruption found and fixed — `pokedex.js` dexId 659–784 (126 species, Bunnelby through Kommo-o) had every row's content (stats, category, flavor text, abilities, `isLegendary`/`isMythical` flags — everything except `name`/`dexId`) shifted +1 relative to its label.** E.g. the row labeled "Kommo-o" actually held Tapu Koko's real data (hence Kommo-o incorrectly showing `isLegendary:true`). Traced via a full dex-wide diff against an independent reference dataset (dexId 1–1025), confirming the corruption was fully contained to this one contiguous block — nothing else in the dex was affected. Root cause: a manual Excel paste misalignment, not a `converter.html`/`fetcher.html` bug (`fetcher.html`'s fetch loop was audited and confirmed to fetch each dexId independently and correctly). **Fixed** by re-fetching dexId 659–784 fresh and overwriting. Re-verified clean via the same dex-wide diff post-fix: 0 mismatches across the full national dex.
-- **Side effect of the above fix, discovered post-fix:** `fetcher.html` only ever produces one base-form row per species (alternate/regional/cosmetic forms are always hand-added, manual Excel rows). Re-fetching the 659–784 range collaterally wiped every manually-added alternate-form row that happened to be interleaved in that same Excel row range: Vivillon (all 18 patterns), Aegislash (Blade/Shield), Pumpkaboo/Gourgeist (4 sizes each), Zygarde (10%/50%/Complete), Oricorio (4 styles), Rockruff (Own Tempo), Lycanroc (3 forms), Wishiwashi (School/Solo), Minior (8 core colors), Mega Diancie, and Hisuian forms for Sliggoo/Goodra/Avalugg/Decidueye. Confirmed intentional/acceptable for now (not urgent) — see backlog below.
 
 ---
 
@@ -1762,33 +1967,14 @@ No shared/global mission modal entry point anymore. Each aide's section in the P
 ### Box assignment (SETTLED — v0.39.3)
 `assignToAide(catchId, idx=0)` and `unassignPokemon(catchId)` — the functions behind the Pokémon detail modal's "+ Party"/"− Remove" buttons — were still entirely hardcoded to Carl Oak through v0.39.2, on top of the `dex` field-ownership bug above: even after that's fixed, nothing let the player choose *which* aide received an assignment. Fixed together: `assignToAide()` now takes a target aide index (the heal-location gate checks that specific aide's own location, not always Carl Oak's), and the detail modal renders one "+ [Aide Name]" button per aide instead of a single hardcoded "+ Party". `unassignPokemon()` searches every aide's `party` to find whichever one currently holds the individual, rather than assuming Carl Oak.
 
-### v0.39.5 — comprehensive Carl-Oak-hardcoding audit and fix pass
+### v0.39.5 — Comprehensive Carl-Oak-Hardcoding Audit
+Triggered by real-play reports (a `checkSpeciesCap` crash, a cross-aide level-cap bug, Faraday's items missing from the bag, and a confusing "3 catches in a row" log read that turned out to be two aides' unattributed encounters interleaved). Jack asked for a full pass finding every place the code assumes Carl Oak specifically.
 
-Triggered by two reports: (1) three specific bugs from the v0.39.4 stress-testing pass (`checkSpeciesCap` crash, cross-aide level-cap bug, Faraday's items missing from the bag), and (2) "every encounter pushes 3 in a row of the same Pokémon," which turned out not to be a duplicate-catch bug at all. Jack asked for a full pass finding *every* place the code assumes Carl Oak specifically and determining whether each needs to switch to real per-aide terminology. Findings, in the order investigated:
+**Implementation Note — this is a recurring failure class, not ten independent bugs:** once a second aide exists, *any* function that reads `state.aides[0]` (or a Carl-Oak-specific field) directly instead of taking an aide index/reference will work correctly for Carl Oak and silently misbehave for every other aide — often invisibly, since Carl Oak was the only aide during most of development and testing. This pattern recurred across at least ten unrelated subsystems in one pass: species-cap checking (crashed on virtually any catch — a stale search pattern missed an arrow-param `a.dex` reference), level-cap lookup (`getLevelCap()` called with no argument — Faraday's Pokémon frozen at the wrong level), the bag/inventory modal (`showBagModal()` only built a section for `state.aides[0]` — Faraday's items invisible), wild-encounter log messages (no aide attribution, reading as one confused story instead of two parallel ones), mission-modal summary text, the Findings Report title, the entire watched gym battle system (`renderTeamOrderModal()`, `confirmTeamOrder()`, `runWatchedBattleLeg()`, `finishWatchedBattle()` — despite `watchedBattle.aideIndex` already tracking the real triggering aide; a second aide's battle would run and award the badge to Carl Oak's team), route-table/pathfinding `requiresItem` gating (`buildRouteTable()`, `buildTravelPath()`, `getReachableDiscoveredLocations()`, `computeMissionDistance()` — checked the wrong aide's inventory), the `in-party` evolution condition (`hasPartyMate()`), and shop purchases (routed into the wrong aide's bag). Every one of these had already been "fixed" once in a prior pass under the assumption that fixing the obvious call sites was sufficient — it wasn't. When adding a second (or third) actor to a previously-singleton system, audit for the literal string pattern *and* equivalent short-variable-name forms (`a.dex`, not just `aide.dex`), and verify by directly testing the second actor's own state, not just that the first one still works.
+- **Audited and confirmed correct, no change needed:** every remaining `state.aides[0]` reference is now either a legitimate default parameter (safely overridable by every real caller), `loadGame()`'s migration fallback, `init()`'s fresh-game creation, or the Daycare/breeding lines — confirmed intentionally deferred (see "Explicitly out of scope" above).
 
-- **`checkSpeciesCap()`/`sweepSpeciesToCap()` — confirmed crashing on virtually any catch.** Both still referenced `a.dex` inside `state.aides.flatMap(a=>a.dex...)` — missed by the v0.39.3 fix because that fix's search pattern was the literal text `aide.dex`; these two functions use the arrow-param name `a`. Worse than originally characterized: crashes on the *first line*, before the cap comparison ever runs — i.e. on effectively any catch, evolution, or hatch, not just the 7th-of-a-species case. Confirmed via direct stress test (crashed by tick 10 of real gameplay). Fixed: `state.dex` is already the full combined pool, both functions simplified to filter it directly, no per-aide loop needed.
-- **`giveExp()`/`giveExpSilent()` called `getLevelCap()` with no argument** — defaults to Carl Oak's `trainerBag` regardless of which aide's Pokémon is actually leveling. Directly proven with a controlled test: gave Faraday a badge (his own cap should rise to 25) while Carl Oak had none (cap 15) — Faraday's Pokémon stayed frozen at Lv15. Fixed: both now accept an aide index (default 0), threaded through all 7 call sites (`resolveEncounterStep`, `runWildEncounterLoop`×2, `catchPokemon`, `processAideOfflineTime`×3 via `awardPerKOExp`).
-- **`showBagModal()` only ever built a section for `state.aides[0]`** — Faraday's own `trainerBag` (items, HMs, held gear) was completely invisible in the Bag view no matter what he was actually carrying. Fixed: now builds one section per aide in `state.aides[]`.
-- **Dead code removed from `renderBagDisplay()`** — leftover references to `#aide-info .aide-name`/`#badge-cap-display`, both stale element IDs from before the v0.39.1 Party-tab rebuild. Silently no-op'd (guarded by `if(el)`, never crashed) rather than actually showing anything. The "Badges: X/8 · Level Cap: Y" readout this used to provide has no home in the new per-aide UI yet — not restored here since it needs a real placement decision, not a guess; flagged as a follow-up below.
-- **"3 catches in a row" — root cause found via direct simulation, not a mechanical bug.** Poké Balls/potions/revives are an intentionally shared pool between both aides (`bagType: "Professor"` — a real, pre-existing design decision, not new). Combined with the fact that **every wild-encounter log message had zero aide attribution**, two aides independently encountering the same common species (Rattata/Pidgey dominate early routes) around the same time read as one confusing continuous story instead of two parallel ones — exactly matching the reported "only had one ball, caught the first, the second KO'd me" (that was actually Carl Oak's catch using the shared ball, and Faraday's *separate* encounter losing with none left). Simulated the exact scenario, confirmed the log showed two unattributed "Wild Pidgey appeared!" lines back to back. Fixed: every message across `resolveEncounterStep()`/`runWildEncounterLoop()`/`catchPokemon()`/`processAideTick()`'s gym-trigger branch now prefixed with the aide's own emoji+name.
-- **Mission-modal summary text hardcoded "Carl Oak → ..."** in both `selectWanderMode()` and `selectMissionDest()`, regardless of which aide the mission modal was actually open for. Fixed to use `state.aides[missionModalAideIndex].name`.
-- **Findings Report modal retitled "Professor's Findings"** (was "Carl Oak's Findings") — `pendingFindings` is genuinely global (fed by either aide's `recordSighting`/`recordCapture`/evolution events, mixed into one array), so the old title was factually wrong once a second aide existed, not just non-ideal. Matches the "Professor's Ledger" framing already established for the log.
-- **The entire watched gym battle system was hardcoded to Carl Oak end-to-end** — `renderTeamOrderModal()`, `confirmTeamOrder()`, `runWatchedBattleLeg()`, and `finishWatchedBattle()` all read/wrote `state.aides[0]` directly, despite `watchedBattle.aideIndex` already tracking the real triggering aide since v0.39.2 — nothing downstream ever used that field. Practical effect: a second aide's watched gym/gauntlet battle would show, reorder, fight with, and award the badge to **Carl Oak's** team instead of their own. Fixed across all four functions; directly tested with deliberately mismatched teams (Carl Oak weak, Faraday strong) — confirmed the team-order modal shows Faraday's own roster, and his win credits his own `trainerBag` specifically.
-- **`buildRouteTable()`'s `requiresItem` gating** (e.g. a fishing-rod requirement on a fish-encounter row) always checked Carl Oak's `trainerBag` regardless of which aide was actually rolling the encounter. Fixed across all 4 call sites (`rollEncounter`, `evaluateWanderTarget`×1, `selectWanderMode`, `renderDestList`).
-- **`buildTravelPath()`/`getReachableDiscoveredLocations()`/`computeMissionDistance()`'s `requiresItem` gating** (e.g. a Bicycle- or Surf-gated connection) had the identical bug — always checked Carl Oak's inventory for pathfinding/reachability regardless of which aide was actually involved, meaning a destination only reachable via *Faraday's* item ownership would incorrectly show as unreachable when routed through his own mission modal, or vice versa. Fixed across all 8 call sites spanning `arriveAtLocation`'s offline-faint path, `evaluateWanderTarget`, `renderDestList`, `selectWanderMode`, `confirmMission`, and `endMission`. Directly tested with genuinely different item ownership between the two aides — confirmed each aide gets a distinct, correct reachable-locations set based on their own inventory, not a shared/wrong one.
-- **`hasPartyMate()`** (the "in-party" evolution condition — e.g. Mantyke evolving with a Remoraid nearby) always checked Carl Oak's party regardless of which aide's Pokémon was actually evolving. Fixed: now looks up the real owning aide via the evolving individual's own `p.holder` field.
-- **`buyItem()` routed every Trainer-category purchase (Bicycle, Rods, Safari Pass, HMs) into Carl Oak's `trainerBag`** regardless of which aide was actually shopping — a real, visible bug, since the shop row's *displayed* bag count (`buildShopItemRowHtml()`) was already correctly reading the shopping aide's own inventory via `missionModalAideIndex`, so a Faraday purchase would silently fail to update the count he was looking at. Fixed the same way. `getPartyEligibleForItem()` (the post-purchase batch-evolve prompt) had the identical bug, fixed identically.
-
-**Audited and confirmed correct, no change needed:** every remaining `state.aides[0]` reference in the codebase is now either a legitimate default parameter (matching the established `param=state.aides[0]` pattern, safely overridable by every real caller), the `loadGame()` migration's Carl Oak identity fallback, `init()`'s fresh-game Carl Oak creation, or the four Daycare/breeding lines — confirmed by Jack as intentionally deferred (see "Explicitly out of scope" above), not a bug.
-
-**Still open, follow-up items:**
-- Daycare/breeding, Pokédex-adjacent nickname/nature/move-editing modals remain Carl-Oak-only by design, per Jack's earlier explicit deferral.
-
-### v0.39.6 — Badges/Level Cap readout restored, genuinely per-aide
-
-The "no Badges/Level Cap display anywhere" gap flagged at the end of v0.39.5 is resolved. New `buildAideCapReadoutHtml(aide)` helper renders "🎖 Badges: X/8 · Level Cap: Y" (+ Champion note if applicable) inline inside each aide's own expanded Party-tab section, computed from that aide's own `trainerBag` — not the old singleton `#badge-cap-display` element, which was always Carl-Oak-only even before it went dead in v0.39.5. Only shown once `TRAINERS_DATA` is loaded, matching the original guard. Verified with a dedicated test: gave Faraday a badge Carl Oak doesn't have, confirmed the roster shows two genuinely different readouts side by side (Carl: 0/8, cap 15; Faraday: 1/8, cap 25).
-
-**Verification:** 116 automated assertions across 16 jsdom-based test scripts — all pre-existing suites re-verified passing after every fix, plus five new dedicated tests this session: a direct reproduction of the `checkSpeciesCap` crash (confirmed fixed), the cross-aide level-cap bug (confirmed fixed with a controlled badge-count scenario), the exact "3 catches" log-confusion scenario (confirmed resolved, log now clearly attributed), the watched-battle system with deliberately mismatched teams (confirmed the correct aide's team is used throughout), a shop-purchase test with both aides buying the same item back-to-back (confirmed no cross-contamination), and a reachability test with genuinely different item ownership between the two aides (confirmed distinct, correct results per aide).
+### v0.39.6 — Badges/Level Cap Readout Restored, Genuinely Per-Aide
+`buildAideCapReadoutHtml(aide)` renders "🎖 Badges: X/8 · Level Cap: Y" (+ Champion note if applicable) inline inside each aide's own expanded Party-tab section, computed from that aide's own `trainerBag` — resolves the display gap v0.39.5 flagged when it removed the old Carl-Oak-only `#badge-cap-display` element. Only shown once `TRAINERS_DATA` is loaded.
 
 ### Explicitly out of scope for v0.39.1
 - Firing/releasing an aide once hired
@@ -1798,26 +1984,24 @@ The "no Badges/Level Cap display anywhere" gap flagged at the end of v0.39.5 is 
 ### Implementation notes — deviations from the original spec above, and known limitations
 
 - **Hiring is NOT routed through the location-based shop system.** `shopTier:'lab'` is referenced in pre-existing code comments but was never actually wired to any location or to `getShopItems()`'s `tierOrder` (confirmed dormant — same root cause as the earlier "duplicate poke-ball, shopTier:lab" bug history entry). Rather than risk touching the shared shop-rendering system for one narrow, one-time special purchase, hiring gets its own dedicated "🧑‍🔬 Hire Second Aide — $100" button directly in the Party/roster screen (shown only while `state.aides.length===1` AND at least one aide is at Pallet Town), wired to `hireAide()`/`showAideEmojiPicker()`/`confirmHireAide()`. The `aide-hire-2` item still exists in `items.js` (itemCategory `aide-hire`, `shopPrice:100`, `bagType:'Professor'`) for data-consistency/documentation, but its `shopPrice` is read for display only — the purchase itself bypasses `buyItem()` entirely. **Gating stays `currentLocation==='palletTown'` directly, NOT `shopTier`, confirmed as the settled approach** — Pallet Town's existing `shopTier:'basic'` already drives its normal field shop, and `shopTier` is a single value, not a list, so setting it to a Lab-specific tier would have silently removed that basic shop. Jack confirmed the fix (a separate `hasLab` boolean field, so both can coexist) as a real future idea, not urgent — see "Things That Are Future Goals" below.
-- **`aide-hire-2` was added directly to the local `items.js` file, not via Excel/`converter.html`.** Copyable Excel row provided to Jack directly in chat. Per the project's standing Excel/code split, needs the equivalent row added to the real Excel Items sheet, or it will be lost the next time `items.js` is regenerated. Same category of outstanding task as the existing `natureMint` entry in "Outstanding Data Tasks" below.
+- **`aide-hire-2` was added directly to the local `items.js` file, not via Excel/`converter.html`, at the time.** Copyable Excel row provided to Jack directly in chat. **Resolved, confirmed via cross-file audit:** Jack maintains JS data files as an exact mirror of their Excel-tab source, so the row's presence in `items.js` (verified with the correct `shopTier:"full"`) confirms it's in the real Excel Items sheet too — not at risk of being lost on a future regen.
 - **v0.39.2 — the battle engine is now fully aide-parameterized, live AND offline/TurboMode.** `runWildEncounterLoop()`/`runWildEncounterLoopSilent()`, `runGymEncounter()`/`runGymEncounterSilent()`, `runOneGymBattle()`/`runOneGymBattleSilent()`, `awardGymWin()`/`awardGymWinSilent()`, `healPartyBeforeGymBattle()`/`healPartyFullBeforeGauntletLeg()`, `awardPerKOExp()`, `catchPokemon()` — all now accept an aide index (default 0, so every pre-existing call site stays correct). **`processOfflineTime()` was previously entirely single-aide-only** (confirmed during this pass — closing and reopening the app, or any TurboMode catch-up, only ever simulated Carl Oak) — rewritten into a per-aide `processAideOfflineTime(idx,...)`, called once per aide with its own full simulation budget (each aide's own `remaining`/`nextIn`/2000-iteration cap, not split between them). A second aide now genuinely earns their own badges, both live and offline.
 - **Per-species cap (`checkSpeciesCap`) is global across all aides' boxes combined, not per-aide** — this was already the stated design intent in the function's own pre-existing doc comment ("regardless of aide count"), now actually implemented: `sweepSpeciesToCap()`/`checkSpeciesCap()`/`removePokemonFromBoxAndParty()` all operate on `state.aides.flatMap(a=>a.dex)`. A wild caught by Faraday can donate IVs to (or trigger release of) an individual sitting in Carl Oak's box, and vice versa.
 - **v0.39.2 — alternating collision priority, resolving the v0.39.1 "simultaneous encounters" flag.** If 2+ aides both roll a brand-new encounter in the same tick, they're processed in alternating order — first collision Carl-first, next collision Faraday-first, flipping only on a genuine collision (not every tick). Implemented via a single shared `aidePriorityFlip` toggle used by both `gameTick()` and `processOfflineTime()`, so the same fairness applies live, backgrounded, and under TurboMode (TurboMode is this same loop on a shorter interval, not a separate code path — confirmed, not assumed). **Confirmed by Jack as accepted, not a gap:** whichever aide processes second in a colliding tick still has its `#enc-body` text overwritten by whichever went first. Jack's framing — the log/encounter feed is conceptually "the Professor's Ledger," a single shared record, not per-aide attribution that needs preserving — means this is the correct final design, not a placeholder awaiting a two-modal fix.
 - **Friendship ticking (`advanceFriendshipTicks()`) is a single shared global timer, not per-aide** — when it fires, it ticks every aide's party together. This was already gameTick()'s design (documented in the v0.39.1 entry above); `processOfflineTime()` is now consistent with it rather than trying to give each aide their own independent friendship clock, which would have meant sequentially-run offline loops fighting over a counter that was never designed to be split.
 - **`watchedBattle`** (the full-screen watched-battle flow, gym or gauntlet) stays a single global variable with an `aideIndex` field added, rather than becoming a per-aide array — deliberate: the player can only watch one battle at a time regardless of aide count, so blocking a second aide's gym-trigger button while one is in progress is correct behavior, not a limitation.
 - **Still explicitly out of scope, unrelated to battle resolution:** Daycare/breeding, Pokédex rendering (`renderDex*`), nickname/nature/move-editing modals, and item-usage-target pickers are still hardcoded to `aides[0]` by default-param fallback. None of these block a second aide from fighting, earning badges, or catching Pokémon — they're player-driven UI interactions the player would trigger while looking at a specific Pokémon, and converting all of them was judged lower priority than the battle-engine fix Jack explicitly asked for. Confirmed via `grep` that ~50 functions still reference `state.aides[0]` in this category — a bounded, known backlog, not a hidden gap.
-- **Two bugs found and fixed during v0.39.1 implementation, not part of the original design but worth recording:** (1) `saveGame()` initially still wrote the pre-v26 flat single-aide shape even after `state.aides[]` existed — would have silently discarded any hired aide's entire save on every autosave; found via an actual save→reload round-trip test, not just "does gameTick throw." (2) `loadGame()`'s tail section referenced the old singular `#btn-start`/`#btn-recall` DOM elements (removed during the Party-tab HTML restructure), throwing and getting silently swallowed by `loadGame()`'s own try/catch — meaning a fully valid, correctly-migrated save would still report "load failed" to the player. Both fixed and covered by regression tests.
+- **Two data-loss-adjacent bugs found during v0.39.1 implementation:** (1) `saveGame()` initially still wrote the pre-v26 flat single-aide shape even after `state.aides[]` existed — would have silently discarded any hired aide's entire save on every autosave; found via an actual save→reload round-trip test, not just "does gameTick throw." (2) `loadGame()`'s tail section referenced old singular `#btn-start`/`#btn-recall` DOM elements (removed during the Party-tab restructure), throwing and getting silently swallowed by `loadGame()`'s own try/catch — a fully valid, correctly-migrated save would still report "load failed." Both fixed, covered by regression tests.
 - **Verification:** 95 automated assertions across 11 jsdom-based test scripts (fresh boot, full mission flow, dual-aide `gameTick()` stress test, full save→reload round-trip, map rendering with both aides at the same location, full hire-flow, a complete realistic session end-to-end, a dedicated battle-engine test confirming Faraday's gym win credits his own `trainerBag` specifically not Carl Oak's, a CSS-layout regression test, a dedicated test assigning a box Pokémon to Faraday specifically, and a migration test using a hand-crafted fake v26 two-aide save to confirm no data loss when `dex` moved back to shared).
 
-### Two critical data-loss bugs found and fixed (v0.39.4)
+### Migration Correctness Lessons (v0.39.4)
 
-Reported by Jack after real extended play: 20 Pokémon caught across two aides, worked fine live, **reload wiped the entire box.** Root causes, both in `loadGame()`'s migration logic (not caught by v0.39.3's own tests — see below):
+Two data-loss bugs surfaced after real extended play (20 Pokémon across two aides, worked fine live, reload wiped the entire box) — both in `loadGame()`'s migration logic, both missed by v0.39.3's own tests.
 
-1. **The v27-vs-v26 dex-source check was structurally wrong.** The migration line deciding where to read `dex` from checked `s.aides && s.aides.length` to mean "this is a v26 save, dex is nested per-aide" — but `s.aides` exists on **every** save from v26 onward, including genuine v27 saves where `dex` is already correctly a shared top-level field and no aide carries its own `dex` at all. Reloading an already-migrated v27 save re-derived `dex` from `s.aides[i].dex` (which doesn't exist on a v27 save) instead of the real, correctly-saved `s.dex` — silently producing an empty array. **Every reload of an already-migrated save wiped the box.** Fixed with a structural check on `s.dex` itself (`s.dex !== undefined`) instead of inferring format from `aides[]` presence — both pre-v26 saves and v27+ saves have a top-level `s.dex`; only the brief v26 window (v0.39.1/v0.39.2) doesn't.
-2. **The party↔dex re-link only ever covered Carl Oak.** `state.party = state.party.map(pp => state.dex.find(...) || pp)` — the "re-link JSON-parsed party entries back to the same object as their dex entry" step — ran against the temporary flat `state.party` field (Carl Oak's, pre-wrap) and never touched any additional aide's party at all. After a JSON round-trip, Faraday's party held disconnected copies, not shared references with `state.dex`. Fixed with a second re-link pass, after the aides[] wrap completes, looping every aide.
-
-**Why v0.39.3's own tests didn't catch bug #1:** the migration test used a hand-crafted *v26-format* fixture (dex nested per-aide) specifically to verify the v26→v27 upgrade path — it never tested reloading a save that was *already* in native v27 format, which is the actual scenario every real player hits on their second-and-later session. The round-trip test separately only asserted on `aides[1].party`, not `state.dex`, so it didn't notice the box was empty either. Both test gaps are fixed: `test_roundtrip.js` was rewritten to populate a realistic ~20-Pokémon box split across two aides' parties (matching the reported scenario exactly), assert `state.dex.length` directly, verify object-reference re-linking for both aides, and reload **twice** to rule out a one-shot fluke.
-
-No `SAVE_VERSION` change — this was a load-logic bug, not a schema change; `saveGame()`'s output was already correct in v0.39.3, only the *reading* of it was broken.
+- **Implementation Note — infer format from a direct structural check, not a sibling field's presence.** The v27-vs-v26 dex-source check used `s.aides && s.aides.length` to mean "this is a v26 save, dex is nested per-aide" — but `s.aides` exists on every save from v26 onward, including v27+ saves where `dex` is already correctly shared and top-level. Every reload of an already-migrated save re-derived `dex` from a per-aide field that doesn't exist there, silently producing an empty array. Fixed with a check on `s.dex !== undefined` itself — the field actually in question — instead of inferring format from something merely correlated with it.
+- **Implementation Note — a per-object fix written against a single hardcoded instance doesn't generalize to a collection for free.** The party↔dex re-link (`state.party = state.party.map(...)`, restoring shared object references after a JSON round-trip) ran against the old flat `state.party` field during migration and never touched any additional aide's party — Faraday's party held disconnected copies after reload. Fixed with a second re-link pass, after the `aides[]` wrap completes, looping every aide.
+- **Testing gap:** v0.39.3's migration test only covered the v26→v27 upgrade path (a hand-crafted v26 fixture), never reloading a save already in native v27 format — the actual scenario every real player hits on their second-and-later session. The round-trip test also only asserted on `aides[1].party`, not `state.dex`, missing the empty box entirely. Fixed: the round-trip test now populates a realistic ~20-Pokémon box split across two aides, asserts `state.dex.length` directly, verifies reference re-linking for both aides, and reloads twice to rule out a one-shot fluke.
+- No `SAVE_VERSION` change — this was a load-logic bug, not a schema change; `saveGame()`'s output was already correct in v0.39.3, only the *reading* of it was broken.
 
 ---
 
@@ -1825,346 +2009,28 @@ No `SAVE_VERSION` change — this was a load-logic bug, not a schema change; `sa
 
 ---
 
-## v0.40 — Shipped
+## Version-to-Section Index (v0.40 through v0.44.3)
 
-All seven items implemented and verified. `SAVE_VERSION` bumped 27→28 (two new persisted fields: `state.avoidCappedSpecies`, per-aide `expShareActive`). Below is the original settled spec for each item; implementation notes and real bugs found along the way follow after.
+Every item shipped in these versions has been relocated to its topical section — nothing below is unique content, only a map from version number to where it actually lives, kept for anyone tracing a change back to when it shipped.
 
-### Implementation notes — deviations, real bugs found, and things worth knowing
+| Version | Items | Where they live |
+|---|---|---|
+| v0.40 | 7 | Day Care System (multi-aide access), Combat System (EXP Share), Pokémon Storage (ball-avoid toggle, Select Pokémon to Release), Gym System (passive/idle gym battles), Cheat Codes (CheatN), IVs/Natures cluster (Perfect IV/Unicorn indicators) |
+| v0.41 | 4 | Game Loop (Render Focus-Guard), Encounter Methods (Gym Battle badge-aware checkbox), Map System (gym badge info), Pokémon Storage (Species Detail form-selection fix) |
+| v0.42 | 3 | Branching Evolutions (`fromFormName`/`requiredGender`), Shedinja Creation (`shed`), Resolved Bug Index (Rockruff casing — since resolved) |
+| v0.43 | 9 | Mission Modal — Wander Mode (discovery-ignoring) and Destination Sorting (level range), Data Architecture/Sprites (shiny-aware `spriteUrl`), Map System (missing-item gates), All Catches View (bidirectional sorting), Log Tab (Custom log view), Info Menu (`INFO_TOPICS` extraction), Pokémon Storage (Rattata #1 protection), Cheat Codes (shiny/normal question) |
+| v0.44 | 15 | Evolution Research System (party-priority reservation), Mission Modal — Destination Sorting (location markers) and Wander Mode (tie-break, stale-destination fix), Shedinja Creation (auto rule-out), All Catches View (friendship display, Has Nickname filter), Day Care System (Ditto-first sorting, Research Mode), Pokémon Storage (universal species-cap enforcement), IVs/Natures cluster (Nature Mint category fix), Shop UI (Pallet Town full shop / aide-hire relocation, once-per-aide purchase limit), Gym System (post-wipe exclusion flag), Onboarding (Gym Battle Default question) |
+| v0.44.1 | 2 | Mission Modal — Method Selection (newly-unlocked methods self-heal), Gym System (EXP batching). Versioning correction starts here — every prior v0.44-line delivery after the initial build was mislabeled "v0.44" instead of incrementing; see workflow.md for the standing rule going forward. |
+| v0.44.2 | 1 | Gym System (Watched Gym Battle — Battle Gym button fix) |
+| v0.44.3 | 2 | Revive Logic and Pre-Encounter Healing (both fixed to revive every fainted member per cycle, unconditionally, not gated behind an encounter rolling — see Trainer Battle System), dead code removal (`evoArrowDownHtml()`, see Branch Line-Break) |
 
-- **#3 confirmation dialog uses the native browser `confirm()`, not a custom styled modal.** Originally told Jack it would be a custom modal; found the sibling feature (lowering the global species cap, `onSpeciesCapChange()`) already uses a plain native `confirm()` for this exact class of decision, so matched that existing convention instead of introducing a one-off pattern.
-- **#1 (Daycare) surfaced a second, real bug along the way, not something asked for.** `assignDaycarePair()`'s party-unassignment logic (dropping off a breeding pair) always removed the parent from `state.aides[0].party` specifically, regardless of which aide actually held it. If Faraday held one of the parents, the old code correctly cleared `p.holder` but silently failed to remove it from Faraday's *real* party array (since it only ever checked Carl Oak's) — leaving a Pokémon simultaneously marked "breeding" and still sitting in an active party. Fixed alongside the location-gate fix, by looking up the real owning aide via `p.holder`, same pattern used for `hasPartyMate()`/`unassignPokemon()` in earlier work.
-- **#2 (EXP Share) item price: $100, confirmed by Jack.**
-- **#2 implementation:** new `distributeExp(pokemon, amount, idx, silent)` wrapper is now the single entry point every EXP-awarding call site goes through (7 call sites converted: 3 live, 3 offline/silent, plus `awardPerKOExp()` for gym battles — which changed from taking a function reference to a `silent` boolean so gym EXP also respects the toggle). `giveExp()`/`giveExpSilent()` themselves are unchanged; the wrapper just calls them multiple times per the split. Formula uses `Math.floor()` at each step (a few fractional EXP points can be lost to rounding in the split — standard tradeoff, matches how real Exp Share implementations work too).
-- **#6 (cheat code) required extending `makePokemon()`** with a new optional trailing `formName` parameter (defaults to `null`, so all ~15+ pre-existing call sites are unaffected) — it never supported spawning a specific form before this, and `p.formName` was never even set on the returned object (existing individuals just relied on it being `undefined`, treated as falsy everywhere it's checked). Needed so the cheat's form picker can actually produce the chosen form, not always the default.
-- **#4 (idle gym battles) — `isGymGrindEligible()` is kept as a distinct named function** even though it's now byte-for-byte identical to `isGymAccessible()`, in case a future reason to differentiate grind-eligibility from watched-accessibility comes up. `rollEncounter()`'s `atDest` variable was removed entirely — gym eligibility and method-selection no longer care whether the current location is the final mission destination or merely a waypoint being passed through.
-- **Verification:** 176 automated assertions across 26 jsdom-based test scripts — all pre-existing suites re-verified passing after every change, plus 9 new dedicated v0.40 test files. Notably includes a 4000-tick end-to-end stress test proving a badge can be earned through purely idle wandering with zero manual gym triggers (not just a unit-level check that the eligibility function returns true), and a cheat-code test confirming the "nothing happens until a form is chosen" safety guarantee by explicitly canceling the picker and verifying the original individual survives untouched.
-
-### Original settled spec
-
-
-
-### 1. Faraday can access the Daycare
-
-The facility (`state.daycareSlots`) is already global/shared — no per-aide state exists there at all, confirmed by Jack ("the daycare seems to only access the box anyway"). The gap is purely that the *management functions* (breeding-pair selection, egg pickup, etc.) are still hardcoded to `state.aides[0]` from the v0.39.1-era deferral (see "Things That Are Future Goals" below, to be removed once this ships). Fix: wherever these functions currently check "is Carl Oak at `DAYCARE_LOCATION_ID`" to decide whether to show breeding controls, check whichever aide is actually there instead. **Confirmed no dual-presence handling needed** — both aides can be at the Daycare simultaneously with zero conflict, since nothing about the feature is aide-scoped once you're past the "who unlocked the UI" gate.
-
-### 2. EXP Share item
-
-New item, `bagType: "Trainer"` (per-aide — each aide needs their own copy), one-time purchase (not consumed, `isConsumable: false`), persistent per-aide toggle once owned.
-
-**Formula:** whoever actually earns the EXP (won a fight, made a catch) gets 50%. The other 50% splits evenly across every *other* party member of that same aide, fainted or not. Solo party (nobody to split with) → the battler just gets the full normal amount, nothing is lost. A recipient already at that aide's level cap still accrues the EXP normally (existing `giveExp`/`giveExpSilent` level-up logic already handles "can't level past cap" — no special case needed, this falls out for free).
-
-**Implementation:** new per-aide boolean field (e.g. `aide.expShareActive`, default `false`) on the `makeAide()` shape. `giveExp()`/`giveExpSilent()` need to check the owning aide's flag and, when active, distribute per the formula above instead of awarding 100% to a single Pokémon — every one of the 7 existing call sites already threads an `idx` (see the v0.39.5 audit), so the aide context is already available everywhere this needs it.
-
-**UI:** a button directly next to each aide's row of 6 party sprites (same location as the mini sprite row shown even when collapsed). Reads `Exp Share: ON` (styled `border-color:var(--accent);color:var(--accent);`, matching the Change Nature button) or `Exp Share: OFF` (styled `border-color:#555;color:#777;`, matching the Reset button). Only rendered once that aide's `trainerBag` actually contains the item — no button shown for an aide who hasn't bought it yet, consistent with how badge sprites only show once earned.
-
-### 3. Ball-avoid toggle for capped species
-
-Global (not per-aide) — lives next to the existing species-cap setting. When ON: a wild encounter of a species already at its effective cap (respecting per-species overrides via `getEffectiveSpeciesCap()`) still resolves as a normal fight for EXP — the aide just never attempts a catch. Shiny individuals are entirely unaffected regardless of the toggle, since shiny catches are a separate auto-catch check that fires *before* the normal ball-throw decision logic is ever reached — nothing to special-case there.
-
-**Confirmation on enable:** toggling this ON (not OFF — no downside to warn about there) shows a modal, not a native browser confirm, reading:
-
-> Are you sure you would like to restrict capture attempts to Pokémon underneath the species cap?
->
-> Income rate is based on how many total catches you have made.
->
-> Stronger IVs are passed down to existing Pokémon upon release.
-
-Canceling leaves the toggle off; confirming commits it.
-
-### 4. Gym battles available passively/idly at current tier
-
-Two changes, both confirmed buildable against the existing architecture without new plumbing:
-
-- **`isGymGrindEligible()` currently requires the badge already be held** before the passive/idle encounter-roll system will ever pick "gym" as a method — meaning today, idle gym-grinding only ever works as a *rematch* mechanic, never a first attempt. This is specifically what's blocking "earn all badges and Elite Four while idle." Fix: relax `isGymGrindEligible()` to match `isGymAccessible()` exactly (same rule the manual watched-battle button already uses) — Elite Four/Champion stays correctly locked until 8 regular badges either way, since that's enforced by `isGymAccessible()` itself, untouched by this change.
-- **Waypoints (locations passed through en route, not the final mission destination) currently skip the weighted method-selection system entirely** — they just use the location's flat `defaultEncounterMethod` string, bypassing `pickMethodForLocation()` (which already correctly treats `'gym'` as one weighted option among grass/fish/etc., competing via `state.locationMethodPrefs[locId]`) entirely. Fix: extend waypoint handling to use the same method-selection path a destination already gets. This means gym becomes available while genuinely passing through a gym city, not just upon arrival — naturally rate-limited by the same ~10-second encounter cadence as everything else, not spammy.
-
-**Side effect worth documenting, not something asked for but falls out of the fix:** waypoints will also start respecting any `locationMethodPrefs` configured for that location, where today they ignore it entirely in favor of the flat default. This reads as more-consistent-and-correct behavior rather than a regression.
-
-### 5. "Select Pokémon to Release" on the species detail page
-
-New button directly beneath the existing per-species cap override control. Opens a modal with checkboxes for every **boxed** (non-held, `!p.holder`) individual of that exact species+form currently in `state.dex` — held/active party members excluded from the list entirely (confirmed: box-only, for safety). Shinies included and selectable (confirmed: player's explicit choice, not auto-protected the way cap-overflow release protects them). A "Release Selected" action triggers a confirmation prompt before anything is actually removed (irreversible action). Confirmed removal reuses the existing `removePokemonFromBoxAndParty(id)` mechanism per selected individual.
-
-### 6. New cheat code — `CheatN` nickname triggers a release-and-replace
-
-Hooked into `saveNickname(catchId)`, checked *before* the literal nickname is applied: if the trimmed input matches `/^cheat(\d+)$/i` (case-insensitive — `"cheat26"`, `"CHEAT26"`, `"Cheat26"` all valid) and the captured number is a real `dexId`:
-
-1. If that `dexId` has more than one form in `POKEDEX_DATA`, show a picker modal listing **every** raw form (unfiltered — no Mega/cosmetic exclusion, confirmed "all raw forms, however many"). Nothing is released or created until a form is chosen; canceling the modal leaves the original individual and its nickname-in-progress completely untouched.
-2. Single-form species skip the picker and proceed directly.
-3. Once the form is resolved (immediately, or via the picker): release the original individual (same mechanism as #5 above), generate a replacement at the chosen `dexId`/form via `makePokemon()` **at the same level** as the one just released. The replacement takes the same held/boxed status as the original — if it was in an aide's active party, the replacement takes that exact slot with that aide as holder; if boxed, it goes straight into the box.
-
-If the captured number doesn't correspond to a real `dexId`, no special behavior fires — the input just applies as a literal nickname, same as today (silent fallback, not an error state).
-
-### 7. Pokédex-wide Perfect IV / Unicorn indicators
-
-Reuses the *exact* existing convention from `getRarityBadge()` (the per-individual badge already used on party cards, the detail modal, and the Day Care picker) rather than inventing new emoji: 💥 for Perfect IV (all 6 IVs at 31, via the existing `isPerfectIV()` helper), 🦄 for Unicorn (shiny AND perfect IV on the *same* individual). Two new species-level aggregate functions, mirroring `hasLiveShiny()`'s existing "any live individual of this species" pattern exactly:
-
-```
-hasLivePerfectIV(dexId) — state.dex.some(p => p.pokedexId===dexId && isPerfectIV(p))
-hasLiveUnicorn(dexId)   — state.dex.some(p => p.pokedexId===dexId && p.isShiny && isPerfectIV(p))
-```
-
-**Suppression rule, confirmed:** unicorn supersedes, it doesn't stack. Check unicorn first — if true, show only 🦄. Otherwise check shiny and perfect-IV independently and show whichever apply (either, both, or neither), alongside the existing ✨/🔬 convention already in place.
-
-**Scope, confirmed "all dex pages" — applies everywhere the shiny badge currently appears, all three existing sites:** the Pokédex grid cells (`renderDexPokedexGrid()`), the evolution-chain nodes (`evoNodeHtml()`), and the species detail page header. Official Pokédex mode is unaffected — it already uses a decoupled "preview" concept (`dexOfficialShinyPreview`) rather than real ownership, and Perfect IV/Unicorn have no equivalent "official" concept to preview.
+`SAVE_VERSION`: 27→28 (v0.40), stays on 28 (v0.41–v0.43), reaches 30 across two bumps (v0.44), no bump (v0.44.1–v0.44.3, none of these touch save-file shape).
 
 ---
 
-## v0.41 — Shipped
+## Things That Are Future Goals (Do Not Implement Yet)
 
-All four items implemented and verified. `SAVE_VERSION` stays on 28 — no new persisted fields.
-
-### Implementation notes — deviations, real bugs found, and things worth knowing
-
-- **#2 (Gym Battle checkbox) surfaced a real bug mid-implementation, not something asked for.** The badge-aware default (checked pre-badge → unchecked post-badge, or vice versa) correctly computed and rendered to the DOM on the badge-earned transition, but was never actually persisted — `pickMethodForLocation()` reads the saved `methods[]` array, not the DOM, so the transition never actually entered the encounter pool. Fixed by having `updateMethodPrefs()` fire automatically on the transition, not just on manual toggle. Caught by a dedicated test, not by inspection.
-- **#4 (Species Detail form-selection bug) — root cause confirmed via exhaustive audit, not a one-off.** Three separate click handlers (`renderDexPokedexGrid()`, `renderDexSpecies()`, `renderDexOfficialSpeciesList()`) all hardcoded `dexSelectedFormName=null` instead of the entry's real `formName`. For any dexId with no null-form base row (confirmed 35 such dexIds across the current Pokédex, including both Nidoran species), this made every filter keyed on `(p.formName||null)===(dexSelectedFormName||null)` mismatch — held individuals and the Release modal went invisibly empty for these species. Confirmed not data loss: `dexSelectedFormName` is a transient UI variable, never written to `state`, so the fix self-heals immediately with no migration needed.
-- **Verification:** all pre-existing suites re-verified passing, plus dedicated tests for each of the 4 items.
-
-### Original settled spec
-
-### 1. Render Focus-Guard
-
-`gameTick()`'s 1-second `render()` call was destroying any focused `<input>` mid-edit via `innerHTML` rebuild — keyboard dismisses on mobile before the user can finish typing (surfaced specifically on the Species Cap input). Fix: guard at the top of `render()` — if `document.activeElement` is `INPUT` or `TEXTAREA`, skip the redraw for that tick. Game state continues normally underneath; only the DOM rebuild is skipped. Structural fix, protects every future tick-rendered input, not just this one field.
-
-### 2. Gym Battle method — badge-aware default checkbox
-
-`renderMethodPrefs()` computes Gym Battle's default checked state from a new `hasGymBadge(trainerId, trainerBag)` helper (mirrors the existing `hasChampionBadge()` pattern): unchecked pre-badge, checked post-badge, recomputed on the badge-earned transition and overriding any prior manual choice. New `gymBadgeState` field in `state.locationMethodPrefs[locId]` tracks last-rendered badge state — additive, degrades gracefully the same way v0.34's `knownMethods` does.
-
-### 3. Map: gym badge info
-
-Map detail panel (`showMapDetail()`) gains a gym block under the location name — badge sprite/name plus per-aide tier from `aide.gymProgress[trainerId]` — shown regardless of gym accessibility. Map SVG node label (`renderMap()`) gets a small (~10px) badge sprite next to the location name for any discovered gym node. No new state — reuses `BADGE_SPRITE_MAP`, `getItem()`, `getGymTrainerIdsAtLocation()`, and the existing `gymProgress`.
-
-### 4. Fix: Species Detail form-selection bug — "form-only" species invisible in box
-
-See implementation notes above for the confirmed root cause and scope. Fix: all three click handlers now use `dexSelectedFormName=entry.formName||null` instead of a hardcoded `null`. `familyChainNodeClick()` was already correct and served as the reference pattern for the fix.
-
----
-
-## v0.42 — Shipped
-
-All three items implemented and verified. `SAVE_VERSION` stays on 28 — no new persisted fields; `fromFormName`/`requiredGender` live on `EVO_TREE` (static reference data from `evotree.js`, not part of `state`), and `shed` reuses the existing individual-Pokémon object shape.
-
-### Implementation notes — deviations, real bugs found, and things worth knowing
-
-- **#1 required a real code fix on the first attempt, not just data entry.** First implementation used `if(b.fromFormName!=null && p.formName!==b.fromFormName) return false;` — this treats a blank `fromFormName` as "skip the check" (wildcard, matches any form), not "must match null exactly." Caught by a dedicated test built specifically to catch this exact class of mistake (not a coincidence — see "The Rule" below), then made the *same* error again in the first attempted fix, writing `(b.fromFormName||null)!==(p.formName||null) && b.fromFormName!=null` — the trailing `&&` clause silently undid the exact-match logic a second time. Final, correct form has no trailing condition at all: `if((b.fromFormName||null)!==(p.formName||null)) return false;`
-- **#1 also surfaced a significantly bigger, pre-existing architectural gap, found only by testing against real species, not by auditing the enforcement code in isolation.** `checkEvolution()`'s Path 1 (flat pokedex.js columns) runs *before* Path 2 (EVO_TREE) and is completely blind to both form and gender — it resolves the species via `getPokemonEntry(p.pokedexId)` with no form argument at all. Whenever a species' flat row has an `evolveMethod`/`evolvesIntoId` using the *same trigger* as a competing EVO_TREE branch, Path 1 fires first and `return`s immediately, before Path 2's (correctly-enforced) restriction ever runs. Confirmed on four separate species during testing — Wooper, Meowth, Rockruff, and Combee all exhibited this independently, each caught only once a dedicated test was written for it. This did **not** require a structural code change in the end: every affected species' flat row was cleared (`evolveMethod`/`evolvesIntoId` set to blank) with the base-form outcome represented as an explicit `fromFormName: null` EVO_TREE entry instead, matching the same "no single flat answer, all branches in EVO_TREE" treatment already established for true multi-path species (Eevee, Kubfu, Applin). **This is a real, general risk for any future branching species entered by hand** — a species with two branches sharing the same trigger method needs its flat row cleared, or Path 1 will silently override Path 2's restriction no matter how correct the EVO_TREE data is. Worth checking for on every new branching species going forward, not just the four found this pass.
-- **The Rule, worth stating plainly since it was arrived at the hard way, over several corrections:** `fromFormName` only belongs on a branch when the *source* species genuinely has that form as a real, separately-existing thing — not just because the target does. Confirmed via direct research that Pikachu, Koffing, Mime Jr., Dartrix, Dewott, Bergmite, Petilil, Rufflet, and Goomy all correctly have `fromFormName: null` on their form-producing branches, because none of those species has a regional pre-evolution at all (there is no "Alolan Pikachu" — a single, ordinary Pikachu can become either Raichu). Setting `fromFormName` to the target's form name in these cases wouldn't just be unnecessary, it would make that branch permanently unreachable, since no real individual could ever carry a matching `formName`. Contrast with Voltorb, Growlithe, Wooper, Sneasel, Zorua, and Sliggoo, where both the pre-evolution and evolution genuinely exist as separate forms — there, the restriction is required.
-- **#2's column is `requiredGender`, not `requireGender`** — renamed from the original Excel column name before this code shipped; confirmed correct spelling used throughout.
-- **#3 (Shedinja) — real mechanic simplified deliberately, not by oversight.** The actual games require an empty party slot *and* a spare Poké Ball (consumed on creation); this implementation checks party space only. Hooked into all five successful-evolution exit points in `checkEvolution()` (Path 1's level/friendship/use-move/in-party, and Path 2), keyed off `getEvolutions(prevDexId)` finding a `shed`-method entry — not hardcoded to Nincada's dexId, so any future species with the same mechanic works without another code change. New individual is created via the normal `makePokemon()` path (correct ability roll, nature, equipped moves) then has `level`/`ivs` overwritten with the evolving individual's own values and `recalcStats()` re-run — reuses existing, tested stat math rather than duplicating it.
-- **A real data inconsistency was found and flagged, not fixed here (Jack's side):** `pokedex.js` has Rockruff's special form as `"Own tempo"` while `evotree.js`'s Dusk branch specifies `"Own Tempo"` — exact-string matching means this casing mismatch would silently prevent that evolution from ever resolving correctly, the same way it broke the dedicated test written for it.
-- **Verification:** dedicated tests for all three items (9 total, including regression coverage for the exact-match fix using Meowth's Kantonian/Galarian split, gender exclusion/inclusion via Combee, and both the free-slot and full-party Shedinja cases), plus the full pre-existing regression suite re-verified passing.
-
-### Original settled spec
-
-### 1. Enforce `fromFormName` in branch-matching
-
-New `EVO_TREE` column, blank by default. Restricts a branch to individuals currently in a specific form — confirmed necessary for Wooper→Clodsire (Paldean-only) and, once the Path 1 bypass above was found, for Meowth's Galarian branch and Rockruff's Dusk branch as well. Enforced in both `professorAutoTestEvolutions()`'s item-candidate filter and `checkEvolution()`'s Path 2 branch-qualifying filter — see implementation notes for the exact formula and the mistake made getting there.
-
-### 2. Enforce `requiredGender` in branch-matching
-
-Same treatment, new column, same two enforcement points: `if(branch.requiredGender && p.gender!==branch.requiredGender) return false;`. Covers Kirlia→Gallade, Snorunt→Froslass, Burmy's two branches, Combee→Vespiquen, and Salandit→Salazzle.
-
-### 3. New `shed` evolution method — Shedinja creation
-
-Nincada evolving into Ninjask via the normal level-20 path also creates a second individual, Shedinja, as a side effect — not a branch choice between competing outcomes, both happen at once. `'shed'` added to `EVOLUTION_METHODS`' base list so Nincada's species page can register full research completion. See implementation notes for the exact hook location and simplification made versus the real mechanic.
-
----
-
-## v0.43 — Settled Spec (Locked, Pending Build)
-
-### 1. Wander Ignores Discovery
-
-New `getWanderReachableLocations(fromId, trainerBag)` — same BFS as `getReachableDiscoveredLocations`, minus every `state.discoveredLocations` check. `buildTravelPath()` gains a 4th param `ignoreDiscovery=false` (default preserves every existing caller); when `true`, both internal BFS branches skip the discovery check. `evaluateWanderTarget()` and `selectWanderMode()` switch to the new reachable-pool function and pass `ignoreDiscovery=true`. Connection-level `requiresItem` gates (Surf, Cut, Flash, Strength, Bicycle, Silph Scope, Safari Pass, Coin Case, SS Ticket) still fully apply — only discovery is dropped. Manual "dispatch to a specific location" stays discovery-gated, out of scope. `arriveAtLocation()`/`advanceTravelPath()` need no changes — arrival-time discovery already fires per-waypoint regardless of how the aide got there, and a never-visited location already scores 0 on both Wander metrics for free.
-
-### 2. Form Sprites — Shiny-Aware `spriteUrl` Resolution
-
-`getSpriteUrl()`'s early-return path (`if(entry&&entry.spriteUrl) return entry.spriteUrl;`) ignored `isShiny` once a row had a populated `spriteUrl`. Fixed to `return isShiny?entry.spriteUrl.replace('/pokemon/','/pokemon/shiny/'):entry.spriteUrl;`. Dormant until Jack populates `spriteURL` values (in progress), but required before shiny form sprites can ever work correctly. Confirmed the only read site of `entry.spriteUrl` in the codebase.
-
-### 3. Missing-Item Gates in Map Detail Panel
-
-`showMapDetail()` gains a new `getMissingItemGatesForLocation(locId)` helper — scans `CONNECTIONS_DATA` for any row touching `locId` where `requiresItem` is set and the same `gatedOwned` ownership check `renderMap()`'s line-coloring already uses evaluates false. Renders one `🔒 Requires: {getItem(itemId).name}` line per missing item, listed regardless of whether another already-open connection also reaches the node. Direct connections only (matches the map's existing line-coloring scope, not a full path trace).
-
-### 4. Bidirectional Dex Sorting
-
-New ▲/▼ toggle button next to the existing `#sort-select` dropdown in both dex tabs. New `DEX_SORT_DEFAULT_DIR` lookup (per-field defaults, unchanged from today: `id`/`dexid`/`family` asc, everything else desc) plus `dexCatchesSortDir`/`dexSpeciesSortDir` state. Selecting a *different* field resets direction to that field's own default; the toggle button flips the *current* field's direction. Both `renderDexViewAll()` and `renderDexOfficialSpeciesList()` comparators rewritten to a canonical ascending expression per field, wrapped `dir==='asc'?cmp:-cmp`, including `family`'s dexId tie-break.
-
-### 5. Custom Log View
-
-Third `logViewMode='custom'` tab. `addLog(msg, type, category, aideId)` — every existing call site (113 total) gets a `category` tag from a fixed 15-value set (Catches, Wild Encounters, Evolutions, Level Ups & EXP, Gym Battles & Badges, Travel & Discovery, Healing, Fainting, Item Usage, Shop Purchases, Day Care/Breeding, Roster Management, Move/TM Management, Aide Management, System/Errors) and an `aideId` (`aide.id`, or `null`/`'general'` when not attributable to one aide — funds, Professor's-bag purchases, species-cap changes, validation errors). `state.logCustomFilters={categories:{},aides:{}}`, persisted in save data, all `false` by default. Filter semantics: **category group** — empty selection shows nothing, checking any OR's together; **aide group** — empty selection means no additional narrowing (any aide), checking one or more AND-narrows the category results down to just those aides/General. Reuses the existing `dex-filter-modal` checkbox-popup styling.
-
-### 6. Level Range in Mission Destination List
-
-`renderDestList()`'s per-location button label appends a combined level range, e.g. `Route 1 (Lv 2-7)`, computed via `buildRouteTable(loc, aide.trainerBag)` (already respects rod/item gating) — `Math.min`/`Math.max` across all currently-valid rows' `minLv`/`maxLv`. One combined range across all encounter methods, not broken out per method. Single-level locations show `Lv 5`, not `Lv 5-5`. Locations with zero valid rows show no range. Applies uniformly across all four sort modes; no change to Wander buttons or the map detail panel.
-
-### 7. Extract `INFO_TOPICS` to `info.js` + Converter Support
-
-New **Info** Excel tab, one row per idea: `category | subCategory | text`. `converter.html` gets `convertInfo()`, grouping rows by `category` in first-appearance order into `{id: category, title: category, sections: [{header: subCategory||null, text}]}`, output as `info.js`'s `const INFO_TOPICS = [...]`; called from `convertAll()`. `text` stored/rendered as raw HTML (author `<br><br>` directly in the cell for line breaks, matching today's hardcoded convention). Initial `info.js` ships with today's exact 10-topic content unchanged. The hardcoded `const INFO_TOPICS=[...]` block is deleted from the inline script; `showInfoMenu()`/`renderInfoTopicList()`/`renderInfoTopicPage()` and the hardcoded "🎨 Display" tile (which stays first, unaffected — it's not part of `INFO_TOPICS`) are otherwise unchanged. Converter version label bumped per the standing pre-delivery gate.
-
-### 8. Rattata #1 (Starter) Can Never Be Released
-
-`removePokemonFromBoxAndParty(id)` — the shared low-level function every release path already calls — gets `if(id===1) return;` at the top, structurally protecting all four current call sites (`checkSpeciesCap()` auto-release, `sweepSpeciesToCap()` cap-lowering sweep, `confirmReleaseSelected()` manual release, `performCheatReplace()` cheat release-and-replace) and any future one. `checkSpeciesCap()`'s weakest-picker additionally excludes `id===1` from candidacy so cap enforcement keeps working correctly (releases the next-weakest instead of silently no-op'ing). `sweepSpeciesToCap()` needs no logic change (id 1 is always the lowest possible id, already always kept) but gets a dedicated test confirming it. `showReleaseModal()` also excludes `id===1` from ever appearing as a checkable candidate, even when unassigned.
-
-### 9. Shiny/Normal Question in the CheatN Creator
-
-New `showCheatShinyPicker(catchId, targetDexId, formName)` modal — "✨ Shiny" / "Normal" buttons, each calling `performCheatReplace(catchId, targetDexId, formName, isShiny)`. Shown for **every** CheatN invocation, including single-form species (which previously replaced instantly with zero questions). `performCheatReplace()` gains a 4th param `isShiny=false`, setting `replacement.isShiny=isShiny` post-creation (purely cosmetic, no `makePokemon()` signature change needed) and adjusting the log message when true. Flow becomes: single-form → shiny choice → replace; multi-form → form choice → shiny choice → replace. Nothing is created until the final choice is made, matching the existing form-picker's cancel-safe guarantee.
-
----
-
-## v0.44 — Settled Spec (Locked, Pending Build)
-
-### 1. Party-Priority Reservation for Evolution-Item Research
-
-On purchase of an evolve-stone/evolve-trade item, `buyItem()` scans all aides' parties (not just the shopping aide's) via an extended `getPartyEligibleForItem()` for eligible individuals — confirmed or unconfirmed branches both count, same exclusions as today (`evolveBlocked`, nickname-lock narrowing). 0 eligible → unchanged, `professorAutoTestEvolutions()` proceeds normally next tick. Exactly 1 → evolves it immediately and synchronously (same evolve pipeline `confirmBatchEvolve()` uses), no modal, 1 unit consumed. 2+ → shows the existing checkbox modal and adds the full purchased quantity to a new transient (non-saved) `itemReservations[itemId]` map; `professorAutoTestEvolutions()`'s box-eligibility check is updated to treat available stock as `(professorBag[itemId]||0) - (itemReservations[itemId]||0)`. The reservation is released (subtracted back out) when the modal resolves via either Skip or Evolve Selected. Replacing an already-open modal with a new one (a second evolve-item purchase before the first modal is dismissed) releases the old modal's reservation first, keyed off the old modal's own itemId, to prevent a permanently stuck reservation.
-
-### 2. Mission Modal — Location Markers to Match Map
-
-`renderDestList()`'s per-destination button gets an idle border color derived the same way `getMapNodeStyle()` already derives map node colors: shop-tier locations `#2ecc71` (green), heal-only locations `#e63946` (red), shop wins on combined heal+shop locations, routes/other unchanged. Gym locations — any location with a `TRAINERS_DATA` row matching its `locationId`, `!isGauntlet`, and a `badgeItemId` — show that badge's sprite next to the location name via the existing `BADGE_SPRITE_MAP` (+ emoji fallback) pattern already used in the aide panel, shown regardless of whether that badge has been earned yet. The existing 2px accent "selected" border still overrides the idle color when that destination is the current pick.
-
-### 3. Wander Tie-Break by Lowest Max Level
-
-`evaluateWanderTarget()`'s best-target selection becomes a deterministic 3-key comparison across all reachable locations, for both the Encounters and Catches metrics: (1) metric count ascending, (2) max level in the area ascending (`Math.max(...buildRouteTable(locId, aide.trainerBag).map(r=>r.maxLv))`), (3) location name alphabetical (same natural/numeric-aware comparator the Alphabetical sort uses) as final tie-break. This replaces today's implicit "ties always keep the current destination" behavior — a tie can now redirect the aide away from their current spot, since leaving adds an encounter/catch at the new location.
-
-### 4. Auto Rule-Out `shed` for Non-Applicable Species
-
-`getResearch()`'s structural rule-out block — which already handles `use-item`/`in-party` this way — gains `if(!speciesHasEvolveMethod(dexId,'shed')) r.testedMethods.push('shed');`, generic via the existing `speciesHasEvolveMethod()` helper (checks live `EVO_TREE` data, currently only Nincada dexId 290 has a `shed`-method branch; not hardcoded). `loadGame()` gets an unconditional backfill sweep over `state.researchLog` applying the same check retroactively (matches the existing v0.22/v0.26 unconditional-migration convention — no `SAVE_VERSION` bump, this is a logic correction, not a schema change).
-
-### 5. Friendship on Dex "View All" Catches
-
-`renderDexViewAll()`'s per-catch detail line gains `· Friendship:X` (`p.friendship||0`), matching the exact format `renderDexDetail()` already shows on the species-detail individuals list, appended after the existing BST readout.
-
-### 6. "Has Nickname" Filter on All Catches
-
-New boolean checkbox in `renderDexFilterPopupContent()`'s All Catches filter popup — `cb('hasNickname','🏷️ Has Nickname')`, positioned after Perfect IV, before the Type/Move Type pickers. `matchesCatchesFilters()` gains `if(f.hasNickname&&!p.nickname) return false;`. A simple boolean, not a mutually-exclusive has/doesn't-have pair like Assigned/Unassigned. `dexCatchesFilters` is transient UI state (not persisted), so no schema impact.
-
-### 7. Ditto Always First in Day Care Pickers
-
-`sortDaycareList()`'s comparator gains a leading key: any Ditto entry sorts first, unconditionally, ahead of the existing family → evolution-order → dexId three-key sort. Applies identically to both the Parent A and Parent B pickers, since both route through this shared function.
-
-### 8. Day Care Research Mode
-
-New per-aide checkbox, backed by a new persisted `aide.researchMode` boolean (**requires `SAVE_VERSION` bump — see below**). Lives inside `renderMethodPrefs()`'s Encounter Methods panel, scoped to when the Day Care itself is the selected destination — not a global toggle near the Wander buttons, since it's only meaningful in that context. Toggling it on immediately attempts pair selection if none is active, independent of hitting Dispatch. New per-aide `aide.researchPair` field (`{parentAId, parentBId, resultDexId, nextReadyAt, eggsQueued}` or `null`), functionally parallel to a `daycareSlots.slots[]` entry but tracked separately and never counted against `daycareSlots.purchased` capacity.
-
-Selection pool is box-only (`!p.holder && !p.breeding`), restricted to `canBreedPair()`-compatible pairs, preferring a pairing whose result species isn't yet `breedingTested`; falls back to any valid compatible pair if none are untested; stays `null` (inactive) if no valid pair exists at all in the box. Selected parents are locked (`p.breeding=true`) exactly like a manual pair.
-
-A new `updateResearchModePairs()`, called once per aide at the top of `gameTick()` alongside `professorAutoTestEvolutions()`: for every aide with `researchMode` and no active `researchPair`, attempts selection. For every aide with an active `researchPair`, advances its egg queue using the same remainder-preserving interval loop `updateDaycareQueue()` uses (`getHatchMinutes(resultDexId)*60000`) — this runs regardless of the aide's location, so the clock never pauses. When that aide is physically at the Day Care (`currentLocation===DAYCARE_LOCATION_ID`) and `eggsQueued>=1`, the switch fires: collect all queued eggs through the exact same pipeline `collectDaycareSlot()` uses (catch/shiny-roll/species-cap/log), set `breedingTested` for the result species, release both parents (`p.breeding=false`, plus the new `checkSpeciesCap()` call from item #9 below), clear `researchPair` to `null`, then — only if `researchMode` is still `true` at that moment — immediately select a new random pair. This is how unchecking the box takes effect: it doesn't stop anything mid-cycle, it just prevents the next pair from being picked once the aide is next physically present for a switch.
-
-Read-only "Research Pairs" section added to the Day Care screen (`buildDaycareHtml()`) — sprite row (reusing `daycareSpriteRowHtml()`) + live countdown per aide with an active `researchPair`, no manual buttons; fully automatic.
-
-Multiple aides can run Research Mode in parallel as independent pairs — naturally non-colliding since a locked individual (`p.breeding`) can't be selected by a second aide's pair-selection pass.
-
-**`SAVE_VERSION` bump required**: new persisted fields `aide.researchMode` (default `false`) and `aide.researchPair` (default `null`) on every existing aide object. Migration: both fields initialized to their defaults on load for any aide missing them.
-
-### 9. Universal Species-Cap Enforcement — Box Membership Only
-
-`checkSpeciesCap()`'s exemption guard becomes `if(individual.holder||individual.breeding) return;` (was `holder` only), and its `liveNonShinyBox` filter adds `&&!p.breeding` alongside the existing `!p.holder`. `sweepSpeciesToCap()` (the global cap-lowering sweep) gets the identical `&&!p.breeding` addition to its `allBoxed` filter — it had the same gap. New `checkSpeciesCap(p)` calls added at every point a Pokémon becomes box-eligible (`holder` and `breeding` both become falsy) that's currently missing one: `unassignPokemon()` (after `p.holder=null` — the originally-reported bug) and `releaseDaycarePair()` (after `p.breeding=false`, for both `pA`/`pB`). No call needed on the reverse transition (into party or into breeding) — that direction can only hold steady or reduce a species' box count, never push it over cap. Item #8's Research Mode pair-release step must include this same call on both freed parents, since it's functionally identical to `releaseDaycarePair()`.
-
-### 10. Nature Mint Category Fix
-
-`natureMint`'s `itemCategory` changed from `"tool"` to `"consumable"` in `items.js` — its `isConsumable` flag was already correctly `true` (confirmed via `confirmNatureChange()`, which already decrements bag stock on use), but it was shop-grouped alongside genuinely reusable tools instead of the Consumables section. Data-only change, no code change required (already implemented by Jack directly in `items.js`).
-
-### 11. Pallet Town → Full Shop; `aide-hire-2` Relocated to Key Items
-
-`locations.js`: Pallet Town's `shopTier` changed from `"lab"` to `"full"`. `items.js`: `aide-hire-2`'s `shopTier` changed from `"lab"` to `"full"` (`itemCategory` stays `"aide-hire"`, unchanged). Both already implemented directly by Jack in the data files.
-
-`SHOP_CATEGORY_MAP` gains `'aide-hire':'keyItems'` — the only mapping needed to surface it in the shop's existing Key Items tile alongside `hm`/`keyItem`/`rod`/`tool`. `buildShopItemRowHtml()` special-cases `item.effect==='hire-aide'`: renders a single button calling `hireAide()` directly (not `buyItem()` — `hireAide()` already independently handles its own funds check and the `confirmHireAide()` emoji-picker flow, unchanged), no ×1/×100/×1000, no bag-count display, disabled/hidden once `state.aides.length>1` (the same one-time-ever gate as today, unchanged, just relocated). `buildHireAideButtonHtml()` and its call in `renderParty()` are removed entirely, since the shop listing fully replaces it.
-
-This makes the previously-outstanding "New, v0.39.2: `hasLab` boolean field" item (see "Not Yet Implemented," below) moot — Pallet Town now uses the real `shopTier:'full'` mechanism instead of a hardcoded `currentLocation==='palletTown'` check. Struck from that list below.
-
-### 12. Once-Per-Aide Purchase Limit for Key Items
-
-Applies to every item where `SHOP_CATEGORY_MAP[item.itemCategory]==='keyItems'` except the hire-aide item (governed entirely by #11 instead). Confirmed every other item in that group (`hm-*`, `pokeFlute`, `safariPass`, `silphScope`, `sSTicket`, `goodRod`/`oldRod`/`superRod`, `bicycle`/`coinCase`/`expShare`) is `bagType:"Trainer"` and `isConsumable:false`, so "already purchased by this aide" is fully answered by the existing `aide.trainerBag[itemId]` count — no new state needed. `buildShopItemRowHtml()` renders a single "Buy" button for these (no ×100/×1000 — never useful for a non-stacking one-per-aide item), showing a disabled "Owned" state once `(aide.trainerBag[itemId]||0)>=1` for the currently-shopping aide. `buyItem()` gets the identical check as a defensive backstop and clamps `qty` to 1 for these items regardless of the value passed in.
-
-### 13. Gym Battle Excluded Only Right After a Wipe, Until Departure + No-Prefs Default Respects Earned-Badge Status (Wander Deadlock Fix)
-
-**Bug** (reported post-build, fixed within v0.44, in three rounds): a Wander aide could get permanently stuck cycling through the same location forever, requiring manual intervention — reported recurring at each new city reached (Cerulean, then Saffron, then Vermillion), "fixed" temporarily each time only by manually checking that city's Gym Battle box and re-dispatching.
-
-**Root cause, part 1**: Wander routes toward whichever reachable location currently has the lowest encounter/catch count, and the path there can pass through other locations as waypoints — encounters (including Gym Battle, per v0.40's "gym battles available at any location the aide occupies") roll at any waypoint being dwelled at, not just the final destination. A party wipe (gym loss or a tough wild encounter) triggers `endMission('faint')`, which recalls the aide to `lastHealLocation` and rebuilds the same path toward the same Wander target, immediately re-exposing it to the identical fight before ever getting away.
-
-**Root cause, part 2**: `pickMethodForLocation()` only respects a location's Gym Battle checkbox once `state.locationMethodPrefs[locId]` actually exists for it — which requires the player to have manually opened that city's Encounter Methods panel at least once. Any city reached purely via Wander (the normal case) had no such record, and the no-prefs fallback picked uniformly at random across every available method **including gym**, with no regard for the checkbox's own stated default (`renderMethodPrefs()`'s `gymChecked`, which defaults OFF until that badge is earned). This is why gym battles could fire at a city whose checkbox the player had never even seen, let alone checked.
-
-**First fix attempt (superseded)**: excluded gym at `aide.missionOrigin` only. Left every new city the aide progressed to unprotected until the player manually re-dispatched from it (which resets `missionOrigin`) — explaining the "works once per city, breaks again at the next" pattern.
-
-**Second fix attempt (superseded)**: extended the exclusion to `aide.lastHealLocation` as well, since that's what actually tracks current progress. This over-corrected: `lastHealLocation` updates on **every** arrival at any `heals:true` city, not just after a wipe — so it permanently blocked gym battles at nearly every gym city (almost all of which are also heal locations), even in a game that had never wiped once. Reported directly: "I selected yes and made it through 2500 encounters. No gym battles ever triggered."
-
-**Final fix**: replaced both location-identity checks with a dedicated per-aide flag, `aide.wipeRecallLocation`, that is set **only** by an actual party wipe and cleared the moment the aide genuinely leaves. `endMission('faint', idx)` sets `aide.wipeRecallLocation=returnLocId` (a deliberate `'recall'` does not — the player chose to stop, there's no unwanted-immediate-refight risk to guard against). `arriveAtLocation(locId, aide)` clears it as soon as `locId!==aide.wipeRecallLocation` — a genuine arrival anywhere else. `rollEncounter()`'s gym-eligibility check becomes simply `locId===aide.wipeRecallLocation`. This blocks only the one immediate re-fight right after a wipe and never touches gym battling otherwise — including the very first attempt at a fresh city, which now works exactly like before either fix existed. `pickMethodForLocation()` (now taking a `trainerBag` param) separately mirrors the checkbox's own default in its no-prefs fallback: gym only joins the random pool if `hasGymBadge()` is already true, exactly matching what the UI would show as checked by default (or, per item #14 below, if the player's New Player Preamble choice says so). `wipeRecallLocation` is a plain property on the aide object and flows through the existing generic per-aide serialization without needing its own migration entry — a save/reload occurring in the narrow window between a wipe and the next departure could theoretically lose the flag, a low-stakes edge case accepted rather than repeating the full migration ceremony for it.
-
-Verified via direct `rollEncounter()` instrumentation over a 15,000-tick simulation (checking the log directly was unreliable here — `state.log` is capped at 200 entries, so rare events from early in a long run get evicted before being checked at the end): 2 genuine gym battles fired during ordinary idle play, and 7 rolls were correctly blocked in the narrow post-wipe window.
-
----
-
-### 14. Gym Battle Default — New Player Preamble Question
-
-New one-time modal, chained immediately after the existing "Welcome, Professor!" preamble (same `!hasSave`-gated new-game-only trigger, no dismiss-by-clicking-outside — requires an explicit choice):
-
-> **Gym Battle Default**
-> Select one of the following:
->
-> *Note: if you want to manually fight each gym for the first time, select NO. If you want a more idle experience, select YES.*
->
-> [ NO ] [ YES ]
-
-Sets a new global, persisted `state.gymBattleDefaultPreference` boolean (`false` for NO, `true` for YES; defaults to `false` for any save predating this question — no behavior change for existing players). This is **not** a master switch — every location's Gym Battle checkbox remains individually overridable afterward via the mission modal's Encounter Methods panel, exactly as before. It only changes what an as-yet-untouched location's checkbox starts as, for an unearned badge:
-
-- `renderMethodPrefs()`'s `gymChecked` default (used when rendering a location's checkbox for the first time, or recomputing after a badge-status transition) becomes `gymHasBadge||!!state.gymBattleDefaultPreference` instead of always `gymHasBadge` alone.
-- `pickMethodForLocation()`'s no-prefs roll-time fallback (see item #13) gets the identical `||state.gymBattleDefaultPreference` addition, keeping the checkbox's displayed default and the actual roll-time behavior in sync.
-- The item #13 deadlock-fix exclusion (`aide.wipeRecallLocation`, set only by an actual wipe) applies unconditionally regardless of this preference — choosing YES makes gym battles more common everywhere, but never reintroduces the recall-and-repeat loop right after a wipe.
-
-`SAVE_VERSION` bumped to `30` for the new field (added to both the real fresh-game state initializer and the `loadGame()`/`saveGame()` migration paths — note the module-level `let state={...}` placeholder near the top of the file is never actually used for a fresh game and was a red herring during implementation; the real initializer lives in the `!hasSave` boot branch).
-
----
-
-### 15. Wander Could Make Zero Progress Forever — Stale Destination + Missing `ignoreDiscovery` on Wipe Recovery
-
-**Bug** (reported post-build): an aide left Wandering overnight made zero progress — no balls used, no exp gained, despite a healthy 6-Pokémon party that wasn't wiping every single battle. The log showed the exact same two lines repeating forever: "arrived at Route 2 - South" and "changes course — new destination: Diglett's Cave," alternating with nothing else ever happening.
-
-**Root cause, part 1 (stale destination during departure dwell)**: `evaluateWanderTarget()`'s "departure dwell" (`travelPathIndex===-1`, added in v0.34) deliberately leaves `aide.missionDestination` **stale** — still showing the old target — until the dwell finishes and the new journey officially begins (see that function's own comments for why). Both `endMission('faint', idx)` and its duplicate in `processAideOfflineTime()` (the function that actually processes an offline/overnight gap) decide "is the aide already at their destination?" by comparing the wipe-recall point against `aide.missionDestination` directly. If a party wipe landed during that exact departure-dwell window, this read the stale value — which, since the aide hadn't physically left yet, equals the recall point itself — concluding "already home" and silently discarding the freshly-computed real target (e.g. Diglett's Cave) entirely, resetting cleanly back to "no plan" at the heal location (in this case, Route 4 West, which has `heals:true` but no encounters of its own).
-
-**Root cause, part 2 (missing `ignoreDiscovery`)**: once reset, Wander immediately recomputes and re-queues the identical redirect toward the same far-off target — but the wipe-recovery rebuild call to `buildTravelPath()` (in both `endMission()` and `processAideOfflineTime()`) was missing the `ignoreDiscovery=true` flag that `evaluateWanderTarget()`'s own call already carries. Since v0.43 explicitly permits Wander to route through undiscovered territory, but this recovery call required the *entire* path to already be discovered, any wipe occurring while genuinely exploring new ground made the rebuild fail every time — permanently truncating progress back to the heal point, since the retry attempt was exploring that exact same undiscovered territory and just as likely to wipe again before completing it.
-
-Together, these two bugs meant: the first wipe deep in unexplored territory could reset progress to zero, and every subsequent attempt carried the same risk of resetting again before ever finishing — with enough wipes over a long offline gap, guaranteed to happen, exactly matching "zero progress overnight."
-
-**Fix**: both `endMission()` and `processAideOfflineTime()` now resolve the *true* pending destination before deciding — `(aide.travelPathIndex===-1 && aide.travelPath.length) ? aide.travelPath[aide.travelPath.length-1] : aide.missionDestination` — and immediately collapse `aide.missionDestination` to that resolved value, since the wipe is interrupting those plans regardless. Both wipe-recovery rebuild calls to `buildTravelPath()` now pass `ignoreDiscovery=true`, matching `evaluateWanderTarget()`'s own permission model exactly.
-
-Verified via direct reproduction of the race condition (wipe injected mid-departure-dwell) and a 20,000-tick end-to-end simulation: previously frozen at 2 locations forever with 0 catches; after the fix, 11 unique locations visited, 17 discovered, 26 catches (with Poké Balls available), and no permanent oscillation — remaining time spent at Mt. Moon reflects the level-15 tier-1 cap (needs the first badge to raise), not a technical loop.
-
----
-
-## v0.44.1 — Shipped
-
-Versioning correction starting here: every prior delivery in the v0.44 line after the initial build was mislabeled "v0.44" instead of incrementing — this is the first properly-numbered follow-up. See workflow.md for the standing rule going forward.
-
-### 16. Newly-Unlocked Encounter Methods Silently Excluded Forever (Stale `locationMethodPrefs`)
-
-**Bug** (reported post-build): an aide at Celadon City — a fishing/Surf-only location, all 16 encounter rows item-gated — only ever battled the gym, despite the aide already holding at least two of the required items and every other method showing as checked in the mission modal.
-
-**Root cause**: `state.locationMethodPrefs[locId]` is saved once and then read directly at roll time by `pickMethodForLocation()`. If that location's prefs were saved *before* the aide acquired the relevant item (e.g. a rod bought after Wander had already passed through once), the newly-unlocked method becomes genuinely available and even *displays* as checked by default in `renderMethodPrefs()` (correct — it uses `knownMethods` to detect "never offered before" and defaults those to checked) — but that display default was never being persisted into the saved `prefs.methods` array unless the player happened to manually interact with some control on that exact location's panel afterward, which triggers `updateMethodPrefs()`. Since Wander routes through and past locations without ever reopening their panels, the stale saved array — missing the newly-unlocked method — was what `pickMethodForLocation()` actually read, forever, regardless of what the UI displayed. Matches Jack's own recollection of previously "fixing" this by manually re-toggling a location's checkboxes — that manual interaction was exactly what forced the persist.
-
-**Fix, two parts**: `renderMethodPrefs()` now also treats a newly-available non-gym method (present in `availMethods` but absent from `knownMethods`) as a reason to immediately call `updateMethodPrefs()` and persist the corrected defaults — the same trigger the gym-badge-transition case already had, just extended to cover this case too. More importantly, `pickMethodForLocation()` itself now self-heals at roll time, independent of whether the panel ever re-renders: a method that's available right now but isn't in `prefs.knownMethods` is treated as checked by default directly in the roll pool, exactly mirroring the display-side default — so a method a player has never explicitly unchecked is never silently excluded just because the save predates owning the item. A method the player genuinely did uncheck (present in `knownMethods` but absent from `methods`) still correctly stays excluded — this only rescues real new unlocks, not deliberate opt-outs.
-
-### 17. Gym Battle EXP Batched to One Line Per Pokémon
-
-**Reported**: a single gym win could produce a wall of near-identical "+X EXP" log lines — one per enemy KO per party member, so a 5-Pokémon gym roster with EXP Share on and a 6-Pokémon party produced up to 30 lines for one battle.
-
-**Fix**: `giveExp()`'s per-call logging is replaced, for gym battles specifically, by a new `applyExpBatched()`/`emitExpSummary()` pair — EXP from every KO in the battle accumulates into a `{catchId: total}` map instead of logging immediately, and exactly one summary line per Pokémon ("Name #id +TOTAL EXP") is emitted once the whole battle concludes. Level-up transitions still log individually — those remain distinct, meaningful events, not routine spam. `distributeExp()` and `awardPerKOExp()` both gained an optional trailing `totals` parameter; every other existing caller (ordinary wild-encounter EXP) omits it and is completely unaffected, falling through to the original per-call `giveExp()`/`giveExpSilent()` behavior unchanged. `runOneGymBattleSilent()` (the offline-catch-up variant, already fully silent) is untouched. The Elite Four/Champion gauntlet's 5-leg loop gets one summary per leg automatically, since each leg is its own `runOneGymBattle()` call — no separate change needed there.
-
----
-
-## v0.44.2 — Shipped
-
-### 1. Battle Gym Button Permanently Disappears After a Fully-Wiped Watched Battle
-
-**Bug**: clicking "Battle Gym" while the whole party is fainted permanently hides the button — recalling doesn't fix it, only a full page reload does.
-
-**Root cause**: `runWatchedBattleLeg()` has an early-exit branch for an empty `playerSnapshot` (every party member at 0 HP) that calls `finishWatchedBattle()` directly, but `finishWatchedBattle()` reads `document.getElementById('battle-result-area')` — an element that only exists once `showBattleScreen()` has run, which this early-exit path skips entirely. So nothing renders: no result screen, no "Close" button. Since `watchedBattle` (the in-memory flag `updateBattleGymButton()` checks to decide whether the button should show) is only ever cleared by that same Close button's `closeWatchedBattle()` call, it stays stuck non-null indefinitely. Being a plain `let` variable (never part of `state`, never saved), only a full page reload — which re-initializes it to `null` — clears it; a `recall`, which never touches `watchedBattle` at all, does nothing. Once triggered anywhere, the button is broken everywhere (it's a global flag, not per-location), which is why it can look like it "carried over" from one gym to the next.
-
-**Fix, two parts**:
-1. `startWatchedGymBattle()` gains an upfront check: if the party has no conscious Pokémon (mirroring the same `getLeadPokemon()`-style check already used elsewhere before a wild encounter), refuse to start and show a clear "team needs to heal first" message instead of entering the flow at all.
-2. `runWatchedBattleLeg()`'s empty-team early-exit is fixed as a backstop regardless of (1): it now calls `showBattleScreen()` (or an equivalent minimal result render) before `finishWatchedBattle()`, so `#battle-result-area` always exists and the Close button is always reachable, closing off any other path that could leave `watchedBattle` stuck.
-
-**Related improvement, same root cause**: gym battles (both the watched flow and the automatic/idle roll path) don't heal the party immediately after concluding today — healing only happens on the next regular tick's heal check. A loss that wipes the whole team leaves it sitting at 0 HP until that next tick, and clicking Battle Gym again inside that window is exactly the scenario that triggers the bug above. Both `finishWatchedBattle()` and the automatic gym-battle resolution path now call the existing party-heal logic immediately once a battle concludes (win or lose), rather than waiting for the next tick. This also shortens the window that contributed to the earlier overnight Wander-loop issue (item 15 in the v0.44 spec), though that issue's own root causes are already fixed independently.
-
----
-
- (playback variant chosen — see "Watched Gym Battle — Aide Card Trigger"; true player-controlled move selection remains undone/not implemented).
+- ~~Manual/interactive trainer battle mode~~ — **resolved v0.29** (playback variant chosen — see "Watched Gym Battle — Aide Card Trigger"; true player-controlled move selection remains undone/not implemented).
 - Gauntlet-style sub-trainers within regular gyms (mainline-game precedent) — deferred from v0.25.
 - Trainer innate abilities / type affinities
 - New trainer recruitment mechanics
@@ -2174,17 +2040,12 @@ Versioning correction starting here: every prior delivery in the v0.44 line afte
 - Distribution charts for height/weight on species detail page
 - `swarm` encounter method — future-proofing only; mechanic undefined (possible time/rotation-based active swarm). Not implemented.
 - `honey` encounter method — future-proofing only; would require `requiresItem: honey`-type item placed on a tree, possibly with a wait/return timer. Not implemented.
-- ~~**`hasLab` boolean field on location data**~~ — **resolved v0.44.** Pallet Town's `shopTier` changed to `'full'` directly (see v0.44 #11); the Hire Second Aide button was removed and its purchase relocated into the generic shop's Key Items category, gated by the existing `state.aides.length>1` check instead of a hardcoded `currentLocation==='palletTown'` check.
+- ~~**`hasLab` boolean field on location data**~~ — **resolved v0.44.** Pallet Town's `shopTier` changed to `'full'` directly (see "Pallet Town → Full Shop; Aide Hiring Relocated to Key Items" under Shop UI); the Hire Second Aide button was removed and its purchase relocated into the generic shop's Key Items category, gated by the existing `state.aides.length>1` check instead of a hardcoded `currentLocation==='palletTown'` check.
 - **New, v0.39.2: aide-aware Pokédex rendering, and nickname/nature/move-editing.** Currently all still hardcoded to `aides[0]` (default-param fallback) — Jack confirmed fine to defer, to be revisited later. *(Daycare/breeding specifically resolved v0.40 — see above.)*
 
 ---
 
 ## Outstanding Data Tasks (Jack's side — spreadsheet, not code)
 
-- **~~18 evolution items missing from Items sheet~~ — resolved, verified v0.28.** All 18 (Protector, Dragon Scale, Electirizer, Magmarizer, Up Grade, Razor Fang, Razor Claw, Peat Block, Dubious Disc, Reaper Cloth, Deep Sea Tooth, Sachet, Whipped Dream, Tart Apple, Cracked Pot, Metal Alloy, Auspicious Armor, Unremarkable Teacup) confirmed present in `items.js` with correct slugs, `evolutionItem` category, and correctly wired via the existing name-matching convention (`entry.evolveItem===itemName`, same pattern as Water Stone/Fire Stone).
-- **2 blank-`evolveItem` `use-item` rows** in the single-target Pokédex columns, identified as Kubfu and Dipplin. Confirmed harmless via code trace — Path 1 failing silently falls through to Path 2 (EVO_TREE), so this only matters if their EVO_TREE rows are *also* incomplete. Worth a quick check on Jack's end, not urgent.
-- **~~4 orphaned items~~ — corrected v0.33.** King's Rock and Black Augurite were previously listed here as orphaned/unreferenced; confirmed via v0.33 audit that both are in fact wired into `evotree.js` (King's Rock: Poliwhirl→Politoed, Slowpoke→Slowking; Black Augurite: Scyther→Kleavor) — this note was simply never updated after they were wired up. **Still genuinely orphaned:** Scroll of Darkness, Scroll of Waters — purchasable, `effect: evolve-stone`/`evolve-trade`, but no species references them yet. **Newly identified as orphaned (v0.33 audit, found via the `EVOLUTION_METHODS` auto-derive fix):** Sweet Treat, Leader's Crest, Prism Scale, Magmarizer — same status, purchasable and correctly tagged but not yet referenced by any `EvoTree`/Pokédex row. All six now correctly appear in the live-derived `EVOLUTION_METHODS` list (see "Evolution Method Enum") and will show as ruled-out (not confirmed) for every species until Jack wires an actual branch to one of them.
-- **~~Duplicate `poke-ball` entry~~ — resolved v0.31.** Removed directly from `items.js` by Jack (second row had `shopTier:"lab"`, a tier no location used — was dormant, not actively harmful, but would have resurfaced as a duplicate shop listing the moment the `shopTier` string-comparison issue below got fixed or a `lab`-tier location was added).
-- **`formVariant` column** — every row is `null` except dexId 555 (Darmanitan), which has `formVariant:1`. Field is unreferenced anywhere in `pokeprof.html`. Not pruning yet — worth checking whether this is a breadcrumb of an intended Standard/Zen form-variant system before treating it as pure cruft. Tabled, no urgency.
-- **New item, v0.36:** `natureMint` needs to be added to the Items sheet (row: `natureMint | Nature Mint | consumable | Changes a Pokémon's Nature when used. | change-nature | | 100 | | full | TRUE | | TRUE | TRUE | FALSE | | Professor`) and the converter re-run. Sprite not yet sourced.
-- **Backlog, v0.39: full Pokédex regen + form-hunting pass.** `fetcher.html` has no concept of hand-added alternate-form rows — any range re-fetch silently drops alternate forms sitting in that Excel row range (confirmed v0.39, see Bug Fixes above). Planned: redo the full Pokédex tab from scratch via `converter.html`, then a dedicated pass to re-add every alternate form by hand. Not urgent; not blocking any current version.
+- **Charjabug (dexId 737) instant-evolve data bug.** Currently `evolveMethod: "level"` with `evolveLevel: null` — coerces to `p.level >= 0` (always true), meaning it will evolve on its very next level-up. Jack confirmed the intended fix: `evolveMethod: "use-item"` with `evolveItem: "Thunder Stone"`.
+- **Backlog: full Pokédex regen + form-hunting pass.** `fetcher.html` has no concept of hand-added alternate-form rows — any range re-fetch silently drops alternate forms sitting in that Excel row range (see Resolved Bug Index, v0.39 data corruption fix, for the standing limitation this task addresses). Planned: redo the full Pokédex tab from scratch via `converter.html`, then a dedicated pass to re-add every alternate form by hand. Not urgent; not blocking any current version.

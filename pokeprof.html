@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.44.3</title>
+<title>PokeProf v0.44.4</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -143,7 +143,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span style="font-size:11px;color:var(--main-text-muted);">v0.44.2</span></h1>
+  <h1>PokeProf <span id="game-version-display" style="font-size:11px;color:var(--main-text-muted);">v0.44.4</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">100.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -556,6 +556,12 @@ function buildRouteTable(locationId,trainerBag=state.aides[0].trainerBag){
 // left on the live countdown (state.aides[0].nextEncounterIn) — only cycles after that use CLOSED.
 const ENC_INTERVAL_OPEN = 10;
 const ENC_INTERVAL_CLOSED = 30;
+// v0.44.4 — single source of truth for the version shown to the player. Previously the <title>
+// tag and the in-game header's version <span> each hardcoded their own copy of the version
+// string independently, with nothing forcing them to agree — v0.44.3's delivery updated one and
+// missed the other. Both now render FROM this constant at boot (see init()) — bumping a version
+// is a one-line edit here, and the two displays can no longer drift apart.
+const GAME_VERSION = '0.44.4';
 const FRIENDSHIP_THRESHOLD = 220;
 // v0.22 — highest level-based evolution across the whole franchise is Zweilous->Hydreigon
 // at level 64; 65 clears it with the minimum safe margin. Used to rule out 'level' as a
@@ -2939,6 +2945,9 @@ function runWildEncounterLoopSilent(lead,enc,summary,encLocKey,encDexKey,idx=0){
     lead=getLeadPokemon(idx);
     if(!lead) return; // caller's outer loop already handles the full-wipe case before calling in
     const hasBalls=getBallCount()>0;
+    // v0.44.4 fix — same fix as the live runWildEncounterLoop(); see that function's comment
+    // for the full writeup.
+    const canCatchThisSpecies=hasBalls&&!(state.avoidCappedSpecies&&state.dex.filter(p=>p.pokedexId===enc.pokedexId&&!p.isShiny&&!p.holder).length>=getEffectiveSpeciesCap(enc.pokedexId));
     const throwDecision=hasBalls?decideWildBallThrow(wild.currentHP,wild.maxHP,wild.catchRate,enc.pokedexId,round%2===0):null;
 
     if(throwDecision){
@@ -2977,7 +2986,7 @@ function runWildEncounterLoopSilent(lead,enc,summary,encLocKey,encDexKey,idx=0){
         const move=selectAIMove(lead,wild,history);
         if(!move) continue;
         const hit=applyCrit(calcBattleDamage(lead,wild,move));
-        wild.currentHP=Math.max(hasBalls?1:0,wild.currentHP-hit.damage);
+        wild.currentHP=Math.max(canCatchThisSpecies?1:0,wild.currentHP-hit.damage);
         if(!history[lead.id]) history[lead.id]=[];
         history[lead.id].push(move.type+'|'+move.category);
         if(history[lead.id].length>2) history[lead.id].shift();
@@ -3547,6 +3556,14 @@ function runWildEncounterLoop(lead,enc,idx=0){
     lead=getLeadPokemon(idx);
     if(!lead){ endMission('faint',idx); return; }
     const hasBalls=getBallCount()>0;
+    // v0.44.4 fix — Avoid Capped Species was making capped-species encounters unwinnable, not
+    // just uncatchable. decideWildBallThrow() already refuses to throw at a capped species when
+    // this toggle is on, but the HP floor below only checked "do you own any balls at all" — not
+    // whether a throw was actually still possible for THIS species. Result: the wild Pokémon could
+    // never reach 0 HP, wildDefeated never fired, and the fight only ever ended in a party wipe.
+    // Fix: the floor now checks the same real availability decideWildBallThrow() checks, so once
+    // a species is genuinely uncatchable this encounter, combat can conclude normally.
+    const canCatchThisSpecies=hasBalls&&!(state.avoidCappedSpecies&&state.dex.filter(p=>p.pokedexId===enc.pokedexId&&!p.isShiny&&!p.holder).length>=getEffectiveSpeciesCap(enc.pokedexId));
     const throwDecision=hasBalls?decideWildBallThrow(wild.currentHP,wild.maxHP,wild.catchRate,enc.pokedexId,round%2===0):null;
 
     if(throwDecision){
@@ -3582,8 +3599,9 @@ function runWildEncounterLoop(lead,enc,idx=0){
         const move=selectAIMove(lead,wild,history);
         if(!move) continue;
         const hit=applyCrit(calcBattleDamage(lead,wild,move));
-        // HP floor: wild cannot faint while any ball remains in inventory this round.
-        wild.currentHP=Math.max(hasBalls?1:0,wild.currentHP-hit.damage);
+        // HP floor: wild cannot faint while a catch attempt is still genuinely possible this
+        // encounter (owns balls AND not blocked by Avoid Capped Species) — v0.44.4 fix.
+        wild.currentHP=Math.max(canCatchThisSpecies?1:0,wild.currentHP-hit.damage);
         if(!history[lead.id]) history[lead.id]=[];
         history[lead.id].push(move.type+'|'+move.category);
         if(history[lead.id].length>2) history[lead.id].shift();
@@ -8115,6 +8133,13 @@ function getShopItems(locId){
 }
 
 // Boot intervals — set AFTER loadGame/init completes, never inside confirmMission
+// v0.44.4 — version display now renders from GAME_VERSION here, both places, at boot. See the
+// GAME_VERSION declaration for the full writeup on why this exists.
+document.title='PokeProf v'+GAME_VERSION;
+{
+  const verSpan=document.getElementById('game-version-display');
+  if(verSpan) verSpan.textContent='v'+GAME_VERSION;
+}
 window._autoSaveInterval=setInterval(autoSaveTick,1000);
 window._gameTickInterval=setInterval(gameTick,1000);
 

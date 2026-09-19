@@ -108,6 +108,8 @@ proceeds; new entries are appended in the version order they were fixed.
 - `natureMint`'s Items-sheet row (originally flagged as an outstanding v0.36 data task) — confirmed added; the v0.44 "Nature Mint Category Fix" already edits its `itemCategory` directly in `items.js`, which wouldn't be possible otherwise
 - Rockruff casing mismatch (`pokedex.js` `"Own tempo"` vs `evotree.js` `"Own Tempo"`, found v0.42) — resolved; confirmed via cross-file audit that both files now agree exactly on `"Own Tempo"`
 - `aide-hire-2` was added directly to `items.js` outside the normal Excel/`converter.html` pipeline — resolved, confirmed via cross-file audit and Jack's confirmation that JS files exactly mirror their Excel-tab source, so the row's presence in `items.js` means Excel has it too
+- Avoid Capped Species Toggle's HP floor didn't account for the toggle itself — a capped species could never actually be defeated in combat, so every such encounter could only end in a full party wipe instead of the intended "fight for EXP, don't catch" — fixed v0.44.4, see "Avoid Capped Species Toggle" under Combat System
+- Two independent hardcoded version-display strings (`<title>` and the in-game header) could silently drift apart, as happened between v0.44.2 and v0.44.3 — both now render from a single `GAME_VERSION` constant at boot — fixed v0.44.4
 
 ---
 
@@ -241,6 +243,19 @@ that section, rather than left as a second source of truth.
   clearInterval(window._gameTickInterval);
   clearInterval(window._autoSaveInterval);
   ```
+
+### Version Display (v0.44.4)
+- `const GAME_VERSION` is the single source of truth for the version shown to
+  the player — declared once near the top of the script, alongside the other
+  top-level constants (`ENC_INTERVAL_OPEN`, `FRIENDSHIP_THRESHOLD`, etc.).
+- Set at the same unconditional post-boot point as the tick intervals above
+  (after `loadGame()`/`init()` completes either way): `document.title` and the
+  header's `#game-version-display` span both render from `GAME_VERSION` there.
+- **Bug, fixed v0.44.4:** before this, the `<title>` tag and the header span
+  each hardcoded their own copy of the version string independently — nothing
+  forced them to agree, and v0.44.3's delivery updated one and missed the
+  other. Bumping the version is now a one-line edit to `GAME_VERSION`; the two
+  displays cannot drift apart again.
 - `incomeTick()` runs unconditionally inside `gameTick()` — income accrues whether or not a mission is active
 
 ### Encounter Timing (SETTLED — v0.26 revision)
@@ -513,18 +528,59 @@ Each round, while the encounter is still active:
    (existing effective-speed formula), both sides using the real `calcBattleDamage()` —
    lead via the Trainer Battle System's `selectAIMove()` across its real equipped
    moves, wild always using its single default move.
-6. **HP floor:** while any ball remains in the Professor's inventory, wild HP is
-   clamped at a minimum of 1 — it cannot faint. Once balls are exhausted (including
-   mid-encounter), the floor lifts and a normal KO becomes possible (a "win" — EXP
-   only, no catch, matching the old Fight Formula's win condition).
-7. Loop ends on: capture (success), wild faints (no-balls win), or the lead's whole
-   party faints (existing Faint-Switch Behavior / flee rule, unchanged).
+6. **HP floor (revised v0.44.4):** while a catch attempt is still genuinely possible
+   for this species this encounter — owns a ball, AND not blocked by Avoid Capped
+   Species (see below) — wild HP is clamped at a minimum of 1; it cannot faint. Once
+   that's no longer true (balls exhausted mid-encounter, or the species is at/over
+   cap with Avoid Capped on), the floor lifts and a normal KO becomes possible (a
+   "win" — EXP only, no catch, matching the old Fight Formula's win condition).
+   **Bug, fixed v0.44.4:** previously this checked only "owns any ball at all,"
+   without accounting for Avoid Capped Species — so a capped species with that
+   toggle on could never actually reach 0 HP (a ball would never be thrown at it,
+   but the floor kept assuming one might be), and the fight could only ever end in
+   a full party wipe. See "Avoid Capped Species Toggle" below.
+7. Loop ends on: capture (success), wild faints (no-balls **or** Avoid-Capped win),
+   or the lead's whole party faints (existing Faint-Switch Behavior / flee rule,
+   unchanged).
 - **Fully silent/instant** — the entire multi-round encounter resolves within a single
   function call, live or offline, with no watched playback (unlike Gym battles).
 - **Ball consumption unchanged:** one ball consumed per throw attempt regardless of
   outcome — this was a deliberate, confirmed tradeoff, not a side effect to fix.
 - Old `fight()` function (flat `(enc.level/lead.level) × 0.5 × maxHP` formula) remains
   removed, per v0.30.
+
+### Avoid Capped Species Toggle (SETTLED — v0.40, first full spec written v0.44.4)
+DESIGN.md never had a real section for this feature before — only a bare
+SAVE_VERSION table mention. Documented here from the actual code, confirmed
+against its own in-game confirmation-dialog text.
+- **Intent:** a global, player-toggleable setting (`state.avoidCappedSpecies`,
+  default `false`). When on, a wild encounter against a species already at/over
+  its effective species cap (see "Universal Species-Cap Enforcement") is still
+  fought normally for EXP — it just never attempts a catch. The point is to stop
+  wasting balls/time on species you can't keep without releasing something else.
+- `onAvoidCappedSpeciesToggleClick()` — turning it ON requires confirming a native
+  `confirm()` dialog (same convention as `onSpeciesCapChange()`) explaining the
+  tradeoff: income scales off total catches, and stronger IVs pass down to an
+  existing individual on release. Turning it back OFF has no confirmation.
+- `decideWildBallThrow()` checks it directly: if on and the species' live box
+  count (excluding held/shiny individuals, same rule as the species-cap system
+  generally) is at/over `getEffectiveSpeciesCap(dexId)`, returns `null` —
+  no ball is ever thrown at this species while the condition holds.
+- **Bug, fixed v0.44.4:** the Wild Encounter Turn Loop's HP floor (step 6 above)
+  didn't know about this rule — it kept the wild Pokémon's HP floored at 1
+  forever, since it only checked "do you own any balls," not "will a ball ever
+  actually be thrown at this one." A capped species with the toggle on became
+  unwinnable rather than "fight for EXP only" — every such encounter could only
+  end in the player's own party getting ground down to a wipe. Confirmed via
+  direct harness testing (6/6 trials): before the fix, a capped-species encounter
+  always ended in "Your party was defeated"; after, it ends in a normal
+  "Won vs X! +EXP" with no catch attempted, exactly matching the documented
+  intent. Fix applied identically to both `runWildEncounterLoop()` (live) and
+  `runWildEncounterLoopSilent()` (offline) — see the shared `canCatchThisSpecies`
+  check both now use in place of the old bare `hasBalls` for the floor decision.
+- Still fights and gains EXP completely normally against a capped species —
+  only the catch-attempt path is affected. Not fought at all is a different
+  (unrelated) setting/behavior, not this one.
 
 ### Faint-Switch Behavior (SETTLED — v0.26)
 - On lead faint mid-encounter: if `getLeadPokemon()` returns another Pokémon, log
@@ -2009,7 +2065,7 @@ Two data-loss bugs surfaced after real extended play (20 Pokémon across two aid
 
 ---
 
-## Version-to-Section Index (v0.40 through v0.44.3)
+## Version-to-Section Index (v0.40 through v0.44.4)
 
 Every item shipped in these versions has been relocated to its topical section — nothing below is unique content, only a map from version number to where it actually lives, kept for anyone tracing a change back to when it shipped.
 
@@ -2023,8 +2079,9 @@ Every item shipped in these versions has been relocated to its topical section �
 | v0.44.1 | 2 | Mission Modal — Method Selection (newly-unlocked methods self-heal), Gym System (EXP batching). Versioning correction starts here — every prior v0.44-line delivery after the initial build was mislabeled "v0.44" instead of incrementing; see workflow.md for the standing rule going forward. |
 | v0.44.2 | 1 | Gym System (Watched Gym Battle — Battle Gym button fix) |
 | v0.44.3 | 2 | Revive Logic and Pre-Encounter Healing (both fixed to revive every fainted member per cycle, unconditionally, not gated behind an encounter rolling — see Trainer Battle System), dead code removal (`evoArrowDownHtml()`, see Branch Line-Break) |
+| v0.44.4 | 2 | Combat System (Avoid Capped Species Toggle — first full spec written, and its HP-floor interaction bug fixed), version display (single `GAME_VERSION` source of truth, see Game Loop) |
 
-`SAVE_VERSION`: 27→28 (v0.40), stays on 28 (v0.41–v0.43), reaches 30 across two bumps (v0.44), no bump (v0.44.1–v0.44.3, none of these touch save-file shape).
+`SAVE_VERSION`: 27→28 (v0.40), stays on 28 (v0.41–v0.43), reaches 30 across two bumps (v0.44), no bump (v0.44.1–v0.44.4, none of these touch save-file shape).
 
 ---
 

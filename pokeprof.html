@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.45</title>
+<title>PokeProf v0.45.2</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -143,7 +143,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span id="game-version-display" style="font-size:11px;color:var(--main-text-muted);">v0.45</span></h1>
+  <h1>PokeProf <span id="game-version-display" style="font-size:11px;color:var(--main-text-muted);">v0.45.2</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">100.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -562,7 +562,7 @@ const ENC_INTERVAL_CLOSED = 30;
 // string independently, with nothing forcing them to agree — v0.44.3's delivery updated one and
 // missed the other. Both now render FROM this constant at boot (see init()) — bumping a version
 // is a one-line edit here, and the two displays can no longer drift apart.
-const GAME_VERSION = '0.45';
+const GAME_VERSION = '0.45.2';
 const FRIENDSHIP_THRESHOLD = 220;
 // v0.22 — highest level-based evolution across the whole franchise is Zweilous->Hydreigon
 // at level 64; 65 clears it with the minimum safe margin. Used to rule out 'level' as a
@@ -2593,6 +2593,7 @@ function maybeCreateShedFriend(prevDexId,evolvedPokemon){
   recalcStats(shedFriend);
   shedFriend.currentHP=shedFriend.maxHP;
   aide.party.push(shedFriend); state.dex.push(shedFriend);
+  recordFormDiscovered(shedFriend.pokedexId,shedFriend.formName); // v0.45.1 — missed dex.push() site
   addLog('✨ '+getDisplayName(shedFriend)+' #'+shedFriend.id+' emerged from the discarded shell!','evolve','evolutions',(state.aides.find(a=>a.name===shedFriend.holder)||{}).id||'general');
 }
 
@@ -2721,6 +2722,16 @@ function applyEvolutionSilent(p){
     const isDay=hour>=6&&hour<18;
     let branches=getEvolutions(p.pokedexId).filter(b=>{
       if(!b.toDexId) return false;
+      // v0.45.2 fix — this filter was missing the v0.42 fromFormName/requiredGender restriction
+      // that checkEvolution()'s identical filter (above) has always had. Silent processing (used
+      // for offline/batch simulation) is the ONLY path that ever hit this gap — a live evolution
+      // always went through checkEvolution() instead, correctly filtered. Confirmed root cause of
+      // a base-form Meowth evolving into Perrserker: both the Persian branch (fromFormName: null)
+      // and the Perrserker branch (fromFormName: 'Galarian') satisfy "level>=28" simultaneously
+      // when form isn't checked, and selectEvolutionBranch()'s tie-break is a coin flip between
+      // them. Every species with a form-branch in EVO_TREE was exposed to this, not just Meowth.
+      if((b.fromFormName||null)!==(p.formName||null)) return false;
+      if(b.requiredGender&&p.gender!==b.requiredGender) return false;
       if(b.evolveMethod==='level') return p.level>=b.evolveLevel;
       if(b.evolveMethod==='friendship-day') return isDay&&p.friendship>=FRIENDSHIP_THRESHOLD;
       if(b.evolveMethod==='friendship-night') return !isDay&&p.friendship>=FRIENDSHIP_THRESHOLD;
@@ -6362,8 +6373,19 @@ function evoMethodLabel(e){
   if(e.method==='friendship-day') return 'Friendship (Day)';
   if(e.method==='friendship-night') return 'Friendship (Night)';
   if(e.method==='use-item'){
-    if(typeof e.item==='number'){ const it=getItem(e.item); return it?it.name:'Item'; }
-    return e.item||'Item';
+    // v0.45.2 — evotree.js's evolveItem values are a genuine mix: some rows (the ten Kanto
+    // species added this version) hold a typed display string like "Fire Stone"; most
+    // pre-existing branched rows hold a raw PokéAPI-style slug like "leaf-stone", which matches
+    // items.js's own itemId format exactly (confirmed: "leaf-stone", "dawn-stone", "up-grade",
+    // etc. are all real itemIds) but was never looked up as one — only a numeric e.item ever hit
+    // getItem() before, so a string slug fell straight through to raw display, unformatted. Try
+    // getItem() first regardless of type; it now resolves both the numeric flat-pokedex case and
+    // the string-slug EVO_TREE case to the real, correctly-cased item name. A string that matches
+    // no itemId (e.g. this version's own "Fire Stone"/"Link Cable" additions, typed rather than
+    // slugged) falls back to displaying as-is, which is already correctly formatted.
+    const it=getItem(e.item);
+    if(it) return it.name;
+    return (typeof e.item==='string'?e.item:null)||'Item';
   }
   if(e.method==='use-move'){
     const desc=parseUseMoveDescriptor(e.item);
@@ -6381,7 +6403,12 @@ function evoNodeHtml(entry,isHighlight,formName){
   const sprite=getSpriteUrl(entry.dexId,entry.name,isOfficial&&dexOfficialShinyPreview,formName||null);
   const border=isHighlight?'border:2px solid #f4d03f;':'border:1px solid var(--main-border);';
   const shinyBadge=buildDexRarityBadgeHtml(entry.dexId,isOfficial,dexOfficialShinyPreview);
-  const label=formName?entry.name+' ('+formName+')':entry.name;
+  // v0.45.2 — form annotation forced onto its own line, same "any space is two lines" rule as
+  // the arrow labels (forceTwoLineLabel), but inserted directly rather than reused generically:
+  // entry.name can itself contain a space (e.g. "Mr. Mime"), and a first-space-only split would
+  // wrongly break the species name instead of separating it from "(Alolan)". This always breaks
+  // at exactly the name/form boundary, regardless of the species name's own shape.
+  const label=formName?entry.name+'<br>('+formName+')':entry.name;
   // v0.28 — data-dexid enables familyChainNodeClick() to jump straight to this species' detail
   // page when tapped, from either the Family Card or Species Detail context.
   // v0.36 — data-formname added alongside, so tapping an alt-form node lands on its own tab
@@ -6414,13 +6441,24 @@ function evoPlaceholderHtml(){
 // v0.36 — method label sizing: 7px -> 10px, no longer forced onto one line (max-width wraps a
 // long label like "Dubious Disc" or "Friendship (Night)" onto a second line instead, using the
 // vertical space already sitting empty next to the 40px sprites).
+// v0.45.1 — any label containing a space forces a line break at the FIRST space, deterministic
+// regardless of container width or font metrics ("Moon Stone" -> "Moon"/"Stone", "Lv 7" ->
+// "Lv"/"7", "Friendship (Night)" -> "Friendship"/"(Night)"). Replaces relying on CSS max-width
+// auto-wrap, which only kicked in once a label happened to overflow — inconsistent across labels
+// and container widths, and the direct cause of the Wigglytuff/"Moon Stone" layout report.
+function forceTwoLineLabel(label){
+  if(typeof label!=='string') return label;
+  const i=label.indexOf(' ');
+  if(i===-1) return label;
+  return label.slice(0,i)+'<br>'+label.slice(i+1);
+}
 function evoArrowHtml(label){
-  return '<div style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;margin:0 4px;flex-shrink:0;max-width:60px;"><div style="color:var(--main-text-secondary);font-size:12px;">→</div><div style="font-size:10px;color:var(--main-text-muted);text-align:center;">'+label+'</div></div>';
+  return '<div style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;margin:0 4px;flex-shrink:0;max-width:60px;"><div style="color:var(--main-text-secondary);font-size:12px;">→</div><div style="font-size:10px;color:var(--main-text-muted);text-align:center;">'+forceTwoLineLabel(label)+'</div></div>';
 }
 // v0.37 — down-arrow variant WITH a method label sitting just above the arrow, used per-branch
 // in the 2+ simultaneous branches stack below (see "Split Forms — Vertical Down-Arrow Layout").
 function evoArrowDownLabeledHtml(label){
-  return '<div style="display:flex;flex-direction:column;align-items:center;margin:2px 0;"><div style="font-size:10px;color:var(--main-text-muted);text-align:center;max-width:70px;">'+label+'</div><div style="color:var(--main-text-secondary);font-size:12px;">↓</div></div>';
+  return '<div style="display:flex;flex-direction:column;align-items:center;margin:2px 0;"><div style="font-size:10px;color:var(--main-text-muted);text-align:center;max-width:70px;">'+forceTwoLineLabel(label)+'</div><div style="color:var(--main-text-secondary);font-size:12px;">↓</div></div>';
 }
 // Root-based walk of EVO_TREE + single-target pokedex.js evolution edges. A root is any family
 // member with no incoming edge from another family member. Each root gets its own row (Nidoran
@@ -6530,7 +6568,12 @@ function renderEvolutionChainVisual(famId,highlightDexId){
   // incorrectly showing whichever edge happened to win under the old per-species rule.
   return roots.map(root=>{
     const rootEdges=edges.filter(e=>e.from===root.dexId);
-    const formNames=Array.from(new Set(rootEdges.map(e=>e.fromFormName||null)));
+    // v0.45.1 — base line (null) always sorts first; other forms keep their relative data order
+    // after it. Previously unsorted (Set iteration = data order), so whichever form's EVO_TREE
+    // row happened to appear first in evotree.js rendered first — for the regional-form species,
+    // that was consistently the regional row, ahead of the base line.
+    const formNames=Array.from(new Set(rootEdges.map(e=>e.fromFormName||null)))
+      .sort((a,b)=>(a===null?-1:0)-(b===null?-1:0));
     const lines=formNames.length?formNames:[null]; // terminal single-stage species: one base line
     return lines.map(formName=>{
       // v0.45 — wholly-undiscovered line renders nothing at all, not even a placeholder box.
@@ -7778,16 +7821,26 @@ function loadGame(){
         aide.party=aide.party.map(pp=>state.dex.find(d=>d.id===pp.id)||pp);
       });
     }
-    // v0.45 — formsDiscovered backfill. Only runs for saves that predate the field entirely
-    // (post-v0.45 saves already carry a real, precise record). Best-effort floor derived from
-    // present state, not a full history reconstruction: seeds the base form as discovered for
-    // any species with dexHistory>0 (can't distinguish which form was historically caught/
-    // released/evolved away, so base is the safe assumption), then additionally marks each
-    // CURRENTLY-HELD individual's own specific form (covers a live non-base individual, e.g. a
-    // CheatN-spawned Alolan Rattata sitting in the box or a party right now). Regional/alt forms
-    // owned and released or evolved past before v0.45 are not recoverable — documented in
+    // v0.45.1 fix — the actual bug: state.formsDiscovered was only ever assigned inside the
+    // backfill block below, which is guarded to skip any save that already HAS the field. That
+    // meant a normal reload of an already-v0.45 save never restored it at all — it silently sat
+    // at the default state object's empty {} for the rest of that session, and if autosave fired
+    // even once before this was caught, the save FILE itself got overwritten with that empty
+    // object too. This line is the actual fix: always restore whatever the save has, unconditionally.
+    state.formsDiscovered=s.formsDiscovered||{};
+    // v0.45 -> v0.45.1 — backfill trigger broadened from "field is missing" to "field is missing
+    // OR empty". A save already damaged by the bug above has a *present* but empty object, which
+    // needs the exact same recovery as a genuinely pre-v0.45 save — dexHistory and state.dex are
+    // both fully intact either way, so this is a real, not partial, recovery for every species
+    // with no alternate forms (nearly the whole dex). Best-effort floor derived from present
+    // state, not a full history reconstruction: seeds the base form as discovered for any species
+    // with dexHistory>0 (can't distinguish which form was historically caught/released/evolved
+    // away, so base is the safe assumption), then additionally marks each CURRENTLY-HELD
+    // individual's own specific form (covers a live non-base individual, e.g. a CheatN-spawned
+    // Alolan Rattata sitting in the box or a party right now). Regional/alt forms owned and
+    // released or evolved past before this backfill ever ran are not recoverable — documented in
     // DESIGN.md's SAVE_VERSION table.
-    if(!s.formsDiscovered){
+    if(!s.formsDiscovered||!Object.keys(s.formsDiscovered).length){
       state.formsDiscovered={};
       Object.keys(state.dexHistory||{}).forEach(dexIdStr=>{
         if(state.dexHistory[dexIdStr]>0) recordFormDiscovered(parseInt(dexIdStr),null);

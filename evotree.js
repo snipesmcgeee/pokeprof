@@ -1,6 +1,6 @@
 // PokeProf — Evolution Tree (branching evolutions)
-// Auto-generated: 9/6/2026, 8:42:41 PM
-// Entries: 109
+// Auto-generated: 9/22/2026, 8:22:05 PM
+// Entries: 119
 
 const EVO_TREE = [
   {
@@ -13,6 +13,17 @@ const EVO_TREE = [
     "requiredGender": null,
     "toFormName": "Alolan",
     "evolveNickname": "Alolan"
+  },
+  {
+    "fromDexId": 19,
+    "fromFormName": null,
+    "toDexId": 20,
+    "evolveMethod": "level",
+    "evolveLevel": 20,
+    "evolveItem": null,
+    "requiredGender": null,
+    "toFormName": null,
+    "evolveNickname": null
   },
   {
     "fromDexId": 25,
@@ -48,6 +59,17 @@ const EVO_TREE = [
     "evolveNickname": "Alolan"
   },
   {
+    "fromDexId": 27,
+    "fromFormName": null,
+    "toDexId": 28,
+    "evolveMethod": "level",
+    "evolveLevel": 22,
+    "evolveItem": null,
+    "requiredGender": null,
+    "toFormName": null,
+    "evolveNickname": null
+  },
+  {
     "fromDexId": 37,
     "fromFormName": "Alolan",
     "toDexId": 38,
@@ -57,6 +79,17 @@ const EVO_TREE = [
     "requiredGender": null,
     "toFormName": "Alolan",
     "evolveNickname": "Alolan"
+  },
+  {
+    "fromDexId": 37,
+    "fromFormName": null,
+    "toDexId": 38,
+    "evolveMethod": "use-item",
+    "evolveLevel": null,
+    "evolveItem": "Fire Stone",
+    "requiredGender": null,
+    "toFormName": null,
+    "evolveNickname": null
   },
   {
     "fromDexId": 44,
@@ -90,6 +123,17 @@ const EVO_TREE = [
     "requiredGender": null,
     "toFormName": "Alolan",
     "evolveNickname": "Alolan"
+  },
+  {
+    "fromDexId": 50,
+    "fromFormName": null,
+    "toDexId": 51,
+    "evolveMethod": "level",
+    "evolveLevel": 26,
+    "evolveItem": null,
+    "requiredGender": null,
+    "toFormName": null,
+    "evolveNickname": null
   },
   {
     "fromDexId": 52,
@@ -136,6 +180,17 @@ const EVO_TREE = [
     "evolveNickname": "Hisuian"
   },
   {
+    "fromDexId": 58,
+    "fromFormName": null,
+    "toDexId": 59,
+    "evolveMethod": "use-item",
+    "evolveLevel": null,
+    "evolveItem": "Fire Stone",
+    "requiredGender": null,
+    "toFormName": null,
+    "evolveNickname": null
+  },
+  {
     "fromDexId": 61,
     "fromFormName": null,
     "toDexId": 62,
@@ -169,6 +224,17 @@ const EVO_TREE = [
     "evolveNickname": "Alolan"
   },
   {
+    "fromDexId": 74,
+    "fromFormName": null,
+    "toDexId": 75,
+    "evolveMethod": "level",
+    "evolveLevel": 25,
+    "evolveItem": null,
+    "requiredGender": null,
+    "toFormName": null,
+    "evolveNickname": null
+  },
+  {
     "fromDexId": 75,
     "fromFormName": "Alolan",
     "toDexId": 76,
@@ -180,6 +246,17 @@ const EVO_TREE = [
     "evolveNickname": "Alolan"
   },
   {
+    "fromDexId": 75,
+    "fromFormName": null,
+    "toDexId": 76,
+    "evolveMethod": "use-item",
+    "evolveLevel": null,
+    "evolveItem": "Link Cable",
+    "requiredGender": null,
+    "toFormName": null,
+    "evolveNickname": null
+  },
+  {
     "fromDexId": 77,
     "fromFormName": "Galarian",
     "toDexId": 78,
@@ -189,6 +266,17 @@ const EVO_TREE = [
     "requiredGender": null,
     "toFormName": "Galarian",
     "evolveNickname": "Galarian"
+  },
+  {
+    "fromDexId": 77,
+    "fromFormName": null,
+    "toDexId": 78,
+    "evolveMethod": "level",
+    "evolveLevel": 40,
+    "evolveItem": null,
+    "requiredGender": null,
+    "toFormName": null,
+    "evolveNickname": null
   },
   {
     "fromDexId": 79,
@@ -257,6 +345,17 @@ const EVO_TREE = [
     "evolveNickname": "Alolan"
   },
   {
+    "fromDexId": 88,
+    "fromFormName": null,
+    "toDexId": 89,
+    "evolveMethod": "level",
+    "evolveLevel": 38,
+    "evolveItem": null,
+    "requiredGender": null,
+    "toFormName": null,
+    "evolveNickname": null
+  },
+  {
     "fromDexId": 100,
     "fromFormName": "Hisuian",
     "toDexId": 101,
@@ -266,6 +365,17 @@ const EVO_TREE = [
     "requiredGender": null,
     "toFormName": "Hisuian",
     "evolveNickname": "Hisuian"
+  },
+  {
+    "fromDexId": 100,
+    "fromFormName": null,
+    "toDexId": 101,
+    "evolveMethod": "level",
+    "evolveLevel": 30,
+    "evolveItem": null,
+    "requiredGender": null,
+    "toFormName": null,
+    "evolveNickname": null
   },
   {
     "fromDexId": 102,
@@ -329,28 +439,6 @@ const EVO_TREE = [
     "evolveMethod": "level",
     "evolveLevel": 35,
     "evolveItem": null,
-    "requiredGender": null,
-    "toFormName": "Galarian",
-    "evolveNickname": "Galarian"
-  },
-  {
-    "fromDexId": 439,
-    "fromFormName": null,
-    "toDexId": 122,
-    "evolveMethod": "use-move",
-    "evolveLevel": null,
-    "evolveItem": "normal-physical",
-    "requiredGender": null,
-    "toFormName": null,
-    "evolveNickname": "Mr. Mime"
-  },
-  {
-    "fromDexId": 439,
-    "fromFormName": null,
-    "toDexId": 122,
-    "evolveMethod": "use-move",
-    "evolveLevel": null,
-    "evolveItem": "normal-physical",
     "requiredGender": null,
     "toFormName": "Galarian",
     "evolveNickname": "Galarian"
@@ -609,22 +697,22 @@ const EVO_TREE = [
     "evolveNickname": "Galarian"
   },
   {
-    "fromDexId": 264,
-    "fromFormName": "Galarian",
-    "toDexId": 862,
+    "fromDexId": 263,
+    "fromFormName": null,
+    "toDexId": 264,
     "evolveMethod": "level",
-    "evolveLevel": 35,
+    "evolveLevel": 20,
     "evolveItem": null,
     "requiredGender": null,
     "toFormName": null,
     "evolveNickname": null
   },
   {
-    "fromDexId": 263,
-    "fromFormName": null,
-    "toDexId": 264,
+    "fromDexId": 264,
+    "fromFormName": "Galarian",
+    "toDexId": 862,
     "evolveMethod": "level",
-    "evolveLevel": 20,
+    "evolveLevel": 35,
     "evolveItem": null,
     "requiredGender": null,
     "toFormName": null,
@@ -772,6 +860,28 @@ const EVO_TREE = [
     "requiredGender": "F",
     "toFormName": null,
     "evolveNickname": null
+  },
+  {
+    "fromDexId": 439,
+    "fromFormName": null,
+    "toDexId": 122,
+    "evolveMethod": "use-move",
+    "evolveLevel": null,
+    "evolveItem": "normal-physical",
+    "requiredGender": null,
+    "toFormName": null,
+    "evolveNickname": "Mr. Mime"
+  },
+  {
+    "fromDexId": 439,
+    "fromFormName": null,
+    "toDexId": 122,
+    "evolveMethod": "use-move",
+    "evolveLevel": null,
+    "evolveItem": "normal-physical",
+    "requiredGender": null,
+    "toFormName": "Galarian",
+    "evolveNickname": "Galarian"
   },
   {
     "fromDexId": 502,

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.44.4</title>
+<title>PokeProf v0.45</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -143,7 +143,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span id="game-version-display" style="font-size:11px;color:var(--main-text-muted);">v0.44.4</span></h1>
+  <h1>PokeProf <span id="game-version-display" style="font-size:11px;color:var(--main-text-muted);">v0.45</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">100.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -248,9 +248,10 @@
   <!-- MAP TAB -->
   <div class="panel" id="panel-map">
     <div style="background:var(--main-card);border-bottom:1px solid var(--main-border);padding:6px 12px;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--main-text-secondary);flex-shrink:0;">
-      🗺️ Kanto — Discovered Locations
+      🗺️ Discovered Locations
     </div>
-    <div id="map-container" style="flex:1;overflow:hidden;position:relative;background:var(--main-bg);">
+    <div id="map-region-tabs" style="display:flex;gap:2px;background:var(--main-card);border-bottom:1px solid var(--main-border);padding:4px 8px;flex-shrink:0;"></div>
+    <div id="map-container" style="flex:1;overflow:hidden;position:relative;background:var(--main-bg);touch-action:none;">
       <svg id="map-svg" style="width:100%;height:100%;" onclick="handleMapClick(event)"></svg>
     </div>
     <div id="map-detail" style="flex-shrink:0;background:var(--main-panel);border-top:1px solid var(--main-card);max-height:45%;overflow-y:auto;display:none;">
@@ -561,7 +562,7 @@ const ENC_INTERVAL_CLOSED = 30;
 // string independently, with nothing forcing them to agree — v0.44.3's delivery updated one and
 // missed the other. Both now render FROM this constant at boot (see init()) — bumping a version
 // is a one-line edit here, and the two displays can no longer drift apart.
-const GAME_VERSION = '0.44.4';
+const GAME_VERSION = '0.45';
 const FRIENDSHIP_THRESHOLD = 220;
 // v0.22 — highest level-based evolution across the whole franchise is Zweilous->Hydreigon
 // at level 64; 65 clears it with the minimum safe margin. Used to rule out 'level' as a
@@ -744,6 +745,7 @@ let state={
   locationEncounterLog:{},
   locationMethodPrefs:{},
   dexHistory:{},
+  formsDiscovered:{}, // v0.45 — per-(dexId,formName) discovery record powering the Evolution Chain Visual's per-form gating; key is `${dexId}|${formName||''}`. See recordFormDiscovered()/isFormDiscovered().
   freeSkipsRemaining:50,
   // v0.43 — Custom log view filters, persisted across sessions (unlike logViewMode itself, which
   // stays transient/resets to 'full'). Empty categories = show nothing; empty aides = no
@@ -886,8 +888,7 @@ function buildTravelPath(fromId,toId,trainerBag=state.aides[0].trainerBag,ignore
         // Must be a discovered location — unless ignoreDiscovery (Wander) opted out.
         if(!ignoreDiscovery&&!state.discoveredLocations.has(c.toLocationId)) return false;
         if(!c.requiresItem) return true;
-        return (trainerBag&&trainerBag[c.requiresItem]&&trainerBag[c.requiresItem]>0)||
-               (state.trainerUnlocks&&state.trainerUnlocks[c.requiresItem]);
+        return trainerBag&&trainerBag[c.requiresItem]&&trainerBag[c.requiresItem]>0; // v0.45 — trainerUnlocks removed, confirmed dead (never assigned anywhere)
       });
       for(const conn of available){
         const n=conn.toLocationId;
@@ -943,8 +944,7 @@ function getReachableDiscoveredLocations(fromId,trainerBag=state.aides[0].traine
       // actually be dispatched to. Matching buildTravelPath()'s gate exactly fixes the mismatch.
       if(!state.discoveredLocations.has(c.toLocationId)) return false;
       if(!c.requiresItem) return true;
-      return (trainerBag&&trainerBag[c.requiresItem]&&trainerBag[c.requiresItem]>0)||
-             (state.trainerUnlocks&&state.trainerUnlocks[c.requiresItem]);
+      return trainerBag&&trainerBag[c.requiresItem]&&trainerBag[c.requiresItem]>0; // v0.45 — trainerUnlocks removed, confirmed dead
     });
     for(const conn of available){
       const n=conn.toLocationId;
@@ -973,8 +973,7 @@ function getWanderReachableLocations(fromId,trainerBag=state.aides[0].trainerBag
     const available=(CONNECTIONS_DATA||[]).filter(c=>{
       if(c.fromLocationId!==cur) return false;
       if(!c.requiresItem) return true;
-      return (trainerBag&&trainerBag[c.requiresItem]&&trainerBag[c.requiresItem]>0)||
-             (state.trainerUnlocks&&state.trainerUnlocks[c.requiresItem]);
+      return trainerBag&&trainerBag[c.requiresItem]&&trainerBag[c.requiresItem]>0; // v0.45 — trainerUnlocks removed, confirmed dead
     });
     for(const conn of available){
       const n=conn.toLocationId;
@@ -2205,6 +2204,19 @@ function recordCapture(dexId,name){
   }
 }
 function addFinding(type,...args){ state.pendingFindings.push({type,args,time:Date.now()}); }
+// v0.45 — per-(dexId,formName) discovery record, orthogonal to dexHistory/seenDexIds (which are
+// dexId-only and can't distinguish a regular Raichu from an Alolan one). Powers the Evolution
+// Chain Visual's per-form line gating — see DESIGN.md "Per-Form Edge Resolution & Discovery
+// Gating". Called alongside every dexHistory increment site (catch, shiny auto-catch x2, evolution
+// via applySpeciesSwap, Day Care hatch, CheatN replace, init's starter Rattata) plus once per
+// migration-backfilled species. formName null/undefined means base form.
+function recordFormDiscovered(dexId,formName){
+  if(!dexId) return;
+  state.formsDiscovered[dexId+'|'+(formName||'')]=true;
+}
+function isFormDiscovered(dexId,formName){
+  return !!(state.formsDiscovered&&state.formsDiscovered[dexId+'|'+(formName||'')]);
+}
 function isSpeciesKnown(dexId){ return !!state.researchLog[dexId]; }
 
 // Shared evolution apply-logic: species/dexId/form swap, maxHP recalc (preserving missing HP),
@@ -2234,6 +2246,7 @@ function applySpeciesSwap(p,newEntry){
   recordAbilityObserved(newEntry.dexId,p.ability);
   recordGenderObserved(newEntry.dexId,p.gender); // v0.36
   state.dexHistory[newEntry.dexId]=(state.dexHistory[newEntry.dexId]||0)+1;
+  recordFormDiscovered(newEntry.dexId,p.formName); // v0.45
   // v0.35 fix — species cap was never enforced on evolution, only on wild catches. Every
   // evolution path routes through this shared helper, so checking here (once) covers all of
   // them: checkEvolution()'s three paths, applyItemEvolution(), and professorAutoTestEvolutions()
@@ -2901,6 +2914,7 @@ function processAideOfflineTime(idx,secsAway,summary){
         state.dex.push(caught); state.totalCatches++; state.totalSightings++;
         summary.catches++; summary.shinies=(summary.shinies||0)+1;
         state.dexHistory[caught.pokedexId]=(state.dexHistory[caught.pokedexId]||0)+1;
+        recordFormDiscovered(caught.pokedexId,caught.formName); // v0.45
         recordAbilityObserved(caught.pokedexId,caught.ability);
         recordGenderObserved(caught.pokedexId,caught.gender);
         const s_=getPokemonEntry(enc.pokedexId);
@@ -2957,6 +2971,7 @@ function runWildEncounterLoopSilent(lead,enc,summary,encLocKey,encDexKey,idx=0){
         state.dex.push(caught); state.totalCatches++; state.totalSightings++;
         summary.catches++;
         state.dexHistory[caught.pokedexId]=(state.dexHistory[caught.pokedexId]||0)+1;
+        recordFormDiscovered(caught.pokedexId,caught.formName); // v0.45
         recordAbilityObserved(caught.pokedexId,caught.ability);
         recordGenderObserved(caught.pokedexId,caught.gender);
         const exp=Math.floor(((wild.baseExpYield||51)*enc.level)/7);
@@ -3445,6 +3460,7 @@ function resolveEncounterStep(idx=0){
     caught.isShiny=true;
     state.dex.push(caught); state.totalCatches++; state.totalSightings++;
     state.dexHistory[caught.pokedexId]=(state.dexHistory[caught.pokedexId]||0)+1;
+    recordFormDiscovered(caught.pokedexId,caught.formName); // v0.45
     recordAbilityObserved(caught.pokedexId,caught.ability);
     recordGenderObserved(caught.pokedexId,caught.gender);
     const s_=getPokemonEntry(enc.pokedexId);
@@ -3643,6 +3659,7 @@ function catchPokemon(lead,enc,isShiny,idx=0){
   caught.isShiny=isShiny;
   state.dex.push(caught); state.totalCatches++; state.totalSightings++;
   state.dexHistory[caught.pokedexId]=(state.dexHistory[caught.pokedexId]||0)+1;
+  recordFormDiscovered(caught.pokedexId,caught.formName); // v0.45
   recordAbilityObserved(caught.pokedexId,caught.ability);
   recordGenderObserved(caught.pokedexId,caught.gender);
   if(isShiny) addLog(aide.emoji+' '+aide.name+': ✨ SHINY '+getDisplayName(caught)+' caught automatically! ✨','evolve','catches',aide.id);
@@ -3923,6 +3940,14 @@ function compareWanderCandidates(a,b,metric,trainerBag){
   const nameA=(locA?locA.name:a), nameB=(locB?locB.name:b);
   return nameA.localeCompare(nameB,undefined,{numeric:true,sensitivity:'base'});
 }
+// v0.45 — third Wander metric, 'random': uniform random pick from the identical eligible pool
+// the other two metrics use, instead of the deterministic 3-key sort. Shared by both call sites
+// (selectWanderMode()'s initial pick, evaluateWanderTarget()'s ongoing re-routing) so they never
+// disagree about which metric does what. No new eligibility rule, no new candidate pool.
+function pickWanderTarget(reachable,metric,trainerBag){
+  if(metric==='random') return reachable[Math.floor(Math.random()*reachable.length)];
+  return [...reachable].sort((a,b)=>compareWanderCandidates(a,b,metric,trainerBag))[0];
+}
 function evaluateWanderTarget(idx=0){
   const aide=state.aides[idx];
   if(!aide.wanderMode) return;
@@ -3942,8 +3967,8 @@ function evaluateWanderTarget(idx=0){
   // discovery, not just already-discovered ones. requiresItem gates still fully apply.
   const reachable=getWanderReachableLocations(currentLoc,aide.trainerBag).filter(locId=>buildRouteTable(locId,aide.trainerBag).length>0);
   if(!reachable.length) return; // nothing reachable can ever have an encounter — nothing to do
-  const metric=aide.wanderMetric||'encounters'; // v0.35 — 'encounters'|'catches', set at dispatch
-  const best=[...reachable].sort((a,b)=>compareWanderCandidates(a,b,metric,aide.trainerBag))[0];
+  const metric=aide.wanderMetric||'encounters'; // v0.35/v0.45 — 'encounters'|'catches'|'random', set at dispatch
+  const best=pickWanderTarget(reachable,metric,aide.trainerBag);
   if(best===aide.missionDestination) return; // current target is still the deterministic best — no redirect
   // v0.43 — ignoreDiscovery=true: best may be an undiscovered location, and the path may cross
   // undiscovered waypoints too — both fine now, only requiresItem gates still block a route.
@@ -3963,7 +3988,7 @@ function evaluateWanderTarget(idx=0){
   aide.travelPath=path;
   aide.travelPathIndex=-1;
   const destLocData=typeof LOCATIONS!=='undefined'?getLocation(best):null;
-  const metricLabel=metric==='catches'?'lowest-catch':'lowest-encounter'; // v0.35
+  const metricLabel=metric==='random'?'random':(metric==='catches'?'lowest-catch':'lowest-encounter'); // v0.35/v0.45
   addLog('🧭 '+aide.name+' changes course — new '+metricLabel+' destination: '+(destLocData?destLocData.name:best)+'.','info','travel',aide.id);
 }
 
@@ -4071,11 +4096,13 @@ function showMissionModal(){
   const sortButtonsHtml='<div id="dest-sort-buttons" style="display:flex;gap:4px;margin-bottom:8px;">'+destSortButtonHtml('distance','Distance')+destSortButtonHtml('alpha','Alphabetical')+destSortButtonHtml('encounters','Encounters')+destSortButtonHtml('catches','Catches')+'</div>';
   // v0.33 — "Wander" mode: continuously re-routes toward the lowest reachable location by a
   // chosen metric, instead of a fixed destination. Mutually exclusive with manual destination
-  // selection. v0.35 — two metrics, not one: Encounters (original) and Catches (new), each its
-  // own button, since dropping player choice of metric wasn't the intent behind adding Catches.
+  // selection. v0.35 — two metrics: Encounters (original) and Catches, each its own button.
+  // v0.45 — third metric, Random: uniform random pick from the same eligible pool, same button
+  // treatment as the other two.
   const wanderButtonHtml=
     '<button onclick="selectWanderMode(\'encounters\')" id="wander-select-btn-encounters" style="width:100%;padding:8px;margin-bottom:4px;font-size:11px;border-color:var(--main-border);color:var(--main-text-secondary);">🧭 Wander (lowest encounters)</button>'+
-    '<button onclick="selectWanderMode(\'catches\')" id="wander-select-btn-catches" style="width:100%;padding:8px;margin-bottom:8px;font-size:11px;border-color:var(--main-border);color:var(--main-text-secondary);">🧭 Wander (lowest catches)</button>';
+    '<button onclick="selectWanderMode(\'catches\')" id="wander-select-btn-catches" style="width:100%;padding:8px;margin-bottom:4px;font-size:11px;border-color:var(--main-border);color:var(--main-text-secondary);">🧭 Wander (lowest catches)</button>'+
+    '<button onclick="selectWanderMode(\'random\')" id="wander-select-btn-random" style="width:100%;padding:8px;margin-bottom:8px;font-size:11px;border-color:var(--main-border);color:var(--main-text-secondary);">🧭 Wander (random)</button>';
   modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;"><div style="color:var(--accent);font-size:13px;font-weight:bold;margin-bottom:12px;">🗺 Choose Destination</div><div style="font-size:10px;color:var(--main-text-muted);margin-bottom:8px;">From: '+currentLoc+'</div>'+wanderButtonHtml+sortButtonsHtml+'<div id="dest-list-container" style="max-height:220px;overflow-y:auto;"></div><div id="mission-summary" style="color:var(--main-text-secondary);font-size:11px;margin:10px 0;min-height:18px;"></div><div id="method-prefs"></div><div id="shop-section-container"></div><div style="display:flex;gap:8px;"><button onclick="document.getElementById(\'mission-modal\').remove()" style="flex:1;">✕ Cancel</button><button id="confirm-mission" onclick="confirmMission()" class="primary" style="flex:1;" disabled>▶ Dispatch</button></div></div>';
   document.body.appendChild(modal);
   renderDestList();
@@ -4097,15 +4124,16 @@ function selectWanderMode(metric){
   // initial pick and ongoing re-routing.
   const reachable=getWanderReachableLocations(currentLoc,state.aides[missionModalAideIndex].trainerBag).filter(locId=>buildRouteTable(locId,state.aides[missionModalAideIndex].trainerBag).length>0);
   if(!reachable.length){ addLog('No reachable destinations with possible encounters for Wander mode.','fail','systemErrors',state.aides[missionModalAideIndex].id); return; }
-  // v0.44 — same 3-key comparator as evaluateWanderTarget(), so the initial pick and the first
-  // re-evaluation never disagree with each other.
-  const best=[...reachable].sort((a,b)=>compareWanderCandidates(a,b,metric,state.aides[missionModalAideIndex].trainerBag))[0];
+  // v0.45 — pickWanderTarget() handles 'random' (uniform pick) as well as the existing
+  // deterministic 3-key comparator for 'encounters'/'catches', so the initial pick and the first
+  // re-evaluation never disagree with each other for any of the three metrics.
+  const best=pickWanderTarget(reachable,metric,state.aides[missionModalAideIndex].trainerBag);
   state._missionDest=best;
   state._wanderSelected=true;
   state._wanderMetric=metric;
   const locData=typeof LOCATIONS!=='undefined'?getLocation(best):null;
   const name=locData?locData.name:best;
-  const metricLabel=metric==='catches'?'catches':'encounters';
+  const metricLabel=metric==='random'?'random':(metric==='catches'?'catches':'encounters');
   document.getElementById('mission-summary').textContent='🧭 '+state.aides[missionModalAideIndex].name+' → Wander mode, by '+metricLabel+' (currently: '+name+')';
   document.getElementById('confirm-mission').disabled=false;
   const el=document.getElementById('method-prefs'); if(el) el.innerHTML='';
@@ -5047,6 +5075,7 @@ function hatchEggsFromResultDexId(resultDexId,count){
     if(Math.random()<(1/4096)) baby.isShiny=true;
     state.dex.push(baby);
     state.dexHistory[baby.pokedexId]=(state.dexHistory[baby.pokedexId]||0)+1;
+    recordFormDiscovered(baby.pokedexId,baby.formName); // v0.45
     recordAbilityObserved(baby.pokedexId,baby.ability);
     recordGenderObserved(baby.pokedexId,baby.gender);
     const wasFirstSeenBefore=!!(state.researchLog[baby.pokedexId]&&state.researchLog[baby.pokedexId].firstSeen);
@@ -5643,6 +5672,7 @@ function performCheatReplace(catchId,targetDexId,formName,isShiny=false){
   replacement.isShiny=isShiny;
   state.dex.push(replacement);
   state.dexHistory[replacement.pokedexId]=(state.dexHistory[replacement.pokedexId]||0)+1;
+  recordFormDiscovered(replacement.pokedexId,replacement.formName); // v0.45
   recordNewSpecies(replacement.pokedexId,replacement.species);
   if(holder){
     const owner=state.aides.find(a=>a.name===holder);
@@ -6388,93 +6418,81 @@ function renderEvolutionChainVisual(famId,highlightDexId){
   const allMembers=typeof getFamilyMembers!=='undefined'?getFamilyMembers(famId):[];
   if(!allMembers.length) return '';
   const memberSet=new Set(allMembers.map(m=>m.dexId));
-  const seenDexIds=new Set();
-  state.dex.forEach(p=>{ if(p.pokedexId) seenDexIds.add(p.pokedexId); });
-  Object.keys(state.dexHistory).forEach(id=>{ seenDexIds.add(parseInt(id)); });
+  // v0.45 — edges are now built PER (dexId, fromFormName), not per dexId alone. Each edge carries
+  // its own fromFormName (null = base form). This replaces the old v0.35 rule, which decided
+  // "flat vs EVO_TREE" per species — ANY EVO_TREE row for a dexId suppressed that species' flat
+  // edge entirely, regardless of which form the row actually belonged to. That let a regional-
+  // form branch (e.g. Alolan Rattata -> Alolan Raticate) leak onto the BASE node once EVO_TREE had
+  // any row at all for Rattata, displaying "Rattata -> Alolan Raticate" — the reported bug.
+  // See DESIGN.md "Per-Form Edge Resolution & Discovery Gating".
   const edges=[];
   allMembers.forEach(m=>{
-    // v0.35 fix — for species with BOTH a legacy flat evolvesIntoId (pokedex.js) and EVO_TREE
-    // branch rows for the same dexId (e.g. Pikachu: flat field duplicates the EVO_TREE Kantonian
-    // Thunder Stone row, which exists alongside the real Alolan branch), counting both sources
-    // drew the same evolution edge twice. EVO_TREE is authoritative once a species has ANY branch
-    // rows — the flat field is skipped entirely in that case. Confirmed via data audit: 9 species
-    // affected (Pikachu/Raichu, Eevee, Gloom, Poliwhirl, Slowpoke, Scyther, Exeggcute, Cubone,
-    // Koffing) — every one has a flat evolvesIntoId that exactly duplicates one of its own
-    // EVO_TREE rows.
-    const branchRows=getEvolutions(m.dexId);
-    if(!branchRows.length&&m.evolvesIntoId&&memberSet.has(m.evolvesIntoId)){
-      edges.push({from:m.dexId,to:m.evolvesIntoId,method:m.evolveMethod,level:m.evolveLevel,item:m.evolveItem,toFormName:null});
+    const branchRows=getEvolutions(m.dexId); // ALL EVO_TREE rows for this dexId, any form
+    const hasBaseTreeRows=branchRows.some(b=>!b.fromFormName);
+    // Flat pokedex.js edge is used for the BASE-form node only when it has a real evolveMethod
+    // AND EVO_TREE has zero null-fromFormName rows for this dexId. A half-cleared flat row
+    // (method blank, or evolvesIntoId blank) is treated as absent, not as a dangling edge.
+    if(!hasBaseTreeRows&&m.evolveMethod&&m.evolvesIntoId&&memberSet.has(m.evolvesIntoId)){
+      edges.push({from:m.dexId,fromFormName:null,to:m.evolvesIntoId,method:m.evolveMethod,level:m.evolveLevel,item:m.evolveItem,toFormName:null});
     }
     branchRows.forEach(b=>{
       if(b.toDexId&&memberSet.has(b.toDexId)){
-        edges.push({from:m.dexId,to:b.toDexId,method:b.evolveMethod,level:b.evolveLevel,item:b.evolveItem,toFormName:b.toFormName||null});
+        edges.push({from:m.dexId,fromFormName:b.fromFormName||null,to:b.toDexId,method:b.evolveMethod,level:b.evolveLevel,item:b.evolveItem,toFormName:b.toFormName||null});
       }
     });
   });
   const hasIncoming=new Set(edges.map(e=>e.to));
-  // v0.26 fix — bug: roots previously required seenDexIds.has(m.dexId), so a family whose true
-  // structural root had never been seen (e.g. Pichu, if only Pikachu was ever caught) had ZERO
-  // qualifying roots at all (Pikachu itself is disqualified too, since it has an incoming edge
-  // from Pichu) — roots.length came out 0 and the whole chain silently rendered as nothing, not
-  // just the root. Fix: true structural roots (no incoming edge, by data alone) always qualify,
-  // seen or not — walk() below now handles rendering an unseen node as a placeholder itself.
+  // Root-determination is unaffected by form — a species is a structural root if nothing (in any
+  // form) evolves into it. v0.26 fix (unchanged): true structural roots always qualify, seen or
+  // not — walk() below renders an undiscovered node as a placeholder itself.
   const roots=allMembers.filter(m=>!hasIncoming.has(m.dexId));
   if(!roots.length) return '';
-  // Does this edge count as "confirmed" per state.researchLog[dexId].confirmedBranches?
-  // v0.26 fix — bug: this previously compared confirmedBranches[].method against the edge's
-  // generic EVO_TREE method field. For item evolutions, recordEvolution() stores the ITEM NAME
-  // as the method (e.g. "Water Stone"), but the edge's method is the literal string "use-item" —
-  // these could never be equal, so no item-based evolution (Eevee's stones, etc.) could ever
-  // register as confirmed here, no matter how many times it had actually happened. Fix: compare
-  // against the edge's item name when the method is 'use-item', matching what was actually stored.
-  // v0.33 fix — also matches on toFormName. Two branches can share both intoId and matchKey (e.g.
-  // Kantonian/Alolan Raichu, both Thunder Stone -> dexId 26) — without the form check, both
-  // rendered as identical, colliding duplicate edges regardless of which was actually confirmed.
   function isEdgeConfirmed(e,r){
     if(isOfficial) return true; // v0.37 — Official Pokédex shows every real edge unconditionally
     if(!r||!r.confirmedBranches) return false;
     const matchKey=e.method==='use-item'?e.item:e.method;
     return r.confirmedBranches.some(b=>b.method===matchKey&&b.intoId===e.to&&(b.toFormName||null)===(e.toFormName||null));
   }
-  // v0.33 — formName param: a node reached via a form-variant branch (e.g. Alolan Raichu) now
-  // renders its own specific entry/sprite/label instead of always the deduped base-form entry
-  // getFamilyMembers() would otherwise return for every occurrence of this dexId.
+  // v0.45 — discovery gate, per (dexId,formName), replacing the old dexId-only seenDexIds check
+  // (which couldn't distinguish a regular Raichu from an Alolan one, since they share a dexId).
+  function isNodeDiscovered(dexId,formName){
+    return isOfficial||isFormDiscovered(dexId,formName);
+  }
+  // v0.45 — does ANY node along this specific (dexId,formName) line have a discovery record?
+  // Used to decide whether an entire form-line renders at all. A wholly-undiscovered line is
+  // omitted entirely — no floating "?" placeholder hinting that a form exists before it's found.
+  function lineHasAnyDiscovery(dexId,formName,visited){
+    visited=visited||new Set();
+    const key=dexId+'|'+(formName||'');
+    if(visited.has(key)) return false;
+    visited.add(key);
+    if(isNodeDiscovered(dexId,formName)) return true;
+    const outgoing=edges.filter(e=>e.from===dexId&&(e.fromFormName||null)===(formName||null));
+    return outgoing.some(e=>lineHasAnyDiscovery(e.to,e.toFormName,visited));
+  }
   function walk(dexId,formName){
     formName=formName||null;
     const baseEntry=allMembers.find(m=>m.dexId===dexId);
     if(!baseEntry) return '';
     const entry=formName?(getPokemonEntry(dexId,formName)||baseEntry):baseEntry;
-    const isSeen=isOfficial||seenDexIds.has(dexId); // v0.37 — Official Pokédex treats every node as seen
-    // v0.26 — an unseen node (most commonly an unseen root) renders as an opaque placeholder,
-    // same visual language as an unconfirmed branch, instead of hiding the whole chain. It still
-    // participates normally in the walk below — if it has an outgoing edge to a species that HAS
-    // been seen (e.g. an unseen Pichu -> a caught Pikachu), that continuation still renders.
+    const isSeen=isNodeDiscovered(dexId,formName); // v0.45 — per-form, was dexId-only (seenDexIds)
     const html=isSeen?evoNodeHtml(entry,dexId===highlightDexId,formName):evoPlaceholderHtml();
-    const outgoing=edges.filter(e=>e.from===dexId);
+    // v0.45 — outgoing edges filtered to THIS node's exact form, not every EVO_TREE row for the dexId.
+    const outgoing=edges.filter(e=>e.from===dexId&&(e.fromFormName||null)===formName);
     const r=state.researchLog[dexId];
-    // v0.23 — terminal node (no data-defined evolution target at all, e.g. Sandslash) no longer
-    // returns silently. Missing data isn't proof of "no further evolution" — only exhaustive
-    // method testing is. Same ???-arrow treatment as an unconfirmed branch, unless ruled out.
-    // v0.37 — Official Pokédex bypasses the research-log confirmation entirely here too: no
-    // outgoing edges in the real data IS authoritative proof of "does not evolve" in this mode.
     if(!outgoing.length){
       if(!isSeen) return html; // v0.26 — unseen node stays fully opaque, no speculative chain hint
       if(isOfficial||(r&&isNonEvolutionConfirmed(r))) return html;
       return html+evoArrowHtml('?')+evoPlaceholderHtml();
     }
-    // v0.26 — a branch shows its real target node if the target has been seen by ANY means
-    // (seenDexIds) — not only if the specific evolution method was formally confirmed via
-    // recordEvolution(). Covers species obtained via Day Care/breeding or any other path that
-    // doesn't route through the normal evolution-checking flow.
-    const relevant=outgoing.filter(e=>isEdgeConfirmed(e,r)||seenDexIds.has(e.to));
+    // v0.45 — was seenDexIds.has(e.to) (dexId-only); now checks the SPECIFIC target form, so an
+    // edge into Alolan Raichu no longer counts as "known" just because regular Raichu was seen.
+    const relevant=outgoing.filter(e=>isEdgeConfirmed(e,r)||isNodeDiscovered(e.to,e.toFormName));
     if(!relevant.length){
       if(!isSeen) return html;
       if(isOfficial||(r&&isNonEvolutionConfirmed(r))) return html;
       return html+evoArrowHtml('?')+evoPlaceholderHtml();
     }
-    // v0.37 — 2+ simultaneous branches: one parent sprite, then each branch as its own column
-    // (method label above a down-arrow, straight down to that branch's sprite/chain), arranged
-    // side by side in a horizontal wrapping row — not stacked one-per-line.
     if(relevant.length>1){
       const branchRows=relevant.map(e=>{
         const label=isEdgeConfirmed(e,r)?evoMethodLabel(e):'?';
@@ -6486,33 +6504,31 @@ function renderEvolutionChainVisual(famId,highlightDexId){
         +'</div>';
     }
     const branches=relevant.map(e=>{
-      // Arrow label: real method if formally confirmed, generic '?' if the species is known but
-      // the method itself hasn't been tested (e.g. seen only via breeding).
       const label=isEdgeConfirmed(e,r)?evoMethodLabel(e):'?';
       return evoArrowHtml(label)+walk(e.to,e.toFormName);
     });
     return html+branches.join('');
   }
-  // v0.36 — a structural root that CAN breed but hasn't been tested yet (see "Unconfirmed
-  // Predecessor via Breeding") gets an unconfirmed "?" placeholder prepended, same visual
-  // treatment as an unconfirmed forward evolution — until now, a species with no known
-  // predecessor ROW in the data (fossils, etc.) silently assumed "confirmed no predecessor" just
-  // because nothing was there to render, even though the player never actually confirmed that via
-  // breeding. Species with no valid egg group at all can't be tested, so they're auto-skipped.
-  // v0.37 fix — getEggGroups().length>0 alone isn't enough: species like Mewtwo have a non-empty
-  // ['No eggs'] group (length 1), so this never actually caught them despite being structurally
-  // unbreedable. Now also excludes isUndiscoveredOnly() species, alongside the length check.
-  // v0.37 — Official Pokédex skips the unconfirmed-predecessor placeholder entirely; every root
-  // renders with nothing before it, since Official mode has no breeding-tested gate at all.
+  // v0.45 — a root can now render MULTIPLE lines, one per distinct fromFormName found among its
+  // own outgoing edges (generic — no species hardcoding; a species with no form-branching still
+  // gets exactly its one existing base line). This is what separates regular Slowpoke's line from
+  // Galarian Slowpoke's, and regular Rattata's from Alolan Rattata's, instead of one line
+  // incorrectly showing whichever edge happened to win under the old per-species rule.
   return roots.map(root=>{
-    // v0.38 fix — Ditto showed a permanently unresolvable "?" here: two Ditto can't pair
-    // (canBreedPair() blocks it) and Ditto paired with anything else always produces the OTHER
-    // parent's species, never Ditto itself — breedingTested for Ditto could never legitimately
-    // become true. Excluded here alongside the existing egg-group/undiscovered-only exclusions.
-    const canBreed=!isOfficial&&getEggGroups(root.dexId).length>0&&!isUndiscoveredOnly(root.dexId)&&!isDitto(root.dexId);
-    const bred=isOfficial||!!(state.researchLog[root.dexId]&&state.researchLog[root.dexId].breedingTested);
-    const preHtml=(canBreed&&!bred)?(evoPlaceholderHtml()+evoArrowHtml('?')):'';
-    return '<div style="display:flex;align-items:flex-start;flex-wrap:wrap;gap:2px;margin:4px 0;">'+preHtml+walk(root.dexId,null)+'</div>';
+    const rootEdges=edges.filter(e=>e.from===root.dexId);
+    const formNames=Array.from(new Set(rootEdges.map(e=>e.fromFormName||null)));
+    const lines=formNames.length?formNames:[null]; // terminal single-stage species: one base line
+    return lines.map(formName=>{
+      // v0.45 — wholly-undiscovered line renders nothing at all, not even a placeholder box.
+      if(!isOfficial&&!lineHasAnyDiscovery(root.dexId,formName)) return '';
+      // Unconfirmed-predecessor-via-breeding placeholder (v0.36) stays scoped to the BASE line
+      // only — an alternate-form line (e.g. Galarian Slowpoke) doesn't get its own independent
+      // "unknown predecessor" prompt; breeding in this game doesn't distinguish target forms.
+      const canBreed=formName===null&&!isOfficial&&getEggGroups(root.dexId).length>0&&!isUndiscoveredOnly(root.dexId)&&!isDitto(root.dexId);
+      const bred=isOfficial||!!(state.researchLog[root.dexId]&&state.researchLog[root.dexId].breedingTested);
+      const preHtml=(canBreed&&!bred)?(evoPlaceholderHtml()+evoArrowHtml('?')):'';
+      return '<div style="display:flex;align-items:flex-start;flex-wrap:wrap;gap:2px;margin:4px 0;">'+preHtml+walk(root.dexId,formName)+'</div>';
+    }).join('');
   }).join('');
 }
 
@@ -7382,7 +7398,7 @@ const SAVE_KEY='pokeprof_save';
 // batch-evolve prompt, offline friendship parity, dual-root family breeding, Ditto
 // breeding-placeholder fix, Family IV Inheritance pool fix) is a bug fix or UI/logic-only, no
 // additional schema impact.
-const SAVE_VERSION=30; // v0.44 — new global gymBattleDefaultPreference field (New Player Preamble's Gym Battle Default question)
+const SAVE_VERSION=31; // v0.45 — new global formsDiscovered record (per-form evolution-chain discovery gating)
 let saveTimer=0;
 
 function saveGame(){
@@ -7407,6 +7423,7 @@ function saveGame(){
         locationEncounterLog:state.locationEncounterLog||{},
         locationMethodPrefs:state.locationMethodPrefs||{},
         dexHistory:state.dexHistory||{},
+        formsDiscovered:state.formsDiscovered||{}, // v0.45
         freeSkipsRemaining:state.freeSkipsRemaining||0,
         significantLog:(state.significantLog||[]).slice(0,50), // v0.33/v0.35
         logCustomFilters:state.logCustomFilters||{categories:{},aides:{}} // v0.43
@@ -7423,9 +7440,9 @@ function loadGame(){
     const data=JSON.parse(raw);
     if(!data) return false;
 
-    // ── SAVE_VERSION 28 MIGRATION ──
-    // Accepts v11-v27 saves and migrates them; rejects anything older.
-    if(data.version!==SAVE_VERSION&&data.version!==29&&data.version!==28&&data.version!==27&&data.version!==26&&data.version!==25&&data.version!==24&&data.version!==23&&data.version!==22&&data.version!==21&&data.version!==20&&data.version!==19&&data.version!==18&&data.version!==17&&data.version!==16&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
+    // ── SAVE_VERSION 31 MIGRATION ──
+    // Accepts v11-v30 saves and migrates them; rejects anything older.
+    if(data.version!==SAVE_VERSION&&data.version!==30&&data.version!==29&&data.version!==28&&data.version!==27&&data.version!==26&&data.version!==25&&data.version!==24&&data.version!==23&&data.version!==22&&data.version!==21&&data.version!==20&&data.version!==19&&data.version!==18&&data.version!==17&&data.version!==16&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
     const s=data.state;
     // v0.39.1 — aide-owned fields (party/dex/trainerBag/currentLocation/mission-and-travel/
     // gymProgress/lastHealLocation/wanderMode) now live in state.aides[]. A pre-v26 save has them
@@ -7747,6 +7764,22 @@ function loadGame(){
         aide.party=aide.party.map(pp=>state.dex.find(d=>d.id===pp.id)||pp);
       });
     }
+    // v0.45 — formsDiscovered backfill. Only runs for saves that predate the field entirely
+    // (post-v0.45 saves already carry a real, precise record). Best-effort floor derived from
+    // present state, not a full history reconstruction: seeds the base form as discovered for
+    // any species with dexHistory>0 (can't distinguish which form was historically caught/
+    // released/evolved away, so base is the safe assumption), then additionally marks each
+    // CURRENTLY-HELD individual's own specific form (covers a live non-base individual, e.g. a
+    // CheatN-spawned Alolan Rattata sitting in the box or a party right now). Regional/alt forms
+    // owned and released or evolved past before v0.45 are not recoverable — documented in
+    // DESIGN.md's SAVE_VERSION table.
+    if(!s.formsDiscovered){
+      state.formsDiscovered={};
+      Object.keys(state.dexHistory||{}).forEach(dexIdStr=>{
+        if(state.dexHistory[dexIdStr]>0) recordFormDiscovered(parseInt(dexIdStr),null);
+      });
+      state.dex.forEach(p=>{ if(p.pokedexId) recordFormDiscovered(p.pokedexId,p.formName); });
+    }
     const secsAway=Math.floor((Date.now()-data.savedAt)/1000);
     let offSum=null;
     if(secsAway>10) offSum=processOfflineTime(secsAway); // v0.26 — research is always active, no missionWasActive gate needed
@@ -7789,6 +7822,7 @@ function init(){
   const s=makePokemon('Rattata',5,Math.random()<0.5?'M':'F',carl.name);
   carl.party.push(s); state.dex.push(s);
   state.dexHistory[s.pokedexId]=(state.dexHistory[s.pokedexId]||0)+1;
+  recordFormDiscovered(s.pokedexId,s.formName); // v0.45
   recordNewSpecies(s.pokedexId,'Rattata');
   recordSighting(s.pokedexId,5);
   addLog('Rattata #1 added to party as starter.','info','catches',state.aides[0].id);
@@ -7823,6 +7857,7 @@ if(!hasSave){
     locationEncounterLog:{},
     locationMethodPrefs:{},
     dexHistory:{},
+    formsDiscovered:{}, // v0.45
     freeSkipsRemaining:50, // v0.24 — onboarding-only, brand new saves get 50 free encounter skips
     significantLog:[] // v0.35 — global, paired with `log`
   };
@@ -7876,27 +7911,112 @@ function getGymBadgeItemIdForLocation(locId){
 
 let mapSelectedLoc = null;
 
+// v0.45 — Region Tabs. Auto-derived from LOCATIONS' distinct `region` values, in file
+// order of first appearance — no hardcoded region list, so a future third region needs a data
+// change only. See DESIGN.md "Region Tabs" under Map System.
+let activeMapRegion=null; // transient, not persisted — always resets to the default on tab entry
+function getMapRegions(){
+  if(typeof LOCATIONS==='undefined') return [];
+  const seen=[];
+  LOCATIONS.forEach(l=>{ if(l.region&&!seen.includes(l.region)) seen.push(l.region); });
+  return seen;
+}
+function isRegionDiscovered(region){
+  for(const locId of state.discoveredLocations){
+    const l=getLocation(locId);
+    if(l&&l.region===region) return true;
+  }
+  return false;
+}
+// Default active region: whichever region the most-recently-active aide's current location
+// belongs to; falls back to the first defined region if that can't be determined.
+function getDefaultMapRegion(){
+  const regions=getMapRegions();
+  if(!regions.length) return null;
+  const aide=state.aides[state.activeAideIndex||0]||state.aides[0];
+  const loc=aide?getLocation(aide.currentLocation):null;
+  if(loc&&loc.region&&regions.includes(loc.region)) return loc.region;
+  return regions[0];
+}
+function selectMapRegion(region){
+  if(region===activeMapRegion) return;
+  activeMapRegion=region; // renderMap() rebuilds the zoom-group fresh — this is reset trigger #3
+  renderMap();
+}
+function renderMapRegionTabs(){
+  const c=document.getElementById('map-region-tabs');
+  if(!c) return;
+  const regions=getMapRegions();
+  if(regions.length<2){ c.innerHTML=''; c.style.display='none'; return; }
+  c.style.display='flex';
+  c.innerHTML=regions.map(r=>{
+    const discovered=isRegionDiscovered(r);
+    const active=r===activeMapRegion;
+    const style='flex:1;padding:6px;font-size:10px;text-align:center;border-radius:4px;'
+      +(discovered?'cursor:pointer;':'cursor:not-allowed;opacity:0.4;')
+      +(active?'background:var(--accent);color:#000;font-weight:bold;':'background:var(--main-bg);color:var(--main-text-secondary);');
+    return '<div onclick="'+(discovered?"selectMapRegion('"+r+"')":'')+'" style="'+style+'">'+r+'</div>';
+  }).join('');
+}
+// v0.45 — does either aide own requiresItem? Per-aide, not "any aide" — see below.
+function aideOwnsGate(aide,requiresItem){ return !!(aide.trainerBag&&aide.trainerBag[requiresItem]>0); }
+// v0.45 — perpendicular offset for the two-line gated-connection split, oriented from the
+// connection's own geometry (never hardcoded per connection): horizontal -> Carl top/Faraday
+// bottom; vertical -> Carl left/Faraday right; diagonal -> Carl upper-left/Faraday lower-right.
+function computeLineOffsets(x1,y1,x2,y2,dist){
+  const dx=x2-x1, dy=y2-y1;
+  if(dy===0&&dx!==0) return {a:{dx:0,dy:-dist},b:{dx:0,dy:dist}}; // horizontal
+  if(dx===0&&dy!==0) return {a:{dx:-dist,dy:0},b:{dx:dist,dy:0}}; // vertical
+  const len=Math.sqrt(dx*dx+dy*dy)||1;
+  let px=-(dy/len), py=(dx/len); // one perpendicular unit direction
+  if(px>0||(px===0&&py>0)){ px=-px; py=-py; } // normalize so (px,py) points upper-left-ish
+  return {a:{dx:px*dist,dy:py*dist},b:{dx:-px*dist,dy:-py*dist}};
+}
+function drawGatedLine(container,x1,y1,x2,y2,color,dashed){
+  const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+  line.setAttribute('x1',x1); line.setAttribute('y1',y1);
+  line.setAttribute('x2',x2); line.setAttribute('y2',y2);
+  line.setAttribute('stroke',color); line.setAttribute('stroke-width','2');
+  if(dashed) line.setAttribute('stroke-dasharray','4,4');
+  container.appendChild(line);
+}
+
 function renderMap(){
+  renderMapRegionTabs();
   const svg=document.getElementById('map-svg');
   if(!svg) return;
   svg.innerHTML='';
+  // v0.45 — everything drawn goes inside this single group. Since renderMap() always rebuilds it
+  // fresh with no transform, this is what makes zoom/pan reset to fit-all on every redraw (tab
+  // re-entry, new discovery, region switch) — see setupMapZoomPan() / "Map Zoom & Pan".
+  const zoomGroup=document.createElementNS('http://www.w3.org/2000/svg','g');
+  zoomGroup.setAttribute('id','map-zoom-group');
+  svg.appendChild(zoomGroup);
 
   const discovered=[...state.discoveredLocations];
-  if(!discovered.length){ svg.innerHTML='<text x="50%" y="50%" text-anchor="middle" fill="#555" font-size="12">No locations discovered yet.</text>'; return; }
+  if(!discovered.length){ zoomGroup.innerHTML='<text x="50%" y="50%" text-anchor="middle" fill="#555" font-size="12">No locations discovered yet.</text>'; return; }
 
-  const visibleKeys=discovered.filter(id=>{ const l=getLocation(id); return l&&l.mapCol!=null&&l.mapRow!=null; });
-  if(!visibleKeys.length){ svg.innerHTML='<text x="50%" y="50%" text-anchor="middle" fill="#555" font-size="12" font-family="monospace">Map data for these locations coming soon.</text>'; return; }
+  if(activeMapRegion===null) activeMapRegion=getDefaultMapRegion();
+
+  // v0.45 — scoped to the ACTIVE region only. This is the actual fix for the cross-region
+  // viewBox-stretch problem: Sevii's coordinates never factor into Kanto's fit-all, and vice
+  // versa, because visibleKeys itself never contains a location outside the active region.
+  const visibleKeys=discovered.filter(id=>{
+    const l=getLocation(id);
+    return l&&l.mapCol!=null&&l.mapRow!=null&&l.region===activeMapRegion;
+  });
+  if(!visibleKeys.length){ zoomGroup.innerHTML='<text x="50%" y="50%" text-anchor="middle" fill="#555" font-size="12" font-family="monospace">Map data for these locations coming soon.</text>'; return; }
 
   const cols=visibleKeys.map(k=>getLocation(k).mapCol);
   const rows=visibleKeys.map(k=>getLocation(k).mapRow);
   const minCol=Math.min(...cols), maxCol=Math.max(...cols);
   const minRow=Math.min(...rows), maxRow=Math.max(...rows);
 
-  // Dynamic viewBox computed from discovered node extents — never a fixed grid
   const CELL=72, PAD=48;
   const gridW=(maxCol-minCol)*CELL+PAD*2;
   const gridH=(maxRow-minRow)*CELL+PAD*2;
   svg.setAttribute('viewBox','0 0 '+gridW+' '+gridH);
+  const centerX=(maxCol-minCol)/2*CELL+PAD, centerY=(maxRow-minRow)/2*CELL+PAD;
 
   function nodeX(k){ return (getLocation(k).mapCol-minCol)*CELL+PAD; }
   function nodeY(k){ return (getLocation(k).mapRow-minRow)*CELL+PAD; }
@@ -7908,26 +8028,61 @@ function renderMap(){
       if(drawn.has(key)) return;
       if(!state.discoveredLocations.has(conn.fromLocationId)||!state.discoveredLocations.has(conn.toLocationId)) return;
       const fromLoc=getLocation(conn.fromLocationId), toLoc=getLocation(conn.toLocationId);
-      if(!fromLoc||fromLoc.mapCol==null||fromLoc.mapRow==null) return;
-      if(!toLoc||toLoc.mapCol==null||toLoc.mapRow==null) return;
+      if(!fromLoc||fromLoc.mapCol==null||fromLoc.mapRow==null) return; // source must be real/placed
+      const fromInRegion=fromLoc.region===activeMapRegion;
+      const toInRegion=toLoc&&toLoc.mapCol!=null&&toLoc.mapRow!=null&&toLoc.region===activeMapRegion;
+      if(!fromInRegion&&!toInRegion) return; // neither endpoint is on THIS region's map at all
       drawn.add(key);
-      const line=document.createElementNS('http://www.w3.org/2000/svg','line');
-      line.setAttribute('x1',nodeX(conn.fromLocationId));
-      line.setAttribute('y1',nodeY(conn.fromLocationId));
-      line.setAttribute('x2',nodeX(conn.toLocationId));
-      line.setAttribute('y2',nodeY(conn.toLocationId));
-      // v0.38 — gated (requiresItem) connections are now dynamically color-coded by live
-      // ownership instead of static purple: red until the required item is owned, green once it
-      // is. Same ownership check used elsewhere for gating (buildTravelPath(),
-      // getReachableDiscoveredLocations()). Re-evaluated every renderMap() call.
-      // v0.39.1 — gated connection ownership now checks ANY aide's inventory (most permissive/
-      // informative reading of "is this path walkable" for a shared map view — a connection an
-      // aide could use is shown green even if a different aide is the one currently near it).
-      const gatedOwned=conn.requiresItem&&(state.aides.some(a=>a.trainerBag&&a.trainerBag[conn.requiresItem]>0)||(state.trainerUnlocks&&state.trainerUnlocks[conn.requiresItem]));
-      line.setAttribute('stroke',conn.requiresItem?(gatedOwned?'#2ecc71':'#e63946'):'#4a5a6a');
-      line.setAttribute('stroke-width','2');
-      if(conn.requiresItem) line.setAttribute('stroke-dasharray','4,4');
-      svg.appendChild(line);
+
+      const dist=4; // per-aide line half-separation, matches the ~8px total aide-marker fan-out scale
+
+      if(fromInRegion&&toInRegion){
+        // v0.45 — normal same-region connection.
+        const x1=nodeX(conn.fromLocationId), y1=nodeY(conn.fromLocationId);
+        const x2=nodeX(conn.toLocationId), y2=nodeY(conn.toLocationId);
+        if(!conn.requiresItem){
+          drawGatedLine(zoomGroup,x1,y1,x2,y2,'#4a5a6a',false); // ungated: unchanged solid-blue single line
+          return;
+        }
+        // v0.45 — two lines, one per aide, each colored by that aide's OWN trainerBag only.
+        // state.trainerUnlocks removed entirely — confirmed dead stub, see Resolved Bug Index.
+        if(state.aides.length<2){
+          const color=aideOwnsGate(state.aides[0],conn.requiresItem)?'#2ecc71':'#e63946';
+          drawGatedLine(zoomGroup,x1,y1,x2,y2,color,true);
+        } else {
+          const off=computeLineOffsets(x1,y1,x2,y2,dist);
+          const colorA=aideOwnsGate(state.aides[0],conn.requiresItem)?'#2ecc71':'#e63946';
+          const colorB=aideOwnsGate(state.aides[1],conn.requiresItem)?'#2ecc71':'#e63946';
+          drawGatedLine(zoomGroup,x1+off.a.dx,y1+off.a.dy,x2+off.a.dx,y2+off.a.dy,colorA,true);
+          drawGatedLine(zoomGroup,x1+off.b.dx,y1+off.b.dy,x2+off.b.dx,y2+off.b.dy,colorB,true);
+        }
+      } else {
+        // v0.45 — cross-region stub: exactly one endpoint is on this region's map (the other is
+        // a different region, or has no map coordinates yet — e.g. sSAnne -> oneIsland before
+        // Sevii Islands has real coordinates). Draw a short line from the local endpoint,
+        // trailing off past the grid's edge in the direction away from the grid's geometric
+        // center — computed from this region's own extent, never hardcoded per connection. No
+        // destination node is drawn. See DESIGN.md "Region Tabs" worked example.
+        const localId=fromInRegion?conn.fromLocationId:conn.toLocationId;
+        const lx=nodeX(localId), ly=nodeY(localId);
+        let dx=lx-centerX, dy=ly-centerY;
+        const len=Math.sqrt(dx*dx+dy*dy)||1;
+        dx/=len; dy/=len;
+        const stubLen=CELL*0.6;
+        const ex=lx+dx*stubLen, ey=ly+dy*stubLen;
+        if(!conn.requiresItem){
+          drawGatedLine(zoomGroup,lx,ly,ex,ey,'#4a5a6a',true);
+        } else if(state.aides.length<2){
+          const color=aideOwnsGate(state.aides[0],conn.requiresItem)?'#2ecc71':'#e63946';
+          drawGatedLine(zoomGroup,lx,ly,ex,ey,color,true);
+        } else {
+          const off=computeLineOffsets(lx,ly,ex,ey,dist);
+          const colorA=aideOwnsGate(state.aides[0],conn.requiresItem)?'#2ecc71':'#e63946';
+          const colorB=aideOwnsGate(state.aides[1],conn.requiresItem)?'#2ecc71':'#e63946';
+          drawGatedLine(zoomGroup,lx+off.a.dx,ly+off.a.dy,ex+off.a.dx,ey+off.a.dy,colorA,true);
+          drawGatedLine(zoomGroup,lx+off.b.dx,ly+off.b.dy,ex+off.b.dx,ey+off.b.dy,colorB,true);
+        }
+      }
     });
   }
 
@@ -7935,8 +8090,6 @@ function renderMap(){
     const locData=getLocation(locId);
     const c=getMapNodeStyle(locData);
     const x=nodeX(locId), y=nodeY(locId);
-    // v0.39.1 — every aide currently at this node, not just Carl Oak. Order matches state.aides
-    // (Carl Oak first, hire order after), consistent with the fixed roster order elsewhere.
     const aidesHere=state.aides.filter(a=>a.currentLocation===locId);
     const isCurrent=aidesHere.length>0;
     const isSelected=mapSelectedLoc===locId;
@@ -7947,16 +8100,10 @@ function renderMap(){
     const circle=document.createElementNS('http://www.w3.org/2000/svg','circle');
     circle.setAttribute('cx',x); circle.setAttribute('cy',y); circle.setAttribute('r','14');
     circle.setAttribute('fill',isCurrent?'#245a8a':c.fill);
-    // v0.36 fix — reverted from the theme's Accent color back to fixed gold. The selected-node
-    // ring never needed to be tied to the theme in the first place; it's a state indicator, not
-    // a brand/interactive element, same reasoning as the map's other v0.36 fixed-palette changes.
     circle.setAttribute('stroke',isSelected?'#f4d03f':c.stroke);
     circle.setAttribute('stroke-width',isSelected?'3':'2');
     g.appendChild(circle);
 
-    // v0.39.1 — one marker per aide at this node, using that aide's own emoji (not a hardcoded
-    // 🧑). Multiple aides at the same node fan out via a small fixed pixel offset rather than
-    // stacking — generalizes cleanly to 3+ aides without needing a redesign later.
     aidesHere.forEach((aide,i)=>{
       const offset=aidesHere.length>1?(i-(aidesHere.length-1)/2)*8:0;
       const marker=document.createElementNS('http://www.w3.org/2000/svg','text');
@@ -7967,8 +8114,6 @@ function renderMap(){
     });
 
     const text=document.createElementNS('http://www.w3.org/2000/svg','text');
-    // v0.22: stagger label y-offset by column parity to reduce adjacent-column overlap.
-    // Even columns keep the original offset; odd columns get 12px extra. No connector line.
     const labelYOffset=((locData.mapCol||0)%2===0)?26:38;
     text.setAttribute('x',x); text.setAttribute('y',y+labelYOffset);
     text.setAttribute('text-anchor','middle');
@@ -7979,11 +8124,6 @@ function renderMap(){
     text.textContent=locData.name||locId;
     g.appendChild(text);
 
-    // v0.41 — tiny badge-sprite icon next to the location name for any discovered gym location,
-    // regardless of current accessibility (confirmed). Same BADGE_SPRITE_MAP/champion-badge-emoji
-    // convention as the Aide Panel and the map-detail-panel block above. Positioned just to the
-    // right of the label's approximate text width (label font is 9px monospace, so this is an
-    // estimate, not a measured width — good enough at this scale).
     const gymTrainerIdsAtNode=getGymTrainerIdsAtLocation(locId);
     if(gymTrainerIdsAtNode.length){
       const trainerRow=typeof TRAINERS_DATA!=='undefined'?TRAINERS_DATA.find(t=>t.trainerId===gymTrainerIdsAtNode[0]):null;
@@ -8008,8 +8148,114 @@ function renderMap(){
     }
 
     g.onclick=(e)=>{ e.stopPropagation(); selectMapLocation(locId); };
-    svg.appendChild(g);
+    zoomGroup.appendChild(g);
   });
+  setupMapZoomPan(); // v0.45 — idempotent; see "Map Zoom & Pan"
+}
+
+// v0.45 — Map Zoom & Pan. Pinch/wheel zoom + drag/pan, scoped to #map-container only (the
+// header, tab bar, and #map-detail below are untouched). Layered on top of renderMap()'s
+// existing fit-all viewBox via a transform on #map-zoom-group — never replaces that computation.
+// Min zoom = fit-all (scale 1); max = 6x. Resets to fit-all on tab re-entry, a new-discovery
+// redraw, and a region-tab switch — all three call renderMap(), which rebuilds #map-zoom-group
+// fresh with no transform, so "reset" requires no special-case code here at all.
+let _mapZoomSetup=false;
+const MAP_ZOOM_MIN=1, MAP_ZOOM_MAX=6;
+function setupMapZoomPan(){
+  if(_mapZoomSetup) return; // idempotent — call freely from renderMap() every redraw
+  _mapZoomSetup=true;
+  const container=document.getElementById('map-container');
+  if(!container) return;
+  let scale=1, tx=0, ty=0;
+  function apply(){
+    const g=document.getElementById('map-zoom-group');
+    if(g) g.setAttribute('transform','translate('+tx+','+ty+') scale('+scale+')');
+  }
+  function reset(){ scale=1; tx=0; ty=0; }
+  // Every renderMap() call creates a brand-new #map-zoom-group with no transform — that IS the
+  // reset. This local scale/tx/ty must reset in lockstep, or the next gesture would jump from a
+  // stale remembered value instead of fit-all. Cheapest reliable hook: reset before every apply
+  // triggered by a fresh gesture start, and explicitly whenever the group identity changes.
+  let lastGroup=null;
+  function syncResetIfNewGroup(){
+    const g=document.getElementById('map-zoom-group');
+    if(g!==lastGroup){ lastGroup=g; reset(); }
+  }
+  function clientToSvgPoint(clientX,clientY){
+    const svg=document.getElementById('map-svg');
+    const pt=svg.createSVGPoint();
+    pt.x=clientX; pt.y=clientY;
+    return pt.matrixTransform(svg.getScreenCTM().inverse());
+  }
+  function zoomAt(clientX,clientY,factor){
+    syncResetIfNewGroup();
+    const p=clientToSvgPoint(clientX,clientY);
+    // p is in current (post-transform) space; solve for new tx,ty so the point under the cursor
+    // stays fixed while scale changes.
+    const newScale=Math.min(MAP_ZOOM_MAX,Math.max(MAP_ZOOM_MIN,scale*factor));
+    if(newScale===scale) return;
+    const worldX=(p.x-tx)/scale, worldY=(p.y-ty)/scale;
+    tx=p.x-worldX*newScale; ty=p.y-worldY*newScale;
+    scale=newScale;
+    apply();
+  }
+  // Desktop: wheel to zoom (also covers trackpad pinch, reported as wheel+ctrlKey), click-drag to pan.
+  container.addEventListener('wheel',(e)=>{
+    e.preventDefault();
+    syncResetIfNewGroup();
+    const factor=e.deltaY<0?1.1:0.9;
+    zoomAt(e.clientX,e.clientY,factor);
+  },{passive:false});
+  let dragging=false, dragStartX=0, dragStartY=0, dragTx0=0, dragTy0=0;
+  container.addEventListener('mousedown',(e)=>{
+    syncResetIfNewGroup();
+    dragging=true; dragStartX=e.clientX; dragStartY=e.clientY; dragTx0=tx; dragTy0=ty;
+  });
+  window.addEventListener('mousemove',(e)=>{
+    if(!dragging) return;
+    const svg=document.getElementById('map-svg');
+    const rect=svg.getBoundingClientRect();
+    const scaleX=svg.viewBox.baseVal.width/rect.width;
+    tx=dragTx0+(e.clientX-dragStartX)*scaleX;
+    ty=dragTy0+(e.clientY-dragStartY)*scaleX;
+    apply();
+  });
+  window.addEventListener('mouseup',()=>{ dragging=false; });
+  // Touch: one-finger drag to pan, two-finger pinch to zoom.
+  let touchMode=null, touchStartDist=0, touchStartScale=1, touchStartTx=0, touchStartTy=0;
+  container.addEventListener('touchstart',(e)=>{
+    syncResetIfNewGroup();
+    if(e.touches.length===1){
+      touchMode='pan';
+      dragStartX=e.touches[0].clientX; dragStartY=e.touches[0].clientY; dragTx0=tx; dragTy0=ty;
+    } else if(e.touches.length===2){
+      touchMode='pinch';
+      const dx=e.touches[0].clientX-e.touches[1].clientX, dy=e.touches[0].clientY-e.touches[1].clientY;
+      touchStartDist=Math.sqrt(dx*dx+dy*dy); touchStartScale=scale; touchStartTx=tx; touchStartTy=ty;
+    }
+  },{passive:false});
+  container.addEventListener('touchmove',(e)=>{
+    e.preventDefault();
+    if(touchMode==='pan'&&e.touches.length===1){
+      const svg=document.getElementById('map-svg');
+      const rect=svg.getBoundingClientRect();
+      const scaleX=svg.viewBox.baseVal.width/rect.width;
+      tx=dragTx0+(e.touches[0].clientX-dragStartX)*scaleX;
+      ty=dragTy0+(e.touches[0].clientY-dragStartY)*scaleX;
+      apply();
+    } else if(touchMode==='pinch'&&e.touches.length===2){
+      const dx=e.touches[0].clientX-e.touches[1].clientX, dy=e.touches[0].clientY-e.touches[1].clientY;
+      const dist=Math.sqrt(dx*dx+dy*dy)||1;
+      const midX=(e.touches[0].clientX+e.touches[1].clientX)/2, midY=(e.touches[0].clientY+e.touches[1].clientY)/2;
+      const newScale=Math.min(MAP_ZOOM_MAX,Math.max(MAP_ZOOM_MIN,touchStartScale*(dist/touchStartDist)));
+      const p=clientToSvgPoint(midX,midY);
+      const worldX=(p.x-touchStartTx)/touchStartScale, worldY=(p.y-touchStartTy)/touchStartScale;
+      scale=newScale;
+      tx=p.x-worldX*scale; ty=p.y-worldY*scale;
+      apply();
+    }
+  },{passive:false});
+  container.addEventListener('touchend',()=>{ touchMode=null; });
 }
 
 function handleMapClick(e){
@@ -8038,7 +8284,7 @@ function getMissingItemGatesForLocation(locId){
   CONNECTIONS_DATA.forEach(conn=>{
     if(conn.fromLocationId!==locId&&conn.toLocationId!==locId) return;
     if(!conn.requiresItem) return;
-    const gatedOwned=state.aides.some(a=>a.trainerBag&&a.trainerBag[conn.requiresItem]>0)||(state.trainerUnlocks&&state.trainerUnlocks[conn.requiresItem]);
+    const gatedOwned=state.aides.some(a=>a.trainerBag&&a.trainerBag[conn.requiresItem]>0); // v0.45 — trainerUnlocks removed, confirmed dead
     if(!gatedOwned) missing.add(conn.requiresItem);
   });
   return [...missing];

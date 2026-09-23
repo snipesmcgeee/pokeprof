@@ -202,11 +202,56 @@ const REGIONAL_FORMS = {
   'paldea': { formName: 'Paldean',  versions: ['scarlet','violet'], generation: 9 }
 };
 
-// One known exception to "familyId = PokéAPI's own evolution-chain ID": Nidoran♀/♂ are two
-// fully separate PokéAPI species/chains (29 and 32), deliberately merged into one breeding
-// family in this game's design — the only case of its kind in the whole franchise. Forced to
-// share Nidoran♀'s own chain ID so both land in the same familyId.
-const FAMILY_MERGES = { 32: 29 }; // dexId 32 (Nidoran-M) borrows dexId 29's (Nidoran-F) chain
+// v0.45 — family-ID derivation, chain-ID based. Replaces the old dexId-keyed FAMILY_MERGES
+// below (kept in a comment for history), which only remapped Nidoran-M's OWN row and did
+// nothing for Nidorino/Nidoking — a separate PokéAPI species each, still reading their real
+// chain (13) with no merge applied — and did nothing at all unless Nidoran-F (dexId 29) had
+// already been fetched earlier in the SAME session (it read the merge target from
+// baseSpeciesCache, not from the chain ID itself). See DESIGN.md "FullFetcher.html — family-ID
+// (familyId) derivation".
+//   const FAMILY_MERGES = { 32: 29 }; // old, dexId-keyed, superseded
+//
+// PokéAPI assigns Nidoran-F's chain ID 12 and Nidoran-M's line (Nidorino, Nidoking) chain 13 —
+// two chains for one breeding family, the only case of its kind in the whole franchise.
+// CHAIN_MERGES folds 13 into 12 at the raw-chain-ID level, before anything else touches it, so
+// every row on either chain — base AND variant — gets the same correct familyId regardless of
+// fetch order.
+const CHAIN_MERGES = { 13: 12 };
+// Chain IDs PokéAPI has never assigned (as of v0.45) — kept a contiguous 1–540 familyId range by
+// subtracting, per ID, the count of these below it. 13 doubles as the post-merge empty slot.
+// Maintenance: if PokéAPI ever retires or introduces a new chain ID, add it here by hand — this
+// derivation can't detect a newly-empty or newly-occupied slot on its own; see the skipped-ID
+// warning below for the downstream symptom.
+const CHAIN_EMPTY_SLOTS = [13, 210, 222, 225, 226, 227, 231, 238, 251];
+function deriveFamilyId(rawChainId) {
+  if (rawChainId == null) return null;
+  const merged = CHAIN_MERGES[rawChainId] != null ? CHAIN_MERGES[rawChainId] : rawChainId;
+  return merged - CHAIN_EMPTY_SLOTS.filter(v => merged > v).length;
+}
+// Parses a PokéAPI evolution_chain.url into a final familyId, flagging (not silently
+// mis-numbering) if the raw chain ID falls in a slot that should never occur — either a
+// permanently-vacant number, or evidence PokéAPI has changed its chain numbering since this
+// list was built. Returns {familyId, flagged}; flagged rows get 'familyId' pushed onto that
+// row's existing reviewFields array by the caller, same convention as every other
+// needs-manual-check field in this tool.
+function familyIdFromChainUrl(chainUrl) {
+  if (!chainUrl) return { familyId: null, flagged: false };
+  const rawChainId = parseInt(chainUrl.match(/(\d+)\/?$/)[1]);
+  const flagged = CHAIN_EMPTY_SLOTS.includes(rawChainId) && !(rawChainId in CHAIN_MERGES);
+  return { familyId: deriveFamilyId(rawChainId), flagged };
+}
+// v0.45 — load-time self-check against fixed anchor pairs. A red banner (not a silent console
+// log) means the derivation itself is broken — don't trust any familyId from this session.
+function selfCheckFamilyIdDerivation() {
+  const anchors = [[1,1],[13,12],[14,13],[209,208],[211,209],[549,540],[550,541]];
+  const failures = anchors.filter(([raw,expected]) => deriveFamilyId(raw) !== expected);
+  if (failures.length) {
+    const el = document.createElement('div');
+    el.style.cssText = 'background:#e63946;color:#fff;padding:10px;font-weight:bold;text-align:center;';
+    el.textContent = '⚠ familyId derivation self-check FAILED: ' + failures.map(([raw,exp]) => raw+'→expected '+exp+', got '+deriveFamilyId(raw)).join('; ');
+    document.body.insertBefore(el, document.body.firstChild);
+  }
+}
 // Slugs for temporary in-battle transformations with no learnset of their own in the source
 // games — confirmed for both: Gigantamax gets no separate movepool at all, and Mega Evolution
 // changes stats/type/ability but keeps the exact same moveset as the pre-Mega form (confirmed
@@ -577,9 +622,12 @@ async function fetchBaseRow(idOrName) {
     mergeMaxInto(moveSlots, inherited);
   }
 
-  // familyId: PokéAPI's own evolution-chain ID, with the one known hardcoded merge exception.
-  let familyId = species.evolution_chain?.url ? parseInt(species.evolution_chain.url.match(/(\d+)\/?$/)[1]) : null;
+  // familyId: PokéAPI's own evolution-chain ID, normalized via deriveFamilyId() (Nidoran merge +
+  // contiguous renumbering) — see the derivation block above.
+  const familyIdResult = familyIdFromChainUrl(species.evolution_chain?.url);
+  let familyId = familyIdResult.familyId;
   const reviewFields = [];
+  if (familyIdResult.flagged) reviewFields.push('familyId');
   if (evo.needsReview) reviewFields.push('evolvesIntoId','evolveMethod','evolveLevel','evolveItem');
 
   // True multi-path species (Eevee-style, confirmed via resolveEvolution's sourceHasMultipleVarieties
@@ -773,7 +821,9 @@ async function fetchAndPushVariant(dexId, slug) {
     const baseSpecies = baseSlug ? await fetch(`https://pokeapi.co/api/v2/pokemon-species/${baseSlug}`).then(r => r.ok ? r.json() : null) : null;
     if (!baseSpecies) { setStatus('Not found: ' + slug, 'err'); return null; }
     const generation = baseSpecies.generation?.url ? parseInt(baseSpecies.generation.url.match(/(\d+)\/?$/)[1]) : 0;
-    const familyId = baseSpecies.evolution_chain?.url ? parseInt(baseSpecies.evolution_chain.url.match(/(\d+)\/?$/)[1]) : null;
+    const familyIdResult = familyIdFromChainUrl(baseSpecies.evolution_chain?.url);
+    const familyId = familyIdResult.familyId;
+    if (familyIdResult.flagged) reviewFields.push('familyId'); // v0.45 — same guard as fetchBaseRow's
     // Fetch the base form's own poke data too when this is a direct Gmax/Mega-slug search with
     // no prior base fetch — otherwise the movepool-inheritance below has nothing to borrow from
     // and silently falls back to the (empty or wrong) transformed-form movepool instead.
@@ -791,17 +841,12 @@ async function fetchAndPushVariant(dexId, slug) {
 }
 
 // ── DISPATCH ───────────────────────────────────────────────────────────
+// v0.45 — fetchOneById() no longer needs a post-hoc merge step: familyIdFromChainUrl() now
+// derives the correct, already-merged familyId at the point fetchBaseRow() computes it, for
+// every species regardless of fetch order or session cache. applyFamilyMerge()/FAMILY_MERGES
+// (dexId-keyed, only ever fixed Nidoran-M's own row) are removed — superseded, not just unused.
 async function fetchOneById(id) {
-  const row = await fetchBaseRow(id);
-  if (row) applyFamilyMerge(row);
-  return row;
-}
-function applyFamilyMerge(row) {
-  if (FAMILY_MERGES[row.dexId] != null) {
-    const targetDexId = FAMILY_MERGES[row.dexId];
-    const targetCached = baseSpeciesCache[targetDexId];
-    if (targetCached) row.familyId = targetCached.familyId;
-  }
+  return await fetchBaseRow(id);
 }
 
 async function startFetch() {
@@ -836,7 +881,17 @@ async function startFetch() {
   document.getElementById('stop-btn').disabled = true;
   document.getElementById('progress-bar').style.width = '100%';
   document.getElementById('progress-text').textContent = `Done — ${results.length} fetched, ${errors} errors`;
-  setStatus(`✔ Fetched ${results.length} rows. ${errors > 0 ? errors + ' failed.' : ''} ${Object.keys(flaggedForms).length ? 'Form variants detected below.' : ''}`, 'ok');
+  // v0.45 — skipped-ID warning: if this pull's own familyIds above 540 (the current max) aren't
+  // contiguous, PokéAPI has introduced or retired a chain ID since CHAIN_EMPTY_SLOTS was built.
+  const newFamilyIds = results.map(r => r.familyId).filter(f => f != null && f > 540).sort((a,b) => a-b);
+  let gapWarning = '';
+  for (let i = 1; i < newFamilyIds.length; i++) {
+    if (newFamilyIds[i] !== newFamilyIds[i-1] + 1) {
+      gapWarning = ` ⚠ Gap between familyId ${newFamilyIds[i-1]} and ${newFamilyIds[i]} — PokéAPI may have added/retired a chain ID; check CHAIN_EMPTY_SLOTS.`;
+      break;
+    }
+  }
+  setStatus(`✔ Fetched ${results.length} rows. ${errors > 0 ? errors + ' failed.' : ''} ${Object.keys(flaggedForms).length ? 'Form variants detected below.' : ''}${gapWarning}`, gapWarning ? 'err' : 'ok');
   renderTable();
 }
 
@@ -847,7 +902,6 @@ async function fetchSingle() {
   try {
     const row = await fetchBaseRow(name);
     if (row) {
-      applyFamilyMerge(row);
       results.push(row);
       renderTable();
       setStatus('✔ Fetched ' + row.name, 'ok');
@@ -994,6 +1048,7 @@ function clearResults() {
   document.getElementById('evotree-body').innerHTML = '';
   setStatus('Cleared.', 'info');
 }
+selfCheckFamilyIdDerivation(); // v0.45 — runs once at load; script sits at end of <body>, DOM above is already parsed
 </script>
 </body>
 </html>

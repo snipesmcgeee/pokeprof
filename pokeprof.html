@@ -4139,12 +4139,20 @@ function selectWanderMode(metric){
   const el=document.getElementById('method-prefs'); if(el) el.innerHTML='';
   const encBtn=document.getElementById('wander-select-btn-encounters');
   const catchBtn=document.getElementById('wander-select-btn-catches');
+  const randomBtn=document.getElementById('wander-select-btn-random');
   // v0.39 — standardized selection highlight: explicit 2px accent border (was border-color only,
   // relying on the button's default border-width, which was inconsistent with other modals).
   const selectedStyle='width:100%;padding:8px;margin-bottom:{{MB}};font-size:11px;border:2px solid var(--accent);color:var(--accent-light);';
   const unselectedStyle='width:100%;padding:8px;margin-bottom:{{MB}};font-size:11px;border-color:var(--main-border);color:var(--main-text-secondary);';
+  // v0.45 — Random is now the third/last of the three buttons, so IT carries the 8px trailing
+  // margin (the gap before the destination-sort buttons below); encounters/catches both get the
+  // tight 4px inter-button gap. Was previously hardcoded assuming catches was last (8px) — left
+  // unfixed here when Random was added, catches' margin snapped back to 8px the instant any
+  // wander button was clicked, doubling the gap before Random. Fixed by giving each button its
+  // own correct margin instead of two copy-pasted constants.
   if(encBtn) encBtn.style.cssText=(metric==='encounters'?selectedStyle:unselectedStyle).replace('{{MB}}','4px');
-  if(catchBtn) catchBtn.style.cssText=(metric==='catches'?selectedStyle:unselectedStyle).replace('{{MB}}','8px');
+  if(catchBtn) catchBtn.style.cssText=(metric==='catches'?selectedStyle:unselectedStyle).replace('{{MB}}','4px');
+  if(randomBtn) randomBtn.style.cssText=(metric==='random'?selectedStyle:unselectedStyle).replace('{{MB}}','8px');
 }
 
 // ── SHOP SECTION (v0.27 — category condensing for full-tier shops) ──
@@ -4326,12 +4334,18 @@ function selectMissionDest(locId){
   state._wanderMetric=null;
   // v0.39 — standardized to the shared 2px accent-border selection style (was a bespoke full
   // inline style-swap); unselected state unchanged.
+  // v0.45 — Random added as the third button; it carries the 8px trailing margin now (see
+  // selectWanderMode()'s matching comment), not catches — catches only ever needed 8px back
+  // when it was the last of the two buttons.
   const unselectedStyleEnc='width:100%;padding:8px;margin-bottom:4px;font-size:11px;border-color:var(--main-border);color:var(--main-text-secondary);';
-  const unselectedStyleCatch='width:100%;padding:8px;margin-bottom:8px;font-size:11px;border-color:var(--main-border);color:var(--main-text-secondary);';
+  const unselectedStyleCatch='width:100%;padding:8px;margin-bottom:4px;font-size:11px;border-color:var(--main-border);color:var(--main-text-secondary);';
+  const unselectedStyleRandom='width:100%;padding:8px;margin-bottom:8px;font-size:11px;border-color:var(--main-border);color:var(--main-text-secondary);';
   const encBtn=document.getElementById('wander-select-btn-encounters');
   const catchBtn=document.getElementById('wander-select-btn-catches');
+  const randomBtn=document.getElementById('wander-select-btn-random');
   if(encBtn) encBtn.style.cssText=unselectedStyleEnc;
   if(catchBtn) catchBtn.style.cssText=unselectedStyleCatch;
+  if(randomBtn) randomBtn.style.cssText=unselectedStyleRandom;
   const locData=typeof LOCATIONS!=='undefined'?getLocation(locId):null;
   const name=locData?locData.name:locId;
   // v0.27 — Daycare has nothing to research; clarify that breeding is managed via the Map tab.

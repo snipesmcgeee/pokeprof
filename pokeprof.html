@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.45.2</title>
+<title>PokeProf v0.45.3</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -143,7 +143,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span id="game-version-display" style="font-size:11px;color:var(--main-text-muted);">v0.45.2</span></h1>
+  <h1>PokeProf <span id="game-version-display" style="font-size:11px;color:var(--main-text-muted);">v0.45.3</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">100.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -562,7 +562,7 @@ const ENC_INTERVAL_CLOSED = 30;
 // string independently, with nothing forcing them to agree — v0.44.3's delivery updated one and
 // missed the other. Both now render FROM this constant at boot (see init()) — bumping a version
 // is a one-line edit here, and the two displays can no longer drift apart.
-const GAME_VERSION = '0.45.2';
+const GAME_VERSION = '0.45.3';
 const FRIENDSHIP_THRESHOLD = 220;
 // v0.22 — highest level-based evolution across the whole franchise is Zweilous->Hydreigon
 // at level 64; 65 clears it with the minimum safe margin. Used to rule out 'level' as a
@@ -5187,7 +5187,13 @@ function findResearchPair(){
 // Attempts to give an aide with researchMode on (and no active pair) a fresh pair. Locks both
 // parents (p.breeding=true) exactly like a manual Day Care pair. No-ops if one is already active
 // or none can be found right now — the next tick (or the next switch) tries again.
-function attemptResearchPairSelection(aide){
+// v0.45.3 — optional startAt: when a switch happens mid-catch-up (many hatch-intervals of real
+// time already elapsed since this function was last able to run), the new pair's clock starts
+// from the moment the OLD pair's last egg would have hatched, not from Date.now() — otherwise a
+// switch mid-catch-up would "eat" the very leftover time it was supposed to hand off, capping the
+// whole catch-up at exactly one switch no matter how much real time was actually available. Live
+// play (the normal case) omits startAt and gets today's exact behavior — brand new pair starts now.
+function attemptResearchPairSelection(aide,startAt){
   if(aide.researchPair) return;
   const found=findResearchPair();
   if(!found) return;
@@ -5195,7 +5201,7 @@ function attemptResearchPairSelection(aide){
   if(!pA||!pB) return;
   pA.breeding=true; pB.breeding=true;
   const hatchMinutes=getHatchMinutes(found.resultDexId);
-  aide.researchPair={parentAId:found.parentAId,parentBId:found.parentBId,resultDexId:found.resultDexId,nextReadyAt:Date.now()+hatchMinutes*60000,eggsQueued:0};
+  aide.researchPair={parentAId:found.parentAId,parentBId:found.parentBId,resultDexId:found.resultDexId,nextReadyAt:(startAt||Date.now())+hatchMinutes*60000,eggsQueued:0};
 }
 // The "switch": fires only when the aide is physically at the Day Care with >=1 egg queued (see
 // updateResearchModePairs()). Collects through the exact same pipeline collectDaycareSlot() uses,
@@ -5203,7 +5209,8 @@ function attemptResearchPairSelection(aide){
 // "Universal Species-Cap Enforcement"), clears the pair, then — only if researchMode is STILL on
 // at this moment — immediately selects a new pair. This is how unchecking the box takes effect:
 // not mid-cycle, only at the next physical-presence switch.
-function collectResearchPair(aide){
+// v0.45.3 — optional startAt, threaded straight through to attemptResearchPairSelection (see there).
+function collectResearchPair(aide,startAt){
   const rec=aide.researchPair;
   if(!rec) return;
   const count=rec.eggsQueued||0;
@@ -5216,24 +5223,63 @@ function collectResearchPair(aide){
   [pA,pB].forEach(p=>{ if(p) p.breeding=false; });
   [pA,pB].forEach(p=>{ if(p) checkSpeciesCap(p); });
   aide.researchPair=null;
-  if(aide.researchMode) attemptResearchPairSelection(aide);
+  if(aide.researchMode) attemptResearchPairSelection(aide,startAt);
 }
 // Called once per tick (see gameTick()), for every aide, regardless of location — the clock always
 // runs. Attempts selection for any researchMode aide lacking a pair, advances every active pair's
 // egg queue with the same remainder-preserving interval loop updateDaycareQueue() uses, and fires
 // the switch once the aide is physically present with eggs ready.
+// v0.45.3 fix — the switch itself now loops. Previously it fired at most once per actual call to
+// this function, regardless of how many hatch-intervals of real elapsed time that one call was
+// fast-forwarding through (egg COUNT was always correctly time-based; the SWITCH wasn't). On a
+// backgrounded/idle tab, setInterval(gameTick,1000) is throttled by the browser — sometimes to a
+// handful of firings over a long idle stretch — so a species with a short hatch time could
+// accumulate a large egg backlog while only ever getting counted as ONE researched family,
+// instead of the many distinct pairs that real elapsed time should have supported. Reported live:
+// 32 eggs collected, only ~8 families newly researched. The loop below keeps switching — each new
+// pair continuing seamlessly from where the last one's clock left off, via startAt above — until
+// either no eggs are ready for the current pair, the aide isn't at the Day Care, or no further
+// pair can be found (e.g. the box is exhausted of eligible candidates).
 function updateResearchModePairs(){
   state.aides.forEach(aide=>{
     if(aide.researchMode&&!aide.researchPair) attemptResearchPairSelection(aide);
-    if(!aide.researchPair) return;
-    const rec=aide.researchPair;
-    const intervalMs=getHatchMinutes(rec.resultDexId)*60000;
-    while(Date.now()>=rec.nextReadyAt){
+    let guard=0; // hard ceiling — mirrors the spirit of OFFLINE_LOOP_CAP elsewhere: bounds the
+    // worst case (months idle at the Day Care with a very short hatch time) without meaningfully
+    // limiting any realistic catch-up.
+    while(aide.researchPair&&guard<1000){
+      guard++;
+      const rec=aide.researchPair;
+      const intervalMs=getHatchMinutes(rec.resultDexId)*60000;
+      if(aide.currentLocation!==DAYCARE_LOCATION_ID){
+        // v0.45.3 — aide isn't physically present, so no switch is possible regardless of how
+        // many eggs accumulate; this stays the original fast, uncapped batch loop (identical to
+        // updateDaycareQueue()'s pattern) rather than the per-egg loop below, since there's
+        // nothing here that a switch-per-egg model would change while nobody's there to collect.
+        while(Date.now()>=rec.nextReadyAt){
+          rec.eggsQueued=(rec.eggsQueued||0)+1;
+          rec.nextReadyAt+=intervalMs;
+        }
+        break;
+      }
+      // v0.45.3 fix — the actual bug. Aide IS present: process exactly ONE interval per loop
+      // iteration and collect immediately, rather than letting the whole elapsed backlog pile up
+      // on the CURRENT pair before ever checking whether a switch is due. The original bug wasn't
+      // just "switch once per call" — it was that the very FIRST pair's own catch-up loop consumed
+      // essentially all the elapsed real time as its own eggsQueued before the switch-check ever
+      // ran, leaving nothing meaningful for a second pair to inherit even if a switch did fire.
+      // This mirrors exactly what live, unthrottled ticking already did naturally: with the aide
+      // parked at the Day Care and gameTick() firing every second, eggsQueued hits 1 and the very
+      // next tick collects and switches — one egg per pair, always. This loop reproduces that same
+      // one-egg-then-switch rhythm across however many intervals of real time actually elapsed,
+      // instead of collapsing them all into one pair's oversized batch.
+      if(Date.now()<rec.nextReadyAt) break; // no egg ready yet for the current pair this call
       rec.eggsQueued=(rec.eggsQueued||0)+1;
+      const eggReadyAt=rec.nextReadyAt; // the exact moment THIS egg hatched — becomes the new pair's start
       rec.nextReadyAt+=intervalMs;
-    }
-    if(aide.currentLocation===DAYCARE_LOCATION_ID&&rec.eggsQueued>=1){
-      collectResearchPair(aide);
+      collectResearchPair(aide,eggReadyAt);
+      // aide.researchPair is now either a fresh pair (loop continues, checked against any
+      // remaining elapsed time) or null (researchMode was turned off mid-catch-up, or no further
+      // eligible pair exists in the box) — either way the while condition handles it correctly.
     }
   });
 }
@@ -6568,11 +6614,24 @@ function renderEvolutionChainVisual(famId,highlightDexId){
   // incorrectly showing whichever edge happened to win under the old per-species rule.
   return roots.map(root=>{
     const rootEdges=edges.filter(e=>e.from===root.dexId);
+    // v0.45.3 fix — formNames must come from the real Pokédex forms this dexId actually has, not
+    // only from which forms happen to have an outgoing edge. getFamilyMembers() (used to build
+    // allMembers, above) deliberately collapses a species' forms down to one representative row
+    // per dexId — correct for its own purpose, but it meant a NON-EVOLVING form contributed zero
+    // edges and so got silently dropped from the line list entirely, rather than rendering as its
+    // own single-node line. Confirmed on Farfetch'd: base Farfetch'd never evolves (no edge from
+    // it at all), Galarian Farfetch'd does (→ Sirfetch'd) — only the Galarian line ever rendered;
+    // the base line, and Farfetch'd itself, simply never appeared. A species with only one form,
+    // or where every form evolves, never hit this — hence Ditto/Mew rendering correctly the whole
+    // time despite going through the exact same code path.
+    const realFormNames=typeof POKEDEX_DATA!=='undefined'
+      ?Array.from(new Set(POKEDEX_DATA.filter(p=>p.dexId===root.dexId).map(p=>p.formName||null)))
+      :[];
     // v0.45.1 — base line (null) always sorts first; other forms keep their relative data order
     // after it. Previously unsorted (Set iteration = data order), so whichever form's EVO_TREE
     // row happened to appear first in evotree.js rendered first — for the regional-form species,
     // that was consistently the regional row, ahead of the base line.
-    const formNames=Array.from(new Set(rootEdges.map(e=>e.fromFormName||null)))
+    const formNames=Array.from(new Set([...realFormNames,...rootEdges.map(e=>e.fromFormName||null)]))
       .sort((a,b)=>(a===null?-1:0)-(b===null?-1:0));
     const lines=formNames.length?formNames:[null]; // terminal single-stage species: one base line
     return lines.map(formName=>{
@@ -6581,7 +6640,15 @@ function renderEvolutionChainVisual(famId,highlightDexId){
       // Unconfirmed-predecessor-via-breeding placeholder (v0.36) stays scoped to the BASE line
       // only — an alternate-form line (e.g. Galarian Slowpoke) doesn't get its own independent
       // "unknown predecessor" prompt; breeding in this game doesn't distinguish target forms.
-      const canBreed=formName===null&&!isOfficial&&getEggGroups(root.dexId).length>0&&!isUndiscoveredOnly(root.dexId)&&!isDitto(root.dexId);
+      // v0.45.3 fix — also requires the root ITSELF to already be discovered. Previously this
+      // placeholder didn't check that at all, so an evolution confirmed without ever personally
+      // owning its pre-evolution (e.g. Cubone→Marowak confirmed via testing, base Cubone never
+      // actually caught) rendered TWO leading "?"s stacked — one asking "is there an even earlier
+      // unknown ancestor?", immediately in front of Cubone's own placeholder box for being unseen
+      // itself. Asking about an ancestor of something not yet known to exist doesn't make sense;
+      // the root's own unseen-placeholder box is already the correct single indicator.
+      const rootIsDiscovered=isOfficial||isNodeDiscovered(root.dexId,formName);
+      const canBreed=formName===null&&!isOfficial&&rootIsDiscovered&&getEggGroups(root.dexId).length>0&&!isUndiscoveredOnly(root.dexId)&&!isDitto(root.dexId);
       const bred=isOfficial||!!(state.researchLog[root.dexId]&&state.researchLog[root.dexId].breedingTested);
       const preHtml=(canBreed&&!bred)?(evoPlaceholderHtml()+evoArrowHtml('?')):'';
       return '<div style="display:flex;align-items:flex-start;flex-wrap:wrap;gap:2px;margin:4px 0;">'+preHtml+walk(root.dexId,formName)+'</div>';

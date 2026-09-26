@@ -1,5 +1,5 @@
 // PokeProf — Evolution Tree (branching evolutions)
-// Auto-generated: 9/22/2026, 8:22:05 PM
+// Auto-generated: 9/26/2026, 1:38:58 PM
 // Entries: 119
 
 const EVO_TREE = [
@@ -86,7 +86,7 @@ const EVO_TREE = [
     "toDexId": 38,
     "evolveMethod": "use-item",
     "evolveLevel": null,
-    "evolveItem": "Fire Stone",
+    "evolveItem": "fire-stone",
     "requiredGender": null,
     "toFormName": null,
     "evolveNickname": null
@@ -185,7 +185,7 @@ const EVO_TREE = [
     "toDexId": 59,
     "evolveMethod": "use-item",
     "evolveLevel": null,
-    "evolveItem": "Fire Stone",
+    "evolveItem": "fire-stone",
     "requiredGender": null,
     "toFormName": null,
     "evolveNickname": null
@@ -251,7 +251,7 @@ const EVO_TREE = [
     "toDexId": 76,
     "evolveMethod": "use-item",
     "evolveLevel": null,
-    "evolveItem": "Link Cable",
+    "evolveItem": "link-cable",
     "requiredGender": null,
     "toFormName": null,
     "evolveNickname": null

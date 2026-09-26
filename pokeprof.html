@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.45.3</title>
+<title>PokeProf v0.45.4</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -143,7 +143,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span id="game-version-display" style="font-size:11px;color:var(--main-text-muted);">v0.45.3</span></h1>
+  <h1>PokeProf <span id="game-version-display" style="font-size:11px;color:var(--main-text-muted);">v0.45.4</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">100.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -562,7 +562,7 @@ const ENC_INTERVAL_CLOSED = 30;
 // string independently, with nothing forcing them to agree — v0.44.3's delivery updated one and
 // missed the other. Both now render FROM this constant at boot (see init()) — bumping a version
 // is a one-line edit here, and the two displays can no longer drift apart.
-const GAME_VERSION = '0.45.3';
+const GAME_VERSION = '0.45.4';
 const FRIENDSHIP_THRESHOLD = 220;
 // v0.22 — highest level-based evolution across the whole franchise is Zweilous->Hydreigon
 // at level 64; 65 clears it with the minimum safe margin. Used to rule out 'level' as a
@@ -776,7 +776,7 @@ function makePokemon(sp,lv,gender,holder=null,dexId=null,formName=null){
   if(!entry) entry=SPECIES[sp];
   const resolvedDexId=dexId||(entry?entry.dexId||entry.id:0);
   const growthRate=(entry&&entry.growthRate)||'mediumFast';
-  const ivs=rollIVs(resolvedDexId);
+  const ivs=rollIVs(resolvedDexId,(entry&&entry.formName)||null);
   const nature=rollNature();
   const maxHP=calcMaxHP(sp,lv,resolvedDexId,ivs.hp);
   const startExp=expToLevel(lv,growthRate);
@@ -1138,8 +1138,8 @@ function natureModFor(natureName,statKey){
 // v0.31 — rolls 6 IVs (0-31 each). If the species' dex page is already complete
 // (isDexPageComplete), each stat is rolled 10× and the best kept instead of a single roll —
 // checked fresh at creation time, so a species completed mid-game benefits immediately.
-function rollIVs(dexId){
-  const advantage=dexId&&isDexPageComplete(dexId);
+function rollIVs(dexId,formName=null){
+  const advantage=dexId&&isDexPageComplete(dexId,formName);
   const rollOne=()=>{
     if(!advantage) return Math.floor(Math.random()*32);
     let best=0;
@@ -2058,21 +2058,44 @@ function hasPartyMate(requiredDexId,party=state.aides[0].party){
   if(!id) return false;
   return party.some(pm=>pm.pokedexId===id);
 }
-// Does this species have ANY use-move/in-party branch defined at all — single-target
-// (pokedex.js) or branching (EVO_TREE)? Used for the structural rule-out check in getResearch().
-function speciesHasEvolveMethod(dexId,method){
-  const s=getPokemonEntry(dexId);
-  if(s&&s.evolveMethod===method&&s.evolvesIntoId) return true;
+// v0.45.4 — every branch belonging to one specific form (fromFormName exact match, null means
+// base form). Used anywhere research needs "what can THIS form actually confirm," as opposed to
+// getEvolutions(dexId), which still returns every branch across every form of that dexId (used by
+// the chain visual and official-mode listings, which intentionally want the whole family).
+function getFormEvolutions(dexId,formName){
+  formName=formName||null;
+  return getEvolutions(dexId).filter(b=>(b.fromFormName||null)===formName);
+}
+// Does this species+form have ANY use-move/in-party branch defined at all — single-target
+// (pokedex.js, base form only) or branching (EVO_TREE, this form only)? Used for the structural
+// rule-out check in getResearch(). v0.45.4 — form-aware; single-target pokedex.js entries only
+// ever apply to the base form (formName null), so a non-null formName only ever matches via EVO_TREE.
+function speciesHasEvolveMethod(dexId,method,formName){
+  formName=formName||null;
+  const s=getPokemonEntry(dexId,formName);
+  if(formName===null&&s&&s.evolveMethod===method&&s.evolvesIntoId) return true;
   if(typeof EVO_TREE!=='undefined'){
-    return getEvolutions(dexId).some(b=>b.evolveMethod===method&&b.toDexId);
+    return getFormEvolutions(dexId,formName).some(b=>b.evolveMethod===method&&b.toDexId);
   }
   return false;
 }
 
 // ── RESEARCH ──
-function getResearch(dexId){
-  if(!state.researchLog[dexId]){
-    state.researchLog[dexId]={
+// v0.45.4 — research now belongs to a specific FORM, not a whole dexId. A form is a different
+// species for research purposes: completing base Growlithe's page has no bearing on Hisuian
+// Growlithe's, which starts fresh the first time one is ever owned. See DESIGN.md "Research Log —
+// Per-Form Identity" for the two bugs this replaced (Growlithe's Fire Stone showing both Confirmed
+// and Unknown at once; Vulpix's Ice Stone permanently stuck at Unknown) and why per-form scoping
+// fixes both structurally rather than patching either symptom. Key format matches
+// state.formsDiscovered's own convention (see recordFormDiscovered() below).
+function getResearchKey(dexId,formName){
+  return dexId+'|'+(formName||'');
+}
+function getResearch(dexId,formName){
+  formName=formName||null;
+  const key=getResearchKey(dexId,formName);
+  if(!state.researchLog[key]){
+    state.researchLog[key]={
       evolutionConfirmed:false,
       confirmedBranches:[], // v0.20 — [{method,intoId}], replaces confirmedMethod/confirmedIntoId
       testedMethods:[], highestLevelObserved:0,
@@ -2086,16 +2109,38 @@ function getResearch(dexId){
     // time). Instead, rule them out immediately and structurally if this species simply has no
     // such branch defined anywhere in the data — otherwise most of the dex could never reach
     // 100% tested once these methods exist.
-    const r=state.researchLog[dexId];
-    if(!speciesHasEvolveMethod(dexId,'use-move')) r.testedMethods.push('use-move');
-    if(!speciesHasEvolveMethod(dexId,'in-party')) r.testedMethods.push('in-party');
+    const r=state.researchLog[key];
+    if(!speciesHasEvolveMethod(dexId,'use-move',formName)) r.testedMethods.push('use-move');
+    if(!speciesHasEvolveMethod(dexId,'in-party',formName)) r.testedMethods.push('in-party');
     // v0.44 — 'shed' (Nincada->Shedinja) has the same problem: nothing in the game will ever
     // naturally confirm or deny it for any OTHER species, permanently blocking their "fully
     // tested" status. Same structural rule-out pattern, generic via speciesHasEvolveMethod()
     // (not hardcoded to Nincada's dexId).
-    if(!speciesHasEvolveMethod(dexId,'shed')) r.testedMethods.push('shed');
+    if(!speciesHasEvolveMethod(dexId,'shed',formName)) r.testedMethods.push('shed');
   }
-  return state.researchLog[dexId];
+  return state.researchLog[key];
+}
+// v0.45.4 migration helper — re-keys a loaded save's researchLog from the old bare-dexId shape
+// to the new dexId+'|'+(formName||'') compound shape, BEFORE any migration block below ever reads
+// it by key. Must run this early: two existing unconditional (every-load) migration blocks — the
+// v0.26 item-rule-out cleanup and the v0.44 'shed' backfill — parse researchLog keys via
+// Number(dexIdStr); re-keying at the END of the migration chain (as originally drafted) would make
+// Number("58|") evaluate to NaN on every subsequent load, silently corrupting both blocks forever
+// (most seriously: incorrectly force-marking 'shed' ruled-out for every species including Nincada,
+// permanently breaking the Shedinja mechanic). Doing it here instead, right where researchLog is
+// first read from the save, means every migration block below always sees the new shape.
+// Idempotent: a key that already contains '|' (a save already on this shape) passes through
+// unchanged, so this is a safe no-op on every save from v0.45.4 onward.
+// Every pre-v0.45.4 entry belonged to the species as a whole and moves to that dexId's base-form
+// key (formName:null) — the user-approved default; every other form's research starts fresh,
+// exactly as it would for a form nobody had ever owned before.
+function migrateResearchLogKeys(oldLog){
+  const migrated={};
+  Object.keys(oldLog||{}).forEach(key=>{
+    if(key.indexOf('|')!==-1){ migrated[key]=oldLog[key]; return; } // already compound-keyed
+    migrated[key+'|']=oldLog[key]; // bare dexId -> that dexId's base-form (formName:null) key
+  });
+  return migrated;
 }
 // v0.33 — hardened from a length comparison to a content check. The length-only version could
 // be fooled by any stray/duplicate entry inflating testedMethods.length past EVOLUTION_METHODS
@@ -2104,17 +2149,18 @@ function getResearch(dexId){
 function isNonEvolutionConfirmed(r){
   return !!r && EVOLUTION_METHODS.every(m=>r.testedMethods.includes(m));
 }
-function recordSighting(dexId,level){
-  const r=getResearch(dexId);
+function recordSighting(dexId,level,formName){
+  const r=getResearch(dexId,formName);
   if(level>r.highestLevelObserved) r.highestLevelObserved=level;
 }
 // v0.22 — rules out level/friendship as a species' evolution method once an individual has
 // clearly passed the highest plausible trigger for that method without evolving. Checked inline
 // against the specific Pokemon that just changed (no full-roster rescan needed — level and
 // friendship only ever increase). Safe no-op if already tested (confirmed or ruled out).
-function checkMethodRuleOut(dexId,level,friendship){
+// v0.45.4 — formName added; this individual's own form's research record, not a species-wide one.
+function checkMethodRuleOut(dexId,level,friendship,formName){
   if(!dexId) return;
-  const r=getResearch(dexId);
+  const r=getResearch(dexId,formName);
   if(level!=null&&level>=LEVEL_RULEOUT_THRESHOLD&&!r.testedMethods.includes('level')){
     r.testedMethods.push('level');
   }
@@ -2129,9 +2175,11 @@ function checkMethodRuleOut(dexId,level,friendship){
 // v0.33 — toFormName added. Two branches can share the same intoId (e.g. Kantonian/Alolan
 // Raichu both -> dexId 26) and previously collided in confirmedBranches since the duplicate
 // check only compared {method, intoId} — the second branch silently never got stored.
-function recordEvolution(fromDexId,toDexId,method,level,toFormName){
+// v0.45.4 — fromFormName added: which of fromDexId's own forms is confirming this branch. Writes
+// to that form's own research record, not a shared one — see "Research Log — Per-Form Identity".
+function recordEvolution(fromDexId,toDexId,method,level,toFormName,fromFormName){
   toFormName=toFormName||null;
-  const r=getResearch(fromDexId);
+  const r=getResearch(fromDexId,fromFormName);
   const already=r.confirmedBranches.some(b=>b.method===method&&b.intoId===toDexId&&(b.toFormName||null)===toFormName);
   if(!already){
     r.evolutionConfirmed=true;
@@ -2139,18 +2187,18 @@ function recordEvolution(fromDexId,toDexId,method,level,toFormName){
     if((method==='level'||method==='friendship'||method==='friendship-day'||method==='friendship-night'||method==='use-move'||method==='in-party')&&!r.testedMethods.includes(method)){
       r.testedMethods.push(method);
     }
-    const fromEntry=getPokemonEntry(fromDexId);
+    const fromEntry=getPokemonEntry(fromDexId,fromFormName);
     const toEntry=getPokemonEntry(toDexId,toFormName);
     addFinding('evolution',fromEntry?fromEntry.name:'#'+fromDexId,toEntry?toEntry.name:'#'+toDexId,method,level);
   }
 }
-// Records that a given ability slot has been observed at least once for a species.
+// Records that a given ability slot has been observed at least once for a species+form.
 // Persists independently of held-Pokemon state — survives releases/cap overflow.
-function recordAbilityObserved(dexId,abilityName){
+function recordAbilityObserved(dexId,abilityName,formName){
   if(!abilityName) return;
-  const entry=getPokemonEntry(dexId);
+  const entry=getPokemonEntry(dexId,formName);
   if(!entry) return;
-  const r=getResearch(dexId);
+  const r=getResearch(dexId,formName);
   if(entry.ability1&&entry.ability1===abilityName) r.abilitiesObserved.ability1=true;
   if(entry.ability2&&entry.ability2===abilityName) r.abilitiesObserved.ability2=true;
   if(entry.hiddenAbility&&entry.hiddenAbility===abilityName) r.abilitiesObserved.hiddenAbility=true;
@@ -2162,17 +2210,21 @@ function recordAbilityObserved(dexId,abilityName){
 // v0.37 — gendersObserved changes shape from booleans ({M:true,F:true}) to running counts
 // ({M:0,F:0}), so Species Detail can show a real Male/Female percentage split instead of just
 // Seen/Unknown. Called at the same 7 sites as before — every new-individual creation path.
-function recordGenderObserved(dexId,gender){
+// v0.45.4 — formName added, same per-form scoping as the rest of this section.
+function recordGenderObserved(dexId,gender,formName){
   if(gender!=='M'&&gender!=='F') return;
-  const r=getResearch(dexId);
+  const r=getResearch(dexId,formName);
   if(!r.gendersObserved) r.gendersObserved={};
   r.gendersObserved[gender]=(r.gendersObserved[gender]||0)+1;
 }
-// True once every non-null ability slot the species has has been observed.
-function isDexPageComplete(dexId){
-  const entry=getPokemonEntry(dexId);
+// True once every non-null ability slot the species+form has has been observed.
+// v0.45.4 — formName added; reads that form's own record, not a shared species-wide one, so a
+// form that's unobtainable outside cheats (e.g. Hisuian Growlithe) never blocks the base form's
+// own dex-complete status (and the IV-roll bonus it unlocks — see rollIVs()).
+function isDexPageComplete(dexId,formName){
+  const entry=getPokemonEntry(dexId,formName);
   if(!entry) return false;
-  const r=state.researchLog[dexId];
+  const r=state.researchLog[getResearchKey(dexId,formName)];
   if(!r) return false;
   if(!EVOLUTION_METHODS.every(m=>(r.testedMethods||[]).includes(m))) return false;
   const obs=r.abilitiesObserved||{};
@@ -2181,8 +2233,8 @@ function isDexPageComplete(dexId){
   if(entry.hiddenAbility&&!obs.hiddenAbility) return false;
   return true;
 }
-function recordNewSpecies(dexId,name){
-  const r=getResearch(dexId);
+function recordNewSpecies(dexId,name,formName){
+  const r=getResearch(dexId,formName);
   if(!r.firstSeen){
     r.firstSeen=true; addFinding('species',name,dexId);
     // v0.33 — previously only reached the separate pendingFindings/Findings Report mechanism,
@@ -2194,8 +2246,8 @@ function recordNewSpecies(dexId,name){
 // v0.24 — fires "🎯 Captured" on first successful catch of a species (distinct from
 // recordNewSpecies' "🆕 New Species", which now fires on first sighting instead of first catch).
 // Tagged with dexId so showFindingsReport() can dedupe a same-report seen+captured pair.
-function recordCapture(dexId,name){
-  const r=getResearch(dexId);
+function recordCapture(dexId,name,formName){
+  const r=getResearch(dexId,formName);
   if(!r.firstCaught){
     r.firstCaught=true; addFinding('captured',name,dexId);
     // v0.33 — same "newly appears in the Log tab" note as recordNewSpecies above.
@@ -2217,7 +2269,7 @@ function recordFormDiscovered(dexId,formName){
 function isFormDiscovered(dexId,formName){
   return !!(state.formsDiscovered&&state.formsDiscovered[dexId+'|'+(formName||'')]);
 }
-function isSpeciesKnown(dexId){ return !!state.researchLog[dexId]; }
+function isSpeciesKnown(dexId,formName){ return !!state.researchLog[getResearchKey(dexId,formName)]; }
 
 // Shared evolution apply-logic: species/dexId/form swap, maxHP recalc (preserving missing HP),
 // SPECIES registration, and research bookkeeping (recordNewSpecies, recordAbilityObserved,
@@ -2241,10 +2293,10 @@ function applySpeciesSwap(p,newEntry){
   if(!SPECIES[p.species]) SPECIES[p.species]=newEntry;
   const formKey=p.species+'|'+(p.formName||'');
   if(!SPECIES[formKey]) SPECIES[formKey]=newEntry;
-  recordNewSpecies(newEntry.dexId,p.species);
-  recordCapture(newEntry.dexId,p.species); // v0.36 — was missing; dexHistory incremented below but the "captured" finding never fired
-  recordAbilityObserved(newEntry.dexId,p.ability);
-  recordGenderObserved(newEntry.dexId,p.gender); // v0.36
+  recordNewSpecies(newEntry.dexId,p.species,p.formName);
+  recordCapture(newEntry.dexId,p.species,p.formName); // v0.36 — was missing; dexHistory incremented below but the "captured" finding never fired
+  recordAbilityObserved(newEntry.dexId,p.ability,p.formName);
+  recordGenderObserved(newEntry.dexId,p.gender,p.formName); // v0.36
   state.dexHistory[newEntry.dexId]=(state.dexHistory[newEntry.dexId]||0)+1;
   recordFormDiscovered(newEntry.dexId,p.formName); // v0.45
   // v0.35 fix — species cap was never enforced on evolution, only on wild catches. Every
@@ -2279,10 +2331,20 @@ function applySpeciesSwap(p,newEntry){
 function getAvailableItemQty(itemId){
   return (state.professorBag[itemId]||0)-(itemReservations[itemId]||0);
 }
+// v0.45.4 — iterates per (dexId, formName) pair, not per bare dexId. A form is a different
+// species for research purposes (see DESIGN.md "Research Log — Per-Form Identity"): the outer
+// key list now comes from state.formsDiscovered (already per-form, see recordFormDiscovered())
+// instead of state.dexHistory (dexId-only, blind to which form was actually seen). Path 2's
+// branch list is scoped to THIS form via getFormEvolutions() instead of every branch across
+// every form via getEvolutions() — this is what stops a form-restricted branch (e.g. an
+// Alolan-only stone) from permanently blocking the base form's own testedMethods entry.
 function professorAutoTestEvolutions(){
   if(!state.professorBag) return;
-  const knownDexIds=Object.keys(state.dexHistory).map(Number).filter(id=>id>0);
-  if(!knownDexIds.length) return;
+  const knownForms=Object.keys(state.formsDiscovered||{}).map(key=>{
+    const bar=key.indexOf('|');
+    return {dexId:Number(key.slice(0,bar)),formName:key.slice(bar+1)||null};
+  }).filter(f=>f.dexId>0);
+  if(!knownForms.length) return;
   let anyChange=false;
 
   const evoItemIds=Object.keys(state.professorBag).filter(itemId=>{
@@ -2296,38 +2358,39 @@ function professorAutoTestEvolutions(){
     if(!item) continue;
     const itemName=item.name;
 
-    for(const dexId of knownDexIds){
+    for(const {dexId,formName} of knownForms){
       if(getAvailableItemQty(itemId)<=0) break; // out of stock (or fully reserved)
 
-      const r=getResearch(dexId);
-      if(r.testedMethods.includes(itemName)) continue; // already fully resolved this item+species pair
+      const r=getResearch(dexId,formName);
+      if(r.testedMethods.includes(itemName)) continue; // already fully resolved this item+form pair
 
-      const entry=getPokemonEntry(dexId);
+      const entry=getPokemonEntry(dexId,formName);
       let path1Matched=false, path1Target=null;
 
       // Path 1: single-target SPECIES evolution (pokedex.js) — matched by item NAME. Always a
-      // single unambiguous target; no form-variant/multi-branch concept on this path.
+      // single unambiguous target; no form-variant/multi-branch concept on this path. entry is
+      // already this specific form's own pokedex.js row, so this is naturally form-scoped.
       if(entry&&entry.evolveMethod==='use-item'&&entry.evolveItem===itemName){
         path1Matched=true; path1Target=entry.evolvesIntoId;
       }
 
-      // Path 2 (v0.20): EVO_TREE branching evolutions — matched by itemId.
-      const path2Branches=getEvolutions(dexId).filter(b=>b.evolveMethod==='use-item'&&b.evolveItem===itemId&&b.toDexId);
+      // Path 2 (v0.20): EVO_TREE branching evolutions — matched by itemId, scoped to branches
+      // whose fromFormName matches THIS form (v0.45.4 — getFormEvolutions, not getEvolutions).
+      const path2Branches=getFormEvolutions(dexId,formName).filter(b=>b.evolveMethod==='use-item'&&b.evolveItem===itemId&&b.toDexId);
 
       if(!path1Matched&&!path2Branches.length){
         r.testedMethods.push(itemName); // no matching branch exists at all — a data fact, rule out immediately
         continue;
       }
 
-      // Every distinct branch this item+species pair could confirm — form-variant branches
-      // included, no longer treated as auto-apply-exempt. Each needs its own live candidate.
+      // Every distinct branch this item+form pair could confirm. Each needs its own live candidate.
       const branches=[];
-      if(path1Matched) branches.push({toDexId:path1Target,toFormName:null});
+      if(path1Matched) branches.push({toDexId:path1Target,toFormName:null,fromFormName:formName,requiredGender:null});
       path2Branches.forEach(b=>branches.push({toDexId:b.toDexId,toFormName:b.toFormName||null,fromFormName:b.fromFormName!=null?b.fromFormName:null,requiredGender:b.requiredGender||null}));
 
       let allResolved=true;
       for(const br of branches){
-        if(getAvailableItemQty(itemId)<=0){ allResolved=false; break; } // ran out mid-species (or fully reserved)
+        if(getAvailableItemQty(itemId)<=0){ allResolved=false; break; } // ran out mid-form (or fully reserved)
 
         const alreadyConfirmed=r.confirmedBranches.some(b=>b.method===itemName&&b.intoId===br.toDexId&&(b.toFormName||null)===br.toFormName);
         if(alreadyConfirmed) continue; // resolved on an earlier run
@@ -2354,7 +2417,7 @@ function professorAutoTestEvolutions(){
         state.professorBag[itemId]--;
         if(state.professorBag[itemId]<=0) delete state.professorBag[itemId];
         const toEntry=getPokemonEntry(br.toDexId,br.toFormName);
-        recordEvolution(dexId,br.toDexId,itemName,chosen.level,br.toFormName);
+        recordEvolution(dexId,br.toDexId,itemName,chosen.level,br.toFormName,formName);
         const oldName=getDisplayName(chosen);
         if(toEntry) applySpeciesSwap(chosen,toEntry);
         const toLabel=toEntry?(br.toFormName?toEntry.name+' ('+br.toFormName+')':toEntry.name):'#'+br.toDexId;
@@ -2384,7 +2447,7 @@ function applyItemEvolution(catchId,intoId,toFormName){
   if(nickLock&&(nickLock.toDexId!==intoId||(nickLock.toFormName||null)!==toFormName)){
     addLog(getDisplayName(p)+' is nickname-locked to a different evolution.','fail','systemErrors',(state.aides.find(a=>a.name===p.holder)||{}).id||'general'); return;
   }
-  const r=state.researchLog[p.pokedexId];
+  const r=state.researchLog[getResearchKey(p.pokedexId,p.formName)];
   if(!r||!r.confirmedBranches||!r.confirmedBranches.length) return;
   const nonManual=['level','friendship','friendship-day','friendship-night','use-move','in-party'];
   const branch=r.confirmedBranches.find(b=>b.intoId===intoId&&(b.toFormName||null)===toFormName&&!nonManual.includes(b.method));
@@ -2410,12 +2473,12 @@ function applyItemEvolution(catchId,intoId,toFormName){
 
 // Family/Species card display: lists every confirmed evolution target for a species.
 // Shows ??? until at least one branch is confirmed. No per-branch ??? granularity (v0.20 scope).
-function getEvolutionDisplayText(dexId){
-  const r=state.researchLog[dexId];
+function getEvolutionDisplayText(dexId,formName){
+  const r=state.researchLog[getResearchKey(dexId,formName)];
   if(!r) return 'Evolves into: ???';
   if(isNonEvolutionConfirmed(r)) return 'Does not evolve';
   if(r.evolutionConfirmed&&r.confirmedBranches&&r.confirmedBranches.length){
-    const fromEntry=getPokemonEntry(dexId);
+    const fromEntry=getPokemonEntry(dexId,formName);
     const names=r.confirmedBranches.map(b=>{
       const toEntry=getPokemonEntry(b.intoId,b.toFormName);
       const toName=toEntry?(toEntry.name+(b.toFormName?' ('+b.toFormName+')':'')):'#'+b.intoId;
@@ -2471,9 +2534,9 @@ function checkEvolution(p){
   if(s&&s.evolveMethod==='level'&&s.evolvesIntoId&&p.level>=s.evolveLevel){
     const newEntry=getPokemonEntry(s.evolvesIntoId);
     if(newEntry){
-      const old=getDisplayName(p); const prevDexId=p.pokedexId;
+      const old=getDisplayName(p); const prevDexId=p.pokedexId; const prevFormName=p.formName||null;
       applySpeciesSwap(p,newEntry);
-      recordEvolution(prevDexId,newEntry.dexId,'level',p.level);
+      recordEvolution(prevDexId,newEntry.dexId,'level',p.level,null,prevFormName);
       addLog(old+' #'+p.id+' evolved into '+getDisplayName(p)+'!','evolve','evolutions',(state.aides.find(a=>a.name===p.holder)||{}).id||'general');
       document.getElementById('enc-body').textContent=old+' evolved into '+getDisplayName(p)+'!';
       maybeCreateShedFriend(prevDexId,p); // v0.42 — Nincada->Shedinja; no-ops for every other species
@@ -2484,9 +2547,9 @@ function checkEvolution(p){
   if(s&&s.evolveMethod==='friendship'&&s.evolvesIntoId&&p.friendship>=FRIENDSHIP_THRESHOLD){
     const newEntry=getPokemonEntry(s.evolvesIntoId);
     if(newEntry){
-      const old=getDisplayName(p); const prevDexId=p.pokedexId;
+      const old=getDisplayName(p); const prevDexId=p.pokedexId; const prevFormName=p.formName||null;
       applySpeciesSwap(p,newEntry);
-      recordEvolution(prevDexId,newEntry.dexId,'friendship',p.level);
+      recordEvolution(prevDexId,newEntry.dexId,'friendship',p.level,null,prevFormName);
       addLog(old+' #'+p.id+' evolved into '+getDisplayName(p)+'!','evolve','evolutions',(state.aides.find(a=>a.name===p.holder)||{}).id||'general');
       document.getElementById('enc-body').textContent=old+' evolved into '+getDisplayName(p)+'!';
       maybeCreateShedFriend(prevDexId,p);
@@ -2497,9 +2560,9 @@ function checkEvolution(p){
   if(s&&s.evolveMethod==='use-move'&&s.evolvesIntoId&&hasQualifyingMove(p,s.evolveItem,s.evolveLevel)){
     const newEntry=getPokemonEntry(s.evolvesIntoId);
     if(newEntry){
-      const old=getDisplayName(p); const prevDexId=p.pokedexId;
+      const old=getDisplayName(p); const prevDexId=p.pokedexId; const prevFormName=p.formName||null;
       applySpeciesSwap(p,newEntry);
-      recordEvolution(prevDexId,newEntry.dexId,'use-move',p.level);
+      recordEvolution(prevDexId,newEntry.dexId,'use-move',p.level,null,prevFormName);
       addLog(old+' #'+p.id+' evolved into '+getDisplayName(p)+'!','evolve','evolutions',(state.aides.find(a=>a.name===p.holder)||{}).id||'general');
       document.getElementById('enc-body').textContent=old+' evolved into '+getDisplayName(p)+'!';
       maybeCreateShedFriend(prevDexId,p);
@@ -2510,9 +2573,9 @@ function checkEvolution(p){
   if(s&&s.evolveMethod==='in-party'&&s.evolvesIntoId&&hasPartyMate(s.evolveItem,(state.aides.find(a=>a.name===p.holder)||state.aides[0]).party)){
     const newEntry=getPokemonEntry(s.evolvesIntoId);
     if(newEntry){
-      const old=getDisplayName(p); const prevDexId=p.pokedexId;
+      const old=getDisplayName(p); const prevDexId=p.pokedexId; const prevFormName=p.formName||null;
       applySpeciesSwap(p,newEntry);
-      recordEvolution(prevDexId,newEntry.dexId,'in-party',p.level);
+      recordEvolution(prevDexId,newEntry.dexId,'in-party',p.level,null,prevFormName);
       addLog(old+' #'+p.id+' evolved into '+getDisplayName(p)+'!','evolve','evolutions',(state.aides.find(a=>a.name===p.holder)||{}).id||'general');
       document.getElementById('enc-body').textContent=old+' evolved into '+getDisplayName(p)+'!';
       maybeCreateShedFriend(prevDexId,p);
@@ -2547,9 +2610,9 @@ function checkEvolution(p){
       const branch=selectEvolutionBranch(p,branches);
       const newEntry=getPokemonEntry(branch.toDexId,branch.toFormName);
       if(newEntry){
-        const old=getDisplayName(p); const prevDexId=p.pokedexId;
+        const old=getDisplayName(p); const prevDexId=p.pokedexId; const prevFormName=p.formName||null;
         applySpeciesSwap(p,newEntry);
-        recordEvolution(prevDexId,newEntry.dexId,branch.evolveMethod,p.level,branch.toFormName);
+        recordEvolution(prevDexId,newEntry.dexId,branch.evolveMethod,p.level,branch.toFormName,prevFormName);
         addLog(old+' #'+p.id+' evolved into '+getDisplayName(p)+'!','evolve','evolutions',(state.aides.find(a=>a.name===p.holder)||{}).id||'general');
         document.getElementById('enc-body').textContent=old+' evolved into '+getDisplayName(p)+'!';
         maybeCreateShedFriend(prevDexId,p);
@@ -2629,7 +2692,7 @@ function applyExpBatched(pokemon,amount,idx,totals){
       pokemon.currentHP=Math.min(pokemon.maxHP,pokemon.currentHP+(pokemon.maxHP-om));
       addLog(getDisplayName(pokemon)+' #'+pokemon.id+' -> Lv'+pokemon.level+'!','evolve','levelExp',(state.aides.find(a=>a.name===pokemon.holder)||{}).id||'general');
       checkEvolution(pokemon); saveGame();
-      checkMethodRuleOut(pokemon.pokedexId,pokemon.level,pokemon.friendship);
+      checkMethodRuleOut(pokemon.pokedexId,pokemon.level,pokemon.friendship,pokemon.formName);
     } else break;
   }
 }
@@ -2670,7 +2733,7 @@ function giveExp(pokemon,amount,idx=0){
       pokemon.currentHP=Math.min(pokemon.maxHP,pokemon.currentHP+(pokemon.maxHP-om));
       addLog(getDisplayName(pokemon)+' #'+pokemon.id+' -> Lv'+pokemon.level+'!','evolve','levelExp',(state.aides.find(a=>a.name===pokemon.holder)||{}).id||'general');
       checkEvolution(pokemon); saveGame();
-      checkMethodRuleOut(pokemon.pokedexId,pokemon.level,pokemon.friendship);
+      checkMethodRuleOut(pokemon.pokedexId,pokemon.level,pokemon.friendship,pokemon.formName);
     } else break;
   }
   if(levelled) renderDex();
@@ -2686,7 +2749,7 @@ function giveExpSilent(p,amount,idx=0){
       const om=p.maxHP; recalcStats(p);
       p.currentHP=Math.min(p.maxHP,p.currentHP+(p.maxHP-om));
       applyEvolutionSilent(p);
-      checkMethodRuleOut(p.pokedexId,p.level,p.friendship);
+      checkMethodRuleOut(p.pokedexId,p.level,p.friendship,p.formName);
     } else break;
   }
 }
@@ -2699,9 +2762,9 @@ function applyEvolutionSilent(p){
   const tryApply=(toDexId,method,toFormName)=>{
     const ne=getPokemonEntry(toDexId,toFormName);
     if(!ne) return false;
-    const prevDexId=p.pokedexId;
+    const prevDexId=p.pokedexId; const prevFormName=p.formName||null;
     applySpeciesSwap(p,ne);
-    recordEvolution(prevDexId,ne.dexId,method,p.level,toFormName);
+    recordEvolution(prevDexId,ne.dexId,method,p.level,toFormName,prevFormName);
     return true;
   };
   if(s&&s.evolveMethod==='level'&&s.evolvesIntoId&&p.level>=s.evolveLevel){
@@ -2761,7 +2824,7 @@ function advanceFriendshipTicks(seconds){
   while(state._friendshipTick>=180){
     state._friendshipTick-=180;
     state.aides.forEach(aide=>{
-      aide.party.forEach(p=>{ if(p.currentHP>0){ p.friendship=(p.friendship||0)+1; checkMethodRuleOut(p.pokedexId,p.level,p.friendship); } });
+      aide.party.forEach(p=>{ if(p.currentHP>0){ p.friendship=(p.friendship||0)+1; checkMethodRuleOut(p.pokedexId,p.level,p.friendship,p.formName); } });
     });
   }
 }
@@ -2926,12 +2989,12 @@ function processAideOfflineTime(idx,secsAway,summary){
         summary.catches++; summary.shinies=(summary.shinies||0)+1;
         state.dexHistory[caught.pokedexId]=(state.dexHistory[caught.pokedexId]||0)+1;
         recordFormDiscovered(caught.pokedexId,caught.formName); // v0.45
-        recordAbilityObserved(caught.pokedexId,caught.ability);
-        recordGenderObserved(caught.pokedexId,caught.gender);
+        recordAbilityObserved(caught.pokedexId,caught.ability,caught.formName);
+        recordGenderObserved(caught.pokedexId,caught.gender,caught.formName);
         const s_=getPokemonEntry(enc.pokedexId);
         const exp=Math.floor(((s_?s_.baseExpYield:51)||51)*enc.level/7);
         distributeExp(lead,exp,idx,true);
-        recordCapture(caught.pokedexId,enc.species);
+        recordCapture(caught.pokedexId,enc.species,caught.formName);
         logCaptureRarity(caught,false);
         if(encDexKey) state.locationEncounterLog[encLocKey][encDexKey].caught++;
         checkSpeciesCap(caught,idx);
@@ -2983,11 +3046,11 @@ function runWildEncounterLoopSilent(lead,enc,summary,encLocKey,encDexKey,idx=0){
         summary.catches++;
         state.dexHistory[caught.pokedexId]=(state.dexHistory[caught.pokedexId]||0)+1;
         recordFormDiscovered(caught.pokedexId,caught.formName); // v0.45
-        recordAbilityObserved(caught.pokedexId,caught.ability);
-        recordGenderObserved(caught.pokedexId,caught.gender);
+        recordAbilityObserved(caught.pokedexId,caught.ability,caught.formName);
+        recordGenderObserved(caught.pokedexId,caught.gender,caught.formName);
         const exp=Math.floor(((wild.baseExpYield||51)*enc.level)/7);
         distributeExp(lead,exp,idx,true);
-        recordCapture(caught.pokedexId,enc.species);
+        recordCapture(caught.pokedexId,enc.species,caught.formName);
         logCaptureRarity(caught,false);
         if(encDexKey) state.locationEncounterLog[encLocKey][encDexKey].caught++;
         checkSpeciesCap(caught,idx);
@@ -3472,12 +3535,12 @@ function resolveEncounterStep(idx=0){
     state.dex.push(caught); state.totalCatches++; state.totalSightings++;
     state.dexHistory[caught.pokedexId]=(state.dexHistory[caught.pokedexId]||0)+1;
     recordFormDiscovered(caught.pokedexId,caught.formName); // v0.45
-    recordAbilityObserved(caught.pokedexId,caught.ability);
-    recordGenderObserved(caught.pokedexId,caught.gender);
+    recordAbilityObserved(caught.pokedexId,caught.ability,caught.formName);
+    recordGenderObserved(caught.pokedexId,caught.gender,caught.formName);
     const s_=getPokemonEntry(enc.pokedexId);
     const exp=Math.floor(((s_?s_.baseExpYield:51)||51)*enc.level/7);
     distributeExp(lead,exp,idx,false);
-    recordCapture(caught.pokedexId,enc.species);
+    recordCapture(caught.pokedexId,enc.species,caught.formName);
     logCaptureRarity(caught,false);
     addLog(aide.emoji+' '+aide.name+': ✨ SHINY '+getDisplayName(caught)+' caught automatically! ✨','evolve','catches',aide.id);
     document.getElementById('total-catches').textContent=state.totalCatches;
@@ -3671,14 +3734,14 @@ function catchPokemon(lead,enc,isShiny,idx=0){
   state.dex.push(caught); state.totalCatches++; state.totalSightings++;
   state.dexHistory[caught.pokedexId]=(state.dexHistory[caught.pokedexId]||0)+1;
   recordFormDiscovered(caught.pokedexId,caught.formName); // v0.45
-  recordAbilityObserved(caught.pokedexId,caught.ability);
-  recordGenderObserved(caught.pokedexId,caught.gender);
+  recordAbilityObserved(caught.pokedexId,caught.ability,caught.formName);
+  recordGenderObserved(caught.pokedexId,caught.gender,caught.formName);
   if(isShiny) addLog(aide.emoji+' '+aide.name+': ✨ SHINY '+getDisplayName(caught)+' caught automatically! ✨','evolve','catches',aide.id);
   logCaptureRarity(caught,true);
   const s_=getPokemonEntry(enc.pokedexId);
   const exp=Math.floor(((s_?s_.baseExpYield:51)||51)*enc.level/7);
   distributeExp(lead,exp,idx,false);
-  recordCapture(caught.pokedexId,enc.species);
+  recordCapture(caught.pokedexId,enc.species,caught.formName);
   addLog(aide.emoji+' '+aide.name+': Caught '+getDisplayName(caught)+' #'+caught.id+' (Lv'+enc.level+' '+enc.gender+(isShiny?' ✨':'')+')! +'+exp+' EXP','catch','catches',aide.id);
   document.getElementById('total-catches').textContent=state.totalCatches;
   document.getElementById('total-sightings').textContent=state.totalSightings;
@@ -3750,7 +3813,7 @@ function gameTick(){
   if(state._friendshipTick>=180){
     state._friendshipTick=0;
     state.aides.forEach(aide=>{
-      aide.party.forEach(p=>{ if(p.currentHP>0){ p.friendship=(p.friendship||0)+1; checkMethodRuleOut(p.pokedexId,p.level,p.friendship); } });
+      aide.party.forEach(p=>{ if(p.currentHP>0){ p.friendship=(p.friendship||0)+1; checkMethodRuleOut(p.pokedexId,p.level,p.friendship,p.formName); } });
     });
   }
 
@@ -4508,17 +4571,20 @@ function updateMethodPrefs(locId){
 // periodic renderDex() call (every ~10s, on each encounter roll) wiped back to collapsed on every
 // rebuild — it wasn't auto-collapsing, it was being torn down and redrawn collapsed. Tracking it
 // here lets buildEvoMethodsHtml() restore the correct state on every rebuild.
+// v0.45.4 — keyed by the same dexId+'|'+(formName||'') string as researchLog/formsDiscovered
+// (getResearchKey()), not a bare dexId, so two forms of the same species (e.g. base vs Hisuian
+// Growlithe) no longer share one expand/collapse state.
 const expandedEvoDexIds=new Set();
-function toggleEvoSection(btn,dexId){
+function toggleEvoSection(btn,evoKey){
   const section=btn.nextElementSibling;
   if(section.style.display==='none'){
     section.style.display='block';
     btn.textContent=btn.textContent.replace('▼','▲');
-    if(dexId!=null) expandedEvoDexIds.add(dexId);
+    if(evoKey!=null) expandedEvoDexIds.add(evoKey);
   } else {
     section.style.display='none';
     btn.textContent=btn.textContent.replace('▲','▼');
-    if(dexId!=null) expandedEvoDexIds.delete(dexId);
+    if(evoKey!=null) expandedEvoDexIds.delete(evoKey);
   }
 }
 
@@ -4802,7 +4868,10 @@ function getPartyEligibleForItem(itemId){
       if(entry&&entry.evolveMethod==='use-item'&&entry.evolveItem===itemName&&entry.evolvesIntoId){
         branches.push({toDexId:entry.evolvesIntoId,toFormName:null});
       }
-      getEvolutions(p.pokedexId).filter(b=>b.evolveMethod==='use-item'&&b.evolveItem===itemId&&b.toDexId).forEach(b=>{
+      // v0.45.4 — scoped to THIS individual's own form via getFormEvolutions(), not every branch
+      // across every form via getEvolutions() — a form-restricted branch (e.g. an Alolan-only
+      // stone) no longer lists a mismatched-form individual as eligible.
+      getFormEvolutions(p.pokedexId,p.formName).filter(b=>b.evolveMethod==='use-item'&&b.evolveItem===itemId&&b.toDexId).forEach(b=>{
         branches.push({toDexId:b.toDexId,toFormName:b.toFormName||null});
       });
       if(!branches.length) return;
@@ -4830,8 +4899,8 @@ function autoEvolvePartySingle(itemId,elig){
   if(!toEntry) return;
   state.professorBag[itemId]--;
   if(state.professorBag[itemId]<=0) delete state.professorBag[itemId];
-  const fromDexId=p.pokedexId, preLevel=p.level, old=getDisplayName(p);
-  recordEvolution(fromDexId,branch.toDexId,itemName,preLevel,branch.toFormName);
+  const fromDexId=p.pokedexId, preLevel=p.level, old=getDisplayName(p), fromFormName=p.formName||null;
+  recordEvolution(fromDexId,branch.toDexId,itemName,preLevel,branch.toFormName,fromFormName);
   applySpeciesSwap(p,toEntry);
   addLog(old+' #'+p.id+' evolved into '+getDisplayName(p)+' using '+itemName+'!','evolve','evolutions',(state.aides.find(a=>a.name===p.holder)||{}).id||'general');
   saveGame(); render();
@@ -4907,8 +4976,8 @@ function confirmBatchEvolve(itemId,maxQty){
     const toEntry=getPokemonEntry(intoId,toFormName); if(!toEntry) return;
     state.professorBag[itemId]--;
     if(state.professorBag[itemId]<=0) delete state.professorBag[itemId];
-    const fromDexId=p.pokedexId, preLevel=p.level, old=getDisplayName(p);
-    recordEvolution(fromDexId,intoId,itemName,preLevel,toFormName);
+    const fromDexId=p.pokedexId, preLevel=p.level, old=getDisplayName(p), fromFormName=p.formName||null;
+    recordEvolution(fromDexId,intoId,itemName,preLevel,toFormName,fromFormName);
     applySpeciesSwap(p,toEntry);
     addLog(old+' #'+p.id+' evolved into '+getDisplayName(p)+' using '+itemName+'!','evolve','evolutions',(state.aides.find(a=>a.name===p.holder)||{}).id||'general');
   });
@@ -5101,12 +5170,13 @@ function hatchEggsFromResultDexId(resultDexId,count){
     state.dex.push(baby);
     state.dexHistory[baby.pokedexId]=(state.dexHistory[baby.pokedexId]||0)+1;
     recordFormDiscovered(baby.pokedexId,baby.formName); // v0.45
-    recordAbilityObserved(baby.pokedexId,baby.ability);
-    recordGenderObserved(baby.pokedexId,baby.gender);
-    const wasFirstSeenBefore=!!(state.researchLog[baby.pokedexId]&&state.researchLog[baby.pokedexId].firstSeen);
-    recordNewSpecies(baby.pokedexId,baby.species);
+    recordAbilityObserved(baby.pokedexId,baby.ability,baby.formName);
+    recordGenderObserved(baby.pokedexId,baby.gender,baby.formName);
+    const babyResearchKey=getResearchKey(baby.pokedexId,baby.formName);
+    const wasFirstSeenBefore=!!(state.researchLog[babyResearchKey]&&state.researchLog[babyResearchKey].firstSeen);
+    recordNewSpecies(baby.pokedexId,baby.species,baby.formName);
     if(!wasFirstSeenBefore) newSpeciesCount++;
-    recordCapture(baby.pokedexId,baby.species);
+    recordCapture(baby.pokedexId,baby.species,baby.formName);
     logCaptureRarity(baby,false);
     if(baby.isShiny&&isPerfectIV(baby)) unicornCount++;
     else if(baby.isShiny) shinyCount++;
@@ -5584,7 +5654,7 @@ function showPokemonDetail(catchId){
   // v0.31 — label now shows the TARGET species name, not just the item name; two branches
   // sharing one item (e.g. Raichu/Alolan Raichu, both Thunder Stone) previously rendered as
   // identical, indistinguishable buttons.
-  const r=state.researchLog[p.pokedexId];
+  const r=state.researchLog[getResearchKey(p.pokedexId,p.formName)];
   const nonManualMethods=['level','friendship','friendship-day','friendship-night','use-move','in-party'];
   let evolveBtnHtml='';
   if(r&&r.confirmedBranches&&r.confirmedBranches.length&&!p.evolveBlocked){
@@ -5744,7 +5814,7 @@ function performCheatReplace(catchId,targetDexId,formName,isShiny=false){
   state.dex.push(replacement);
   state.dexHistory[replacement.pokedexId]=(state.dexHistory[replacement.pokedexId]||0)+1;
   recordFormDiscovered(replacement.pokedexId,replacement.formName); // v0.45
-  recordNewSpecies(replacement.pokedexId,replacement.species);
+  recordNewSpecies(replacement.pokedexId,replacement.species,replacement.formName);
   if(holder){
     const owner=state.aides.find(a=>a.name===holder);
     if(owner) owner.party.push(replacement);
@@ -6577,7 +6647,10 @@ function renderEvolutionChainVisual(famId,highlightDexId){
     const html=isSeen?evoNodeHtml(entry,dexId===highlightDexId,formName):evoPlaceholderHtml();
     // v0.45 — outgoing edges filtered to THIS node's exact form, not every EVO_TREE row for the dexId.
     const outgoing=edges.filter(e=>e.from===dexId&&(e.fromFormName||null)===formName);
-    const r=state.researchLog[dexId];
+    // v0.45.4 — this node's OWN form's research record, not a dexId-wide one shared across every
+    // form (see DESIGN.md "Research Log — Per-Form Identity"). A confirmed branch on one form's
+    // line no longer bleeds into another form's line rendering as if it were confirmed there too.
+    const r=state.researchLog[getResearchKey(dexId,formName)];
     if(!outgoing.length){
       if(!isSeen) return html; // v0.26 — unseen node stays fully opaque, no speculative chain hint
       if(isOfficial||(r&&isNonEvolutionConfirmed(r))) return html;
@@ -6649,7 +6722,8 @@ function renderEvolutionChainVisual(famId,highlightDexId){
       // the root's own unseen-placeholder box is already the correct single indicator.
       const rootIsDiscovered=isOfficial||isNodeDiscovered(root.dexId,formName);
       const canBreed=formName===null&&!isOfficial&&rootIsDiscovered&&getEggGroups(root.dexId).length>0&&!isUndiscoveredOnly(root.dexId)&&!isDitto(root.dexId);
-      const bred=isOfficial||!!(state.researchLog[root.dexId]&&state.researchLog[root.dexId].breedingTested);
+      const bredR=state.researchLog[getResearchKey(root.dexId,null)];
+      const bred=isOfficial||!!(bredR&&bredR.breedingTested);
       const preHtml=(canBreed&&!bred)?(evoPlaceholderHtml()+evoArrowHtml('?')):'';
       return '<div style="display:flex;align-items:flex-start;flex-wrap:wrap;gap:2px;margin:4px 0;">'+preHtml+walk(root.dexId,formName)+'</div>';
     }).join('');
@@ -6681,14 +6755,14 @@ function renderDexPokedexGrid(){
   roster.forEach(entry=>{
     const dexId=entry.dexId;
     const captured=isOfficial||(state.dexHistory[dexId]||0)>0;
-    const seen=isOfficial||isSpeciesKnown(dexId);
+    const seen=isOfficial||isSpeciesKnown(dexId,entry.formName);
     const cell=document.createElement('div');
     cell.style.cssText='display:flex;flex-direction:column;align-items:center;background:var(--main-card);border:1px solid var(--main-border);border-radius:6px;padding:6px;'+((captured||seen)?'cursor:pointer;':'opacity:0.5;');
     if(captured||seen){
       const sprite=getSpriteUrl(dexId,entry.name,isOfficial&&dexOfficialShinyPreview);
       const filter=captured?'':'filter:brightness(0);';
       const shinyBadge=buildDexRarityBadgeHtml(dexId,isOfficial,dexOfficialShinyPreview);
-      const completeBadge=(!isOfficial&&isDexPageComplete(dexId))?'<span title="Dex page complete" style="font-size:10px;margin-left:2px;">🔬</span>':'';
+      const completeBadge=(!isOfficial&&isDexPageComplete(dexId,entry.formName))?'<span title="Dex page complete" style="font-size:10px;margin-left:2px;">🔬</span>':'';
       cell.innerHTML='<img src="'+sprite+'" style="width:48px;height:48px;image-rendering:pixelated;'+filter+'" onerror="this.style.display=\'none\'"><div style="font-size:9px;color:var(--main-text-secondary);margin-top:2px;text-align:center;">#'+dexId+' '+entry.name+shinyBadge+completeBadge+'</div>';
       // v0.41 fix — was hardcoded null, which broke "form-only" species (every Pokédex row has a
       // non-null formName, no null-form sibling — e.g. Nidoran M/F) by mismatching every filter
@@ -6737,7 +6811,7 @@ function renderDexFamilies(){
       });
       const knownMembers=allMembers.filter(m=>speciesSeen.has(m.dexId));
       const lastKnown=knownMembers[knownMembers.length-1];
-      const lastR=lastKnown?state.researchLog[lastKnown.dexId]:null;
+      const lastR=lastKnown?state.researchLog[getResearchKey(lastKnown.dexId,lastKnown.formName)]:null;
       const allFamKnown=allMembers.every(m=>speciesSeen.has(m.dexId))&&allMembers.length>0&&(lastR&&(lastR.evolutionConfirmed||isNonEvolutionConfirmed(lastR)));
       speciesDisplay=allFamKnown?speciesSeen.size+'/'+allMembers.length:speciesSeen.size+'/?';
       totalEverCaught=0;
@@ -6776,14 +6850,14 @@ function renderDexSpecies(){
     const d=document.createElement('div');
     d.className='dex-entry'; d.style.cursor='pointer';
     const rightLabel=isOfficial?'▶':(totalEver+' total ('+liveCount+' held) ▶');
-    d.innerHTML='<div style="display:flex;align-items:center;gap:10px;"><img src="'+sprite+'" style="width:40px;height:40px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div class="dex-header"><span class="dex-name">#'+entry.dexId+' '+entry.name+'</span><span class="dex-id">'+rightLabel+'</span></div><div class="dex-details">'+(entry.type1||'???')+(entry.type2?' / '+entry.type2:'')+' · BST '+(entry.bst||'?')+'</div>'+(isOfficial?'':'<div style="color:var(--main-text-muted);font-size:10px;margin-top:2px;">'+getEvolutionDisplayText(entry.dexId)+'</div>')+'</div></div>';
+    d.innerHTML='<div style="display:flex;align-items:center;gap:10px;"><img src="'+sprite+'" style="width:40px;height:40px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div class="dex-header"><span class="dex-name">#'+entry.dexId+' '+entry.name+'</span><span class="dex-id">'+rightLabel+'</span></div><div class="dex-details">'+(entry.type1||'???')+(entry.type2?' / '+entry.type2:'')+' · BST '+(entry.bst||'?')+'</div>'+(isOfficial?'':'<div style="color:var(--main-text-muted);font-size:10px;margin-top:2px;">'+getEvolutionDisplayText(entry.dexId,entry.formName)+'</div>')+'</div></div>';
     // v0.41 fix — see renderDexPokedexGrid() above for the full bug explanation; same fix here.
     d.onclick=()=>{ dexSelectedDexId=entry.dexId; dexSelectedFormName=entry.formName||null; dexView='detail'; renderDex(); };
     c.appendChild(d);
   });
   if(isOfficial) return;
   const lastEntry=visibleMembers[visibleMembers.length-1];
-  const lastR=state.researchLog[lastEntry.dexId];
+  const lastR=state.researchLog[getResearchKey(lastEntry.dexId,lastEntry.formName)];
   if(!lastR||(!lastR.evolutionConfirmed&&!isNonEvolutionConfirmed(lastR))){
     const ph=document.createElement('div');
     ph.className='dex-entry'; ph.style.opacity='0.45';
@@ -6798,25 +6872,33 @@ function renderDexSpecies(){
 // Expands to show ✓ Confirmed, ? Unknown, N Ruled Out.
 // v0.37 — Official Pokédex bypasses all of this and reads the real methods straight from EVO_TREE
 // (plus the single-target SPECIES lookup), no testedMethods/confirmedBranches gating at all.
-function buildEvoMethodsHtml(dexId){
+// v0.45.4 — formName param added (defaults to null/base). A form is a different species for
+// research purposes (see DESIGN.md "Research Log — Per-Form Identity"): both the official-mode
+// branch list and the researchLog record below are now scoped to THIS specific form, not every
+// form sharing dexId combined. This is the structural fix for the Growlithe dual-status bug
+// (Fire Stone showing both ✓ and ? at once) and the Vulpix stuck-Ice-Stone bug — a form-restricted
+// branch is no longer even a candidate on a form's page that can never own the branch's required
+// source form, so it's cleanly ruled out immediately instead of blocking testedMethods forever.
+function buildEvoMethodsHtml(dexId,formName=null){
+  const evoKey=getResearchKey(dexId,formName);
   if(dexMode==='official'){
     const realMethods=[];
-    const singleEntry=getPokemonEntry(dexId);
+    const singleEntry=getPokemonEntry(dexId,formName);
     if(singleEntry&&singleEntry.evolvesIntoId) realMethods.push(evoMethodLabel({method:singleEntry.evolveMethod,level:singleEntry.evolveLevel,item:singleEntry.evolveItem,from:dexId,to:singleEntry.evolvesIntoId}));
-    getEvolutions(dexId).forEach(e=>{
+    getFormEvolutions(dexId,formName).forEach(e=>{
       realMethods.push(evoMethodLabel({method:e.evolveMethod,level:e.evolveLevel,item:e.evolveItem,from:dexId,to:e.toDexId}));
     });
     const inner=realMethods.length
       ?realMethods.map(m=>'<div style="font-size:11px;color:var(--main-text);padding:3px 0;">'+m+'</div>').join('')
       :'<div style="font-size:11px;color:var(--main-text-secondary);padding:4px 0;">Does not evolve</div>';
-    const isOpen=expandedEvoDexIds.has(dexId);
+    const isOpen=expandedEvoDexIds.has(evoKey);
     return '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--main-border);">'
-      +'<button onclick="toggleEvoSection(this,'+dexId+')" style="width:100%;text-align:left;padding:6px 8px;background:var(--main-bg);border:1px solid var(--main-border);border-radius:3px;color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">'
+      +'<button onclick="toggleEvoSection(this,\''+evoKey+'\')" style="width:100%;text-align:left;padding:6px 8px;background:var(--main-bg);border:1px solid var(--main-border);border-radius:3px;color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">'
       +'🔬 Evolution Methods '+(isOpen?'▲':'▼')+'</button>'
       +'<div style="display:'+(isOpen?'block':'none')+';margin-top:6px;padding:6px 8px;background:var(--main-bg);border-radius:3px;">'+inner+'</div>'
       +'</div>';
   }
-  const r=state.researchLog[dexId];
+  const r=state.researchLog[evoKey];
   const total=EVOLUTION_METHODS.length;
   const tested=r?r.testedMethods.length:0;
 
@@ -6829,8 +6911,10 @@ function buildEvoMethodsHtml(dexId){
     confirmedMethods.forEach(m=>{
       inner+='<div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0;"><span style="color:var(--main-text);">'+m+'</span><span style="color:#2ecc71;">✓</span></div>';
     });
-    // Unknown (in enum, not yet tested)
-    const unknown=EVOLUTION_METHODS.filter(m=>!r||!r.testedMethods.includes(m));
+    // Unknown (in enum, not yet tested) — v0.45.4: filtered against THIS form's own testedMethods,
+    // so a method already confirmed can never simultaneously appear here too (see bug narrative
+    // above — this exclusivity plus the per-form scoping is what fixes both reported bugs).
+    const unknown=EVOLUTION_METHODS.filter(m=>!confirmedMethods.includes(m)&&(!r||!r.testedMethods.includes(m)));
     unknown.forEach(m=>{
       inner+='<div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0;"><span style="color:var(--main-text-secondary);">'+m+'</span><span style="color:var(--main-text-muted);">?</span></div>';
     });
@@ -6841,9 +6925,9 @@ function buildEvoMethodsHtml(dexId){
     }
   }
 
-  const isOpen=expandedEvoDexIds.has(dexId);
+  const isOpen=expandedEvoDexIds.has(evoKey);
   return '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--main-border);">'
-    +'<button onclick="toggleEvoSection(this,'+dexId+')" style="width:100%;text-align:left;padding:6px 8px;background:var(--main-bg);border:1px solid var(--main-border);border-radius:3px;color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">'
+    +'<button onclick="toggleEvoSection(this,\''+evoKey+'\')" style="width:100%;text-align:left;padding:6px 8px;background:var(--main-bg);border:1px solid var(--main-border);border-radius:3px;color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">'
     +'🔬 '+tested+'/'+total+' Evolution Methods Tested '+(isOpen?'▲':'▼')+'</button>'
     +'<div style="display:'+(isOpen?'block':'none')+';margin-top:6px;padding:6px 8px;background:var(--main-bg);border-radius:3px;">'+inner+'</div>'
     +'</div>';
@@ -6922,10 +7006,12 @@ function renderDexDetail(){
   }
   // v0.36 fix — rebuilt off the PERSISTENT researchLog flags instead of the currently-held
   // roster, so releasing/evolving away the one individual with a given ability/gender doesn't
-  // make it vanish from this display. Research tracking stays combined per dex # regardless of
-  // form tab (intentionally dexId-keyed, not form-keyed — same as the rest of Research & Pokédex),
-  // so both sections read state.researchLog[dexSelectedDexId] even while a form tab is selected.
-  const rFlags=state.researchLog[dexSelectedDexId]||{};
+  // make it vanish from this display.
+  // v0.45.4 — a form is a different species for research purposes (see DESIGN.md "Research Log —
+  // Per-Form Identity"): both sections now read the SELECTED FORM's own record via
+  // getResearchKey(), not a dexId-wide one shared across every form. Switching form tabs shows
+  // that form's own independently-tracked abilities/gender split.
+  const rFlags=state.researchLog[getResearchKey(dexSelectedDexId,dexSelectedFormName)]||{};
   // v0.37 — Official Pokédex always shows the real ability name, never "Unknown."
   let abilityHtml='';
   if(entry&&(entry.ability1||entry.ability2||entry.hiddenAbility)){
@@ -6988,7 +7074,7 @@ function renderDexDetail(){
   const header=document.createElement('div');
   header.className='dex-entry';
   const detailRarityBadge=buildDexRarityBadgeHtml(dexSelectedDexId,isOfficial,dexOfficialShinyPreview);
-  header.innerHTML='<div style="display:flex;gap:12px;align-items:flex-start;"><img src="'+sprite+'" style="width:91px;height:91px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div style="color:#fff;font-size:14px;font-weight:bold;">#'+dexSelectedDexId+' '+(entry?entry.name:'???')+(entry&&entry.formName?'<span style="color:var(--main-text-secondary);font-size:11px;"> ('+entry.formName+')</span>':'')+detailRarityBadge+'</div><div style="color:var(--main-text-secondary);font-size:11px;margin-top:1px;">Dex #'+dexSelectedDexId+'</div>'+(entry&&entry.category?'<div style="color:var(--main-text-secondary);font-size:10px;margin-top:2px;">"'+entry.category+'"</div>':'')+'<div style="display:flex;gap:5px;margin-top:6px;">'+typeBadgeHtml(entry?entry.type1:null)+typeBadgeHtml(entry?entry.type2:null)+'</div><div style="color:var(--main-text-muted);font-size:10px;margin-top:5px;">'+(heightDisplay?'📏 '+heightDisplay:'')+(heightDisplay&&weightDisplay?' · ':'')+(weightDisplay?'⚖️ '+weightDisplay:'')+'</div></div></div>'+formTabHtml+(entry&&entry.flavorText?'<div style="color:#a0c0a0;font-size:11px;font-style:italic;margin-top:10px;padding-top:10px;border-top:1px solid var(--main-border);line-height:1.6;">'+entry.flavorText+'</div>':'')+'<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--main-border);"><div style="color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Base Stats</div>'+(entry?[{label:'HP',val:entry.baseHP,color:'#2ecc71'},{label:'ATK',val:entry.baseAtk,color:'#e74c3c'},{label:'DEF',val:entry.baseDef,color:'#f4d03f'},{label:'SpATK',val:entry.baseSpatk,color:'#9b59b6'},{label:'SpDEF',val:entry.baseSpdef,color:'#5dade2'},{label:'SPD',val:entry.baseSpd,color:'#2ecc71'}].map(s=>'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;"><span style="color:var(--main-text-muted);font-size:10px;width:40px;text-align:right;">'+s.label+'</span><span style="color:#fff;font-size:10px;width:28px;text-align:right;">'+(s.val||'?')+'</span><div style="flex:1;background:var(--main-bg);border-radius:2px;height:6px;overflow:hidden;"><div style="width:'+Math.min(100,Math.round(((s.val||0)/255)*100))+'%;height:100%;background:'+s.color+';border-radius:2px;"></div></div></div>').join(''):'<div style="color:#555;font-size:10px;">No stat data available.</div>')+(entry?'<div style="color:#f4d03f;font-size:10px;text-align:right;margin-top:4px;">BST: '+(entry.bst||'?')+'</div>':'')+'</div>'+evoChainHtml+abilityHtml+genderHtml+buildEvoMethodsHtml(dexSelectedDexId)+encounteredAtHtml+capOverrideHtml;
+  header.innerHTML='<div style="display:flex;gap:12px;align-items:flex-start;"><img src="'+sprite+'" style="width:91px;height:91px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div style="color:#fff;font-size:14px;font-weight:bold;">#'+dexSelectedDexId+' '+(entry?entry.name:'???')+(entry&&entry.formName?'<span style="color:var(--main-text-secondary);font-size:11px;"> ('+entry.formName+')</span>':'')+detailRarityBadge+'</div><div style="color:var(--main-text-secondary);font-size:11px;margin-top:1px;">Dex #'+dexSelectedDexId+'</div>'+(entry&&entry.category?'<div style="color:var(--main-text-secondary);font-size:10px;margin-top:2px;">"'+entry.category+'"</div>':'')+'<div style="display:flex;gap:5px;margin-top:6px;">'+typeBadgeHtml(entry?entry.type1:null)+typeBadgeHtml(entry?entry.type2:null)+'</div><div style="color:var(--main-text-muted);font-size:10px;margin-top:5px;">'+(heightDisplay?'📏 '+heightDisplay:'')+(heightDisplay&&weightDisplay?' · ':'')+(weightDisplay?'⚖️ '+weightDisplay:'')+'</div></div></div>'+formTabHtml+(entry&&entry.flavorText?'<div style="color:#a0c0a0;font-size:11px;font-style:italic;margin-top:10px;padding-top:10px;border-top:1px solid var(--main-border);line-height:1.6;">'+entry.flavorText+'</div>':'')+'<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--main-border);"><div style="color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Base Stats</div>'+(entry?[{label:'HP',val:entry.baseHP,color:'#2ecc71'},{label:'ATK',val:entry.baseAtk,color:'#e74c3c'},{label:'DEF',val:entry.baseDef,color:'#f4d03f'},{label:'SpATK',val:entry.baseSpatk,color:'#9b59b6'},{label:'SpDEF',val:entry.baseSpdef,color:'#5dade2'},{label:'SPD',val:entry.baseSpd,color:'#2ecc71'}].map(s=>'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;"><span style="color:var(--main-text-muted);font-size:10px;width:40px;text-align:right;">'+s.label+'</span><span style="color:#fff;font-size:10px;width:28px;text-align:right;">'+(s.val||'?')+'</span><div style="flex:1;background:var(--main-bg);border-radius:2px;height:6px;overflow:hidden;"><div style="width:'+Math.min(100,Math.round(((s.val||0)/255)*100))+'%;height:100%;background:'+s.color+';border-radius:2px;"></div></div></div>').join(''):'<div style="color:#555;font-size:10px;">No stat data available.</div>')+(entry?'<div style="color:#f4d03f;font-size:10px;text-align:right;margin-top:4px;">BST: '+(entry.bst||'?')+'</div>':'')+'</div>'+evoChainHtml+abilityHtml+genderHtml+buildEvoMethodsHtml(dexSelectedDexId,dexSelectedFormName)+encounteredAtHtml+capOverrideHtml;
   c.appendChild(header);
   // v0.37 — Official Pokédex hides the caught-individuals list entirely (pure species-level
   // reference, decoupled from ownership) regardless of whether you happen to own any.
@@ -7522,7 +7608,7 @@ const SAVE_KEY='pokeprof_save';
 // batch-evolve prompt, offline friendship parity, dual-root family breeding, Ditto
 // breeding-placeholder fix, Family IV Inheritance pool fix) is a bug fix or UI/logic-only, no
 // additional schema impact.
-const SAVE_VERSION=31; // v0.45 — new global formsDiscovered record (per-form evolution-chain discovery gating)
+const SAVE_VERSION=32; // v0.45.4 — state.researchLog re-keyed from bare dexId to dexId+'|'+(formName||'') (per-form research identity; see "Research Log — Per-Form Identity" in DESIGN.md)
 let saveTimer=0;
 
 function saveGame(){
@@ -7564,9 +7650,9 @@ function loadGame(){
     const data=JSON.parse(raw);
     if(!data) return false;
 
-    // ── SAVE_VERSION 31 MIGRATION ──
-    // Accepts v11-v30 saves and migrates them; rejects anything older.
-    if(data.version!==SAVE_VERSION&&data.version!==30&&data.version!==29&&data.version!==28&&data.version!==27&&data.version!==26&&data.version!==25&&data.version!==24&&data.version!==23&&data.version!==22&&data.version!==21&&data.version!==20&&data.version!==19&&data.version!==18&&data.version!==17&&data.version!==16&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
+    // ── SAVE_VERSION 32 MIGRATION ──
+    // Accepts v11-v31 saves and migrates them; rejects anything older.
+    if(data.version!==SAVE_VERSION&&data.version!==31&&data.version!==30&&data.version!==29&&data.version!==28&&data.version!==27&&data.version!==26&&data.version!==25&&data.version!==24&&data.version!==23&&data.version!==22&&data.version!==21&&data.version!==20&&data.version!==19&&data.version!==18&&data.version!==17&&data.version!==16&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
     const s=data.state;
     // v0.39.1 — aide-owned fields (party/dex/trainerBag/currentLocation/mission-and-travel/
     // gymProgress/lastHealLocation/wanderMode) now live in state.aides[]. A pre-v26 save has them
@@ -7625,7 +7711,7 @@ function loadGame(){
       // selects the right source for all three cases, not just two of them.
       dex:(s.dex!==undefined)?s.dex:((s.aides&&s.aides.length)?s.aides.flatMap(a=>a.dex||[]):[]),
       log:s.log??[],
-      researchLog:s.researchLog??{}, pendingFindings:[],
+      researchLog:migrateResearchLogKeys(s.researchLog??{}), pendingFindings:[], // v0.45.4 — re-keyed to dexId+'|'+(formName||'') here, before any migration block below reads it
       missionDestination:src0.missionDestination??'route1', missionBehavior:src0.missionBehavior??'research',
       missionOrigin:src0.missionOrigin??'palletTown', currentLocation:src0.currentLocation??'palletTown',
       professorBag, trainerBag,
@@ -7694,9 +7780,13 @@ function loadGame(){
       }
     });
     // v0.20 migration: researchLog schema changes
+    // v0.45.4 — dexIdStr is now a compound "dexId|formName" key (see migrateResearchLogKeys()
+    // above); the raw dexId portion (needed only for the s.dexHistory lookup below, which stays
+    // dexId-only) is parsed via split('|').
     Object.keys(state.researchLog).forEach(dexIdStr=>{
       const r=state.researchLog[dexIdStr];
       if(!r) return;
+      const rawDexId=dexIdStr.split('|')[0];
       // confirmedBranches[] replaces singular confirmedMethod/confirmedIntoId
       if(!r.confirmedBranches){
         r.confirmedBranches=(r.confirmedMethod&&r.confirmedIntoId!=null)
@@ -7726,14 +7816,14 @@ function loadGame(){
       // already been caught — backfill both flags true so old saves don't get a false "first
       // capture" burst as they naturally re-encounter species they already have.
       if(r.firstSeen===undefined) r.firstSeen=true;
-      if(r.firstCaught===undefined) r.firstCaught=!!(s.dexHistory&&s.dexHistory[dexIdStr]);
+      if(r.firstCaught===undefined) r.firstCaught=!!(s.dexHistory&&s.dexHistory[rawDexId]);
     });
-    state.dex.forEach(p=>{ if(p.pokedexId&&p.ability) recordAbilityObserved(p.pokedexId,p.ability); });
+    state.dex.forEach(p=>{ if(p.pokedexId&&p.ability) recordAbilityObserved(p.pokedexId,p.ability,p.formName); });
     // v0.37 — gated to pre-v0.37 loads only (see comment above): recordGenderObserved() now
     // increments a persisted counter, so running this unconditionally on every load (as the old
     // boolean-set version safely did) would double-count on every single page refresh.
     if(data.version<24){
-      state.dex.forEach(p=>{ if(p.pokedexId&&(p.gender==='M'||p.gender==='F')) recordGenderObserved(p.pokedexId,p.gender); });
+      state.dex.forEach(p=>{ if(p.pokedexId&&(p.gender==='M'||p.gender==='F')) recordGenderObserved(p.pokedexId,p.gender,p.formName); });
     }
     // v0.21 migration: fishing split into fish-old/fish-good/fish-super sub-methods.
     // Any saved location preference referencing the old bare 'fish' method is dropped entirely —
@@ -7756,7 +7846,7 @@ function loadGame(){
     state.party = state.party.map(pp => state.dex.find(d => d.id === pp.id) || pp);
     // v0.22 — retroactive method rule-out: catches up any existing save's individuals that
     // already exceed the level/friendship rule-out thresholds, not just ones going forward.
-    state.dex.forEach(p=>{ checkMethodRuleOut(p.pokedexId,p.level,p.friendship); });
+    state.dex.forEach(p=>{ checkMethodRuleOut(p.pokedexId,p.level,p.friendship,p.formName); });
     // v0.26 — cleanup migration for the trade/item-evolution matching bug fix above: any species
     // whose evolveMethod is 'use-item' may have had its own item incorrectly marked ruled-out
     // (pushed into testedMethods) by the old broken matching logic, despite never having a
@@ -7764,9 +7854,16 @@ function loadGame(){
     // retests correctly against professorAutoTestEvolutions() on its next natural trigger
     // (next purchase or new-species catch) — un-sticks Haunter, Kadabra, and any other
     // Link Cable/effect-mismatched species from a permanent false rule-out.
+    // v0.45.4 — dexIdStr is a compound "dexId|formName" key; split it so entry/speciesHasEvolveMethod
+    // resolve against the SPECIFIC form this record belongs to, not always the base form. This is
+    // one of the two unconditional (every-load) blocks the migration-ordering fix above exists for —
+    // Number(dexIdStr) on a compound key like "58|" would be NaN, which is why the re-key must
+    // happen before this ever runs (see migrateResearchLogKeys()).
     Object.keys(state.researchLog).forEach(dexIdStr=>{
-      const dexId=Number(dexIdStr);
-      const entry=getPokemonEntry(dexId);
+      const bar=dexIdStr.indexOf('|');
+      const dexId=Number(dexIdStr.slice(0,bar));
+      const formName=dexIdStr.slice(bar+1)||null;
+      const entry=getPokemonEntry(dexId,formName);
       if(!entry||entry.evolveMethod!=='use-item'||!entry.evolveItem) return;
       const r=state.researchLog[dexIdStr];
       if(!r||!r.testedMethods) return;
@@ -7780,10 +7877,15 @@ function loadGame(){
     // populates at record-creation time). Same check, applied retroactively — idempotent, safe to
     // run on every load, matching the v0.22/v0.26 unconditional-migration convention (no
     // SAVE_VERSION bump needed for a logic correction, not a schema change).
+    // v0.45.4 — same compound-key split as the block above; this is the OTHER unconditional block
+    // the migration-ordering fix protects (a NaN dexId here would incorrectly force-mark 'shed'
+    // ruled-out for every species, permanently breaking the Shedinja mechanic — see DESIGN.md).
     Object.keys(state.researchLog).forEach(dexIdStr=>{
-      const dexId=Number(dexIdStr);
+      const bar=dexIdStr.indexOf('|');
+      const dexId=Number(dexIdStr.slice(0,bar));
+      const formName=dexIdStr.slice(bar+1)||null;
       const r=state.researchLog[dexIdStr];
-      if(r&&!r.testedMethods.includes('shed')&&!speciesHasEvolveMethod(dexId,'shed')){
+      if(r&&!r.testedMethods.includes('shed')&&!speciesHasEvolveMethod(dexId,'shed',formName)){
         r.testedMethods.push('shed');
       }
     });
@@ -7818,14 +7920,20 @@ function loadGame(){
     // gated behind data.version<21 — runs exactly once, only for saves that actually predate this
     // migration's introduction.
     if(data.version<21){
+      // v0.45.4 — same compound-key split as the two unconditional blocks above. A save this old
+      // predates forms entirely (formsDiscovered didn't exist until v0.45), so formName here will
+      // always resolve to null in practice — but parsed properly rather than assumed, in case a
+      // save was hand-edited or migrated through an unusual path.
       Object.keys(state.researchLog).forEach(dexIdStr=>{
-        const dexId=Number(dexIdStr);
+        const bar=dexIdStr.indexOf('|');
+        const dexId=Number(dexIdStr.slice(0,bar));
+        const formName=dexIdStr.slice(bar+1)||null;
         const r=state.researchLog[dexIdStr];
         if(!r) return;
-        const entry=getPokemonEntry(dexId);
+        const entry=getPokemonEntry(dexId,formName);
         const realItemNames=new Set();
         if(entry&&entry.evolveMethod==='use-item'&&entry.evolveItem) realItemNames.add(entry.evolveItem);
-        (typeof getEvolutions==='function'?getEvolutions(dexId):[]).forEach(b=>{
+        (typeof getFormEvolutions==='function'?getFormEvolutions(dexId,formName):[]).forEach(b=>{
           if(b.evolveMethod==='use-item'&&b.evolveItem){
             const itemEntry=typeof ITEMS_DATA!=='undefined'?ITEMS_DATA.find(i=>i.itemId===b.evolveItem):null;
             if(itemEntry) realItemNames.add(itemEntry.name);
@@ -7957,8 +8065,8 @@ function init(){
   carl.party.push(s); state.dex.push(s);
   state.dexHistory[s.pokedexId]=(state.dexHistory[s.pokedexId]||0)+1;
   recordFormDiscovered(s.pokedexId,s.formName); // v0.45
-  recordNewSpecies(s.pokedexId,'Rattata');
-  recordSighting(s.pokedexId,5);
+  recordNewSpecies(s.pokedexId,'Rattata',s.formName);
+  recordSighting(s.pokedexId,5,s.formName);
   addLog('Rattata #1 added to party as starter.','info','catches',state.aides[0].id);
   render();
 }

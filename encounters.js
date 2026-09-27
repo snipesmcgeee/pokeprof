@@ -1,6 +1,6 @@
 // PokeProf — Encounters Database
-// Auto-generated: 9/5/2026, 11:20:22 PM
-// Entries: 1360
+// Auto-generated: 9/26/2026, 9:06:20 PM
+// Entries: 1827
 
 const ENCOUNTERS = [
   {
@@ -10,7 +10,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 3,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "viridianForest",
@@ -19,7 +20,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 3,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansion",
@@ -28,7 +30,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 3,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route24",
@@ -37,7 +40,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 3,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsE",
@@ -46,7 +50,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 3,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsW",
@@ -55,7 +60,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 3,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "vermillionCity",
@@ -64,7 +70,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 1,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route24",
@@ -73,7 +80,8 @@ const ENCOUNTERS = [
     "maxLevel": 7,
     "encounterRate": 45,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route25",
@@ -82,7 +90,8 @@ const ENCOUNTERS = [
     "maxLevel": 8,
     "encounterRate": 46,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route2N",
@@ -91,7 +100,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 20,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route2S",
@@ -100,7 +110,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 20,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "viridianForest",
@@ -109,7 +120,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 150,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route24",
@@ -118,7 +130,8 @@ const ENCOUNTERS = [
     "maxLevel": 8,
     "encounterRate": 17.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route25",
@@ -127,7 +140,8 @@ const ENCOUNTERS = [
     "maxLevel": 9,
     "encounterRate": 21.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "viridianForest",
@@ -136,7 +150,8 @@ const ENCOUNTERS = [
     "maxLevel": 6,
     "encounterRate": 67.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route24",
@@ -145,7 +160,8 @@ const ENCOUNTERS = [
     "maxLevel": 7,
     "encounterRate": 45,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route25",
@@ -154,7 +170,8 @@ const ENCOUNTERS = [
     "maxLevel": 8,
     "encounterRate": 46,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route2N",
@@ -163,7 +180,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 20,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route2S",
@@ -172,7 +190,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 20,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "viridianForest",
@@ -181,7 +200,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 95,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route24",
@@ -190,7 +210,8 @@ const ENCOUNTERS = [
     "maxLevel": 8,
     "encounterRate": 17.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route25",
@@ -199,7 +220,8 @@ const ENCOUNTERS = [
     "maxLevel": 9,
     "encounterRate": 21.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "viridianForest",
@@ -208,7 +230,8 @@ const ENCOUNTERS = [
     "maxLevel": 6,
     "encounterRate": 47.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route1",
@@ -217,7 +240,8 @@ const ENCOUNTERS = [
     "maxLevel": 7,
     "encounterRate": 230,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route11",
@@ -226,7 +250,8 @@ const ENCOUNTERS = [
     "maxLevel": 18,
     "encounterRate": 40,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route12",
@@ -235,7 +260,8 @@ const ENCOUNTERS = [
     "maxLevel": 27,
     "encounterRate": 115,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route13",
@@ -244,7 +270,8 @@ const ENCOUNTERS = [
     "maxLevel": 27,
     "encounterRate": 90,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route14",
@@ -253,7 +280,8 @@ const ENCOUNTERS = [
     "maxLevel": 27,
     "encounterRate": 40,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route15",
@@ -262,7 +290,8 @@ const ENCOUNTERS = [
     "maxLevel": 27,
     "encounterRate": 50,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route21",
@@ -271,7 +300,8 @@ const ENCOUNTERS = [
     "maxLevel": 23,
     "encounterRate": 110,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route24",
@@ -280,7 +310,8 @@ const ENCOUNTERS = [
     "maxLevel": 13,
     "encounterRate": 84,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route25",
@@ -289,7 +320,8 @@ const ENCOUNTERS = [
     "maxLevel": 17,
     "encounterRate": 74,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route2N",
@@ -298,7 +330,8 @@ const ENCOUNTERS = [
     "maxLevel": 7,
     "encounterRate": 155,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route2S",
@@ -307,7 +340,8 @@ const ENCOUNTERS = [
     "maxLevel": 7,
     "encounterRate": 155,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route3",
@@ -316,7 +350,8 @@ const ENCOUNTERS = [
     "maxLevel": 8,
     "encounterRate": 130,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route5",
@@ -325,7 +360,8 @@ const ENCOUNTERS = [
     "maxLevel": 17,
     "encounterRate": 155,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route6",
@@ -334,7 +370,8 @@ const ENCOUNTERS = [
     "maxLevel": 17,
     "encounterRate": 155,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route7",
@@ -343,7 +380,8 @@ const ENCOUNTERS = [
     "maxLevel": 22,
     "encounterRate": 140,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route8",
@@ -352,7 +390,8 @@ const ENCOUNTERS = [
     "maxLevel": 22,
     "encounterRate": 140,
     "encounterMethod": "grass",
-    "requiresItem": "hm-cut"
+    "requiresItem": "hm-cut",
+    "formName": null
   },
   {
     "locationId": "viridianForest",
@@ -361,7 +400,8 @@ const ENCOUNTERS = [
     "maxLevel": 8,
     "encounterRate": 24,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route11",
@@ -370,7 +410,8 @@ const ENCOUNTERS = [
     "maxLevel": 20,
     "encounterRate": 10,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route12",
@@ -379,7 +420,8 @@ const ENCOUNTERS = [
     "maxLevel": 28,
     "encounterRate": 10,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route13",
@@ -388,7 +430,8 @@ const ENCOUNTERS = [
     "maxLevel": 29,
     "encounterRate": 20,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route14",
@@ -397,7 +440,8 @@ const ENCOUNTERS = [
     "maxLevel": 29,
     "encounterRate": 25,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route15",
@@ -406,7 +450,8 @@ const ENCOUNTERS = [
     "maxLevel": 29,
     "encounterRate": 15,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route21",
@@ -415,7 +460,8 @@ const ENCOUNTERS = [
     "maxLevel": 32,
     "encounterRate": 40,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route24",
@@ -424,7 +470,8 @@ const ENCOUNTERS = [
     "maxLevel": 17,
     "encounterRate": 1,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route5",
@@ -433,7 +480,8 @@ const ENCOUNTERS = [
     "maxLevel": 17,
     "encounterRate": 5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route6",
@@ -442,7 +490,8 @@ const ENCOUNTERS = [
     "maxLevel": 17,
     "encounterRate": 5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route7",
@@ -451,7 +500,8 @@ const ENCOUNTERS = [
     "maxLevel": 24,
     "encounterRate": 10,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route8",
@@ -460,7 +510,8 @@ const ENCOUNTERS = [
     "maxLevel": 24,
     "encounterRate": 10,
     "encounterMethod": "grass",
-    "requiresItem": "hm-cut"
+    "requiresItem": "hm-cut",
+    "formName": null
   },
   {
     "locationId": "viridianForest",
@@ -469,7 +520,8 @@ const ENCOUNTERS = [
     "maxLevel": 9,
     "encounterRate": 1,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansion",
@@ -478,7 +530,8 @@ const ENCOUNTERS = [
     "maxLevel": 37,
     "encounterRate": 45,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansion2F",
@@ -487,7 +540,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 45,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansion3F",
@@ -496,7 +550,8 @@ const ENCOUNTERS = [
     "maxLevel": 43,
     "encounterRate": 45,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansionB1F",
@@ -505,7 +560,8 @@ const ENCOUNTERS = [
     "maxLevel": 26,
     "encounterRate": 5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route1",
@@ -514,7 +570,8 @@ const ENCOUNTERS = [
     "maxLevel": 4,
     "encounterRate": 170,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route10N",
@@ -523,7 +580,8 @@ const ENCOUNTERS = [
     "maxLevel": 18,
     "encounterRate": 15,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route11",
@@ -532,7 +590,8 @@ const ENCOUNTERS = [
     "maxLevel": 17,
     "encounterRate": 25,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route16",
@@ -541,7 +600,8 @@ const ENCOUNTERS = [
     "maxLevel": 24,
     "encounterRate": 115,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route17",
@@ -550,7 +610,8 @@ const ENCOUNTERS = [
     "maxLevel": 22,
     "encounterRate": 5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route18",
@@ -559,7 +620,8 @@ const ENCOUNTERS = [
     "maxLevel": 22,
     "encounterRate": 30,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route21",
@@ -568,7 +630,8 @@ const ENCOUNTERS = [
     "maxLevel": 23,
     "encounterRate": 95,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route22",
@@ -577,7 +640,8 @@ const ENCOUNTERS = [
     "maxLevel": 4,
     "encounterRate": 155,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route2N",
@@ -586,7 +650,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 175,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route2S",
@@ -595,7 +660,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 175,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route3",
@@ -604,7 +670,8 @@ const ENCOUNTERS = [
     "maxLevel": 12,
     "encounterRate": 15,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route4",
@@ -613,7 +680,8 @@ const ENCOUNTERS = [
     "maxLevel": 12,
     "encounterRate": 140,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route5",
@@ -622,7 +690,8 @@ const ENCOUNTERS = [
     "maxLevel": 16,
     "encounterRate": 25,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route6",
@@ -631,7 +700,8 @@ const ENCOUNTERS = [
     "maxLevel": 16,
     "encounterRate": 25,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route7",
@@ -640,7 +710,8 @@ const ENCOUNTERS = [
     "maxLevel": 20,
     "encounterRate": 15,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route8",
@@ -649,7 +720,8 @@ const ENCOUNTERS = [
     "maxLevel": 20,
     "encounterRate": 15,
     "encounterMethod": "grass",
-    "requiresItem": "hm-cut"
+    "requiresItem": "hm-cut",
+    "formName": null
   },
   {
     "locationId": "route9",
@@ -658,7 +730,8 @@ const ENCOUNTERS = [
     "maxLevel": 17,
     "encounterRate": 145,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansion",
@@ -667,7 +740,8 @@ const ENCOUNTERS = [
     "maxLevel": 37,
     "encounterRate": 60,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansion2F",
@@ -676,7 +750,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 55,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansion3F",
@@ -685,7 +760,8 @@ const ENCOUNTERS = [
     "maxLevel": 43,
     "encounterRate": 55,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansionB1F",
@@ -694,7 +770,8 @@ const ENCOUNTERS = [
     "maxLevel": 46,
     "encounterRate": 70,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route10N",
@@ -703,7 +780,8 @@ const ENCOUNTERS = [
     "maxLevel": 20,
     "encounterRate": 5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route11",
@@ -712,7 +790,8 @@ const ENCOUNTERS = [
     "maxLevel": 17,
     "encounterRate": 1,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route16",
@@ -721,7 +800,8 @@ const ENCOUNTERS = [
     "maxLevel": 26,
     "encounterRate": 20,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route17",
@@ -730,7 +810,8 @@ const ENCOUNTERS = [
     "maxLevel": 29,
     "encounterRate": 85,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route18",
@@ -739,7 +820,8 @@ const ENCOUNTERS = [
     "maxLevel": 29,
     "encounterRate": 60,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route21",
@@ -748,7 +830,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 35,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route9",
@@ -757,7 +840,8 @@ const ENCOUNTERS = [
     "maxLevel": 20,
     "encounterRate": 4,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route10N",
@@ -766,7 +850,8 @@ const ENCOUNTERS = [
     "maxLevel": 17,
     "encounterRate": 95,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route11",
@@ -775,7 +860,8 @@ const ENCOUNTERS = [
     "maxLevel": 17,
     "encounterRate": 95,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route16",
@@ -784,7 +870,8 @@ const ENCOUNTERS = [
     "maxLevel": 23,
     "encounterRate": 140,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route17",
@@ -793,7 +880,8 @@ const ENCOUNTERS = [
     "maxLevel": 22,
     "encounterRate": 110,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route18",
@@ -802,7 +890,8 @@ const ENCOUNTERS = [
     "maxLevel": 23,
     "encounterRate": 140,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route22",
@@ -811,7 +900,8 @@ const ENCOUNTERS = [
     "maxLevel": 6,
     "encounterRate": 40,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route23",
@@ -820,7 +910,8 @@ const ENCOUNTERS = [
     "maxLevel": 34,
     "encounterRate": 45,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route3",
@@ -829,7 +920,8 @@ const ENCOUNTERS = [
     "maxLevel": 8,
     "encounterRate": 170,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route4",
@@ -838,7 +930,8 @@ const ENCOUNTERS = [
     "maxLevel": 12,
     "encounterRate": 140,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route9",
@@ -847,7 +940,8 @@ const ENCOUNTERS = [
     "maxLevel": 17,
     "encounterRate": 105,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route16",
@@ -856,7 +950,8 @@ const ENCOUNTERS = [
     "maxLevel": 24,
     "encounterRate": 5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route17",
@@ -865,7 +960,8 @@ const ENCOUNTERS = [
     "maxLevel": 29,
     "encounterRate": 35,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route18",
@@ -874,7 +970,8 @@ const ENCOUNTERS = [
     "maxLevel": 29,
     "encounterRate": 50,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route23",
@@ -883,7 +980,8 @@ const ENCOUNTERS = [
     "maxLevel": 45,
     "encounterRate": 80,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route9",
@@ -892,7 +990,8 @@ const ENCOUNTERS = [
     "maxLevel": 19,
     "encounterRate": 1,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route10N",
@@ -901,7 +1000,8 @@ const ENCOUNTERS = [
     "maxLevel": 17,
     "encounterRate": 37.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route11",
@@ -910,7 +1010,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 65,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route23",
@@ -919,7 +1020,8 @@ const ENCOUNTERS = [
     "maxLevel": 34,
     "encounterRate": 35,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route4",
@@ -928,7 +1030,8 @@ const ENCOUNTERS = [
     "maxLevel": 12,
     "encounterRate": 37.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route8",
@@ -937,7 +1040,8 @@ const ENCOUNTERS = [
     "maxLevel": 19,
     "encounterRate": 30,
     "encounterMethod": "grass",
-    "requiresItem": "hm-cut"
+    "requiresItem": "hm-cut",
+    "formName": null
   },
   {
     "locationId": "route9",
@@ -946,7 +1050,8 @@ const ENCOUNTERS = [
     "maxLevel": 17,
     "encounterRate": 37.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -955,7 +1060,8 @@ const ENCOUNTERS = [
     "maxLevel": 52,
     "encounterRate": 10,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -964,7 +1070,8 @@ const ENCOUNTERS = [
     "maxLevel": 57,
     "encounterRate": 5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad",
@@ -973,7 +1080,8 @@ const ENCOUNTERS = [
     "maxLevel": 44,
     "encounterRate": 2.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad2F",
@@ -982,7 +1090,8 @@ const ENCOUNTERS = [
     "maxLevel": 46,
     "encounterRate": 2.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad3F",
@@ -991,7 +1100,8 @@ const ENCOUNTERS = [
     "maxLevel": 44,
     "encounterRate": 2.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route23",
@@ -1000,7 +1110,8 @@ const ENCOUNTERS = [
     "maxLevel": 44,
     "encounterRate": 7.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "powerPlant",
@@ -1009,7 +1120,8 @@ const ENCOUNTERS = [
     "maxLevel": 26,
     "encounterRate": 75,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "viridianForest",
@@ -1018,7 +1130,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 15,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -1027,7 +1140,8 @@ const ENCOUNTERS = [
     "maxLevel": 53,
     "encounterRate": 8,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -1036,7 +1150,8 @@ const ENCOUNTERS = [
     "maxLevel": 64,
     "encounterRate": 20,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "powerPlant",
@@ -1045,7 +1160,8 @@ const ENCOUNTERS = [
     "maxLevel": 36,
     "encounterRate": 5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "mtMoon",
@@ -1054,7 +1170,8 @@ const ENCOUNTERS = [
     "maxLevel": 12,
     "encounterRate": 4,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route10N",
@@ -1063,7 +1180,8 @@ const ENCOUNTERS = [
     "maxLevel": 17,
     "encounterRate": 37.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route11",
@@ -1072,7 +1190,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 65,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route23",
@@ -1081,7 +1200,8 @@ const ENCOUNTERS = [
     "maxLevel": 34,
     "encounterRate": 35,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route3",
@@ -1090,7 +1210,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 15,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route4",
@@ -1099,7 +1220,8 @@ const ENCOUNTERS = [
     "maxLevel": 12,
     "encounterRate": 52.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route8",
@@ -1108,7 +1230,8 @@ const ENCOUNTERS = [
     "maxLevel": 19,
     "encounterRate": 30,
     "encounterMethod": "grass",
-    "requiresItem": "hm-cut"
+    "requiresItem": "hm-cut",
+    "formName": null
   },
   {
     "locationId": "route9",
@@ -1117,7 +1240,8 @@ const ENCOUNTERS = [
     "maxLevel": 17,
     "encounterRate": 37.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -1126,7 +1250,8 @@ const ENCOUNTERS = [
     "maxLevel": 52,
     "encounterRate": 10,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave2F",
@@ -1135,7 +1260,8 @@ const ENCOUNTERS = [
     "maxLevel": 56,
     "encounterRate": 10,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -1144,7 +1270,8 @@ const ENCOUNTERS = [
     "maxLevel": 57,
     "encounterRate": 5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad",
@@ -1153,7 +1280,8 @@ const ENCOUNTERS = [
     "maxLevel": 44,
     "encounterRate": 2.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad2F",
@@ -1162,7 +1290,8 @@ const ENCOUNTERS = [
     "maxLevel": 46,
     "encounterRate": 2.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad3F",
@@ -1171,7 +1300,8 @@ const ENCOUNTERS = [
     "maxLevel": 44,
     "encounterRate": 2.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route23",
@@ -1180,7 +1310,8 @@ const ENCOUNTERS = [
     "maxLevel": 44,
     "encounterRate": 7.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route10N",
@@ -1189,7 +1320,8 @@ const ENCOUNTERS = [
     "maxLevel": 17,
     "encounterRate": 10,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route22",
@@ -1198,7 +1330,8 @@ const ENCOUNTERS = [
     "maxLevel": 4,
     "encounterRate": 65,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route2N",
@@ -1207,7 +1340,8 @@ const ENCOUNTERS = [
     "maxLevel": 6,
     "encounterRate": 15,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route2S",
@@ -1216,7 +1350,8 @@ const ENCOUNTERS = [
     "maxLevel": 6,
     "encounterRate": 15,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route3",
@@ -1225,7 +1360,8 @@ const ENCOUNTERS = [
     "maxLevel": 6,
     "encounterRate": 7.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route9",
@@ -1234,7 +1370,8 @@ const ENCOUNTERS = [
     "maxLevel": 18,
     "encounterRate": 35,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone1",
@@ -1243,7 +1380,8 @@ const ENCOUNTERS = [
     "maxLevel": 22,
     "encounterRate": 60,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone2",
@@ -1252,7 +1390,8 @@ const ENCOUNTERS = [
     "maxLevel": 24,
     "encounterRate": 57.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone3",
@@ -1261,7 +1400,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 50,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone4",
@@ -1270,7 +1410,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 57.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "gameCorner",
@@ -1279,7 +1420,8 @@ const ENCOUNTERS = [
     "maxLevel": 17,
     "encounterRate": 35,
     "encounterMethod": "cave",
-    "requiresItem": "coinCase"
+    "requiresItem": "coinCase",
+    "formName": null
   },
   {
     "locationId": "route23",
@@ -1288,7 +1430,8 @@ const ENCOUNTERS = [
     "maxLevel": 44,
     "encounterRate": 25,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route9",
@@ -1297,7 +1440,8 @@ const ENCOUNTERS = [
     "maxLevel": 18,
     "encounterRate": 5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone1",
@@ -1306,7 +1450,8 @@ const ENCOUNTERS = [
     "maxLevel": 31,
     "encounterRate": 22.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone2",
@@ -1315,7 +1460,8 @@ const ENCOUNTERS = [
     "maxLevel": 33,
     "encounterRate": 25,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone3",
@@ -1324,7 +1470,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 32.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route10N",
@@ -1333,7 +1480,8 @@ const ENCOUNTERS = [
     "maxLevel": 17,
     "encounterRate": 10,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route22",
@@ -1342,7 +1490,8 @@ const ENCOUNTERS = [
     "maxLevel": 4,
     "encounterRate": 65,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route2N",
@@ -1351,7 +1500,8 @@ const ENCOUNTERS = [
     "maxLevel": 6,
     "encounterRate": 15,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route2S",
@@ -1360,7 +1510,8 @@ const ENCOUNTERS = [
     "maxLevel": 6,
     "encounterRate": 15,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route3",
@@ -1369,7 +1520,8 @@ const ENCOUNTERS = [
     "maxLevel": 7,
     "encounterRate": 7.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route9",
@@ -1378,7 +1530,8 @@ const ENCOUNTERS = [
     "maxLevel": 18,
     "encounterRate": 35,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone1",
@@ -1387,7 +1540,8 @@ const ENCOUNTERS = [
     "maxLevel": 22,
     "encounterRate": 60,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone2",
@@ -1396,7 +1550,8 @@ const ENCOUNTERS = [
     "maxLevel": 24,
     "encounterRate": 67.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone3",
@@ -1405,7 +1560,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 60,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone4",
@@ -1414,7 +1570,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 67.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "gameCorner",
@@ -1423,7 +1580,8 @@ const ENCOUNTERS = [
     "maxLevel": 17,
     "encounterRate": 35,
     "encounterMethod": "cave",
-    "requiresItem": "coinCase"
+    "requiresItem": "coinCase",
+    "formName": null
   },
   {
     "locationId": "route23",
@@ -1432,7 +1590,8 @@ const ENCOUNTERS = [
     "maxLevel": 44,
     "encounterRate": 35,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route9",
@@ -1441,7 +1600,8 @@ const ENCOUNTERS = [
     "maxLevel": 18,
     "encounterRate": 5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone1",
@@ -1450,7 +1610,8 @@ const ENCOUNTERS = [
     "maxLevel": 31,
     "encounterRate": 32.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone2",
@@ -1459,7 +1620,8 @@ const ENCOUNTERS = [
     "maxLevel": 33,
     "encounterRate": 15,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone3",
@@ -1468,7 +1630,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 22.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone4",
@@ -1477,7 +1640,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 25,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "gameCorner",
@@ -1486,7 +1650,8 @@ const ENCOUNTERS = [
     "maxLevel": 18,
     "encounterRate": 80,
     "encounterMethod": "cave",
-    "requiresItem": "coinCase"
+    "requiresItem": "coinCase",
+    "formName": null
   },
   {
     "locationId": "mtMoon",
@@ -1495,7 +1660,8 @@ const ENCOUNTERS = [
     "maxLevel": 11,
     "encounterRate": 4,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "mtMoonB1F",
@@ -1504,7 +1670,8 @@ const ENCOUNTERS = [
     "maxLevel": 12,
     "encounterRate": 13,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "mtMoonB2F",
@@ -1513,7 +1680,8 @@ const ENCOUNTERS = [
     "maxLevel": 12,
     "encounterRate": 28,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "gameCorner",
@@ -1522,7 +1690,8 @@ const ENCOUNTERS = [
     "maxLevel": 18,
     "encounterRate": 50,
     "encounterMethod": "cave",
-    "requiresItem": "coinCase"
+    "requiresItem": "coinCase",
+    "formName": null
   },
   {
     "locationId": "pokemonMansion",
@@ -1531,7 +1700,8 @@ const ENCOUNTERS = [
     "maxLevel": 34,
     "encounterRate": 87.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansion2F",
@@ -1540,7 +1710,8 @@ const ENCOUNTERS = [
     "maxLevel": 32,
     "encounterRate": 32.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansion3F",
@@ -1549,7 +1720,8 @@ const ENCOUNTERS = [
     "maxLevel": 33,
     "encounterRate": 22.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansionB1F",
@@ -1558,7 +1730,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 22.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route7",
@@ -1567,7 +1740,8 @@ const ENCOUNTERS = [
     "maxLevel": 20,
     "encounterRate": 15,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route8",
@@ -1576,7 +1750,8 @@ const ENCOUNTERS = [
     "maxLevel": 18,
     "encounterRate": 30,
     "encounterMethod": "grass",
-    "requiresItem": "hm-cut"
+    "requiresItem": "hm-cut",
+    "formName": null
   },
   {
     "locationId": "route3",
@@ -1585,7 +1760,8 @@ const ENCOUNTERS = [
     "maxLevel": 7,
     "encounterRate": 30,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route5",
@@ -1594,7 +1770,8 @@ const ENCOUNTERS = [
     "maxLevel": 7,
     "encounterRate": 10,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route6",
@@ -1603,7 +1780,8 @@ const ENCOUNTERS = [
     "maxLevel": 7,
     "encounterRate": 10,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route7",
@@ -1612,7 +1790,8 @@ const ENCOUNTERS = [
     "maxLevel": 24,
     "encounterRate": 10,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route8",
@@ -1621,7 +1800,8 @@ const ENCOUNTERS = [
     "maxLevel": 24,
     "encounterRate": 10,
     "encounterMethod": "grass",
-    "requiresItem": "hm-cut"
+    "requiresItem": "hm-cut",
+    "formName": null
   },
   {
     "locationId": "ceruleanCave2F",
@@ -1630,7 +1810,8 @@ const ENCOUNTERS = [
     "maxLevel": 54,
     "encounterRate": 10,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "gameCorner",
@@ -1639,7 +1820,8 @@ const ENCOUNTERS = [
     "maxLevel": 22,
     "encounterRate": 15,
     "encounterMethod": "cave",
-    "requiresItem": "coinCase"
+    "requiresItem": "coinCase",
+    "formName": null
   },
   {
     "locationId": "mtMoon",
@@ -1648,7 +1830,8 @@ const ENCOUNTERS = [
     "maxLevel": 11,
     "encounterRate": 302,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "mtMoonB1F",
@@ -1657,7 +1840,8 @@ const ENCOUNTERS = [
     "maxLevel": 11,
     "encounterRate": 185,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "mtMoonB2F",
@@ -1666,7 +1850,8 @@ const ENCOUNTERS = [
     "maxLevel": 11,
     "encounterRate": 217,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "rockTunnel",
@@ -1675,7 +1860,8 @@ const ENCOUNTERS = [
     "maxLevel": 21,
     "encounterRate": 195,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "rockTunnel1FS",
@@ -1684,7 +1870,8 @@ const ENCOUNTERS = [
     "maxLevel": 21,
     "encounterRate": 195,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "rockTunnel1FW",
@@ -1693,7 +1880,8 @@ const ENCOUNTERS = [
     "maxLevel": 21,
     "encounterRate": 195,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "rockTunnelB1FE",
@@ -1702,7 +1890,8 @@ const ENCOUNTERS = [
     "maxLevel": 16,
     "encounterRate": 30,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "rockTunnelB1FW",
@@ -1711,7 +1900,8 @@ const ENCOUNTERS = [
     "maxLevel": 16,
     "encounterRate": 30,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB1FE",
@@ -1720,7 +1910,8 @@ const ENCOUNTERS = [
     "maxLevel": 36,
     "encounterRate": 79,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB1FW",
@@ -1729,7 +1920,8 @@ const ENCOUNTERS = [
     "maxLevel": 36,
     "encounterRate": 79,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB2FE",
@@ -1738,7 +1930,8 @@ const ENCOUNTERS = [
     "maxLevel": 36,
     "encounterRate": 60,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB2FW",
@@ -1747,7 +1940,8 @@ const ENCOUNTERS = [
     "maxLevel": 36,
     "encounterRate": 60,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -1756,7 +1950,8 @@ const ENCOUNTERS = [
     "maxLevel": 36,
     "encounterRate": 35,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -1765,7 +1960,8 @@ const ENCOUNTERS = [
     "maxLevel": 36,
     "encounterRate": 35,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -1774,7 +1970,8 @@ const ENCOUNTERS = [
     "maxLevel": 36,
     "encounterRate": 20,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsE",
@@ -1783,7 +1980,8 @@ const ENCOUNTERS = [
     "maxLevel": 36,
     "encounterRate": 104,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsW",
@@ -1792,7 +1990,8 @@ const ENCOUNTERS = [
     "maxLevel": 36,
     "encounterRate": 104,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad",
@@ -1801,7 +2000,8 @@ const ENCOUNTERS = [
     "maxLevel": 32,
     "encounterRate": 50,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad2F",
@@ -1810,7 +2010,8 @@ const ENCOUNTERS = [
     "maxLevel": 34,
     "encounterRate": 40,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad3F",
@@ -1819,7 +2020,8 @@ const ENCOUNTERS = [
     "maxLevel": 44,
     "encounterRate": 60,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -1828,7 +2030,8 @@ const ENCOUNTERS = [
     "maxLevel": 55,
     "encounterRate": 104,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave2F",
@@ -1837,7 +2040,8 @@ const ENCOUNTERS = [
     "maxLevel": 58,
     "encounterRate": 65,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -1846,7 +2050,8 @@ const ENCOUNTERS = [
     "maxLevel": 61,
     "encounterRate": 51,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB1FE",
@@ -1855,7 +2060,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 21,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB1FW",
@@ -1864,7 +2070,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 21,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB2FE",
@@ -1873,7 +2080,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 33,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB2FW",
@@ -1882,7 +2090,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 33,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -1891,7 +2100,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 35,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -1900,7 +2110,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 35,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -1909,7 +2120,8 @@ const ENCOUNTERS = [
     "maxLevel": 36,
     "encounterRate": 47,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsE",
@@ -1918,7 +2130,8 @@ const ENCOUNTERS = [
     "maxLevel": 36,
     "encounterRate": 26,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsW",
@@ -1927,7 +2140,8 @@ const ENCOUNTERS = [
     "maxLevel": 36,
     "encounterRate": 26,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad",
@@ -1936,7 +2150,8 @@ const ENCOUNTERS = [
     "maxLevel": 44,
     "encounterRate": 25,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad2F",
@@ -1945,7 +2160,8 @@ const ENCOUNTERS = [
     "maxLevel": 46,
     "encounterRate": 30,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad3F",
@@ -1954,7 +2170,8 @@ const ENCOUNTERS = [
     "maxLevel": 44,
     "encounterRate": 15,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route12",
@@ -1963,7 +2180,8 @@ const ENCOUNTERS = [
     "maxLevel": 26,
     "encounterRate": 92.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route13",
@@ -1972,7 +2190,8 @@ const ENCOUNTERS = [
     "maxLevel": 26,
     "encounterRate": 92.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route14",
@@ -1981,7 +2200,8 @@ const ENCOUNTERS = [
     "maxLevel": 26,
     "encounterRate": 92.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route15",
@@ -1990,7 +2210,8 @@ const ENCOUNTERS = [
     "maxLevel": 26,
     "encounterRate": 92.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route24",
@@ -1999,7 +2220,8 @@ const ENCOUNTERS = [
     "maxLevel": 14,
     "encounterRate": 72.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route25",
@@ -2008,7 +2230,8 @@ const ENCOUNTERS = [
     "maxLevel": 14,
     "encounterRate": 72.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route5",
@@ -2017,7 +2240,8 @@ const ENCOUNTERS = [
     "maxLevel": 16,
     "encounterRate": 52.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route6",
@@ -2026,7 +2250,8 @@ const ENCOUNTERS = [
     "maxLevel": 16,
     "encounterRate": 52.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route7",
@@ -2035,7 +2260,8 @@ const ENCOUNTERS = [
     "maxLevel": 22,
     "encounterRate": 35,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -2044,7 +2270,8 @@ const ENCOUNTERS = [
     "maxLevel": 55,
     "encounterRate": 10,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave2F",
@@ -2053,7 +2280,8 @@ const ENCOUNTERS = [
     "maxLevel": 58,
     "encounterRate": 5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route12",
@@ -2062,7 +2290,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 12.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route13",
@@ -2071,7 +2300,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 12.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route14",
@@ -2080,7 +2310,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 12.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route15",
@@ -2089,7 +2320,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 12.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "mtMoon",
@@ -2098,7 +2330,8 @@ const ENCOUNTERS = [
     "maxLevel": 8,
     "encounterRate": 15,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "mtMoonB1F",
@@ -2107,7 +2340,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 130,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "mtMoonB2F",
@@ -2116,7 +2350,8 @@ const ENCOUNTERS = [
     "maxLevel": 12,
     "encounterRate": 60,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone1",
@@ -2125,7 +2360,8 @@ const ENCOUNTERS = [
     "maxLevel": 27,
     "encounterRate": 5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone2",
@@ -2134,7 +2370,8 @@ const ENCOUNTERS = [
     "maxLevel": 22,
     "encounterRate": 45,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone3",
@@ -2143,7 +2380,8 @@ const ENCOUNTERS = [
     "maxLevel": 23,
     "encounterRate": 45,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -2152,7 +2390,8 @@ const ENCOUNTERS = [
     "maxLevel": 58,
     "encounterRate": 40,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave2F",
@@ -2161,7 +2400,8 @@ const ENCOUNTERS = [
     "maxLevel": 61,
     "encounterRate": 14,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -2170,7 +2410,8 @@ const ENCOUNTERS = [
     "maxLevel": 64,
     "encounterRate": 34,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone1",
@@ -2179,7 +2420,8 @@ const ENCOUNTERS = [
     "maxLevel": 32,
     "encounterRate": 30,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone2",
@@ -2188,7 +2430,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 15,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route12",
@@ -2197,7 +2440,8 @@ const ENCOUNTERS = [
     "maxLevel": 26,
     "encounterRate": 70,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route13",
@@ -2206,7 +2450,8 @@ const ENCOUNTERS = [
     "maxLevel": 26,
     "encounterRate": 70,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route14",
@@ -2215,7 +2460,8 @@ const ENCOUNTERS = [
     "maxLevel": 26,
     "encounterRate": 109,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route15",
@@ -2224,7 +2470,8 @@ const ENCOUNTERS = [
     "maxLevel": 26,
     "encounterRate": 89,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route24",
@@ -2233,7 +2480,8 @@ const ENCOUNTERS = [
     "maxLevel": 16,
     "encounterRate": 10,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route25",
@@ -2242,7 +2490,8 @@ const ENCOUNTERS = [
     "maxLevel": 16,
     "encounterRate": 10,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone1",
@@ -2251,7 +2500,8 @@ const ENCOUNTERS = [
     "maxLevel": 22,
     "encounterRate": 45,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone4",
@@ -2260,7 +2510,8 @@ const ENCOUNTERS = [
     "maxLevel": 23,
     "encounterRate": 45,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -2269,7 +2520,8 @@ const ENCOUNTERS = [
     "maxLevel": 54,
     "encounterRate": 25,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave2F",
@@ -2278,7 +2530,8 @@ const ENCOUNTERS = [
     "maxLevel": 51,
     "encounterRate": 30,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad3F",
@@ -2287,7 +2540,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 20,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route14",
@@ -2296,7 +2550,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 1,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route15",
@@ -2305,7 +2560,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 1,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone3",
@@ -2314,7 +2570,8 @@ const ENCOUNTERS = [
     "maxLevel": 32,
     "encounterRate": 15,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone4",
@@ -2323,7 +2580,8 @@ const ENCOUNTERS = [
     "maxLevel": 32,
     "encounterRate": 15,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "diglettsCaveB1F",
@@ -2332,7 +2590,8 @@ const ENCOUNTERS = [
     "maxLevel": 22,
     "encounterRate": 95,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "diglettsCaveN",
@@ -2341,7 +2600,8 @@ const ENCOUNTERS = [
     "maxLevel": 22,
     "encounterRate": 95,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "diglettsCaveS",
@@ -2350,7 +2610,8 @@ const ENCOUNTERS = [
     "maxLevel": 22,
     "encounterRate": 95,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "diglettsCaveB1F",
@@ -2359,7 +2620,8 @@ const ENCOUNTERS = [
     "maxLevel": 31,
     "encounterRate": 5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "diglettsCaveN",
@@ -2368,7 +2630,8 @@ const ENCOUNTERS = [
     "maxLevel": 31,
     "encounterRate": 5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "diglettsCaveS",
@@ -2377,7 +2640,8 @@ const ENCOUNTERS = [
     "maxLevel": 31,
     "encounterRate": 5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route5",
@@ -2386,7 +2650,8 @@ const ENCOUNTERS = [
     "maxLevel": 16,
     "encounterRate": 60,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route6",
@@ -2395,7 +2660,8 @@ const ENCOUNTERS = [
     "maxLevel": 16,
     "encounterRate": 60,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route7",
@@ -2404,7 +2670,8 @@ const ENCOUNTERS = [
     "maxLevel": 20,
     "encounterRate": 70,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route8",
@@ -2413,7 +2680,8 @@ const ENCOUNTERS = [
     "maxLevel": 20,
     "encounterRate": 30,
     "encounterMethod": "grass",
-    "requiresItem": "hm-cut"
+    "requiresItem": "hm-cut",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB1FE",
@@ -2422,7 +2690,8 @@ const ENCOUNTERS = [
     "maxLevel": 31,
     "encounterRate": 35,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB1FW",
@@ -2431,7 +2700,8 @@ const ENCOUNTERS = [
     "maxLevel": 31,
     "encounterRate": 35,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB2FE",
@@ -2440,7 +2710,8 @@ const ENCOUNTERS = [
     "maxLevel": 32,
     "encounterRate": 45,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB2FW",
@@ -2449,7 +2720,8 @@ const ENCOUNTERS = [
     "maxLevel": 32,
     "encounterRate": 45,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -2458,7 +2730,8 @@ const ENCOUNTERS = [
     "maxLevel": 33,
     "encounterRate": 50,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -2467,7 +2740,8 @@ const ENCOUNTERS = [
     "maxLevel": 33,
     "encounterRate": 50,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -2476,7 +2750,8 @@ const ENCOUNTERS = [
     "maxLevel": 32,
     "encounterRate": 20,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsE",
@@ -2485,7 +2760,8 @@ const ENCOUNTERS = [
     "maxLevel": 33,
     "encounterRate": 47.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsW",
@@ -2494,7 +2770,8 @@ const ENCOUNTERS = [
     "maxLevel": 33,
     "encounterRate": 47.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -2503,7 +2780,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 2.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -2512,7 +2790,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 2.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCity",
@@ -2521,7 +2800,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 66,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "cinnabarIsland",
@@ -2530,7 +2810,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 0.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "fuchsiaCity",
@@ -2539,7 +2820,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 2.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "palletTown",
@@ -2548,7 +2830,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 0.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route10N",
@@ -2557,7 +2840,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 0.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route11",
@@ -2566,7 +2850,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 0.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route12",
@@ -2575,7 +2860,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 0.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route13",
@@ -2584,7 +2870,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 0.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route19",
@@ -2593,7 +2880,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 0.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route20E",
@@ -2602,7 +2890,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 0.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route20W",
@@ -2611,7 +2900,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 0.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route21",
@@ -2620,7 +2910,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 0.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route22",
@@ -2629,7 +2920,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 2.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route23",
@@ -2638,7 +2930,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 2.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route24",
@@ -2647,7 +2940,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 133,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route25",
@@ -2656,7 +2950,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 68.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route4",
@@ -2665,7 +2960,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 0.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route6",
@@ -2674,7 +2970,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 2.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "safariZone1",
@@ -2683,7 +2980,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 52,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "safariZone2",
@@ -2692,7 +2990,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 52,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "safariZone3",
@@ -2701,7 +3000,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 52,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "safariZone4",
@@ -2710,7 +3010,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 52,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -2719,7 +3020,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 2,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -2728,7 +3030,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 2,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -2737,7 +3040,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 2,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "vermillionCity",
@@ -2746,7 +3050,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 0.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "viridianCity",
@@ -2755,7 +3060,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 2.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "celadonCity",
@@ -2764,7 +3070,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 49.5,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -2773,7 +3080,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 32.5,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -2782,7 +3090,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 32.5,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "fuchsiaCity",
@@ -2791,7 +3100,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 50,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route22",
@@ -2800,7 +3110,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 50,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route23",
@@ -2809,7 +3120,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 50,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route25",
@@ -2818,7 +3130,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 100,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route6",
@@ -2827,7 +3140,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 145,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "safariZone1",
@@ -2836,7 +3150,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 50,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "safariZone2",
@@ -2845,7 +3160,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 50,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "safariZone3",
@@ -2854,7 +3170,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 50,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "safariZone4",
@@ -2863,7 +3180,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 50,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -2872,7 +3190,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 2,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -2881,7 +3200,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 2,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -2890,7 +3210,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 2,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "viridianCity",
@@ -2899,7 +3220,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 50,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB1FE",
@@ -2908,7 +3230,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 2.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB1FW",
@@ -2917,7 +3240,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 2.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB2FE",
@@ -2926,7 +3250,8 @@ const ENCOUNTERS = [
     "maxLevel": 34,
     "encounterRate": 6,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB2FW",
@@ -2935,7 +3260,8 @@ const ENCOUNTERS = [
     "maxLevel": 34,
     "encounterRate": 6,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -2944,7 +3270,8 @@ const ENCOUNTERS = [
     "maxLevel": 34,
     "encounterRate": 7.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -2953,7 +3280,8 @@ const ENCOUNTERS = [
     "maxLevel": 34,
     "encounterRate": 7.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -2962,7 +3290,8 @@ const ENCOUNTERS = [
     "maxLevel": 39,
     "encounterRate": 11.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsE",
@@ -2971,7 +3300,8 @@ const ENCOUNTERS = [
     "maxLevel": 38,
     "encounterRate": 1,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsW",
@@ -2980,7 +3310,8 @@ const ENCOUNTERS = [
     "maxLevel": 38,
     "encounterRate": 1,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -2989,7 +3320,8 @@ const ENCOUNTERS = [
     "maxLevel": 55,
     "encounterRate": 17.5,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -2998,7 +3330,8 @@ const ENCOUNTERS = [
     "maxLevel": 55,
     "encounterRate": 17.5,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route6",
@@ -3007,7 +3340,8 @@ const ENCOUNTERS = [
     "maxLevel": 20,
     "encounterRate": 5,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -3016,7 +3350,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 0.5,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -3025,7 +3360,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 0.5,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -3034,7 +3370,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 0.5,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "fightingDojo",
@@ -3043,7 +3380,8 @@ const ENCOUNTERS = [
     "maxLevel": 18,
     "encounterRate": 55,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "rockTunnel",
@@ -3052,7 +3390,8 @@ const ENCOUNTERS = [
     "maxLevel": 17,
     "encounterRate": 15,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "rockTunnel1FS",
@@ -3061,7 +3400,8 @@ const ENCOUNTERS = [
     "maxLevel": 17,
     "encounterRate": 15,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "rockTunnel1FW",
@@ -3070,7 +3410,8 @@ const ENCOUNTERS = [
     "maxLevel": 17,
     "encounterRate": 15,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "rockTunnelB1FE",
@@ -3079,7 +3420,8 @@ const ENCOUNTERS = [
     "maxLevel": 17,
     "encounterRate": 15,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "rockTunnelB1FW",
@@ -3088,7 +3430,8 @@ const ENCOUNTERS = [
     "maxLevel": 17,
     "encounterRate": 15,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route22",
@@ -3097,7 +3440,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 65,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route23",
@@ -3106,7 +3450,8 @@ const ENCOUNTERS = [
     "maxLevel": 41,
     "encounterRate": 50,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route3",
@@ -3115,7 +3460,8 @@ const ENCOUNTERS = [
     "maxLevel": 7,
     "encounterRate": 25,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route4",
@@ -3124,7 +3470,8 @@ const ENCOUNTERS = [
     "maxLevel": 9,
     "encounterRate": 20,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route5",
@@ -3133,7 +3480,8 @@ const ENCOUNTERS = [
     "maxLevel": 16,
     "encounterRate": 25,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route6",
@@ -3142,7 +3490,8 @@ const ENCOUNTERS = [
     "maxLevel": 16,
     "encounterRate": 25,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route7",
@@ -3151,7 +3500,8 @@ const ENCOUNTERS = [
     "maxLevel": 20,
     "encounterRate": 30,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route8",
@@ -3160,7 +3510,8 @@ const ENCOUNTERS = [
     "maxLevel": 20,
     "encounterRate": 25,
     "encounterMethod": "grass",
-    "requiresItem": "hm-cut"
+    "requiresItem": "hm-cut",
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -3169,7 +3520,8 @@ const ENCOUNTERS = [
     "maxLevel": 61,
     "encounterRate": 11,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad2F",
@@ -3178,7 +3530,8 @@ const ENCOUNTERS = [
     "maxLevel": 42,
     "encounterRate": 10,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route23",
@@ -3187,7 +3540,8 @@ const ENCOUNTERS = [
     "maxLevel": 46,
     "encounterRate": 10,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansion",
@@ -3196,7 +3550,8 @@ const ENCOUNTERS = [
     "maxLevel": 38,
     "encounterRate": 37.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansion2F",
@@ -3205,7 +3560,8 @@ const ENCOUNTERS = [
     "maxLevel": 32,
     "encounterRate": 32.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansion3F",
@@ -3214,7 +3570,8 @@ const ENCOUNTERS = [
     "maxLevel": 33,
     "encounterRate": 22.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansionB1F",
@@ -3223,7 +3580,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 22.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route7",
@@ -3232,7 +3590,8 @@ const ENCOUNTERS = [
     "maxLevel": 20,
     "encounterRate": 15,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route8",
@@ -3241,7 +3600,8 @@ const ENCOUNTERS = [
     "maxLevel": 18,
     "encounterRate": 30,
     "encounterMethod": "grass",
-    "requiresItem": "hm-cut"
+    "requiresItem": "hm-cut",
+    "formName": null
   },
   {
     "locationId": "celadonCity",
@@ -3250,7 +3610,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -3259,7 +3620,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 210,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -3268,7 +3630,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -3277,7 +3640,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 210,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -3286,7 +3650,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCity",
@@ -3295,7 +3660,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "cinnabarIsland",
@@ -3304,7 +3670,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "fuchsiaCity",
@@ -3313,7 +3680,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 170,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "palletTown",
@@ -3322,7 +3690,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "palletTown",
@@ -3331,7 +3700,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 100,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route10N",
@@ -3340,7 +3710,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route11",
@@ -3349,7 +3720,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route12",
@@ -3358,7 +3730,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route13",
@@ -3367,7 +3740,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route17",
@@ -3376,7 +3750,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route18",
@@ -3385,7 +3760,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route19",
@@ -3394,7 +3770,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route20E",
@@ -3403,7 +3780,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route20W",
@@ -3412,7 +3790,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route21",
@@ -3421,7 +3800,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route22",
@@ -3430,7 +3810,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 210,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route22",
@@ -3439,7 +3820,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 230,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route23",
@@ -3448,7 +3830,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 210,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route23",
@@ -3457,7 +3840,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 110,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route24",
@@ -3466,7 +3850,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 300,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route25",
@@ -3475,7 +3860,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 210,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route25",
@@ -3484,7 +3870,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route6",
@@ -3493,7 +3880,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 210,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route6",
@@ -3502,7 +3890,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "safariZone1",
@@ -3511,7 +3900,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 170,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "safariZone2",
@@ -3520,7 +3910,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 170,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "safariZone3",
@@ -3529,7 +3920,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 170,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "safariZone4",
@@ -3538,7 +3930,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 170,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -3547,7 +3940,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -3556,7 +3950,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -3565,7 +3960,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "vermillionCity",
@@ -3574,7 +3970,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "viridianCity",
@@ -3583,7 +3980,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 210,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "viridianCity",
@@ -3592,7 +3990,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 240,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "celadonCity",
@@ -3601,7 +4000,8 @@ const ENCOUNTERS = [
     "maxLevel": 23,
     "encounterRate": 100,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -3610,7 +4010,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -3619,7 +4020,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route10N",
@@ -3628,7 +4030,8 @@ const ENCOUNTERS = [
     "maxLevel": 23,
     "encounterRate": 100,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route22",
@@ -3637,7 +4040,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route23",
@@ -3646,7 +4050,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 70,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route25",
@@ -3655,7 +4060,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route6",
@@ -3664,7 +4070,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "viridianCity",
@@ -3673,7 +4080,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "gameCorner",
@@ -3682,7 +4090,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 225,
     "encounterMethod": "cave",
-    "requiresItem": "coinCase"
+    "requiresItem": "coinCase",
+    "formName": null
   },
   {
     "locationId": "route24",
@@ -3691,7 +4100,8 @@ const ENCOUNTERS = [
     "maxLevel": 12,
     "encounterRate": 45,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route25",
@@ -3700,7 +4110,8 @@ const ENCOUNTERS = [
     "maxLevel": 12,
     "encounterRate": 45,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route5",
@@ -3709,7 +4120,8 @@ const ENCOUNTERS = [
     "maxLevel": 7,
     "encounterRate": 15,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route6",
@@ -3718,7 +4130,8 @@ const ENCOUNTERS = [
     "maxLevel": 7,
     "encounterRate": 15,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route7",
@@ -3727,7 +4140,8 @@ const ENCOUNTERS = [
     "maxLevel": 26,
     "encounterRate": 25,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route8",
@@ -3736,7 +4150,8 @@ const ENCOUNTERS = [
     "maxLevel": 19,
     "encounterRate": 20,
     "encounterMethod": "grass",
-    "requiresItem": "hm-cut"
+    "requiresItem": "hm-cut",
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -3745,7 +4160,8 @@ const ENCOUNTERS = [
     "maxLevel": 49,
     "encounterRate": 10,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave2F",
@@ -3754,7 +4170,8 @@ const ENCOUNTERS = [
     "maxLevel": 64,
     "encounterRate": 41,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -3763,7 +4180,8 @@ const ENCOUNTERS = [
     "maxLevel": 67,
     "encounterRate": 25,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route8",
@@ -3772,7 +4190,8 @@ const ENCOUNTERS = [
     "maxLevel": 27,
     "encounterRate": 5,
     "encounterMethod": "grass",
-    "requiresItem": "hm-cut"
+    "requiresItem": "hm-cut",
+    "formName": null
   },
   {
     "locationId": "fightingDojo",
@@ -3781,7 +4200,8 @@ const ENCOUNTERS = [
     "maxLevel": 18,
     "encounterRate": 35,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "rockTunnel",
@@ -3790,7 +4210,8 @@ const ENCOUNTERS = [
     "maxLevel": 21,
     "encounterRate": 60,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "rockTunnel1FS",
@@ -3799,7 +4220,8 @@ const ENCOUNTERS = [
     "maxLevel": 21,
     "encounterRate": 60,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "rockTunnel1FW",
@@ -3808,7 +4230,8 @@ const ENCOUNTERS = [
     "maxLevel": 21,
     "encounterRate": 60,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "rockTunnelB1FE",
@@ -3817,7 +4240,8 @@ const ENCOUNTERS = [
     "maxLevel": 17,
     "encounterRate": 10,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "rockTunnelB1FW",
@@ -3826,7 +4250,8 @@ const ENCOUNTERS = [
     "maxLevel": 17,
     "encounterRate": 10,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad",
@@ -3835,7 +4260,8 @@ const ENCOUNTERS = [
     "maxLevel": 32,
     "encounterRate": 70,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad2F",
@@ -3844,7 +4270,8 @@ const ENCOUNTERS = [
     "maxLevel": 34,
     "encounterRate": 70,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad3F",
@@ -3853,7 +4280,8 @@ const ENCOUNTERS = [
     "maxLevel": 32,
     "encounterRate": 70,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route10N",
@@ -3862,7 +4290,8 @@ const ENCOUNTERS = [
     "maxLevel": 18,
     "encounterRate": 5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -3871,7 +4300,8 @@ const ENCOUNTERS = [
     "maxLevel": 46,
     "encounterRate": 10,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave2F",
@@ -3880,7 +4310,8 @@ const ENCOUNTERS = [
     "maxLevel": 49,
     "encounterRate": 20,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -3889,7 +4320,8 @@ const ENCOUNTERS = [
     "maxLevel": 52,
     "encounterRate": 10,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad",
@@ -3898,7 +4330,8 @@ const ENCOUNTERS = [
     "maxLevel": 46,
     "encounterRate": 20,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad2F",
@@ -3907,7 +4340,8 @@ const ENCOUNTERS = [
     "maxLevel": 48,
     "encounterRate": 23,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad3F",
@@ -3916,7 +4350,8 @@ const ENCOUNTERS = [
     "maxLevel": 46,
     "encounterRate": 15,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route12",
@@ -3925,7 +4360,8 @@ const ENCOUNTERS = [
     "maxLevel": 26,
     "encounterRate": 82.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route13",
@@ -3934,7 +4370,8 @@ const ENCOUNTERS = [
     "maxLevel": 26,
     "encounterRate": 82.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route14",
@@ -3943,7 +4380,8 @@ const ENCOUNTERS = [
     "maxLevel": 26,
     "encounterRate": 82.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route15",
@@ -3952,7 +4390,8 @@ const ENCOUNTERS = [
     "maxLevel": 26,
     "encounterRate": 82.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route24",
@@ -3961,7 +4400,8 @@ const ENCOUNTERS = [
     "maxLevel": 14,
     "encounterRate": 62.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route25",
@@ -3970,7 +4410,8 @@ const ENCOUNTERS = [
     "maxLevel": 14,
     "encounterRate": 50,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route5",
@@ -3979,7 +4420,8 @@ const ENCOUNTERS = [
     "maxLevel": 16,
     "encounterRate": 52.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route6",
@@ -3988,7 +4430,8 @@ const ENCOUNTERS = [
     "maxLevel": 16,
     "encounterRate": 52.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route7",
@@ -3997,7 +4440,8 @@ const ENCOUNTERS = [
     "maxLevel": 22,
     "encounterRate": 35,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -4006,7 +4450,8 @@ const ENCOUNTERS = [
     "maxLevel": 55,
     "encounterRate": 10,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave2F",
@@ -4015,7 +4460,8 @@ const ENCOUNTERS = [
     "maxLevel": 58,
     "encounterRate": 5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route12",
@@ -4024,7 +4470,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 12.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route13",
@@ -4033,7 +4480,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 12.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route14",
@@ -4042,7 +4490,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 12.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route15",
@@ -4051,7 +4500,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 12.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "cinnabarIsland",
@@ -4060,7 +4510,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "palletTown",
@@ -4069,7 +4520,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 140,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route11",
@@ -4078,7 +4530,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 90,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route12",
@@ -4087,7 +4540,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route13",
@@ -4096,7 +4550,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route17",
@@ -4105,7 +4560,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 120,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route18",
@@ -4114,7 +4570,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 120,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route19",
@@ -4123,7 +4580,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 60,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route20E",
@@ -4132,7 +4590,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 60,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route20W",
@@ -4141,7 +4600,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 60,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route21",
@@ -4150,7 +4610,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 60,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "vermillionCity",
@@ -4159,7 +4620,8 @@ const ENCOUNTERS = [
     "maxLevel": 20,
     "encounterRate": 90,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "viridianCity",
@@ -4168,7 +4630,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 100,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "cinnabarIsland",
@@ -4177,7 +4640,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 100,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "palletTown",
@@ -4186,7 +4650,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 100,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route10N",
@@ -4195,7 +4660,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 100,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route11",
@@ -4204,7 +4670,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 100,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route12",
@@ -4213,7 +4680,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 100,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route13",
@@ -4222,7 +4690,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 100,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route19",
@@ -4231,7 +4700,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 400,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route20E",
@@ -4240,7 +4710,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 400,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route20W",
@@ -4249,7 +4720,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 400,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route21",
@@ -4258,7 +4730,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 400,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route24",
@@ -4267,7 +4740,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 200,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route4",
@@ -4276,7 +4750,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 100,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "vermillionCity",
@@ -4285,7 +4760,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 100,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route19",
@@ -4294,7 +4770,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 10,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route20E",
@@ -4303,7 +4780,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 10,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route20W",
@@ -4312,7 +4790,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 10,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route21",
@@ -4321,7 +4800,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 10,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "mtMoon",
@@ -4330,7 +4810,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 75,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "mtMoonB1F",
@@ -4339,7 +4820,8 @@ const ENCOUNTERS = [
     "maxLevel": 11,
     "encounterRate": 72,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "mtMoonB2F",
@@ -4348,7 +4830,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 95,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "rockTunnel",
@@ -4357,7 +4840,8 @@ const ENCOUNTERS = [
     "maxLevel": 20,
     "encounterRate": 120,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "rockTunnel1FS",
@@ -4366,7 +4850,8 @@ const ENCOUNTERS = [
     "maxLevel": 20,
     "encounterRate": 120,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "rockTunnel1FW",
@@ -4375,7 +4860,8 @@ const ENCOUNTERS = [
     "maxLevel": 20,
     "encounterRate": 120,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "rockTunnelB1FE",
@@ -4384,7 +4870,8 @@ const ENCOUNTERS = [
     "maxLevel": 17,
     "encounterRate": 35,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "rockTunnelB1FW",
@@ -4393,7 +4880,8 @@ const ENCOUNTERS = [
     "maxLevel": 17,
     "encounterRate": 35,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad",
@@ -4402,7 +4890,8 @@ const ENCOUNTERS = [
     "maxLevel": 32,
     "encounterRate": 105,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad2F",
@@ -4411,7 +4900,8 @@ const ENCOUNTERS = [
     "maxLevel": 34,
     "encounterRate": 100,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad3F",
@@ -4420,7 +4910,8 @@ const ENCOUNTERS = [
     "maxLevel": 41,
     "encounterRate": 115,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -4429,7 +4920,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 65,
     "encounterMethod": "rock-smash",
-    "requiresItem": "hm-rockSmash"
+    "requiresItem": "hm-rockSmash",
+    "formName": null
   },
   {
     "locationId": "ceruleanCave2F",
@@ -4438,7 +4930,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 65,
     "encounterMethod": "rock-smash",
-    "requiresItem": "hm-rockSmash"
+    "requiresItem": "hm-rockSmash",
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -4447,7 +4940,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 65,
     "encounterMethod": "rock-smash",
-    "requiresItem": "hm-rockSmash"
+    "requiresItem": "hm-rockSmash",
+    "formName": null
   },
   {
     "locationId": "rockTunnelB1FE",
@@ -4456,7 +4950,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 95,
     "encounterMethod": "rock-smash",
-    "requiresItem": "hm-rockSmash"
+    "requiresItem": "hm-rockSmash",
+    "formName": null
   },
   {
     "locationId": "rockTunnelB1FW",
@@ -4465,7 +4960,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 95,
     "encounterMethod": "rock-smash",
-    "requiresItem": "hm-rockSmash"
+    "requiresItem": "hm-rockSmash",
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -4474,7 +4970,8 @@ const ENCOUNTERS = [
     "maxLevel": 45,
     "encounterRate": 15,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave2F",
@@ -4483,7 +4980,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 15,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -4492,7 +4990,8 @@ const ENCOUNTERS = [
     "maxLevel": 55,
     "encounterRate": 15,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad",
@@ -4501,7 +5000,8 @@ const ENCOUNTERS = [
     "maxLevel": 44,
     "encounterRate": 12,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad2F",
@@ -4510,7 +5010,8 @@ const ENCOUNTERS = [
     "maxLevel": 47,
     "encounterRate": 25,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad3F",
@@ -4519,7 +5020,8 @@ const ENCOUNTERS = [
     "maxLevel": 47,
     "encounterRate": 15,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -4528,7 +5030,8 @@ const ENCOUNTERS = [
     "maxLevel": 55,
     "encounterRate": 35,
     "encounterMethod": "rock-smash",
-    "requiresItem": "hm-rockSmash"
+    "requiresItem": "hm-rockSmash",
+    "formName": null
   },
   {
     "locationId": "ceruleanCave2F",
@@ -4537,7 +5040,8 @@ const ENCOUNTERS = [
     "maxLevel": 55,
     "encounterRate": 35,
     "encounterMethod": "rock-smash",
-    "requiresItem": "hm-rockSmash"
+    "requiresItem": "hm-rockSmash",
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -4546,7 +5050,8 @@ const ENCOUNTERS = [
     "maxLevel": 55,
     "encounterRate": 35,
     "encounterMethod": "rock-smash",
-    "requiresItem": "hm-rockSmash"
+    "requiresItem": "hm-rockSmash",
+    "formName": null
   },
   {
     "locationId": "rockTunnelB1FE",
@@ -4555,7 +5060,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 5,
     "encounterMethod": "rock-smash",
-    "requiresItem": "hm-rockSmash"
+    "requiresItem": "hm-rockSmash",
+    "formName": null
   },
   {
     "locationId": "rockTunnelB1FW",
@@ -4564,7 +5070,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 5,
     "encounterMethod": "rock-smash",
-    "requiresItem": "hm-rockSmash"
+    "requiresItem": "hm-rockSmash",
+    "formName": null
   },
   {
     "locationId": "pokemonMansion",
@@ -4573,7 +5080,8 @@ const ENCOUNTERS = [
     "maxLevel": 34,
     "encounterRate": 80,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansion2F",
@@ -4582,7 +5090,8 @@ const ENCOUNTERS = [
     "maxLevel": 32,
     "encounterRate": 50,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansion3F",
@@ -4591,7 +5100,8 @@ const ENCOUNTERS = [
     "maxLevel": 36,
     "encounterRate": 38,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansionB1F",
@@ -4600,7 +5110,8 @@ const ENCOUNTERS = [
     "maxLevel": 34,
     "encounterRate": 30,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route17",
@@ -4609,7 +5120,8 @@ const ENCOUNTERS = [
     "maxLevel": 32,
     "encounterRate": 24,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB1FE",
@@ -4618,7 +5130,8 @@ const ENCOUNTERS = [
     "maxLevel": 31,
     "encounterRate": 45,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB1FW",
@@ -4627,7 +5140,8 @@ const ENCOUNTERS = [
     "maxLevel": 31,
     "encounterRate": 45,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB2FE",
@@ -4636,7 +5150,8 @@ const ENCOUNTERS = [
     "maxLevel": 32,
     "encounterRate": 49,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB2FW",
@@ -4645,7 +5160,8 @@ const ENCOUNTERS = [
     "maxLevel": 32,
     "encounterRate": 49,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -4654,7 +5170,8 @@ const ENCOUNTERS = [
     "maxLevel": 33,
     "encounterRate": 50,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -4663,7 +5180,8 @@ const ENCOUNTERS = [
     "maxLevel": 33,
     "encounterRate": 50,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -4672,7 +5190,8 @@ const ENCOUNTERS = [
     "maxLevel": 32,
     "encounterRate": 20,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsE",
@@ -4681,7 +5200,8 @@ const ENCOUNTERS = [
     "maxLevel": 33,
     "encounterRate": 42.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsW",
@@ -4690,7 +5210,8 @@ const ENCOUNTERS = [
     "maxLevel": 33,
     "encounterRate": 42.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "celadonCity",
@@ -4699,7 +5220,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 100,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -4708,7 +5230,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 2.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -4717,7 +5240,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 2.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "cinnabarIsland",
@@ -4726,7 +5250,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 0.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "fuchsiaCity",
@@ -4735,7 +5260,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 2.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "palletTown",
@@ -4744,7 +5270,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 0.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route10N",
@@ -4753,7 +5280,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 100.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route11",
@@ -4762,7 +5290,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 0.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route12",
@@ -4771,7 +5300,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 0.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route13",
@@ -4780,7 +5310,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 0.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route19",
@@ -4789,7 +5320,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 0.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route20E",
@@ -4798,7 +5330,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 0.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route20W",
@@ -4807,7 +5340,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 0.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route21",
@@ -4816,7 +5350,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 0.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route22",
@@ -4825,7 +5360,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 2.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route23",
@@ -4834,7 +5370,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 2.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route24",
@@ -4843,7 +5380,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 1,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route25",
@@ -4852,7 +5390,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 2.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route4",
@@ -4861,7 +5400,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 0.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route6",
@@ -4870,7 +5410,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 2.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "safariZone1",
@@ -4879,7 +5420,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 52,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "safariZone2",
@@ -4888,7 +5430,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 52,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "safariZone3",
@@ -4897,7 +5440,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 52,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "safariZone4",
@@ -4906,7 +5450,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 52,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -4915,7 +5460,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 2,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -4924,7 +5470,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 2,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -4933,7 +5480,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 2,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "vermillionCity",
@@ -4942,7 +5490,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 0.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "viridianCity",
@@ -4951,7 +5500,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 2.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "celadonCity",
@@ -4960,7 +5510,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 49.5,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -4969,7 +5520,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 32.5,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -4978,7 +5530,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 32.5,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "fuchsiaCity",
@@ -4987,7 +5540,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 50,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route12",
@@ -4996,7 +5550,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 95,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route13",
@@ -5005,7 +5560,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 95,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route22",
@@ -5014,7 +5570,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 50,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route23",
@@ -5023,7 +5580,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 50,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route25",
@@ -5032,7 +5590,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 100,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route6",
@@ -5041,7 +5600,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 50,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "safariZone1",
@@ -5050,7 +5610,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 50,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "safariZone2",
@@ -5059,7 +5620,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 50,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "safariZone3",
@@ -5068,7 +5630,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 50,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "safariZone4",
@@ -5077,7 +5640,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 50,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -5086,7 +5650,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 2,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -5095,7 +5660,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 2,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -5104,7 +5670,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 2,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "viridianCity",
@@ -5113,7 +5680,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 50,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB1FE",
@@ -5122,7 +5690,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 2.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB1FW",
@@ -5131,7 +5700,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 2.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB2FE",
@@ -5140,7 +5710,8 @@ const ENCOUNTERS = [
     "maxLevel": 34,
     "encounterRate": 7,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB2FW",
@@ -5149,7 +5720,8 @@ const ENCOUNTERS = [
     "maxLevel": 34,
     "encounterRate": 7,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -5158,7 +5730,8 @@ const ENCOUNTERS = [
     "maxLevel": 34,
     "encounterRate": 7.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -5167,7 +5740,8 @@ const ENCOUNTERS = [
     "maxLevel": 34,
     "encounterRate": 7.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -5176,7 +5750,8 @@ const ENCOUNTERS = [
     "maxLevel": 39,
     "encounterRate": 11.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsE",
@@ -5185,7 +5760,8 @@ const ENCOUNTERS = [
     "maxLevel": 38,
     "encounterRate": 1,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsW",
@@ -5194,7 +5770,8 @@ const ENCOUNTERS = [
     "maxLevel": 38,
     "encounterRate": 1,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -5203,7 +5780,8 @@ const ENCOUNTERS = [
     "maxLevel": 23,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -5212,7 +5790,8 @@ const ENCOUNTERS = [
     "maxLevel": 23,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "cinnabarIsland",
@@ -5221,7 +5800,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 2,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route23",
@@ -5230,7 +5810,8 @@ const ENCOUNTERS = [
     "maxLevel": 23,
     "encounterRate": 25,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -5239,7 +5820,8 @@ const ENCOUNTERS = [
     "maxLevel": 55,
     "encounterRate": 17.5,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -5248,7 +5830,8 @@ const ENCOUNTERS = [
     "maxLevel": 55,
     "encounterRate": 17.5,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route12",
@@ -5257,7 +5840,8 @@ const ENCOUNTERS = [
     "maxLevel": 20,
     "encounterRate": 5,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route13",
@@ -5266,7 +5850,8 @@ const ENCOUNTERS = [
     "maxLevel": 20,
     "encounterRate": 5,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -5275,7 +5860,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 0.5,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -5284,7 +5870,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 0.5,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -5293,7 +5880,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 0.5,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "powerPlant",
@@ -5302,7 +5890,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 120,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route10N",
@@ -5311,7 +5900,8 @@ const ENCOUNTERS = [
     "maxLevel": 22,
     "encounterRate": 55,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -5320,7 +5910,8 @@ const ENCOUNTERS = [
     "maxLevel": 49,
     "encounterRate": 50,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave2F",
@@ -5329,7 +5920,8 @@ const ENCOUNTERS = [
     "maxLevel": 52,
     "encounterRate": 10,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -5338,7 +5930,8 @@ const ENCOUNTERS = [
     "maxLevel": 55,
     "encounterRate": 10,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "powerPlant",
@@ -5347,7 +5940,8 @@ const ENCOUNTERS = [
     "maxLevel": 38,
     "encounterRate": 52.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route12",
@@ -5356,7 +5950,8 @@ const ENCOUNTERS = [
     "maxLevel": 31,
     "encounterRate": 5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route13",
@@ -5365,7 +5960,8 @@ const ENCOUNTERS = [
     "maxLevel": 31,
     "encounterRate": 5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route16",
@@ -5374,7 +5970,8 @@ const ENCOUNTERS = [
     "maxLevel": 26,
     "encounterRate": 102.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route17",
@@ -5383,7 +5980,8 @@ const ENCOUNTERS = [
     "maxLevel": 28,
     "encounterRate": 140,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route18",
@@ -5392,7 +5990,8 @@ const ENCOUNTERS = [
     "maxLevel": 28,
     "encounterRate": 120,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone2",
@@ -5401,7 +6000,8 @@ const ENCOUNTERS = [
     "maxLevel": 26,
     "encounterRate": 50,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone4",
@@ -5410,7 +6010,8 @@ const ENCOUNTERS = [
     "maxLevel": 26,
     "encounterRate": 50,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -5419,7 +6020,8 @@ const ENCOUNTERS = [
     "maxLevel": 49,
     "encounterRate": 20,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave2F",
@@ -5428,7 +6030,8 @@ const ENCOUNTERS = [
     "maxLevel": 51,
     "encounterRate": 50,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route17",
@@ -5437,7 +6040,8 @@ const ENCOUNTERS = [
     "maxLevel": 29,
     "encounterRate": 1,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB1FE",
@@ -5446,7 +6050,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 45,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB1FW",
@@ -5455,7 +6060,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 45,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB2FE",
@@ -5464,7 +6070,8 @@ const ENCOUNTERS = [
     "maxLevel": 32,
     "encounterRate": 110,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB2FW",
@@ -5473,7 +6080,8 @@ const ENCOUNTERS = [
     "maxLevel": 32,
     "encounterRate": 110,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -5482,7 +6090,8 @@ const ENCOUNTERS = [
     "maxLevel": 33,
     "encounterRate": 105,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -5491,7 +6100,8 @@ const ENCOUNTERS = [
     "maxLevel": 33,
     "encounterRate": 105,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -5500,7 +6110,8 @@ const ENCOUNTERS = [
     "maxLevel": 34,
     "encounterRate": 100,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsE",
@@ -5509,7 +6120,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 50,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsW",
@@ -5518,7 +6130,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 50,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -5527,7 +6140,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 60,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -5536,7 +6150,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 60,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -5545,7 +6160,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 60,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB1FE",
@@ -5554,7 +6170,8 @@ const ENCOUNTERS = [
     "maxLevel": 38,
     "encounterRate": 8,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB1FW",
@@ -5563,7 +6180,8 @@ const ENCOUNTERS = [
     "maxLevel": 38,
     "encounterRate": 8,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -5572,7 +6190,8 @@ const ENCOUNTERS = [
     "maxLevel": 37,
     "encounterRate": 12,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -5581,7 +6200,8 @@ const ENCOUNTERS = [
     "maxLevel": 37,
     "encounterRate": 12,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -5590,7 +6210,8 @@ const ENCOUNTERS = [
     "maxLevel": 36,
     "encounterRate": 15,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -5599,7 +6220,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 5,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -5608,7 +6230,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 5,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -5617,7 +6240,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 5,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "pokemonMansion",
@@ -5626,7 +6250,8 @@ const ENCOUNTERS = [
     "maxLevel": 32,
     "encounterRate": 82.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansion2F",
@@ -5635,7 +6260,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 92.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansion3F",
@@ -5644,7 +6270,8 @@ const ENCOUNTERS = [
     "maxLevel": 38,
     "encounterRate": 92.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansionB1F",
@@ -5653,7 +6280,8 @@ const ENCOUNTERS = [
     "maxLevel": 38,
     "encounterRate": 112.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "powerPlant",
@@ -5662,7 +6290,8 @@ const ENCOUNTERS = [
     "maxLevel": 37,
     "encounterRate": 15,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "celadonCity",
@@ -5671,7 +6300,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 1,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "pokemonMansion",
@@ -5680,7 +6310,8 @@ const ENCOUNTERS = [
     "maxLevel": 39,
     "encounterRate": 7.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansion2F",
@@ -5689,7 +6320,8 @@ const ENCOUNTERS = [
     "maxLevel": 37,
     "encounterRate": 12.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansion3F",
@@ -5698,7 +6330,8 @@ const ENCOUNTERS = [
     "maxLevel": 41,
     "encounterRate": 23.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansionB1F",
@@ -5707,7 +6340,8 @@ const ENCOUNTERS = [
     "maxLevel": 42,
     "encounterRate": 23.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "powerPlant",
@@ -5716,7 +6350,8 @@ const ENCOUNTERS = [
     "maxLevel": 37,
     "encounterRate": 5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB1FE",
@@ -5725,7 +6360,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 40,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB1FW",
@@ -5734,7 +6370,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 40,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB2FE",
@@ -5743,7 +6380,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 15,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB2FW",
@@ -5752,7 +6390,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 15,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -5761,7 +6400,8 @@ const ENCOUNTERS = [
     "maxLevel": 31,
     "encounterRate": 15,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -5770,7 +6410,8 @@ const ENCOUNTERS = [
     "maxLevel": 31,
     "encounterRate": 15,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -5779,7 +6420,8 @@ const ENCOUNTERS = [
     "maxLevel": 33,
     "encounterRate": 25,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsE",
@@ -5788,7 +6430,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 19,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsW",
@@ -5797,7 +6440,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 19,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "cinnabarIsland",
@@ -5806,7 +6450,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 70,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "palletTown",
@@ -5815,7 +6460,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 20,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route11",
@@ -5824,7 +6470,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 100,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route17",
@@ -5833,7 +6480,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 30,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route18",
@@ -5842,7 +6490,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 30,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route19",
@@ -5851,7 +6500,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route20E",
@@ -5860,7 +6510,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route20W",
@@ -5869,7 +6520,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route21",
@@ -5878,7 +6530,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route25",
@@ -5887,7 +6540,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 66,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route6",
@@ -5896,7 +6550,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 100,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -5905,7 +6560,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -5914,7 +6570,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -5923,7 +6580,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "vermillionCity",
@@ -5932,7 +6590,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 120,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "pokemonTower3F",
@@ -5941,7 +6600,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 365,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonTower4F",
@@ -5950,7 +6610,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 365,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonTower5F",
@@ -5959,7 +6620,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 365,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonTower6F",
@@ -5968,7 +6630,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 365,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonTower7F",
@@ -5977,7 +6640,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 365,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonTower3F",
@@ -5986,7 +6650,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 8,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonTower4F",
@@ -5995,7 +6660,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 8,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonTower5F",
@@ -6004,7 +6670,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 8,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonTower6F",
@@ -6013,7 +6680,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 8,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonTower7F",
@@ -6022,7 +6690,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 8,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "rockTunnel",
@@ -6031,7 +6700,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 15,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "rockTunnel1FS",
@@ -6040,7 +6710,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 15,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "rockTunnel1FW",
@@ -6049,7 +6720,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 15,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "rockTunnelB1FE",
@@ -6058,7 +6730,8 @@ const ENCOUNTERS = [
     "maxLevel": 17,
     "encounterRate": 10,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "rockTunnelB1FW",
@@ -6067,7 +6740,8 @@ const ENCOUNTERS = [
     "maxLevel": 17,
     "encounterRate": 10,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad",
@@ -6076,7 +6750,8 @@ const ENCOUNTERS = [
     "maxLevel": 46,
     "encounterRate": 100,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad2F",
@@ -6085,7 +6760,8 @@ const ENCOUNTERS = [
     "maxLevel": 48,
     "encounterRate": 90,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad3F",
@@ -6094,7 +6770,8 @@ const ENCOUNTERS = [
     "maxLevel": 46,
     "encounterRate": 80,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route11",
@@ -6103,7 +6780,8 @@ const ENCOUNTERS = [
     "maxLevel": 19,
     "encounterRate": 99,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -6112,7 +6790,8 @@ const ENCOUNTERS = [
     "maxLevel": 46,
     "encounterRate": 30,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB2FE",
@@ -6121,7 +6800,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 35,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB2FW",
@@ -6130,7 +6810,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 35,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -6139,7 +6820,8 @@ const ENCOUNTERS = [
     "maxLevel": 31,
     "encounterRate": 35,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -6148,7 +6830,8 @@ const ENCOUNTERS = [
     "maxLevel": 31,
     "encounterRate": 35,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -6157,7 +6840,8 @@ const ENCOUNTERS = [
     "maxLevel": 33,
     "encounterRate": 55,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsE",
@@ -6166,7 +6850,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 50,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsW",
@@ -6175,7 +6860,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 50,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCity",
@@ -6184,7 +6870,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 66,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "cinnabarIsland",
@@ -6193,7 +6880,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "cinnabarIsland",
@@ -6202,7 +6890,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 20,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "fuchsiaCity",
@@ -6211,7 +6900,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "palletTown",
@@ -6220,7 +6910,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "palletTown",
@@ -6229,7 +6920,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 20,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route10N",
@@ -6238,7 +6930,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route10N",
@@ -6247,7 +6940,8 @@ const ENCOUNTERS = [
     "maxLevel": 20,
     "encounterRate": 70,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route11",
@@ -6256,7 +6950,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route11",
@@ -6265,7 +6960,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 42,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route11",
@@ -6274,7 +6970,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 100,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route12",
@@ -6283,7 +6980,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route12",
@@ -6292,7 +6990,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 42,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route13",
@@ -6301,7 +7000,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route13",
@@ -6310,7 +7010,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 42,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route17",
@@ -6319,7 +7020,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route18",
@@ -6328,7 +7030,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route19",
@@ -6337,7 +7040,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route19",
@@ -6346,7 +7050,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route20E",
@@ -6355,7 +7060,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route20E",
@@ -6364,7 +7070,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route20W",
@@ -6373,7 +7080,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route20W",
@@ -6382,7 +7090,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route21",
@@ -6391,7 +7100,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route21",
@@ -6400,7 +7110,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route24",
@@ -6409,7 +7120,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 80,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route24",
@@ -6418,7 +7130,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 174,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route25",
@@ -6427,7 +7140,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 66,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route4",
@@ -6436,7 +7150,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route4",
@@ -6445,7 +7160,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 42,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route6",
@@ -6454,7 +7170,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 100,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "safariZone1",
@@ -6463,7 +7180,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 52,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "safariZone2",
@@ -6472,7 +7190,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "safariZone3",
@@ -6481,7 +7200,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "safariZone4",
@@ -6490,7 +7210,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -6499,7 +7220,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -6508,7 +7230,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -6517,7 +7240,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -6526,7 +7250,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -6535,7 +7260,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -6544,7 +7270,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 80,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "vermillionCity",
@@ -6553,7 +7280,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "vermillionCity",
@@ -6562,7 +7290,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 122,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -6571,7 +7300,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 15,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -6580,7 +7310,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 15,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -6589,7 +7320,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 15,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB1FE",
@@ -6598,7 +7330,8 @@ const ENCOUNTERS = [
     "maxLevel": 37,
     "encounterRate": 6,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB1FW",
@@ -6607,7 +7340,8 @@ const ENCOUNTERS = [
     "maxLevel": 37,
     "encounterRate": 6,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB2FE",
@@ -6616,7 +7350,8 @@ const ENCOUNTERS = [
     "maxLevel": 28,
     "encounterRate": 10,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB2FW",
@@ -6625,7 +7360,8 @@ const ENCOUNTERS = [
     "maxLevel": 28,
     "encounterRate": 10,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -6634,7 +7370,8 @@ const ENCOUNTERS = [
     "maxLevel": 39,
     "encounterRate": 14,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -6643,7 +7380,8 @@ const ENCOUNTERS = [
     "maxLevel": 39,
     "encounterRate": 14,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -6652,7 +7390,8 @@ const ENCOUNTERS = [
     "maxLevel": 32,
     "encounterRate": 10,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -6661,7 +7400,8 @@ const ENCOUNTERS = [
     "maxLevel": 23,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -6670,7 +7410,8 @@ const ENCOUNTERS = [
     "maxLevel": 23,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "palletTown",
@@ -6679,7 +7420,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 2,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route10N",
@@ -6688,7 +7430,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 10,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route19",
@@ -6697,7 +7440,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 2,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route20E",
@@ -6706,7 +7450,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 2,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route20W",
@@ -6715,7 +7460,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 2,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route21",
@@ -6724,7 +7470,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 2,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route23",
@@ -6733,7 +7480,8 @@ const ENCOUNTERS = [
     "maxLevel": 23,
     "encounterRate": 25,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route25",
@@ -6742,7 +7490,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 30,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -6751,7 +7500,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 20,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -6760,7 +7510,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 20,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -6769,7 +7520,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 20,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "powerPlant",
@@ -6778,7 +7530,8 @@ const ENCOUNTERS = [
     "maxLevel": 37,
     "encounterRate": 120,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route10N",
@@ -6787,7 +7540,8 @@ const ENCOUNTERS = [
     "maxLevel": 17,
     "encounterRate": 130,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -6796,7 +7550,8 @@ const ENCOUNTERS = [
     "maxLevel": 58,
     "encounterRate": 5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave2F",
@@ -6805,7 +7560,8 @@ const ENCOUNTERS = [
     "maxLevel": 61,
     "encounterRate": 24,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -6814,7 +7570,8 @@ const ENCOUNTERS = [
     "maxLevel": 64,
     "encounterRate": 34,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "powerPlant",
@@ -6823,7 +7580,8 @@ const ENCOUNTERS = [
     "maxLevel": 34,
     "encounterRate": 5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone1",
@@ -6832,7 +7590,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 75,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone2",
@@ -6841,7 +7600,8 @@ const ENCOUNTERS = [
     "maxLevel": 26,
     "encounterRate": 80,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone3",
@@ -6850,7 +7610,8 @@ const ENCOUNTERS = [
     "maxLevel": 27,
     "encounterRate": 75,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone4",
@@ -6859,7 +7620,8 @@ const ENCOUNTERS = [
     "maxLevel": 27,
     "encounterRate": 80,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonTower3F",
@@ -6868,7 +7630,8 @@ const ENCOUNTERS = [
     "maxLevel": 22,
     "encounterRate": 27,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonTower4F",
@@ -6877,7 +7640,8 @@ const ENCOUNTERS = [
     "maxLevel": 22,
     "encounterRate": 27,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonTower5F",
@@ -6886,7 +7650,8 @@ const ENCOUNTERS = [
     "maxLevel": 22,
     "encounterRate": 27,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonTower6F",
@@ -6895,7 +7660,8 @@ const ENCOUNTERS = [
     "maxLevel": 22,
     "encounterRate": 27,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonTower7F",
@@ -6904,7 +7670,8 @@ const ENCOUNTERS = [
     "maxLevel": 22,
     "encounterRate": 27,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone2",
@@ -6913,7 +7680,8 @@ const ENCOUNTERS = [
     "maxLevel": 19,
     "encounterRate": 10,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone3",
@@ -6922,7 +7690,8 @@ const ENCOUNTERS = [
     "maxLevel": 16,
     "encounterRate": 5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone4",
@@ -6931,7 +7700,8 @@ const ENCOUNTERS = [
     "maxLevel": 19,
     "encounterRate": 10,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave2F",
@@ -6940,7 +7710,8 @@ const ENCOUNTERS = [
     "maxLevel": 52,
     "encounterRate": 20,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -6949,7 +7720,8 @@ const ENCOUNTERS = [
     "maxLevel": 55,
     "encounterRate": 30,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad",
@@ -6958,7 +7730,8 @@ const ENCOUNTERS = [
     "maxLevel": 46,
     "encounterRate": 13,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad2F",
@@ -6967,7 +7740,8 @@ const ENCOUNTERS = [
     "maxLevel": 48,
     "encounterRate": 7,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad3F",
@@ -6976,7 +7750,8 @@ const ENCOUNTERS = [
     "maxLevel": 46,
     "encounterRate": 5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone2",
@@ -6985,7 +7760,8 @@ const ENCOUNTERS = [
     "maxLevel": 24,
     "encounterRate": 5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone4",
@@ -6994,7 +7770,8 @@ const ENCOUNTERS = [
     "maxLevel": 24,
     "encounterRate": 5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "fightingDojo",
@@ -7003,7 +7780,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "fightingDojo",
@@ -7012,7 +7790,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -7021,7 +7800,8 @@ const ENCOUNTERS = [
     "maxLevel": 55,
     "encounterRate": 5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansion",
@@ -7030,7 +7810,8 @@ const ENCOUNTERS = [
     "maxLevel": 32,
     "encounterRate": 62.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansion2F",
@@ -7039,7 +7820,8 @@ const ENCOUNTERS = [
     "maxLevel": 34,
     "encounterRate": 62.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansion3F",
@@ -7048,7 +7830,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 62.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansionB1F",
@@ -7057,7 +7840,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 117.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "celadonCity",
@@ -7066,7 +7850,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 1,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "pokemonMansion",
@@ -7075,7 +7860,8 @@ const ENCOUNTERS = [
     "maxLevel": 37,
     "encounterRate": 7.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansion2F",
@@ -7084,7 +7870,8 @@ const ENCOUNTERS = [
     "maxLevel": 39,
     "encounterRate": 7.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansion3F",
@@ -7093,7 +7880,8 @@ const ENCOUNTERS = [
     "maxLevel": 42,
     "encounterRate": 18.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansionB1F",
@@ -7102,7 +7890,8 @@ const ENCOUNTERS = [
     "maxLevel": 42,
     "encounterRate": 17.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave2F",
@@ -7111,7 +7900,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 10,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -7120,7 +7910,8 @@ const ENCOUNTERS = [
     "maxLevel": 52,
     "encounterRate": 10,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone1",
@@ -7129,7 +7920,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 60,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone3",
@@ -7138,7 +7930,8 @@ const ENCOUNTERS = [
     "maxLevel": 26,
     "encounterRate": 60,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave2F",
@@ -7147,7 +7940,8 @@ const ENCOUNTERS = [
     "maxLevel": 60,
     "encounterRate": 25,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -7156,7 +7950,8 @@ const ENCOUNTERS = [
     "maxLevel": 62,
     "encounterRate": 60,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave2F",
@@ -7165,7 +7960,8 @@ const ENCOUNTERS = [
     "maxLevel": 56,
     "encounterRate": 10,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -7174,7 +7970,8 @@ const ENCOUNTERS = [
     "maxLevel": 64,
     "encounterRate": 25,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone1",
@@ -7183,7 +7980,8 @@ const ENCOUNTERS = [
     "maxLevel": 23,
     "encounterRate": 4,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone2",
@@ -7192,7 +7990,8 @@ const ENCOUNTERS = [
     "maxLevel": 21,
     "encounterRate": 4,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone3",
@@ -7201,7 +8000,8 @@ const ENCOUNTERS = [
     "maxLevel": 26,
     "encounterRate": 12,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route21",
@@ -7210,7 +8010,8 @@ const ENCOUNTERS = [
     "maxLevel": 28,
     "encounterRate": 120,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone1",
@@ -7219,7 +8020,8 @@ const ENCOUNTERS = [
     "maxLevel": 22,
     "encounterRate": 4,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone4",
@@ -7228,7 +8030,8 @@ const ENCOUNTERS = [
     "maxLevel": 27,
     "encounterRate": 1,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone2",
@@ -7237,7 +8040,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 12,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone4",
@@ -7246,7 +8050,8 @@ const ENCOUNTERS = [
     "maxLevel": 28,
     "encounterRate": 3,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB1FE",
@@ -7255,7 +8060,8 @@ const ENCOUNTERS = [
     "maxLevel": 32,
     "encounterRate": 25,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB1FW",
@@ -7264,7 +8070,8 @@ const ENCOUNTERS = [
     "maxLevel": 32,
     "encounterRate": 25,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB2FE",
@@ -7273,7 +8080,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 15,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB2FW",
@@ -7282,7 +8090,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 15,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -7291,7 +8100,8 @@ const ENCOUNTERS = [
     "maxLevel": 31,
     "encounterRate": 15,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -7300,7 +8110,8 @@ const ENCOUNTERS = [
     "maxLevel": 31,
     "encounterRate": 15,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -7309,7 +8120,8 @@ const ENCOUNTERS = [
     "maxLevel": 33,
     "encounterRate": 40,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsE",
@@ -7318,7 +8130,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 20,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsW",
@@ -7327,7 +8140,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 20,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "cinnabarIsland",
@@ -7336,7 +8150,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "cinnabarIsland",
@@ -7345,7 +8160,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 70,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "palletTown",
@@ -7354,7 +8170,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "palletTown",
@@ -7363,7 +8180,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 20,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route10N",
@@ -7372,7 +8190,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route10N",
@@ -7381,7 +8200,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 62,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route11",
@@ -7390,7 +8210,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route11",
@@ -7399,7 +8220,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 42,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route11",
@@ -7408,7 +8230,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 10,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route12",
@@ -7417,7 +8240,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 110,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route12",
@@ -7426,7 +8250,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 42,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route13",
@@ -7435,7 +8260,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 110,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route13",
@@ -7444,7 +8270,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 42,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route19",
@@ -7453,7 +8280,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route19",
@@ -7462,7 +8290,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route20E",
@@ -7471,7 +8300,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route20E",
@@ -7480,7 +8310,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route20W",
@@ -7489,7 +8320,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route20W",
@@ -7498,7 +8330,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route21",
@@ -7507,7 +8340,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route21",
@@ -7516,7 +8350,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 90,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route24",
@@ -7525,7 +8360,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 80,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route24",
@@ -7534,7 +8370,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 84,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route4",
@@ -7543,7 +8380,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route4",
@@ -7552,7 +8390,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 42,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -7561,7 +8400,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -7570,7 +8410,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -7579,7 +8420,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -7588,7 +8430,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -7597,7 +8440,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -7606,7 +8450,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 90,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "vermillionCity",
@@ -7615,7 +8460,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "vermillionCity",
@@ -7624,7 +8470,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 32,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -7633,7 +8480,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 15,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -7642,7 +8490,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 15,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -7651,7 +8500,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 15,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB1FE",
@@ -7660,7 +8510,8 @@ const ENCOUNTERS = [
     "maxLevel": 37,
     "encounterRate": 1,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB1FW",
@@ -7669,7 +8520,8 @@ const ENCOUNTERS = [
     "maxLevel": 37,
     "encounterRate": 1,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -7678,7 +8530,8 @@ const ENCOUNTERS = [
     "maxLevel": 39,
     "encounterRate": 4,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -7687,7 +8540,8 @@ const ENCOUNTERS = [
     "maxLevel": 39,
     "encounterRate": 4,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -7696,7 +8550,8 @@ const ENCOUNTERS = [
     "maxLevel": 23,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -7705,7 +8560,8 @@ const ENCOUNTERS = [
     "maxLevel": 23,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "cinnabarIsland",
@@ -7714,7 +8570,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 2,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "palletTown",
@@ -7723,7 +8580,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 2,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route12",
@@ -7732,7 +8590,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 30,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route13",
@@ -7741,7 +8600,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 30,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route19",
@@ -7750,7 +8610,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 2,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route20E",
@@ -7759,7 +8620,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 2,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route20W",
@@ -7768,7 +8630,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 2,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route21",
@@ -7777,7 +8640,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 2,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route23",
@@ -7786,7 +8650,8 @@ const ENCOUNTERS = [
     "maxLevel": 23,
     "encounterRate": 25,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "celadonCity",
@@ -7795,7 +8660,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "celadonCity",
@@ -7804,7 +8670,8 @@ const ENCOUNTERS = [
     "maxLevel": 20,
     "encounterRate": 100,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -7813,7 +8680,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 170,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -7822,7 +8690,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -7831,7 +8700,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 170,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -7840,7 +8710,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCity",
@@ -7849,7 +8720,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCity",
@@ -7858,7 +8730,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 66,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "cinnabarIsland",
@@ -7867,7 +8740,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "cinnabarIsland",
@@ -7876,7 +8750,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "fuchsiaCity",
@@ -7885,7 +8760,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 210,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "fuchsiaCity",
@@ -7894,7 +8770,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 90,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "palletTown",
@@ -7903,7 +8780,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route10N",
@@ -7912,7 +8790,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route11",
@@ -7921,7 +8800,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route12",
@@ -7930,7 +8810,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route12",
@@ -7939,7 +8820,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route13",
@@ -7948,7 +8830,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route13",
@@ -7957,7 +8840,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route17",
@@ -7966,7 +8850,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route17",
@@ -7975,7 +8860,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route18",
@@ -7984,7 +8870,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route18",
@@ -7993,7 +8880,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route19",
@@ -8002,7 +8890,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route19",
@@ -8011,7 +8900,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route20E",
@@ -8020,7 +8910,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route20E",
@@ -8029,7 +8920,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route20W",
@@ -8038,7 +8930,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route20W",
@@ -8047,7 +8940,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route21",
@@ -8056,7 +8950,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route21",
@@ -8065,7 +8960,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route22",
@@ -8074,7 +8970,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 170,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route22",
@@ -8083,7 +8980,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 100,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route23",
@@ -8092,7 +8990,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 170,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route24",
@@ -8101,7 +9000,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 300,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route24",
@@ -8110,7 +9010,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 272,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route25",
@@ -8119,7 +9020,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 170,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route6",
@@ -8128,7 +9030,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 170,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route6",
@@ -8137,7 +9040,8 @@ const ENCOUNTERS = [
     "maxLevel": 20,
     "encounterRate": 100,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "safariZone1",
@@ -8146,7 +9050,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 210,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "safariZone1",
@@ -8155,7 +9060,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "safariZone2",
@@ -8164,7 +9070,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 210,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "safariZone2",
@@ -8173,7 +9080,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "safariZone3",
@@ -8182,7 +9090,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 210,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "safariZone3",
@@ -8191,7 +9100,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "safariZone4",
@@ -8200,7 +9110,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 210,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "safariZone4",
@@ -8209,7 +9120,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -8218,7 +9130,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -8227,7 +9140,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -8236,7 +9150,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -8245,7 +9160,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -8254,7 +9170,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -8263,7 +9180,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "vermillionCity",
@@ -8272,7 +9190,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 150,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "viridianCity",
@@ -8281,7 +9200,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 170,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -8290,7 +9210,8 @@ const ENCOUNTERS = [
     "maxLevel": 55,
     "encounterRate": 110,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -8299,7 +9220,8 @@ const ENCOUNTERS = [
     "maxLevel": 55,
     "encounterRate": 110,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "fuchsiaCity",
@@ -8308,7 +9230,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 90,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route23",
@@ -8317,7 +9240,8 @@ const ENCOUNTERS = [
     "maxLevel": 23,
     "encounterRate": 25,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route24",
@@ -8326,7 +9250,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 60,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "safariZone1",
@@ -8335,7 +9260,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "safariZone2",
@@ -8344,7 +9270,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "safariZone3",
@@ -8353,7 +9280,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "safariZone4",
@@ -8362,7 +9290,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB1FE",
@@ -8371,7 +9300,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 40,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB1FW",
@@ -8380,7 +9310,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 40,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB2FE",
@@ -8389,7 +9320,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 15,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB2FW",
@@ -8398,7 +9330,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 15,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -8407,7 +9340,8 @@ const ENCOUNTERS = [
     "maxLevel": 31,
     "encounterRate": 15,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -8416,7 +9350,8 @@ const ENCOUNTERS = [
     "maxLevel": 31,
     "encounterRate": 15,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -8425,7 +9360,8 @@ const ENCOUNTERS = [
     "maxLevel": 33,
     "encounterRate": 25,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsE",
@@ -8434,7 +9370,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 19,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsW",
@@ -8443,7 +9380,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 19,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "cinnabarIsland",
@@ -8452,7 +9390,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 130,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "cinnabarIsland",
@@ -8461,7 +9400,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 110,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "palletTown",
@@ -8470,7 +9410,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 60,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route19",
@@ -8479,7 +9420,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 80,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route20E",
@@ -8488,7 +9430,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 80,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route20W",
@@ -8497,7 +9440,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 80,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route21",
@@ -8506,7 +9450,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 80,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -8515,7 +9460,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 90,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -8524,7 +9470,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 90,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -8533,7 +9480,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 90,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "vermillionCity",
@@ -8542,7 +9490,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 20,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route11",
@@ -8551,7 +9500,8 @@ const ENCOUNTERS = [
     "maxLevel": 18,
     "encounterRate": 5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "gameCorner",
@@ -8560,7 +9510,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 10,
     "encounterMethod": "cave",
-    "requiresItem": "coinCase"
+    "requiresItem": "coinCase",
+    "formName": null
   },
   {
     "locationId": "safariZone1",
@@ -8569,7 +9520,8 @@ const ENCOUNTERS = [
     "maxLevel": 23,
     "encounterRate": 6,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone2",
@@ -8578,7 +9530,8 @@ const ENCOUNTERS = [
     "maxLevel": 28,
     "encounterRate": 2.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone3",
@@ -8587,7 +9540,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 4,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB1FE",
@@ -8596,7 +9550,8 @@ const ENCOUNTERS = [
     "maxLevel": 44,
     "encounterRate": 14,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB1FW",
@@ -8605,7 +9560,8 @@ const ENCOUNTERS = [
     "maxLevel": 44,
     "encounterRate": 14,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB2FE",
@@ -8614,7 +9570,8 @@ const ENCOUNTERS = [
     "maxLevel": 44,
     "encounterRate": 14,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB2FW",
@@ -8623,7 +9580,8 @@ const ENCOUNTERS = [
     "maxLevel": 44,
     "encounterRate": 14,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -8632,7 +9590,8 @@ const ENCOUNTERS = [
     "maxLevel": 44,
     "encounterRate": 14,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -8641,7 +9600,8 @@ const ENCOUNTERS = [
     "maxLevel": 44,
     "encounterRate": 14,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -8650,7 +9610,8 @@ const ENCOUNTERS = [
     "maxLevel": 44,
     "encounterRate": 14,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsE",
@@ -8659,7 +9620,8 @@ const ENCOUNTERS = [
     "maxLevel": 44,
     "encounterRate": 14,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsW",
@@ -8668,7 +9630,8 @@ const ENCOUNTERS = [
     "maxLevel": 44,
     "encounterRate": 14,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "powerPlant",
@@ -8677,7 +9640,8 @@ const ENCOUNTERS = [
     "maxLevel": 36,
     "encounterRate": 7.5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansion3F",
@@ -8686,7 +9650,8 @@ const ENCOUNTERS = [
     "maxLevel": 34,
     "encounterRate": 10,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "gameCorner",
@@ -8695,7 +9660,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 10,
     "encounterMethod": "cave",
-    "requiresItem": "coinCase"
+    "requiresItem": "coinCase",
+    "formName": null
   },
   {
     "locationId": "safariZone1",
@@ -8704,7 +9670,8 @@ const ENCOUNTERS = [
     "maxLevel": 23,
     "encounterRate": 6,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone2",
@@ -8713,7 +9680,8 @@ const ENCOUNTERS = [
     "maxLevel": 28,
     "encounterRate": 1.5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone3",
@@ -8722,7 +9690,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 1,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone4",
@@ -8731,7 +9700,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 4,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone2",
@@ -8740,7 +9710,8 @@ const ENCOUNTERS = [
     "maxLevel": 21,
     "encounterRate": 10,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone3",
@@ -8749,7 +9720,8 @@ const ENCOUNTERS = [
     "maxLevel": 28,
     "encounterRate": 3,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone4",
@@ -8758,7 +9730,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 22,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "celadonCity",
@@ -8767,7 +9740,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 400,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "celadonCity",
@@ -8776,7 +9750,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 100,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "celadonCity",
@@ -8785,7 +9760,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 99,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -8794,7 +9770,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 400,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -8803,7 +9780,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 20,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -8812,7 +9790,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 400,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -8821,7 +9800,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 20,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCity",
@@ -8830,7 +9810,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 300,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "cinnabarIsland",
@@ -8839,7 +9820,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 400,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "cinnabarIsland",
@@ -8848,7 +9830,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 20,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "fuchsiaCity",
@@ -8857,7 +9840,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 400,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "fuchsiaCity",
@@ -8866,7 +9850,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 20,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "fuchsiaCity",
@@ -8875,7 +9860,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 90,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "palletTown",
@@ -8884,7 +9870,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 400,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "palletTown",
@@ -8893,7 +9880,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 20,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route10N",
@@ -8902,7 +9890,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 400,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "route10N",
@@ -8911,7 +9900,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 20,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route11",
@@ -8920,7 +9910,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 400,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "route11",
@@ -8929,7 +9920,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 20,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route12",
@@ -8938,7 +9930,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 400,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "route12",
@@ -8947,7 +9940,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 20,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route13",
@@ -8956,7 +9950,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 400,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "route13",
@@ -8965,7 +9960,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 20,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route17",
@@ -8974,7 +9970,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 300,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "route17",
@@ -8983,7 +9980,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route18",
@@ -8992,7 +9990,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 300,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "route18",
@@ -9001,7 +10000,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 50,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route19",
@@ -9010,7 +10010,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 400,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "route19",
@@ -9019,7 +10020,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 20,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route20E",
@@ -9028,7 +10030,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 400,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "route20E",
@@ -9037,7 +10040,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 20,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route20W",
@@ -9046,7 +10050,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 400,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "route20W",
@@ -9055,7 +10060,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 20,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route21",
@@ -9064,7 +10070,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 400,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "route21",
@@ -9073,7 +10080,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 20,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route22",
@@ -9082,7 +10090,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 400,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "route22",
@@ -9091,7 +10100,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 20,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route23",
@@ -9100,7 +10110,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 400,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "route23",
@@ -9109,7 +10120,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 20,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route24",
@@ -9118,7 +10130,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 800,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "route24",
@@ -9127,7 +10140,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route25",
@@ -9136,7 +10150,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 400,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "route25",
@@ -9145,7 +10160,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 20,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route4",
@@ -9154,7 +10170,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 100,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "route4",
@@ -9163,7 +10180,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 20,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route6",
@@ -9172,7 +10190,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 400,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "route6",
@@ -9181,7 +10200,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 20,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "safariZone1",
@@ -9190,7 +10210,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 20,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "safariZone1",
@@ -9199,7 +10220,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 400,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "safariZone1",
@@ -9208,7 +10230,8 @@ const ENCOUNTERS = [
     "maxLevel": 10,
     "encounterRate": 70,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "safariZone2",
@@ -9217,7 +10240,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 400,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "safariZone2",
@@ -9226,7 +10250,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 20,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "safariZone2",
@@ -9235,7 +10260,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 90,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "safariZone3",
@@ -9244,7 +10270,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 400,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "safariZone3",
@@ -9253,7 +10280,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 20,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "safariZone3",
@@ -9262,7 +10290,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 90,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "safariZone4",
@@ -9271,7 +10300,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 400,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "safariZone4",
@@ -9280,7 +10310,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 20,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "safariZone4",
@@ -9289,7 +10320,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 90,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -9298,7 +10330,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 400,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -9307,7 +10340,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 20,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -9316,7 +10350,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 400,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -9325,7 +10360,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 20,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -9334,7 +10370,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 400,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -9343,7 +10380,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 20,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "vermillionCity",
@@ -9352,7 +10390,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 400,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "vermillionCity",
@@ -9361,7 +10400,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 20,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "viridianCity",
@@ -9370,7 +10410,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 400,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "viridianCity",
@@ -9379,7 +10420,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 20,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -9388,7 +10430,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 15,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -9397,7 +10440,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 15,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "cinnabarIsland",
@@ -9406,7 +10450,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 15,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "fuchsiaCity",
@@ -9415,7 +10460,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 25,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "palletTown",
@@ -9424,7 +10470,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 15,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route10N",
@@ -9433,7 +10480,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 15,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route11",
@@ -9442,7 +10490,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 15,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route12",
@@ -9451,7 +10500,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 15,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route13",
@@ -9460,7 +10510,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 15,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route19",
@@ -9469,7 +10520,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 15,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route20E",
@@ -9478,7 +10530,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 15,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route20W",
@@ -9487,7 +10540,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 15,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route21",
@@ -9496,7 +10550,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 15,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route22",
@@ -9505,7 +10560,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 15,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route23",
@@ -9514,7 +10570,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 15,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route24",
@@ -9523,7 +10580,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 30,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route25",
@@ -9532,7 +10590,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 15,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route4",
@@ -9541,7 +10600,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 7.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route6",
@@ -9550,7 +10610,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 15,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -9559,7 +10620,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 16,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -9568,7 +10630,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 16,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -9577,7 +10640,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 16,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "vermillionCity",
@@ -9586,7 +10650,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 7.5,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "viridianCity",
@@ -9595,7 +10660,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 15,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route19",
@@ -9604,7 +10670,8 @@ const ENCOUNTERS = [
     "maxLevel": 44,
     "encounterRate": 1,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route20E",
@@ -9613,7 +10680,8 @@ const ENCOUNTERS = [
     "maxLevel": 44,
     "encounterRate": 1,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route20W",
@@ -9622,7 +10690,8 @@ const ENCOUNTERS = [
     "maxLevel": 44,
     "encounterRate": 1,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -9631,7 +10700,8 @@ const ENCOUNTERS = [
     "maxLevel": 61,
     "encounterRate": 18,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave2F",
@@ -9640,7 +10710,8 @@ const ENCOUNTERS = [
     "maxLevel": 64,
     "encounterRate": 21,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -9649,7 +10720,8 @@ const ENCOUNTERS = [
     "maxLevel": 67,
     "encounterRate": 60,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansionB1F",
@@ -9658,7 +10730,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 20,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route13",
@@ -9667,7 +10740,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 15,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route14",
@@ -9676,7 +10750,8 @@ const ENCOUNTERS = [
     "maxLevel": 23,
     "encounterRate": 45,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route15",
@@ -9685,7 +10760,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 35,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route23",
@@ -9694,7 +10770,8 @@ const ENCOUNTERS = [
     "maxLevel": 43,
     "encounterRate": 60,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route7",
@@ -9703,7 +10780,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 3,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route8",
@@ -9712,7 +10790,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 3,
     "encounterMethod": "grass",
-    "requiresItem": "hm-cut"
+    "requiresItem": "hm-cut",
+    "formName": null
   },
   {
     "locationId": "gameCorner",
@@ -9721,7 +10800,8 @@ const ENCOUNTERS = [
     "maxLevel": 26,
     "encounterRate": 3,
     "encounterMethod": "cave",
-    "requiresItem": "coinCase"
+    "requiresItem": "coinCase",
+    "formName": null
   },
   {
     "locationId": "mtMoonB2F",
@@ -9730,7 +10810,8 @@ const ENCOUNTERS = [
     "maxLevel": 14,
     "encounterRate": 3,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "mtMoonB2F",
@@ -9739,7 +10820,8 @@ const ENCOUNTERS = [
     "maxLevel": 14,
     "encounterRate": 3,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "mtMoonB2F",
@@ -9748,7 +10830,8 @@ const ENCOUNTERS = [
     "maxLevel": 16,
     "encounterRate": 2,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route12",
@@ -9757,7 +10840,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 2,
     "encounterMethod": "grass",
-    "requiresItem": "pokeFlute"
+    "requiresItem": "pokeFlute",
+    "formName": null
   },
   {
     "locationId": "route16",
@@ -9766,7 +10850,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 2,
     "encounterMethod": "grass",
-    "requiresItem": "pokeFlute"
+    "requiresItem": "pokeFlute",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -9775,7 +10860,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 1,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "powerPlant",
@@ -9784,7 +10870,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 1,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad3F",
@@ -9793,7 +10880,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 3,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "gameCorner",
@@ -9802,7 +10890,8 @@ const ENCOUNTERS = [
     "maxLevel": 24,
     "encounterRate": 3,
     "encounterMethod": "cave",
-    "requiresItem": "coinCase"
+    "requiresItem": "coinCase",
+    "formName": null
   },
   {
     "locationId": "safariZone1",
@@ -9811,7 +10900,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 85,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "safariZone2",
@@ -9820,7 +10910,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 75,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "safariZone3",
@@ -9829,7 +10920,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 75,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "safariZone4",
@@ -9838,7 +10930,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 75,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "safariZone1",
@@ -9847,7 +10940,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 11,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "safariZone2",
@@ -9856,7 +10950,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 1,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "safariZone3",
@@ -9865,7 +10960,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 1,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "safariZone4",
@@ -9874,7 +10970,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 1,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -9883,7 +10980,8 @@ const ENCOUNTERS = [
     "maxLevel": 70,
     "encounterRate": 2,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -9892,7 +10990,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.018275,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave2F",
@@ -9901,7 +11000,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0222,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -9910,7 +11010,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.016550000000000002,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "diglettsCaveB1F",
@@ -9919,7 +11020,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.005,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "diglettsCaveN",
@@ -9928,7 +11030,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.00625,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "diglettsCaveS",
@@ -9937,7 +11040,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.005,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "fightingDojo",
@@ -9946,7 +11050,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.00625,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "gameCorner",
@@ -9955,7 +11060,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.016800000000000002,
     "encounterMethod": "cave",
-    "requiresItem": "coinCase"
+    "requiresItem": "coinCase",
+    "formName": null
   },
   {
     "locationId": "mtMoon",
@@ -9964,7 +11070,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.01625,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "mtMoonB1F",
@@ -9973,7 +11080,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.014400000000000001,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "mtMoonB2F",
@@ -9982,7 +11090,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0228,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansion",
@@ -9991,7 +11100,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.01845,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansion2F",
@@ -10000,7 +11110,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0205,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansion3F",
@@ -10009,7 +11120,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.019375,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonMansionB1F",
@@ -10018,7 +11130,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0195,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonTower3F",
@@ -10027,7 +11140,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.02475,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonTower4F",
@@ -10036,7 +11150,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.02,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonTower5F",
@@ -10045,7 +11160,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.02,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonTower6F",
@@ -10054,7 +11170,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.02,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "pokemonTower7F",
@@ -10063,7 +11180,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.02,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "powerPlant",
@@ -10072,7 +11190,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0323,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "rockTunnel",
@@ -10081,7 +11200,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0164,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "rockTunnel1FS",
@@ -10090,7 +11210,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.01625,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "rockTunnel1FW",
@@ -10099,7 +11220,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.01625,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "rockTunnelB1FE",
@@ -10108,7 +11230,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.012,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "rockTunnelB1FW",
@@ -10117,7 +11240,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.012,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB1FE",
@@ -10126,7 +11250,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0175,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB1FW",
@@ -10135,7 +11260,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.01845,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB2FE",
@@ -10144,7 +11270,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.02,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB2FW",
@@ -10153,7 +11280,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.018600000000000002,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -10162,7 +11290,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.01745,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -10171,7 +11300,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.019200000000000002,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -10180,7 +11310,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.019100000000000002,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsE",
@@ -10189,7 +11320,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.01915,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsW",
@@ -10198,7 +11330,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0219,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad",
@@ -10207,7 +11340,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0161,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad2F",
@@ -10216,7 +11350,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0205,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "victoryRoad3F",
@@ -10225,7 +11360,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.020300000000000002,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "celadonCity",
@@ -10234,7 +11370,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.035,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "celadonCity",
@@ -10243,7 +11380,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.020225,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "celadonCity",
@@ -10252,7 +11390,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.001,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -10261,7 +11400,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.031125,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -10270,7 +11410,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.034,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -10279,7 +11420,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.001,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -10288,7 +11430,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.036375000000000005,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -10297,7 +11440,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.024,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -10306,7 +11450,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.001,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCity",
@@ -10315,7 +11460,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.022850000000000002,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCity",
@@ -10324,7 +11470,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0286,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "ceruleanCity",
@@ -10333,7 +11480,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.002,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "cinnabarIsland",
@@ -10342,7 +11490,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.031225000000000003,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "cinnabarIsland",
@@ -10351,7 +11500,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0385,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "cinnabarIsland",
@@ -10360,7 +11510,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.001,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "fuchsiaCity",
@@ -10369,7 +11520,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.02275,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "fuchsiaCity",
@@ -10378,7 +11530,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.030000000000000002,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "fuchsiaCity",
@@ -10387,7 +11540,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0025,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "palletTown",
@@ -10396,7 +11550,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.030001,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "palletTown",
@@ -10405,7 +11560,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.025276,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "palletTown",
@@ -10414,7 +11570,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0012000000000000001,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "route10N",
@@ -10423,7 +11580,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0083,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route10N",
@@ -10432,7 +11590,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0405,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route10N",
@@ -10441,7 +11600,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.001,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "route11",
@@ -10450,7 +11610,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.019625,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route11",
@@ -10459,7 +11620,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0427,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route11",
@@ -10468,7 +11630,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.001,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "route12",
@@ -10477,7 +11640,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.028075000000000003,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route12",
@@ -10486,7 +11650,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0391,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route12",
@@ -10495,7 +11660,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.00495,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "route13",
@@ -10504,7 +11670,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.027025,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route13",
@@ -10513,7 +11680,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0342,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route13",
@@ -10522,7 +11690,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.001,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "route17",
@@ -10531,7 +11700,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.01,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route17",
@@ -10540,7 +11710,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.032100000000000004,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route17",
@@ -10549,7 +11720,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.001,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "route18",
@@ -10558,7 +11730,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.01,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route18",
@@ -10567,7 +11740,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0325,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route18",
@@ -10576,7 +11750,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0025,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "route19",
@@ -10585,7 +11760,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.045450000000000004,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route19",
@@ -10594,7 +11770,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0351,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route19",
@@ -10603,7 +11780,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0045000000000000005,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "route20E",
@@ -10612,7 +11790,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0395,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route20E",
@@ -10621,7 +11800,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.034,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route20E",
@@ -10630,7 +11810,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.001,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "route20W",
@@ -10639,7 +11820,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0395,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route20W",
@@ -10648,7 +11830,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.034,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route20W",
@@ -10657,7 +11840,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.001,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "route21",
@@ -10666,7 +11850,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0429,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route21",
@@ -10675,7 +11860,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0345,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route21",
@@ -10684,7 +11870,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.001,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "route22",
@@ -10693,7 +11880,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.026750000000000003,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route22",
@@ -10702,7 +11890,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0405,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route22",
@@ -10711,7 +11900,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.001,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "route23",
@@ -10720,7 +11910,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.02355,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route23",
@@ -10729,7 +11920,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.030000000000000002,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route23",
@@ -10738,7 +11930,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.001,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "route24",
@@ -10747,7 +11940,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.025425,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route24",
@@ -10756,7 +11950,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.060700000000000004,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route24",
@@ -10765,7 +11960,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.001,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "route25",
@@ -10774,7 +11970,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.028900000000000002,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route25",
@@ -10783,7 +11980,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0308,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route25",
@@ -10792,7 +11990,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.015000000000000001,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "route4",
@@ -10801,7 +12000,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.005,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route4",
@@ -10810,7 +12010,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.007,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route4",
@@ -10819,7 +12020,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.001,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "route6",
@@ -10828,7 +12030,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0381,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "route6",
@@ -10837,7 +12040,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.030500000000000003,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "route6",
@@ -10846,7 +12050,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.001,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "safariZone1",
@@ -10855,7 +12060,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.046400000000000004,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "safariZone1",
@@ -10864,7 +12070,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0175,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "safariZone1",
@@ -10873,7 +12080,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.001,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "safariZone2",
@@ -10882,7 +12090,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.025900000000000003,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "safariZone2",
@@ -10891,7 +12100,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.030500000000000003,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "safariZone2",
@@ -10900,7 +12110,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0035,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "safariZone3",
@@ -10909,7 +12120,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.024800000000000003,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "safariZone3",
@@ -10918,7 +12130,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.030500000000000003,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "safariZone3",
@@ -10927,7 +12140,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0045000000000000005,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "safariZone4",
@@ -10936,7 +12150,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.024800000000000003,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "safariZone4",
@@ -10945,7 +12160,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.030500000000000003,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "safariZone4",
@@ -10954,7 +12170,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0045000000000000005,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -10963,7 +12180,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.014700000000000001,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -10972,7 +12190,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0315,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -10981,7 +12200,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.001,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -10990,7 +12210,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.014650000000000002,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -10999,7 +12220,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0315,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -11008,7 +12230,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.001,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -11017,7 +12240,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.013000000000000001,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -11026,7 +12250,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.03475,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -11035,7 +12260,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.001,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "vermillionCity",
@@ -11044,7 +12270,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.018000000000000002,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "vermillionCity",
@@ -11053,7 +12280,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0362,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "vermillionCity",
@@ -11062,7 +12290,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.001,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "viridianCity",
@@ -11071,7 +12300,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.018301,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "viridianCity",
@@ -11080,7 +12310,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.032501,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "viridianCity",
@@ -11089,7 +12320,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.001001,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "route1",
@@ -11098,7 +12330,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.02000025,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route10N",
@@ -11107,7 +12340,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.01675,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route11",
@@ -11116,7 +12350,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.01905,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route12",
@@ -11125,7 +12360,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0195,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route12",
@@ -11134,7 +12370,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0001,
     "encounterMethod": "grass",
-    "requiresItem": "pokeFlute"
+    "requiresItem": "pokeFlute",
+    "formName": null
   },
   {
     "locationId": "route13",
@@ -11143,7 +12380,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.02,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route14",
@@ -11152,7 +12390,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.01975,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route15",
@@ -11161,7 +12400,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.021,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route16",
@@ -11170,7 +12410,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.01425,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route16",
@@ -11179,7 +12420,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0001,
     "encounterMethod": "grass",
-    "requiresItem": "pokeFlute"
+    "requiresItem": "pokeFlute",
+    "formName": null
   },
   {
     "locationId": "route17",
@@ -11188,7 +12430,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.021125,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route18",
@@ -11197,7 +12440,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.021,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route21",
@@ -11206,7 +12450,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.01405,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route22",
@@ -11215,7 +12460,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.01712525,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route23",
@@ -11224,7 +12470,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.01975,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route24",
@@ -11233,7 +12480,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.01755,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route25",
@@ -11242,7 +12490,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.019950000000000002,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route2N",
@@ -11251,7 +12500,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.02,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route2S",
@@ -11260,7 +12510,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.02,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route3",
@@ -11269,7 +12520,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.022000000000000002,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route4",
@@ -11278,7 +12530,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.01975,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route5",
@@ -11287,7 +12540,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.019375,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route6",
@@ -11296,7 +12550,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.02,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route7",
@@ -11305,7 +12560,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.02015,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "route8",
@@ -11314,7 +12570,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.03255,
     "encounterMethod": "grass",
-    "requiresItem": "hm-cut"
+    "requiresItem": "hm-cut",
+    "formName": null
   },
   {
     "locationId": "route9",
@@ -11323,7 +12580,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0205,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone1",
@@ -11332,7 +12590,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.026275,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone2",
@@ -11341,7 +12600,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.025225,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone2",
@@ -11350,7 +12610,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.003375,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone3",
@@ -11359,7 +12620,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.01895,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "safariZone4",
@@ -11368,7 +12630,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.018250000000000002,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "viridianForest",
@@ -11377,7 +12640,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.02015,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -11386,7 +12650,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.006500000000000001,
     "encounterMethod": "rock-smash",
-    "requiresItem": "hm-rockSmash"
+    "requiresItem": "hm-rockSmash",
+    "formName": null
   },
   {
     "locationId": "ceruleanCave2F",
@@ -11395,7 +12660,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.004,
     "encounterMethod": "rock-smash",
-    "requiresItem": "hm-rockSmash"
+    "requiresItem": "hm-rockSmash",
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -11404,7 +12670,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.004,
     "encounterMethod": "rock-smash",
-    "requiresItem": "hm-rockSmash"
+    "requiresItem": "hm-rockSmash",
+    "formName": null
   },
   {
     "locationId": "rockTunnelB1FE",
@@ -11413,7 +12680,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.005,
     "encounterMethod": "rock-smash",
-    "requiresItem": "hm-rockSmash"
+    "requiresItem": "hm-rockSmash",
+    "formName": null
   },
   {
     "locationId": "rockTunnelB1FW",
@@ -11422,7 +12690,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.002,
     "encounterMethod": "rock-smash",
-    "requiresItem": "hm-rockSmash"
+    "requiresItem": "hm-rockSmash",
+    "formName": null
   },
   {
     "locationId": "celadonCity",
@@ -11431,7 +12700,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0053,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -11440,7 +12710,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.001525,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -11449,7 +12720,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.003625,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "cinnabarIsland",
@@ -11458,7 +12730,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.003,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "fuchsiaCity",
@@ -11467,7 +12740,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.00005,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "palletTown",
@@ -11476,7 +12750,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.007000950000000001,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route10N",
@@ -11485,7 +12760,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0045000000000000005,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route11",
@@ -11494,7 +12770,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0045000000000000005,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route12",
@@ -11503,7 +12780,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.010125,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route13",
@@ -11512,7 +12790,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.002775,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route19",
@@ -11521,7 +12800,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.006,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route20E",
@@ -11530,7 +12810,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.003,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route20W",
@@ -11539,7 +12820,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.003,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route21",
@@ -11548,7 +12830,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.002,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route22",
@@ -11557,7 +12840,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.005,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route23",
@@ -11566,7 +12850,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.00005,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route24",
@@ -11575,7 +12860,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.005,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route25",
@@ -11584,7 +12870,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.00335,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route4",
@@ -11593,7 +12880,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.005,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "route6",
@@ -11602,7 +12890,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0036750000000000003,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "safariZone1",
@@ -11611,7 +12900,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.00025,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "safariZone2",
@@ -11620,7 +12910,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.005200000000000001,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "safariZone3",
@@ -11629,7 +12920,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.005200000000000001,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "safariZone4",
@@ -11638,7 +12930,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.005200000000000001,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FE",
@@ -11647,7 +12940,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.014100000000000001,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB3FW",
@@ -11656,7 +12950,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.014100000000000001,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "seafoamIslandsB4F",
@@ -11665,7 +12960,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.0129,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "vermillionCity",
@@ -11674,7 +12970,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.01005,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "viridianCity",
@@ -11683,7 +12980,8 @@ const ENCOUNTERS = [
     "maxLevel": 50,
     "encounterRate": 0.000251,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "ceruleanCave",
@@ -11692,7 +12990,8 @@ const ENCOUNTERS = [
     "maxLevel": 55,
     "encounterRate": 4,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCave2F",
@@ -11701,7 +13000,8 @@ const ENCOUNTERS = [
     "maxLevel": 58,
     "encounterRate": 5,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "ceruleanCaveB1F",
@@ -11710,7 +13010,8 @@ const ENCOUNTERS = [
     "maxLevel": 61,
     "encounterRate": 1,
     "encounterMethod": "cave",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "oneIsland",
@@ -11719,7 +13020,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 190,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "oneIsland",
@@ -11728,7 +13030,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 10,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "oneIsland",
@@ -11737,7 +13040,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 100,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "oneIsland",
@@ -11746,7 +13050,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 80,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "oneIsland",
@@ -11755,7 +13060,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "oneIsland",
@@ -11764,7 +13070,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 80,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "oneIsland",
@@ -11773,7 +13080,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "oneIsland",
@@ -11782,7 +13090,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "oneIsland",
@@ -11791,7 +13100,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 30,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "oneIsland",
@@ -11800,7 +13110,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 4,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "oneIsland",
@@ -11809,7 +13120,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 1,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "oneIsland",
@@ -11818,7 +13130,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "oneIsland",
@@ -11827,7 +13140,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "oneIsland",
@@ -11836,7 +13150,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 4,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "oneIsland",
@@ -11845,7 +13160,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 1,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "treasureBeach",
@@ -11854,7 +13170,8 @@ const ENCOUNTERS = [
     "maxLevel": 32,
     "encounterRate": 60,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "treasureBeach",
@@ -11863,7 +13180,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 60,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "treasureBeach",
@@ -11872,7 +13190,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 40,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "treasureBeach",
@@ -11881,7 +13200,8 @@ const ENCOUNTERS = [
     "maxLevel": 31,
     "encounterRate": 20,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "treasureBeach",
@@ -11890,7 +13210,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 10,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "treasureBeach",
@@ -11899,7 +13220,8 @@ const ENCOUNTERS = [
     "maxLevel": 31,
     "encounterRate": 5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "treasureBeach",
@@ -11908,7 +13230,8 @@ const ENCOUNTERS = [
     "maxLevel": 31,
     "encounterRate": 5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "treasureBeach",
@@ -11917,7 +13240,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 190,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "treasureBeach",
@@ -11926,7 +13250,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 10,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "treasureBeach",
@@ -11935,7 +13260,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 100,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "treasureBeach",
@@ -11944,7 +13270,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 80,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "treasureBeach",
@@ -11953,7 +13280,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "treasureBeach",
@@ -11962,7 +13290,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 80,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "treasureBeach",
@@ -11971,7 +13300,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 80,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "treasureBeach",
@@ -11980,7 +13310,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 30,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "treasureBeach",
@@ -11989,7 +13320,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 4,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "treasureBeach",
@@ -11998,7 +13330,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 1,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "treasureBeach",
@@ -12007,7 +13340,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 80,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "treasureBeach",
@@ -12016,7 +13350,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 4,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "treasureBeach",
@@ -12025,7 +13360,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 1,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "kindleRoad",
@@ -12034,7 +13370,8 @@ const ENCOUNTERS = [
     "maxLevel": 34,
     "encounterRate": 60,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "kindleRoad",
@@ -12043,7 +13380,8 @@ const ENCOUNTERS = [
     "maxLevel": 32,
     "encounterRate": 50,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "kindleRoad",
@@ -12052,7 +13390,8 @@ const ENCOUNTERS = [
     "maxLevel": 36,
     "encounterRate": 20,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "kindleRoad",
@@ -12061,7 +13400,8 @@ const ENCOUNTERS = [
     "maxLevel": 31,
     "encounterRate": 20,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "kindleRoad",
@@ -12070,7 +13410,8 @@ const ENCOUNTERS = [
     "maxLevel": 31,
     "encounterRate": 20,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "kindleRoad",
@@ -12079,7 +13420,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 10,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "kindleRoad",
@@ -12088,7 +13430,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 10,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "kindleRoad",
@@ -12097,7 +13440,8 @@ const ENCOUNTERS = [
     "maxLevel": 34,
     "encounterRate": 5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "kindleRoad",
@@ -12106,7 +13450,8 @@ const ENCOUNTERS = [
     "maxLevel": 34,
     "encounterRate": 5,
     "encounterMethod": "grass",
-    "requiresItem": null
+    "requiresItem": null,
+    "formName": null
   },
   {
     "locationId": "kindleRoad",
@@ -12115,7 +13460,8 @@ const ENCOUNTERS = [
     "maxLevel": 30,
     "encounterRate": 95,
     "encounterMethod": "rock-smash",
-    "requiresItem": "hm-rockSmash"
+    "requiresItem": "hm-rockSmash",
+    "formName": null
   },
   {
     "locationId": "kindleRoad",
@@ -12124,7 +13470,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 5,
     "encounterMethod": "rock-smash",
-    "requiresItem": "hm-rockSmash"
+    "requiresItem": "hm-rockSmash",
+    "formName": null
   },
   {
     "locationId": "kindleRoad",
@@ -12133,7 +13480,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 190,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "kindleRoad",
@@ -12142,7 +13490,8 @@ const ENCOUNTERS = [
     "maxLevel": 40,
     "encounterRate": 10,
     "encounterMethod": "surf",
-    "requiresItem": "hm-surf"
+    "requiresItem": "hm-surf",
+    "formName": null
   },
   {
     "locationId": "kindleRoad",
@@ -12151,7 +13500,8 @@ const ENCOUNTERS = [
     "maxLevel": 5,
     "encounterRate": 100,
     "encounterMethod": "fish",
-    "requiresItem": "oldRod"
+    "requiresItem": "oldRod",
+    "formName": null
   },
   {
     "locationId": "kindleRoad",
@@ -12160,7 +13510,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 80,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "kindleRoad",
@@ -12169,7 +13520,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 40,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "kindleRoad",
@@ -12178,7 +13530,8 @@ const ENCOUNTERS = [
     "maxLevel": 15,
     "encounterRate": 80,
     "encounterMethod": "fish",
-    "requiresItem": "goodRod"
+    "requiresItem": "goodRod",
+    "formName": null
   },
   {
     "locationId": "kindleRoad",
@@ -12187,7 +13540,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 80,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "kindleRoad",
@@ -12196,7 +13550,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 30,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "kindleRoad",
@@ -12205,7 +13560,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 4,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "kindleRoad",
@@ -12214,7 +13570,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 1,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "kindleRoad",
@@ -12223,7 +13580,8 @@ const ENCOUNTERS = [
     "maxLevel": 25,
     "encounterRate": 80,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "kindleRoad",
@@ -12232,7 +13590,8 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 4,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
   },
   {
     "locationId": "kindleRoad",
@@ -12241,7 +13600,4678 @@ const ENCOUNTERS = [
     "maxLevel": 35,
     "encounterRate": 1,
     "encounterMethod": "fish",
-    "requiresItem": "superRod"
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "mtEmber",
+    "dexId": 77,
+    "minLevel": 30,
+    "maxLevel": 36,
+    "encounterRate": 70,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "mtEmber",
+    "dexId": 22,
+    "minLevel": 38,
+    "maxLevel": 40,
+    "encounterRate": 50,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "mtEmber",
+    "dexId": 21,
+    "minLevel": 30,
+    "maxLevel": 32,
+    "encounterRate": 25,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "mtEmber",
+    "dexId": 66,
+    "minLevel": 35,
+    "maxLevel": 35,
+    "encounterRate": 20,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "mtEmber",
+    "dexId": 74,
+    "minLevel": 33,
+    "maxLevel": 33,
+    "encounterRate": 20,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "mtEmber",
+    "dexId": 78,
+    "minLevel": 39,
+    "maxLevel": 42,
+    "encounterRate": 10,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "mtEmber",
+    "dexId": 126,
+    "minLevel": 38,
+    "maxLevel": 40,
+    "encounterRate": 5,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "summitPath1F",
+    "dexId": 66,
+    "minLevel": 31,
+    "maxLevel": 39,
+    "encounterRate": 100,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "summitPath1F",
+    "dexId": 74,
+    "minLevel": 29,
+    "maxLevel": 37,
+    "encounterRate": 100,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "summitPath1F",
+    "dexId": 74,
+    "minLevel": 5,
+    "maxLevel": 30,
+    "encounterRate": 190,
+    "encounterMethod": "rock-smash",
+    "requiresItem": "hm-rockSmash",
+    "formName": null
+  },
+  {
+    "locationId": "summitPath1F",
+    "dexId": 75,
+    "minLevel": 25,
+    "maxLevel": 40,
+    "encounterRate": 10,
+    "encounterMethod": "rock-smash",
+    "requiresItem": "hm-rockSmash",
+    "formName": null
+  },
+  {
+    "locationId": "summitPath2F",
+    "dexId": 66,
+    "minLevel": 32,
+    "maxLevel": 36,
+    "encounterRate": 80,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "summitPath2F",
+    "dexId": 74,
+    "minLevel": 30,
+    "maxLevel": 34,
+    "encounterRate": 80,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "summitPath2F",
+    "dexId": 67,
+    "minLevel": 38,
+    "maxLevel": 40,
+    "encounterRate": 40,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "summitPath2F",
+    "dexId": 74,
+    "minLevel": 5,
+    "maxLevel": 30,
+    "encounterRate": 130,
+    "encounterMethod": "rock-smash",
+    "requiresItem": "hm-rockSmash",
+    "formName": null
+  },
+  {
+    "locationId": "summitPath2F",
+    "dexId": 75,
+    "minLevel": 25,
+    "maxLevel": 40,
+    "encounterRate": 70,
+    "encounterMethod": "rock-smash",
+    "requiresItem": "hm-rockSmash",
+    "formName": null
+  },
+  {
+    "locationId": "summitPath3F",
+    "dexId": 66,
+    "minLevel": 31,
+    "maxLevel": 39,
+    "encounterRate": 100,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "summitPath3F",
+    "dexId": 74,
+    "minLevel": 29,
+    "maxLevel": 37,
+    "encounterRate": 100,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "summitPath3F",
+    "dexId": 74,
+    "minLevel": 5,
+    "maxLevel": 30,
+    "encounterRate": 130,
+    "encounterMethod": "rock-smash",
+    "requiresItem": "hm-rockSmash",
+    "formName": null
+  },
+  {
+    "locationId": "summitPath3F",
+    "dexId": 75,
+    "minLevel": 25,
+    "maxLevel": 40,
+    "encounterRate": 70,
+    "encounterMethod": "rock-smash",
+    "requiresItem": "hm-rockSmash",
+    "formName": null
+  },
+  {
+    "locationId": "summit",
+    "dexId": 66,
+    "minLevel": 30,
+    "maxLevel": 40,
+    "encounterRate": 14,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "summit",
+    "dexId": 67,
+    "minLevel": 35,
+    "maxLevel": 50,
+    "encounterRate": 85,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "summit",
+    "dexId": 74,
+    "minLevel": 30,
+    "maxLevel": 40,
+    "encounterRate": 15,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "summit",
+    "dexId": 75,
+    "minLevel": 35,
+    "maxLevel": 50,
+    "encounterRate": 85,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "summit",
+    "dexId": 146,
+    "minLevel": 50,
+    "maxLevel": 50,
+    "encounterRate": 2,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "rubyPath",
+    "dexId": 74,
+    "minLevel": 34,
+    "maxLevel": 42,
+    "encounterRate": 70,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "rubyPath",
+    "dexId": 218,
+    "minLevel": 24,
+    "maxLevel": 30,
+    "encounterRate": 30,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "rubyPath",
+    "dexId": 74,
+    "minLevel": 5,
+    "maxLevel": 30,
+    "encounterRate": 65,
+    "encounterMethod": "rock-smash",
+    "requiresItem": "hm-rockSmash",
+    "formName": null
+  },
+  {
+    "locationId": "rubyPath",
+    "dexId": 75,
+    "minLevel": 25,
+    "maxLevel": 40,
+    "encounterRate": 35,
+    "encounterMethod": "rock-smash",
+    "requiresItem": "hm-rockSmash",
+    "formName": null
+  },
+  {
+    "locationId": "rubyPathB1F",
+    "dexId": 74,
+    "minLevel": 40,
+    "maxLevel": 44,
+    "encounterRate": 40,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "rubyPathB1F",
+    "dexId": 218,
+    "minLevel": 22,
+    "maxLevel": 32,
+    "encounterRate": 60,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "rubyPathB1F",
+    "dexId": 74,
+    "minLevel": 5,
+    "maxLevel": 30,
+    "encounterRate": 65,
+    "encounterMethod": "rock-smash",
+    "requiresItem": "hm-rockSmash",
+    "formName": null
+  },
+  {
+    "locationId": "rubyPathB1F",
+    "dexId": 75,
+    "minLevel": 25,
+    "maxLevel": 40,
+    "encounterRate": 35,
+    "encounterMethod": "rock-smash",
+    "requiresItem": "hm-rockSmash",
+    "formName": null
+  },
+  {
+    "locationId": "rubyPathB2F",
+    "dexId": 218,
+    "minLevel": 18,
+    "maxLevel": 36,
+    "encounterRate": 100,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "rubyPathB2F",
+    "dexId": 74,
+    "minLevel": 5,
+    "maxLevel": 30,
+    "encounterRate": 130,
+    "encounterMethod": "rock-smash",
+    "requiresItem": "hm-rockSmash",
+    "formName": null
+  },
+  {
+    "locationId": "rubyPathB2F",
+    "dexId": 75,
+    "minLevel": 25,
+    "maxLevel": 40,
+    "encounterRate": 70,
+    "encounterMethod": "rock-smash",
+    "requiresItem": "hm-rockSmash",
+    "formName": null
+  },
+  {
+    "locationId": "rubyPathB2F",
+    "dexId": 219,
+    "minLevel": 25,
+    "maxLevel": 45,
+    "encounterRate": 10,
+    "encounterMethod": "rock-smash",
+    "requiresItem": "hm-rockSmash",
+    "formName": null
+  },
+  {
+    "locationId": "rubyPathB3F",
+    "dexId": 218,
+    "minLevel": 18,
+    "maxLevel": 36,
+    "encounterRate": 220,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "rubyPathB3F",
+    "dexId": 74,
+    "minLevel": 40,
+    "maxLevel": 44,
+    "encounterRate": 80,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "rubyPathB3F",
+    "dexId": 218,
+    "minLevel": 15,
+    "maxLevel": 35,
+    "encounterRate": 180,
+    "encounterMethod": "rock-smash",
+    "requiresItem": "hm-rockSmash",
+    "formName": null
+  },
+  {
+    "locationId": "rubyPathB3F",
+    "dexId": 219,
+    "minLevel": 25,
+    "maxLevel": 45,
+    "encounterRate": 10,
+    "encounterMethod": "rock-smash",
+    "requiresItem": "hm-rockSmash",
+    "formName": null
+  },
+  {
+    "locationId": "rubyPathB4F",
+    "dexId": 74,
+    "minLevel": 34,
+    "maxLevel": 42,
+    "encounterRate": 70,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "rubyPathB4F",
+    "dexId": 218,
+    "minLevel": 24,
+    "maxLevel": 30,
+    "encounterRate": 30,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "rubyPathB4F",
+    "dexId": 74,
+    "minLevel": 5,
+    "maxLevel": 30,
+    "encounterRate": 65,
+    "encounterMethod": "rock-smash",
+    "requiresItem": "hm-rockSmash",
+    "formName": null
+  },
+  {
+    "locationId": "rubyPathB4F",
+    "dexId": 75,
+    "minLevel": 25,
+    "maxLevel": 40,
+    "encounterRate": 35,
+    "encounterMethod": "rock-smash",
+    "requiresItem": "hm-rockSmash",
+    "formName": null
+  },
+  {
+    "locationId": "rubyPathB5F",
+    "dexId": 74,
+    "minLevel": 34,
+    "maxLevel": 42,
+    "encounterRate": 70,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "rubyPathB5F",
+    "dexId": 218,
+    "minLevel": 24,
+    "maxLevel": 30,
+    "encounterRate": 20,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "rubyPathB5F",
+    "dexId": 74,
+    "minLevel": 5,
+    "maxLevel": 30,
+    "encounterRate": 65,
+    "encounterMethod": "rock-smash",
+    "requiresItem": "hm-rockSmash",
+    "formName": null
+  },
+  {
+    "locationId": "rubyPathB5F",
+    "dexId": 75,
+    "minLevel": 25,
+    "maxLevel": 40,
+    "encounterRate": 35,
+    "encounterMethod": "rock-smash",
+    "requiresItem": "hm-rockSmash",
+    "formName": null
+  },
+  {
+    "locationId": "capeBrink",
+    "dexId": 43,
+    "minLevel": 30,
+    "maxLevel": 32,
+    "encounterRate": 30,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "capeBrink",
+    "dexId": 21,
+    "minLevel": 31,
+    "maxLevel": 31,
+    "encounterRate": 40,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "capeBrink",
+    "dexId": 44,
+    "minLevel": 36,
+    "maxLevel": 38,
+    "encounterRate": 15,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "capeBrink",
+    "dexId": 22,
+    "minLevel": 36,
+    "maxLevel": 36,
+    "encounterRate": 20,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "capeBrink",
+    "dexId": 52,
+    "minLevel": 31,
+    "maxLevel": 31,
+    "encounterRate": 20,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "capeBrink",
+    "dexId": 53,
+    "minLevel": 37,
+    "maxLevel": 40,
+    "encounterRate": 10,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "capeBrink",
+    "dexId": 54,
+    "minLevel": 31,
+    "maxLevel": 31,
+    "encounterRate": 5,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "capeBrink",
+    "dexId": 55,
+    "minLevel": 37,
+    "maxLevel": 40,
+    "encounterRate": 5,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "capeBrink",
+    "dexId": 69,
+    "minLevel": 30,
+    "maxLevel": 32,
+    "encounterRate": 30,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "capeBrink",
+    "dexId": 70,
+    "minLevel": 36,
+    "maxLevel": 38,
+    "encounterRate": 15,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "capeBrink",
+    "dexId": 79,
+    "minLevel": 31,
+    "maxLevel": 31,
+    "encounterRate": 5,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "capeBrink",
+    "dexId": 80,
+    "minLevel": 37,
+    "maxLevel": 40,
+    "encounterRate": 5,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "capeBrink",
+    "dexId": 54,
+    "minLevel": 5,
+    "maxLevel": 40,
+    "encounterRate": 95,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "capeBrink",
+    "dexId": 55,
+    "minLevel": 35,
+    "maxLevel": 40,
+    "encounterRate": 5,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "capeBrink",
+    "dexId": 79,
+    "minLevel": 5,
+    "maxLevel": 40,
+    "encounterRate": 95,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "capeBrink",
+    "dexId": 80,
+    "minLevel": 35,
+    "maxLevel": 40,
+    "encounterRate": 5,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "capeBrink",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 100,
+    "encounterMethod": "fish",
+    "requiresItem": "oldRod",
+    "formName": null
+  },
+  {
+    "locationId": "capeBrink",
+    "dexId": 60,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 60,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "capeBrink",
+    "dexId": 118,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 20,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "capeBrink",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 20,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "capeBrink",
+    "dexId": 60,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "capeBrink",
+    "dexId": 61,
+    "minLevel": 20,
+    "maxLevel": 30,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "capeBrink",
+    "dexId": 130,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 15,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "capeBrink",
+    "dexId": 54,
+    "minLevel": 15,
+    "maxLevel": 35,
+    "encounterRate": 5,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "capeBrink",
+    "dexId": 79,
+    "minLevel": 15,
+    "maxLevel": 35,
+    "encounterRate": 5,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "threeIslePort",
+    "dexId": 206,
+    "minLevel": 5,
+    "maxLevel": 35,
+    "encounterRate": 100,
+    "encounterMethod": "grass",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "bondBridge",
+    "dexId": 16,
+    "minLevel": 29,
+    "maxLevel": 32,
+    "encounterRate": 60,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "bondBridge",
+    "dexId": 43,
+    "minLevel": 31,
+    "maxLevel": 31,
+    "encounterRate": 20,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "bondBridge",
+    "dexId": 17,
+    "minLevel": 34,
+    "maxLevel": 40,
+    "encounterRate": 30,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "bondBridge",
+    "dexId": 44,
+    "minLevel": 36,
+    "maxLevel": 36,
+    "encounterRate": 10,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "bondBridge",
+    "dexId": 52,
+    "minLevel": 31,
+    "maxLevel": 31,
+    "encounterRate": 20,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "bondBridge",
+    "dexId": 48,
+    "minLevel": 34,
+    "maxLevel": 34,
+    "encounterRate": 10,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "bondBridge",
+    "dexId": 53,
+    "minLevel": 37,
+    "maxLevel": 40,
+    "encounterRate": 10,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "bondBridge",
+    "dexId": 54,
+    "minLevel": 31,
+    "maxLevel": 31,
+    "encounterRate": 5,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "bondBridge",
+    "dexId": 69,
+    "minLevel": 31,
+    "maxLevel": 31,
+    "encounterRate": 20,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "bondBridge",
+    "dexId": 70,
+    "minLevel": 36,
+    "maxLevel": 36,
+    "encounterRate": 10,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "bondBridge",
+    "dexId": 79,
+    "minLevel": 31,
+    "maxLevel": 31,
+    "encounterRate": 5,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "bondBridge",
+    "dexId": 72,
+    "minLevel": 5,
+    "maxLevel": 40,
+    "encounterRate": 95,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "bondBridge",
+    "dexId": 73,
+    "minLevel": 35,
+    "maxLevel": 40,
+    "encounterRate": 5,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "bondBridge",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 100,
+    "encounterMethod": "fish",
+    "requiresItem": "oldRod",
+    "formName": null
+  },
+  {
+    "locationId": "bondBridge",
+    "dexId": 116,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "bondBridge",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "bondBridge",
+    "dexId": 98,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "bondBridge",
+    "dexId": 116,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "bondBridge",
+    "dexId": 130,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 30,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "bondBridge",
+    "dexId": 117,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 4,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "bondBridge",
+    "dexId": 54,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 1,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "bondBridge",
+    "dexId": 98,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "bondBridge",
+    "dexId": 99,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 4,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "bondBridge",
+    "dexId": 79,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 1,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "berryForest",
+    "dexId": 17,
+    "minLevel": 37,
+    "maxLevel": 37,
+    "encounterRate": 40,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "berryForest",
+    "dexId": 44,
+    "minLevel": 35,
+    "maxLevel": 35,
+    "encounterRate": 20,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "berryForest",
+    "dexId": 16,
+    "minLevel": 32,
+    "maxLevel": 32,
+    "encounterRate": 20,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "berryForest",
+    "dexId": 43,
+    "minLevel": 30,
+    "maxLevel": 30,
+    "encounterRate": 10,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "berryForest",
+    "dexId": 48,
+    "minLevel": 34,
+    "maxLevel": 34,
+    "encounterRate": 20,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "berryForest",
+    "dexId": 96,
+    "minLevel": 34,
+    "maxLevel": 34,
+    "encounterRate": 20,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "berryForest",
+    "dexId": 49,
+    "minLevel": 37,
+    "maxLevel": 40,
+    "encounterRate": 10,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "berryForest",
+    "dexId": 54,
+    "minLevel": 31,
+    "maxLevel": 31,
+    "encounterRate": 5,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "berryForest",
+    "dexId": 97,
+    "minLevel": 37,
+    "maxLevel": 40,
+    "encounterRate": 10,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "berryForest",
+    "dexId": 102,
+    "minLevel": 35,
+    "maxLevel": 35,
+    "encounterRate": 10,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "berryForest",
+    "dexId": 70,
+    "minLevel": 35,
+    "maxLevel": 35,
+    "encounterRate": 20,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "berryForest",
+    "dexId": 69,
+    "minLevel": 30,
+    "maxLevel": 30,
+    "encounterRate": 10,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "berryForest",
+    "dexId": 79,
+    "minLevel": 31,
+    "maxLevel": 31,
+    "encounterRate": 5,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "berryForest",
+    "dexId": 54,
+    "minLevel": 5,
+    "maxLevel": 40,
+    "encounterRate": 95,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "berryForest",
+    "dexId": 55,
+    "minLevel": 35,
+    "maxLevel": 40,
+    "encounterRate": 5,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "berryForest",
+    "dexId": 79,
+    "minLevel": 5,
+    "maxLevel": 40,
+    "encounterRate": 95,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "berryForest",
+    "dexId": 80,
+    "minLevel": 35,
+    "maxLevel": 40,
+    "encounterRate": 5,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "berryForest",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 100,
+    "encounterMethod": "fish",
+    "requiresItem": "oldRod",
+    "formName": null
+  },
+  {
+    "locationId": "berryForest",
+    "dexId": 118,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 60,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "berryForest",
+    "dexId": 60,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 20,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "berryForest",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 20,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "berryForest",
+    "dexId": 118,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "berryForest",
+    "dexId": 119,
+    "minLevel": 20,
+    "maxLevel": 30,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "berryForest",
+    "dexId": 130,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 30,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "berryForest",
+    "dexId": 54,
+    "minLevel": 15,
+    "maxLevel": 35,
+    "encounterRate": 5,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "berryForest",
+    "dexId": 79,
+    "minLevel": 15,
+    "maxLevel": 35,
+    "encounterRate": 5,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "fourIsland",
+    "dexId": 194,
+    "minLevel": 5,
+    "maxLevel": 25,
+    "encounterRate": 70,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "fourIsland",
+    "dexId": 54,
+    "minLevel": 5,
+    "maxLevel": 35,
+    "encounterRate": 30,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "fourIsland",
+    "dexId": 183,
+    "minLevel": 5,
+    "maxLevel": 25,
+    "encounterRate": 70,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "fourIsland",
+    "dexId": 79,
+    "minLevel": 5,
+    "maxLevel": 35,
+    "encounterRate": 30,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "fourIsland",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 100,
+    "encounterMethod": "fish",
+    "requiresItem": "oldRod",
+    "formName": null
+  },
+  {
+    "locationId": "fourIsland",
+    "dexId": 60,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 120,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "fourIsland",
+    "dexId": 118,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "fourIsland",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "fourIsland",
+    "dexId": 60,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "fourIsland",
+    "dexId": 61,
+    "minLevel": 20,
+    "maxLevel": 30,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "fourIsland",
+    "dexId": 130,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 30,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "fourIsland",
+    "dexId": 54,
+    "minLevel": 15,
+    "maxLevel": 35,
+    "encounterRate": 5,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "fourIsland",
+    "dexId": 79,
+    "minLevel": 15,
+    "maxLevel": 35,
+    "encounterRate": 5,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave",
+    "dexId": 86,
+    "minLevel": 43,
+    "maxLevel": 47,
+    "encounterRate": 80,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave",
+    "dexId": 42,
+    "minLevel": 45,
+    "maxLevel": 48,
+    "encounterRate": 50,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave",
+    "dexId": 87,
+    "minLevel": 49,
+    "maxLevel": 53,
+    "encounterRate": 40,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave",
+    "dexId": 41,
+    "minLevel": 40,
+    "maxLevel": 40,
+    "encounterRate": 20,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave",
+    "dexId": 54,
+    "minLevel": 41,
+    "maxLevel": 41,
+    "encounterRate": 5,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave",
+    "dexId": 79,
+    "minLevel": 41,
+    "maxLevel": 41,
+    "encounterRate": 5,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave",
+    "dexId": 86,
+    "minLevel": 5,
+    "maxLevel": 35,
+    "encounterRate": 120,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave",
+    "dexId": 54,
+    "minLevel": 5,
+    "maxLevel": 35,
+    "encounterRate": 30,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave",
+    "dexId": 87,
+    "minLevel": 35,
+    "maxLevel": 40,
+    "encounterRate": 10,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave",
+    "dexId": 194,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 5,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave",
+    "dexId": 79,
+    "minLevel": 5,
+    "maxLevel": 35,
+    "encounterRate": 30,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave",
+    "dexId": 183,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 5,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 100,
+    "encounterMethod": "fish",
+    "requiresItem": "oldRod",
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave",
+    "dexId": 60,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 120,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave",
+    "dexId": 118,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave",
+    "dexId": 60,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave",
+    "dexId": 61,
+    "minLevel": 20,
+    "maxLevel": 30,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave",
+    "dexId": 130,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 30,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave",
+    "dexId": 54,
+    "minLevel": 15,
+    "maxLevel": 35,
+    "encounterRate": 5,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave",
+    "dexId": 79,
+    "minLevel": 15,
+    "maxLevel": 35,
+    "encounterRate": 5,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave1F2",
+    "dexId": 220,
+    "minLevel": 23,
+    "maxLevel": 31,
+    "encounterRate": 100,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave1F2",
+    "dexId": 42,
+    "minLevel": 45,
+    "maxLevel": 48,
+    "encounterRate": 50,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave1F2",
+    "dexId": 41,
+    "minLevel": 40,
+    "maxLevel": 40,
+    "encounterRate": 20,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave1F2",
+    "dexId": 86,
+    "minLevel": 45,
+    "maxLevel": 45,
+    "encounterRate": 20,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave1F2",
+    "dexId": 225,
+    "minLevel": 30,
+    "maxLevel": 30,
+    "encounterRate": 5,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave1F2",
+    "dexId": 215,
+    "minLevel": 30,
+    "maxLevel": 30,
+    "encounterRate": 5,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave1F3",
+    "dexId": 86,
+    "minLevel": 43,
+    "maxLevel": 47,
+    "encounterRate": 80,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave1F3",
+    "dexId": 42,
+    "minLevel": 45,
+    "maxLevel": 48,
+    "encounterRate": 50,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave1F3",
+    "dexId": 87,
+    "minLevel": 49,
+    "maxLevel": 53,
+    "encounterRate": 40,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave1F3",
+    "dexId": 41,
+    "minLevel": 40,
+    "maxLevel": 40,
+    "encounterRate": 20,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave1F3",
+    "dexId": 54,
+    "minLevel": 41,
+    "maxLevel": 41,
+    "encounterRate": 5,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave1F3",
+    "dexId": 79,
+    "minLevel": 41,
+    "maxLevel": 41,
+    "encounterRate": 5,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave1F3",
+    "dexId": 72,
+    "minLevel": 5,
+    "maxLevel": 45,
+    "encounterRate": 190,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave1F3",
+    "dexId": 73,
+    "minLevel": 35,
+    "maxLevel": 45,
+    "encounterRate": 8,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave1F3",
+    "dexId": 131,
+    "minLevel": 30,
+    "maxLevel": 45,
+    "encounterRate": 2,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave1F3",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 100,
+    "encounterMethod": "fish",
+    "requiresItem": "oldRod",
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave1F3",
+    "dexId": 116,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave1F3",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave1F3",
+    "dexId": 98,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave1F3",
+    "dexId": 116,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave1F3",
+    "dexId": 90,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave1F3",
+    "dexId": 130,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 30,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave1F3",
+    "dexId": 117,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 4,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave1F3",
+    "dexId": 54,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 1,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave1F3",
+    "dexId": 98,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave1F3",
+    "dexId": 120,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave1F3",
+    "dexId": 99,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 4,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "icefallCave1F3",
+    "dexId": 79,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 1,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "icefallCaveB1F",
+    "dexId": 220,
+    "minLevel": 23,
+    "maxLevel": 31,
+    "encounterRate": 100,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "icefallCaveB1F",
+    "dexId": 42,
+    "minLevel": 45,
+    "maxLevel": 48,
+    "encounterRate": 50,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "icefallCaveB1F",
+    "dexId": 41,
+    "minLevel": 40,
+    "maxLevel": 40,
+    "encounterRate": 20,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "icefallCaveB1F",
+    "dexId": 86,
+    "minLevel": 45,
+    "maxLevel": 45,
+    "encounterRate": 20,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "icefallCaveB1F",
+    "dexId": 225,
+    "minLevel": 30,
+    "maxLevel": 30,
+    "encounterRate": 5,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "icefallCaveB1F",
+    "dexId": 215,
+    "minLevel": 30,
+    "maxLevel": 30,
+    "encounterRate": 5,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "fiveIsland",
+    "dexId": 72,
+    "minLevel": 5,
+    "maxLevel": 40,
+    "encounterRate": 130,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "fiveIsland",
+    "dexId": 187,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 60,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "fiveIsland",
+    "dexId": 73,
+    "minLevel": 35,
+    "maxLevel": 40,
+    "encounterRate": 10,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "fiveIsland",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 100,
+    "encounterMethod": "fish",
+    "requiresItem": "oldRod",
+    "formName": null
+  },
+  {
+    "locationId": "fiveIsland",
+    "dexId": 116,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "fiveIsland",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "fiveIsland",
+    "dexId": 98,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "fiveIsland",
+    "dexId": 116,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "fiveIsland",
+    "dexId": 90,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "fiveIsland",
+    "dexId": 130,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 30,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "fiveIsland",
+    "dexId": 117,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 4,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "fiveIsland",
+    "dexId": 54,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 1,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "fiveIsland",
+    "dexId": 98,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "fiveIsland",
+    "dexId": 120,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "fiveIsland",
+    "dexId": 99,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 4,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "fiveIsland",
+    "dexId": 79,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 1,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "fiveIslandMeadow",
+    "dexId": 161,
+    "minLevel": 10,
+    "maxLevel": 15,
+    "encounterRate": 60,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "fiveIslandMeadow",
+    "dexId": 16,
+    "minLevel": 44,
+    "maxLevel": 44,
+    "encounterRate": 40,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "fiveIslandMeadow",
+    "dexId": 17,
+    "minLevel": 48,
+    "maxLevel": 50,
+    "encounterRate": 30,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "fiveIslandMeadow",
+    "dexId": 187,
+    "minLevel": 10,
+    "maxLevel": 15,
+    "encounterRate": 30,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "fiveIslandMeadow",
+    "dexId": 52,
+    "minLevel": 41,
+    "maxLevel": 41,
+    "encounterRate": 20,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "fiveIslandMeadow",
+    "dexId": 53,
+    "minLevel": 47,
+    "maxLevel": 50,
+    "encounterRate": 10,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "fiveIslandMeadow",
+    "dexId": 54,
+    "minLevel": 41,
+    "maxLevel": 41,
+    "encounterRate": 5,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "fiveIslandMeadow",
+    "dexId": 79,
+    "minLevel": 41,
+    "maxLevel": 41,
+    "encounterRate": 5,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "fiveIslandMeadow",
+    "dexId": 72,
+    "minLevel": 5,
+    "maxLevel": 40,
+    "encounterRate": 130,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "fiveIslandMeadow",
+    "dexId": 187,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 60,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "fiveIslandMeadow",
+    "dexId": 73,
+    "minLevel": 35,
+    "maxLevel": 40,
+    "encounterRate": 10,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "fiveIslandMeadow",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 100,
+    "encounterMethod": "fish",
+    "requiresItem": "oldRod",
+    "formName": null
+  },
+  {
+    "locationId": "fiveIslandMeadow",
+    "dexId": 116,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "fiveIslandMeadow",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "fiveIslandMeadow",
+    "dexId": 98,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "fiveIslandMeadow",
+    "dexId": 116,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "fiveIslandMeadow",
+    "dexId": 211,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "fiveIslandMeadow",
+    "dexId": 130,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 30,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "fiveIslandMeadow",
+    "dexId": 117,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 4,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "fiveIslandMeadow",
+    "dexId": 54,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 1,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "fiveIslandMeadow",
+    "dexId": 98,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "fiveIslandMeadow",
+    "dexId": 223,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "fiveIslandMeadow",
+    "dexId": 99,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 4,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "fiveIslandMeadow",
+    "dexId": 79,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 1,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "memorialPillar",
+    "dexId": 187,
+    "minLevel": 6,
+    "maxLevel": 16,
+    "encounterRate": 100,
+    "encounterMethod": "grass",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "memorialPillar",
+    "dexId": 72,
+    "minLevel": 5,
+    "maxLevel": 40,
+    "encounterRate": 130,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "memorialPillar",
+    "dexId": 187,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 60,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "memorialPillar",
+    "dexId": 73,
+    "minLevel": 35,
+    "maxLevel": 40,
+    "encounterRate": 10,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "memorialPillar",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 100,
+    "encounterMethod": "fish",
+    "requiresItem": "oldRod",
+    "formName": null
+  },
+  {
+    "locationId": "memorialPillar",
+    "dexId": 116,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "memorialPillar",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "memorialPillar",
+    "dexId": 98,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "memorialPillar",
+    "dexId": 116,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "memorialPillar",
+    "dexId": 211,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "memorialPillar",
+    "dexId": 130,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 30,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "memorialPillar",
+    "dexId": 117,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 4,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "memorialPillar",
+    "dexId": 54,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 1,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "memorialPillar",
+    "dexId": 98,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "memorialPillar",
+    "dexId": 223,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "memorialPillar",
+    "dexId": 99,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 4,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "memorialPillar",
+    "dexId": 79,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 1,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "waterLabyrinth",
+    "dexId": 175,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 2,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "waterLabyrinth",
+    "dexId": 72,
+    "minLevel": 5,
+    "maxLevel": 40,
+    "encounterRate": 130,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "waterLabyrinth",
+    "dexId": 187,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 60,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "waterLabyrinth",
+    "dexId": 73,
+    "minLevel": 35,
+    "maxLevel": 40,
+    "encounterRate": 10,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "waterLabyrinth",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 100,
+    "encounterMethod": "fish",
+    "requiresItem": "oldRod",
+    "formName": null
+  },
+  {
+    "locationId": "waterLabyrinth",
+    "dexId": 116,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "waterLabyrinth",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "waterLabyrinth",
+    "dexId": 98,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "waterLabyrinth",
+    "dexId": 116,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "waterLabyrinth",
+    "dexId": 211,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "waterLabyrinth",
+    "dexId": 130,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 30,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "waterLabyrinth",
+    "dexId": 117,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 4,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "waterLabyrinth",
+    "dexId": 54,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 1,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "waterLabyrinth",
+    "dexId": 98,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "waterLabyrinth",
+    "dexId": 223,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "waterLabyrinth",
+    "dexId": 99,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 4,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "waterLabyrinth",
+    "dexId": 79,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 1,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "resortGorgeous",
+    "dexId": 72,
+    "minLevel": 5,
+    "maxLevel": 40,
+    "encounterRate": 130,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "resortGorgeous",
+    "dexId": 187,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 60,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "resortGorgeous",
+    "dexId": 73,
+    "minLevel": 35,
+    "maxLevel": 40,
+    "encounterRate": 10,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "resortGorgeous",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 100,
+    "encounterMethod": "fish",
+    "requiresItem": "oldRod",
+    "formName": null
+  },
+  {
+    "locationId": "resortGorgeous",
+    "dexId": 116,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "resortGorgeous",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "resortGorgeous",
+    "dexId": 98,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "resortGorgeous",
+    "dexId": 116,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "resortGorgeous",
+    "dexId": 211,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "resortGorgeous",
+    "dexId": 130,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 30,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "resortGorgeous",
+    "dexId": 117,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 4,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "resortGorgeous",
+    "dexId": 54,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 1,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "resortGorgeous",
+    "dexId": 98,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "resortGorgeous",
+    "dexId": 223,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "resortGorgeous",
+    "dexId": 99,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 4,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "resortGorgeous",
+    "dexId": 79,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 1,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "lostCave",
+    "dexId": 93,
+    "minLevel": 44,
+    "maxLevel": 52,
+    "encounterRate": 60,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "lostCave",
+    "dexId": 92,
+    "minLevel": 38,
+    "maxLevel": 40,
+    "encounterRate": 50,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "lostCave",
+    "dexId": 41,
+    "minLevel": 37,
+    "maxLevel": 37,
+    "encounterRate": 40,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "lostCave",
+    "dexId": 42,
+    "minLevel": 41,
+    "maxLevel": 43,
+    "encounterRate": 40,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "lostCave",
+    "dexId": 198,
+    "minLevel": 22,
+    "maxLevel": 22,
+    "encounterRate": 5,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "lostCave",
+    "dexId": 200,
+    "minLevel": 22,
+    "maxLevel": 22,
+    "encounterRate": 5,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "lostCaveDepths",
+    "dexId": 93,
+    "minLevel": 44,
+    "maxLevel": 52,
+    "encounterRate": 60,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "lostCaveDepths",
+    "dexId": 92,
+    "minLevel": 40,
+    "maxLevel": 40,
+    "encounterRate": 40,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "lostCaveDepths",
+    "dexId": 41,
+    "minLevel": 37,
+    "maxLevel": 37,
+    "encounterRate": 40,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "lostCaveDepths",
+    "dexId": 42,
+    "minLevel": 41,
+    "maxLevel": 41,
+    "encounterRate": 20,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "lostCaveDepths",
+    "dexId": 198,
+    "minLevel": 15,
+    "maxLevel": 22,
+    "encounterRate": 20,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "lostCaveDepths",
+    "dexId": 200,
+    "minLevel": 15,
+    "maxLevel": 22,
+    "encounterRate": 20,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "waterPath",
+    "dexId": 161,
+    "minLevel": 10,
+    "maxLevel": 15,
+    "encounterRate": 60,
+    "encounterMethod": "grass",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "waterPath",
+    "dexId": 21,
+    "minLevel": 44,
+    "maxLevel": 44,
+    "encounterRate": 40,
+    "encounterMethod": "grass",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "waterPath",
+    "dexId": 22,
+    "minLevel": 48,
+    "maxLevel": 50,
+    "encounterRate": 30,
+    "encounterMethod": "grass",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "waterPath",
+    "dexId": 43,
+    "minLevel": 44,
+    "maxLevel": 44,
+    "encounterRate": 10,
+    "encounterMethod": "grass",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "waterPath",
+    "dexId": 52,
+    "minLevel": 41,
+    "maxLevel": 41,
+    "encounterRate": 20,
+    "encounterMethod": "grass",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "waterPath",
+    "dexId": 44,
+    "minLevel": 48,
+    "maxLevel": 48,
+    "encounterRate": 5,
+    "encounterMethod": "grass",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "waterPath",
+    "dexId": 53,
+    "minLevel": 47,
+    "maxLevel": 50,
+    "encounterRate": 10,
+    "encounterMethod": "grass",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "waterPath",
+    "dexId": 54,
+    "minLevel": 41,
+    "maxLevel": 41,
+    "encounterRate": 5,
+    "encounterMethod": "grass",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "waterPath",
+    "dexId": 69,
+    "minLevel": 44,
+    "maxLevel": 44,
+    "encounterRate": 10,
+    "encounterMethod": "grass",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "waterPath",
+    "dexId": 70,
+    "minLevel": 48,
+    "maxLevel": 48,
+    "encounterRate": 5,
+    "encounterMethod": "grass",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "waterPath",
+    "dexId": 79,
+    "minLevel": 41,
+    "maxLevel": 41,
+    "encounterRate": 5,
+    "encounterMethod": "grass",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "waterPath",
+    "dexId": 72,
+    "minLevel": 5,
+    "maxLevel": 40,
+    "encounterRate": 130,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "waterPath",
+    "dexId": 73,
+    "minLevel": 35,
+    "maxLevel": 40,
+    "encounterRate": 10,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "waterPath",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 100,
+    "encounterMethod": "fish",
+    "requiresItem": "oldRod",
+    "formName": null
+  },
+  {
+    "locationId": "waterPath",
+    "dexId": 116,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "waterPath",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "waterPath",
+    "dexId": 98,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "waterPath",
+    "dexId": 116,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "waterPath",
+    "dexId": 211,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "waterPath",
+    "dexId": 130,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 30,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "waterPath",
+    "dexId": 117,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 4,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "waterPath",
+    "dexId": 54,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 1,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "waterPath",
+    "dexId": 98,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "waterPath",
+    "dexId": 223,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "waterPath",
+    "dexId": 99,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 4,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "waterPath",
+    "dexId": 79,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 1,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "ruinValley",
+    "dexId": 177,
+    "minLevel": 15,
+    "maxLevel": 20,
+    "encounterRate": 50,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "ruinValley",
+    "dexId": 21,
+    "minLevel": 44,
+    "maxLevel": 44,
+    "encounterRate": 40,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "ruinValley",
+    "dexId": 22,
+    "minLevel": 49,
+    "maxLevel": 49,
+    "encounterRate": 20,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "ruinValley",
+    "dexId": 52,
+    "minLevel": 43,
+    "maxLevel": 43,
+    "encounterRate": 20,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "ruinValley",
+    "dexId": 193,
+    "minLevel": 18,
+    "maxLevel": 18,
+    "encounterRate": 20,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "ruinValley",
+    "dexId": 194,
+    "minLevel": 15,
+    "maxLevel": 15,
+    "encounterRate": 10,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "ruinValley",
+    "dexId": 53,
+    "minLevel": 49,
+    "maxLevel": 52,
+    "encounterRate": 10,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "ruinValley",
+    "dexId": 54,
+    "minLevel": 41,
+    "maxLevel": 41,
+    "encounterRate": 5,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "ruinValley",
+    "dexId": 202,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 10,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "ruinValley",
+    "dexId": 183,
+    "minLevel": 15,
+    "maxLevel": 15,
+    "encounterRate": 10,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "ruinValley",
+    "dexId": 79,
+    "minLevel": 41,
+    "maxLevel": 41,
+    "encounterRate": 5,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "ruinValley",
+    "dexId": 194,
+    "minLevel": 5,
+    "maxLevel": 25,
+    "encounterRate": 100,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "ruinValley",
+    "dexId": 183,
+    "minLevel": 5,
+    "maxLevel": 25,
+    "encounterRate": 100,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "ruinValley",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 100,
+    "encounterMethod": "fish",
+    "requiresItem": "oldRod",
+    "formName": null
+  },
+  {
+    "locationId": "ruinValley",
+    "dexId": 60,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 120,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "ruinValley",
+    "dexId": 118,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "ruinValley",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "ruinValley",
+    "dexId": 60,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "ruinValley",
+    "dexId": 61,
+    "minLevel": 20,
+    "maxLevel": 30,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "ruinValley",
+    "dexId": 130,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 30,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "ruinValley",
+    "dexId": 54,
+    "minLevel": 15,
+    "maxLevel": 35,
+    "encounterRate": 5,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "ruinValley",
+    "dexId": 79,
+    "minLevel": 15,
+    "maxLevel": 35,
+    "encounterRate": 5,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "greenPath",
+    "dexId": 72,
+    "minLevel": 5,
+    "maxLevel": 40,
+    "encounterRate": 95,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "greenPath",
+    "dexId": 73,
+    "minLevel": 35,
+    "maxLevel": 40,
+    "encounterRate": 5,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "greenPath",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 100,
+    "encounterMethod": "fish",
+    "requiresItem": "oldRod",
+    "formName": null
+  },
+  {
+    "locationId": "greenPath",
+    "dexId": 116,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "greenPath",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "greenPath",
+    "dexId": 98,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "greenPath",
+    "dexId": 116,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "greenPath",
+    "dexId": 211,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "greenPath",
+    "dexId": 130,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 30,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "greenPath",
+    "dexId": 117,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 4,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "greenPath",
+    "dexId": 54,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 1,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "greenPath",
+    "dexId": 98,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "greenPath",
+    "dexId": 223,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "greenPath",
+    "dexId": 99,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 4,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "greenPath",
+    "dexId": 79,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 1,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "patternBush",
+    "dexId": 167,
+    "minLevel": 9,
+    "maxLevel": 14,
+    "encounterRate": 35,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "patternBush",
+    "dexId": 14,
+    "minLevel": 9,
+    "maxLevel": 9,
+    "encounterRate": 25,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "patternBush",
+    "dexId": 214,
+    "minLevel": 15,
+    "maxLevel": 30,
+    "encounterRate": 40,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "patternBush",
+    "dexId": 10,
+    "minLevel": 6,
+    "maxLevel": 6,
+    "encounterRate": 20,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "patternBush",
+    "dexId": 13,
+    "minLevel": 6,
+    "maxLevel": 6,
+    "encounterRate": 20,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "patternBush",
+    "dexId": 165,
+    "minLevel": 9,
+    "maxLevel": 14,
+    "encounterRate": 35,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "patternBush",
+    "dexId": 11,
+    "minLevel": 9,
+    "maxLevel": 9,
+    "encounterRate": 25,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "outcastIsland",
+    "dexId": 72,
+    "minLevel": 5,
+    "maxLevel": 40,
+    "encounterRate": 95,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "outcastIsland",
+    "dexId": 73,
+    "minLevel": 35,
+    "maxLevel": 40,
+    "encounterRate": 5,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "outcastIsland",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 100,
+    "encounterMethod": "fish",
+    "requiresItem": "oldRod",
+    "formName": null
+  },
+  {
+    "locationId": "outcastIsland",
+    "dexId": 116,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "outcastIsland",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "outcastIsland",
+    "dexId": 98,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "outcastIsland",
+    "dexId": 116,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "outcastIsland",
+    "dexId": 211,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "outcastIsland",
+    "dexId": 130,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 30,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "outcastIsland",
+    "dexId": 117,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 4,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "outcastIsland",
+    "dexId": 54,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 1,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "outcastIsland",
+    "dexId": 98,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "outcastIsland",
+    "dexId": 223,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "outcastIsland",
+    "dexId": 99,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 4,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "outcastIsland",
+    "dexId": 79,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 1,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "alteringCave",
+    "dexId": 41,
+    "minLevel": 6,
+    "maxLevel": 16,
+    "encounterRate": 1,
+    "encounterMethod": null,
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "alteringCave",
+    "dexId": 179,
+    "minLevel": 3,
+    "maxLevel": 13,
+    "encounterRate": 1,
+    "encounterMethod": null,
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "alteringCave",
+    "dexId": 204,
+    "minLevel": 19,
+    "maxLevel": 29,
+    "encounterRate": 1,
+    "encounterMethod": null,
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "alteringCave",
+    "dexId": 228,
+    "minLevel": 12,
+    "maxLevel": 20,
+    "encounterRate": 1,
+    "encounterMethod": null,
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "alteringCave",
+    "dexId": 216,
+    "minLevel": 18,
+    "maxLevel": 28,
+    "encounterRate": 1,
+    "encounterMethod": null,
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "alteringCave",
+    "dexId": 190,
+    "minLevel": 18,
+    "maxLevel": 28,
+    "encounterRate": 1,
+    "encounterMethod": null,
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "alteringCave",
+    "dexId": 213,
+    "minLevel": 18,
+    "maxLevel": 28,
+    "encounterRate": 1,
+    "encounterMethod": null,
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "alteringCave",
+    "dexId": 234,
+    "minLevel": 18,
+    "maxLevel": 28,
+    "encounterRate": 1,
+    "encounterMethod": null,
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "alteringCave",
+    "dexId": 235,
+    "minLevel": 18,
+    "maxLevel": 28,
+    "encounterRate": 1,
+    "encounterMethod": null,
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "trainerTower",
+    "dexId": 72,
+    "minLevel": 5,
+    "maxLevel": 40,
+    "encounterRate": 95,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "trainerTower",
+    "dexId": 73,
+    "minLevel": 35,
+    "maxLevel": 40,
+    "encounterRate": 5,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "trainerTower",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 100,
+    "encounterMethod": "fish",
+    "requiresItem": "oldRod",
+    "formName": null
+  },
+  {
+    "locationId": "trainerTower",
+    "dexId": 116,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "trainerTower",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "trainerTower",
+    "dexId": 98,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "trainerTower",
+    "dexId": 116,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "trainerTower",
+    "dexId": 211,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "trainerTower",
+    "dexId": 130,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 30,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "trainerTower",
+    "dexId": 117,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 4,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "trainerTower",
+    "dexId": 54,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 1,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "trainerTower",
+    "dexId": 98,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "trainerTower",
+    "dexId": 223,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "trainerTower",
+    "dexId": 99,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 4,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "trainerTower",
+    "dexId": 79,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 1,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "canyonEntrance",
+    "dexId": 161,
+    "minLevel": 10,
+    "maxLevel": 15,
+    "encounterRate": 60,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "canyonEntrance",
+    "dexId": 21,
+    "minLevel": 44,
+    "maxLevel": 44,
+    "encounterRate": 40,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "canyonEntrance",
+    "dexId": 22,
+    "minLevel": 48,
+    "maxLevel": 50,
+    "encounterRate": 30,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "canyonEntrance",
+    "dexId": 231,
+    "minLevel": 10,
+    "maxLevel": 15,
+    "encounterRate": 30,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "canyonEntrance",
+    "dexId": 52,
+    "minLevel": 41,
+    "maxLevel": 41,
+    "encounterRate": 20,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "canyonEntrance",
+    "dexId": 53,
+    "minLevel": 47,
+    "maxLevel": 50,
+    "encounterRate": 10,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "canyonEntrance",
+    "dexId": 54,
+    "minLevel": 41,
+    "maxLevel": 41,
+    "encounterRate": 5,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "canyonEntrance",
+    "dexId": 79,
+    "minLevel": 41,
+    "maxLevel": 41,
+    "encounterRate": 5,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "seavaultCanyon",
+    "dexId": 74,
+    "minLevel": 46,
+    "maxLevel": 46,
+    "encounterRate": 40,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "seavaultCanyon",
+    "dexId": 231,
+    "minLevel": 20,
+    "maxLevel": 20,
+    "encounterRate": 40,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "seavaultCanyon",
+    "dexId": 22,
+    "minLevel": 50,
+    "maxLevel": 50,
+    "encounterRate": 25,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "seavaultCanyon",
+    "dexId": 52,
+    "minLevel": 43,
+    "maxLevel": 43,
+    "encounterRate": 20,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "seavaultCanyon",
+    "dexId": 104,
+    "minLevel": 46,
+    "maxLevel": 46,
+    "encounterRate": 20,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "seavaultCanyon",
+    "dexId": 105,
+    "minLevel": 52,
+    "maxLevel": 52,
+    "encounterRate": 20,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "seavaultCanyon",
+    "dexId": 53,
+    "minLevel": 49,
+    "maxLevel": 52,
+    "encounterRate": 10,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "seavaultCanyon",
+    "dexId": 95,
+    "minLevel": 54,
+    "maxLevel": 54,
+    "encounterRate": 10,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "seavaultCanyon",
+    "dexId": 227,
+    "minLevel": 30,
+    "maxLevel": 30,
+    "encounterRate": 5,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "seavaultCanyon",
+    "dexId": 246,
+    "minLevel": 15,
+    "maxLevel": 20,
+    "encounterRate": 10,
+    "encounterMethod": "grass",
+    "requiresItem": null,
+    "formName": null
+  },
+  {
+    "locationId": "seavaultCanyon",
+    "dexId": 74,
+    "minLevel": 25,
+    "maxLevel": 40,
+    "encounterRate": 65,
+    "encounterMethod": "rock-smash",
+    "requiresItem": "hm-rockSmash",
+    "formName": null
+  },
+  {
+    "locationId": "seavaultCanyon",
+    "dexId": 75,
+    "minLevel": 30,
+    "maxLevel": 50,
+    "encounterRate": 35,
+    "encounterMethod": "rock-smash",
+    "requiresItem": "hm-rockSmash",
+    "formName": null
+  },
+  {
+    "locationId": "tanobyRuins",
+    "dexId": 72,
+    "minLevel": 5,
+    "maxLevel": 40,
+    "encounterRate": 185,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "tanobyRuins",
+    "dexId": 73,
+    "minLevel": 35,
+    "maxLevel": 40,
+    "encounterRate": 10,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "tanobyRuins",
+    "dexId": 226,
+    "minLevel": 35,
+    "maxLevel": 40,
+    "encounterRate": 5,
+    "encounterMethod": "surf",
+    "requiresItem": "hm-surf",
+    "formName": null
+  },
+  {
+    "locationId": "tanobyRuins",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 5,
+    "encounterRate": 100,
+    "encounterMethod": "fish",
+    "requiresItem": "oldRod",
+    "formName": null
+  },
+  {
+    "locationId": "tanobyRuins",
+    "dexId": 116,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "tanobyRuins",
+    "dexId": 129,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "tanobyRuins",
+    "dexId": 98,
+    "minLevel": 5,
+    "maxLevel": 15,
+    "encounterRate": 80,
+    "encounterMethod": "fish",
+    "requiresItem": "goodRod",
+    "formName": null
+  },
+  {
+    "locationId": "tanobyRuins",
+    "dexId": 116,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "tanobyRuins",
+    "dexId": 211,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "tanobyRuins",
+    "dexId": 130,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 30,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "tanobyRuins",
+    "dexId": 117,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 4,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "tanobyRuins",
+    "dexId": 54,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 1,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "tanobyRuins",
+    "dexId": 98,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "tanobyRuins",
+    "dexId": 223,
+    "minLevel": 15,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "tanobyRuins",
+    "dexId": 99,
+    "minLevel": 25,
+    "maxLevel": 35,
+    "encounterRate": 4,
+    "encounterMethod": "fish",
+    "requiresItem": "superRod",
+    "formName": null
+  },
+  {
+    "locationId": "moneanChamber",
+    "dexId": 201,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 99,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": "A"
+  },
+  {
+    "locationId": "moneanChamber",
+    "dexId": 201,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 1,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": "?"
+  },
+  {
+    "locationId": "liptooChamber",
+    "dexId": 201,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 50,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": "C"
+  },
+  {
+    "locationId": "liptooChamber",
+    "dexId": 201,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 30,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": "D"
+  },
+  {
+    "locationId": "liptooChamber",
+    "dexId": 201,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 14,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": "H"
+  },
+  {
+    "locationId": "liptooChamber",
+    "dexId": 201,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 5,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": "U"
+  },
+  {
+    "locationId": "liptooChamber",
+    "dexId": 201,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 1,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": "O"
+  },
+  {
+    "locationId": "weepethChamber",
+    "dexId": 201,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 60,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": "N"
+  },
+  {
+    "locationId": "weepethChamber",
+    "dexId": 201,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 30,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": "S"
+  },
+  {
+    "locationId": "weepethChamber",
+    "dexId": 201,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 8,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": "I"
+  },
+  {
+    "locationId": "weepethChamber",
+    "dexId": 201,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 2,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": "E"
+  },
+  {
+    "locationId": "dilfordChamber",
+    "dexId": 201,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": "P"
+  },
+  {
+    "locationId": "dilfordChamber",
+    "dexId": 201,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 20,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": "J"
+  },
+  {
+    "locationId": "dilfordChamber",
+    "dexId": 201,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 20,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": "L"
+  },
+  {
+    "locationId": "dilfordChamber",
+    "dexId": 201,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 14,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": "R"
+  },
+  {
+    "locationId": "dilfordChamber",
+    "dexId": 201,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 6,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": "Q"
+  },
+  {
+    "locationId": "scufibChamber",
+    "dexId": 201,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 40,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": "Y"
+  },
+  {
+    "locationId": "scufibChamber",
+    "dexId": 201,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 25,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": "G"
+  },
+  {
+    "locationId": "scufibChamber",
+    "dexId": 201,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 20,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": "T"
+  },
+  {
+    "locationId": "scufibChamber",
+    "dexId": 201,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 13,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": "F"
+  },
+  {
+    "locationId": "scufibChamber",
+    "dexId": 201,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 2,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": "K"
+  },
+  {
+    "locationId": "rixyChamber",
+    "dexId": 201,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 50,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": "V"
+  },
+  {
+    "locationId": "rixyChamber",
+    "dexId": 201,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 30,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": "W"
+  },
+  {
+    "locationId": "rixyChamber",
+    "dexId": 201,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 10,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": "X"
+  },
+  {
+    "locationId": "rixyChamber",
+    "dexId": 201,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 8,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": "M"
+  },
+  {
+    "locationId": "rixyChamber",
+    "dexId": 201,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 2,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": "B"
+  },
+  {
+    "locationId": "viapoisChamber",
+    "dexId": 201,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 99,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": "Z"
+  },
+  {
+    "locationId": "viapoisChamber",
+    "dexId": 201,
+    "minLevel": 25,
+    "maxLevel": 25,
+    "encounterRate": 1,
+    "encounterMethod": "cave",
+    "requiresItem": null,
+    "formName": "!"
   }
 ];
 

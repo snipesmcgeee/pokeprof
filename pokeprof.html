@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.45.4</title>
+<title>PokeProf v0.45.5</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -143,7 +143,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span id="game-version-display" style="font-size:11px;color:var(--main-text-muted);">v0.45.4</span></h1>
+  <h1>PokeProf <span id="game-version-display" style="font-size:11px;color:var(--main-text-muted);">v0.45.5</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">100.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -548,7 +548,7 @@ function buildRouteTable(locationId,trainerBag=state.aides[0].trainerBag){
       if(!e.requiresItem) return true;
       return !!(trainerBag&&trainerBag[e.requiresItem]&&trainerBag[e.requiresItem]>0);
     })
-    .map(e=>({dexId:e.dexId,minLv:e.minLevel,maxLv:e.maxLevel,weight:e.encounterRate,method:getEncounterSubMethod(e.encounterMethod||'grass',e.requiresItem),requiresItem:e.requiresItem||null}));
+    .map(e=>({dexId:e.dexId,minLv:e.minLevel,maxLv:e.maxLevel,weight:e.encounterRate,method:getEncounterSubMethod(e.encounterMethod||'grass',e.requiresItem),requiresItem:e.requiresItem||null,formName:e.formName||null})); // v0.45.5 — formName threaded through from the raw ENCOUNTERS row
 }
 
 // v0.26 — split from a single shared ENC_INTERVAL=30 into separate open/closed values.
@@ -562,7 +562,7 @@ const ENC_INTERVAL_CLOSED = 30;
 // string independently, with nothing forcing them to agree — v0.44.3's delivery updated one and
 // missed the other. Both now render FROM this constant at boot (see init()) — bumping a version
 // is a one-line edit here, and the two displays can no longer drift apart.
-const GAME_VERSION = '0.45.4';
+const GAME_VERSION = '0.45.5';
 const FRIENDSHIP_THRESHOLD = 220;
 // v0.22 — highest level-based evolution across the whole franchise is Zweilous->Hydreigon
 // at level 64; 65 clears it with the minimum safe margin. Used to rule out 'level' as a
@@ -2142,12 +2142,34 @@ function migrateResearchLogKeys(oldLog){
   });
   return migrated;
 }
+// v0.45.5 — same re-keying pattern as migrateResearchLogKeys() above, applied to the per-location
+// inner dexId keys of state.locationEncounterLog ({[locId]: {[dexId]: {seen,caught}}}). Must run
+// before the existing v11->v12 flat-count-to-{seen,caught} shape migration below reads this object,
+// same ordering constraint migrateResearchLogKeys() has relative to its own downstream consumers.
+function migrateLocationEncounterLogKeys(oldLog){
+  const migrated={};
+  Object.keys(oldLog||{}).forEach(locId=>{
+    const entries=oldLog[locId]||{};
+    const migratedEntries={};
+    Object.keys(entries).forEach(key=>{
+      if(key.indexOf('|')!==-1){ migratedEntries[key]=entries[key]; return; } // already compound-keyed
+      migratedEntries[key+'|']=entries[key]; // bare dexId -> that dexId's base-form (formName:null) key
+    });
+    migrated[locId]=migratedEntries;
+  });
+  return migrated;
+}
 // v0.33 — hardened from a length comparison to a content check. The length-only version could
 // be fooled by any stray/duplicate entry inflating testedMethods.length past EVOLUTION_METHODS
 // .length without every real method having been individually attempted (the "38/36" bug) — this
 // is immune to that regardless of source, not just the specific cause fixed elsewhere.
 function isNonEvolutionConfirmed(r){
   return !!r && EVOLUTION_METHODS.every(m=>r.testedMethods.includes(m));
+}
+// v0.45.5 — key format for state.locationEncounterLog[locId][...], matching the researchLog/
+// formsDiscovered dexId+'|'+(formName||'') convention. See "Wild Encounter Form Resolution".
+function encLogKey(dexId,formName){
+  return dexId+'|'+(formName||'');
 }
 function recordSighting(dexId,level,formName){
   const r=getResearch(dexId,formName);
@@ -2970,20 +2992,21 @@ function processAideOfflineTime(idx,secsAway,summary){
       const encLocKey=aide.currentLocation;
       if(!state.locationEncounterLog[encLocKey]) state.locationEncounterLog[encLocKey]={};
       const encDexKey=parseInt(enc.pokedexId)||0;
+      const encFormKey=encLogKey(encDexKey,enc.formName); // v0.45.5 — dexId+'|'+(formName||'')
       if(encDexKey){
-        if(!state.locationEncounterLog[encLocKey][encDexKey]) state.locationEncounterLog[encLocKey][encDexKey]={seen:0,caught:0};
-        state.locationEncounterLog[encLocKey][encDexKey].seen++;
+        if(!state.locationEncounterLog[encLocKey][encFormKey]) state.locationEncounterLog[encLocKey][encFormKey]={seen:0,caught:0};
+        state.locationEncounterLog[encLocKey][encFormKey].seen++;
         // v0.24 — fires here, at encounter generation, regardless of catch outcome (offline
         // equivalent of the same live-path fix in gameTick()).
-        recordSighting(encDexKey,enc.level);
-        recordNewSpecies(encDexKey,enc.species);
+        recordSighting(encDexKey,enc.level,enc.formName);
+        recordNewSpecies(encDexKey,enc.species,enc.formName);
       }
 
       // Step 1 equivalent — shiny check fires before anything else, same as live. Auto-catch,
       // no ball consumed. (Unchanged by v0.30 — this logic already existed pre-v0.30; preserved
       // here exactly, just relocated above the new revive/potion parity block below.)
       if(Math.random()<(1/4096)){
-        const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId);
+        const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId,enc.formName);
         caught.isShiny=true;
         state.dex.push(caught); state.totalCatches++; state.totalSightings++;
         summary.catches++; summary.shinies=(summary.shinies||0)+1;
@@ -2991,12 +3014,12 @@ function processAideOfflineTime(idx,secsAway,summary){
         recordFormDiscovered(caught.pokedexId,caught.formName); // v0.45
         recordAbilityObserved(caught.pokedexId,caught.ability,caught.formName);
         recordGenderObserved(caught.pokedexId,caught.gender,caught.formName);
-        const s_=getPokemonEntry(enc.pokedexId);
+        const s_=getPokemonEntry(enc.pokedexId,enc.formName); // v0.45.5 — form-aware EXP-yield lookup
         const exp=Math.floor(((s_?s_.baseExpYield:51)||51)*enc.level/7);
         distributeExp(lead,exp,idx,true);
         recordCapture(caught.pokedexId,enc.species,caught.formName);
         logCaptureRarity(caught,false);
-        if(encDexKey) state.locationEncounterLog[encLocKey][encDexKey].caught++;
+        if(encDexKey) state.locationEncounterLog[encLocKey][encLogKey(encDexKey,enc.formName)].caught++;
         checkSpeciesCap(caught,idx);
         advanceTravelPath(idx);
         continue;
@@ -3035,13 +3058,13 @@ function runWildEncounterLoopSilent(lead,enc,summary,encLocKey,encDexKey,idx=0){
     const hasBalls=getBallCount()>0;
     // v0.44.4 fix — same fix as the live runWildEncounterLoop(); see that function's comment
     // for the full writeup.
-    const canCatchThisSpecies=hasBalls&&!(state.avoidCappedSpecies&&state.dex.filter(p=>p.pokedexId===enc.pokedexId&&!p.isShiny&&!p.holder).length>=getEffectiveSpeciesCap(enc.pokedexId));
-    const throwDecision=hasBalls?decideWildBallThrow(wild.currentHP,wild.maxHP,wild.catchRate,enc.pokedexId,round%2===0):null;
+    const canCatchThisSpecies=hasBalls&&!(state.avoidCappedSpecies&&state.dex.filter(p=>p.pokedexId===enc.pokedexId&&!p.isShiny&&!p.holder&&sameCapPool(enc.pokedexId,enc.formName,p.formName)).length>=getEffectiveSpeciesCap(enc.pokedexId));
+    const throwDecision=hasBalls?decideWildBallThrow(wild.currentHP,wild.maxHP,wild.catchRate,enc.pokedexId,round%2===0,enc.formName):null;
 
     if(throwDecision){
       useItemFromBag(throwDecision.ballId,null);
       if(Math.random()<throwDecision.prob){
-        const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId);
+        const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId,enc.formName);
         state.dex.push(caught); state.totalCatches++; state.totalSightings++;
         summary.catches++;
         state.dexHistory[caught.pokedexId]=(state.dexHistory[caught.pokedexId]||0)+1;
@@ -3052,7 +3075,7 @@ function runWildEncounterLoopSilent(lead,enc,summary,encLocKey,encDexKey,idx=0){
         distributeExp(lead,exp,idx,true);
         recordCapture(caught.pokedexId,enc.species,caught.formName);
         logCaptureRarity(caught,false);
-        if(encDexKey) state.locationEncounterLog[encLocKey][encDexKey].caught++;
+        if(encDexKey) state.locationEncounterLog[encLocKey][encLogKey(encDexKey,enc.formName)].caught++;
         checkSpeciesCap(caught,idx);
         return;
       }
@@ -3208,7 +3231,7 @@ function rollFromTable(table){
     r-=(e.weight||10);
     if(r<=0){
       const lv=Math.floor(Math.random()*(e.maxLv-e.minLv+1))+e.minLv;
-      const entry=getPokemonEntry(e.dexId);
+      const entry=getPokemonEntry(e.dexId,e.formName); // v0.45.5 — form-aware resolution
       const name=entry?entry.name:'#'+e.dexId;
       const genderMalePct=entry?entry.genderMalePct:50;
       let gender='M';
@@ -3217,7 +3240,7 @@ function rollFromTable(table){
       else if(genderMalePct===100) gender='M';
       else gender=Math.random()*100<genderMalePct?'M':'F';
       // Always use parseInt to ensure numeric pokedexId for encounter log key integrity
-      return {species:name,level:lv,gender,pokedexId:parseInt(e.dexId),baseSpd:entry?entry.baseSpd||50:50};
+      return {species:name,level:lv,gender,pokedexId:parseInt(e.dexId),formName:e.formName||null,baseSpd:entry?entry.baseSpd||50:50}; // v0.45.5 — formName carried onto the encounter object
     }
   }
   return null;
@@ -3269,9 +3292,26 @@ function removePokemonFromBoxAndParty(id){
   });
 }
 
+// v0.45.5 — reads the Pokedex row's formNature field: exactly "Permanent" means this form is
+// caught/capped/dex-tracked as its own species (Unown, regional variants going forward); any other
+// value (blank, "Temporary", or a row that hasn't been given one) is Temporary — today's dexId-only
+// pooling, zero behavior change. See DESIGN.md "Permanent vs. Temporary Form Nature".
+function isPermanentFormNature(dexId,formName){
+  const entry=getPokemonEntry(dexId,formName);
+  return !!(entry&&entry.formNature==='Permanent');
+}
+// v0.45.5 — whether two same-dexId individuals/candidates share one species-cap pool. Temporary-
+// nature (default): always true, matches today's exact form-blind behavior. Permanent-nature: only
+// true on an exact form match — each form (e.g. each Unown letter) is its own independent pool.
+function sameCapPool(dexId,formNameA,formNameB){
+  if(!isPermanentFormNature(dexId,formNameA)) return true;
+  return (formNameA||null)===(formNameB||null);
+}
 // v0.38 — this species' effective cap: the per-species override if one is set, else the global
 // state.speciesCap. Single source of truth for every cap check below (see "Per-Species Cap
 // Overrides").
+// v0.45.5 — stays keyed by bare dexId even for Permanent-nature species: one override value
+// applies uniformly to every form of that species (see "Permanent vs. Temporary Form Nature").
 function getEffectiveSpeciesCap(dexId){
   const ov=state.speciesCapOverrides&&state.speciesCapOverrides[dexId];
   return (ov!=null)?ov:(state.speciesCap||6);
@@ -3289,16 +3329,28 @@ function getEffectiveSpeciesCap(dexId){
 // v0.44 — Universal Species-Cap Enforcement: box membership means neither held NOR breeding.
 // Same gap as checkSpeciesCap() below had — a breeding individual could previously be swept when
 // lowering the global cap.
+// v0.45.5 — Permanent-nature species (each form its own cap pool, see "Permanent vs. Temporary
+// Form Nature") must be swept per form, not as one combined dexId-wide pool; Temporary-nature
+// (default) keeps today's exact single-pool behavior, unchanged.
 function sweepSpeciesToCap(dexId,cap){
   const allBoxed=state.dex.filter(p=>p.pokedexId===dexId&&!p.isShiny&&!p.holder&&!p.breeding);
-  if(allBoxed.length<=cap) return 0;
-  allBoxed.sort((a,b)=>a.id-b.id);
-  const toRelease=new Set(allBoxed.slice(cap).map(p=>p.id));
-  state.dex=state.dex.filter(p=>!toRelease.has(p.id));
-  state.aides.forEach(aide=>{
-    aide.party=aide.party.filter(p=>!toRelease.has(p.id));
+  if(!allBoxed.length) return 0;
+  const isPermanent=isPermanentFormNature(dexId,allBoxed[0].formName);
+  const groups=isPermanent
+    ? Object.values(allBoxed.reduce((acc,p)=>{ const k=(p.formName||''); (acc[k]=acc[k]||[]).push(p); return acc; },{}))
+    : [allBoxed];
+  let releasedCount=0;
+  groups.forEach(group=>{
+    if(group.length<=cap) return;
+    group.sort((a,b)=>a.id-b.id);
+    const toRelease=new Set(group.slice(cap).map(p=>p.id));
+    state.dex=state.dex.filter(p=>!toRelease.has(p.id));
+    state.aides.forEach(aide=>{
+      aide.party=aide.party.filter(p=>!toRelease.has(p.id));
+    });
+    releasedCount+=toRelease.size;
   });
-  return toRelease.size;
+  return releasedCount;
 }
 
 // Per-species cap: flat max 6 non-shiny individuals, regardless of aide count. Shiny exempt.
@@ -3335,14 +3387,20 @@ function sweepSpeciesToCap(dexId,cap){
 // v0.44 — Universal Species-Cap Enforcement: exemption is holder OR breeding (was holder only),
 // and the box-pool filter adds the same &&!p.breeding. Box membership means neither — see
 // DESIGN.md "Universal Species-Cap Enforcement — Box Membership Only".
+// v0.45.5 — liveNonShinyBox and the family-donation pool both respect Permanent-nature form
+// pooling via sameCapPool(): unchanged (dexId-only) for Temporary-nature species, form-exact for
+// Permanent-nature ones. See "Permanent vs. Temporary Form Nature".
 function checkSpeciesCap(individual,idx=0){
   if(individual.isShiny) return; // shinies never released
   if(individual.holder||individual.breeding) return; // party AND breeding are exempt from the cap entirely
   const cap=getEffectiveSpeciesCap(individual.pokedexId);
-  const liveNonShinyBox=state.dex.filter(p=>p.pokedexId===individual.pokedexId&&!p.isShiny&&!p.holder&&!p.breeding);
+  const liveNonShinyBox=state.dex.filter(p=>p.pokedexId===individual.pokedexId&&!p.isShiny&&!p.holder&&!p.breeding&&sameCapPool(individual.pokedexId,individual.formName,p.formName));
   if(liveNonShinyBox.length<=cap) return;
   const familyIds=getFamilyDexIds(individual.pokedexId);
-  const pool=state.dex.filter(p=>p.id!==individual.id&&familyIds.includes(p.pokedexId));
+  // Cross-dexId family members (real evolution relatives) are unaffected by form pooling — they're
+  // already distinct species by dexId. Only same-dexId candidates (this species' own other forms)
+  // are gated by sameCapPool(), so a Permanent-nature species' donation pool stays per-form too.
+  const pool=state.dex.filter(p=>p.id!==individual.id&&familyIds.includes(p.pokedexId)&&(p.pokedexId!==individual.pokedexId||sameCapPool(individual.pokedexId,individual.formName,p.formName)));
   pool.sort((a,b)=>b.level-a.level);
   const wildIV=ivTotal(individual);
   const recipient=pool.find(p=>ivTotal(p)<wildIV);
@@ -3530,14 +3588,14 @@ function resolveEncounterStep(idx=0){
   // Step 1: Shiny check — fires before anything else. Auto-catch, no ball needed.
   if(Math.random()<(1/4096)){
     const lead=getLeadPokemon(idx); if(!lead){ endMission('faint',idx); return; }
-    const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId);
+    const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId,enc.formName);
     caught.isShiny=true;
     state.dex.push(caught); state.totalCatches++; state.totalSightings++;
     state.dexHistory[caught.pokedexId]=(state.dexHistory[caught.pokedexId]||0)+1;
     recordFormDiscovered(caught.pokedexId,caught.formName); // v0.45
     recordAbilityObserved(caught.pokedexId,caught.ability,caught.formName);
     recordGenderObserved(caught.pokedexId,caught.gender,caught.formName);
-    const s_=getPokemonEntry(enc.pokedexId);
+    const s_=getPokemonEntry(enc.pokedexId,enc.formName); // v0.45.5 — form-aware EXP-yield lookup
     const exp=Math.floor(((s_?s_.baseExpYield:51)||51)*enc.level/7);
     distributeExp(lead,exp,idx,false);
     recordCapture(caught.pokedexId,enc.species,caught.formName);
@@ -3589,14 +3647,16 @@ function catchProbabilityForBall(ballId,wildHP,wildMaxHP,speciesCatchRate){
 // round. Zero-balls guard is handled by the caller (hasBalls check before calling this at all).
 // isThrowTurn = whether THIS round is a throw round per the alternating schedule (round 0, 2, 4...
 // starting with a throw) — irrelevant once wildHP<=1, which always throws every round.
-function decideWildBallThrow(wildHP,wildMaxHP,speciesCatchRate,dexId,isThrowTurn){
+function decideWildBallThrow(wildHP,wildMaxHP,speciesCatchRate,dexId,isThrowTurn,formName=null){
   // v0.40 — global toggle: skip the catch attempt entirely for a species already at/over its
   // effective (per-species-override-respecting) cap. Only ever reached for non-shiny encounters —
   // shiny catches are a separate auto-catch check earlier in the pipeline, never reach this
   // function at all — so no shiny-exemption logic is needed here.
+  // v0.45.5 — box count respects Permanent-nature form pooling via sameCapPool(); see "Permanent
+  // vs. Temporary Form Nature".
   if(state.avoidCappedSpecies){
     const cap=getEffectiveSpeciesCap(dexId);
-    const boxCount=state.dex.filter(p=>p.pokedexId===dexId&&!p.isShiny&&!p.holder).length;
+    const boxCount=state.dex.filter(p=>p.pokedexId===dexId&&!p.isShiny&&!p.holder&&sameCapPool(dexId,formName,p.formName)).length;
     if(boxCount>=cap) return null;
   }
   const owned=getOwnedBallsAscending();
@@ -3619,8 +3679,8 @@ function decideWildBallThrow(wildHP,wildMaxHP,speciesCatchRate,dexId,isThrowTurn
 // turn loop. Move assignment is literally pickDefaultMove(), same as a freshly-caught Pokemon
 // (one move, power 40) — see DESIGN.md "Wild Pokemon Move Assignment".
 function makeWildBattler(enc){
-  const entry=getPokemonEntry(enc.pokedexId);
-  const maxHP=calcMaxHP(enc.species,enc.level,enc.pokedexId);
+  const entry=getPokemonEntry(enc.pokedexId,enc.formName); // v0.45.5 — form-aware resolution
+  const maxHP=calcMaxHP(enc.species,enc.level,enc.pokedexId,0,enc.formName); // v0.45.5 — form-aware stats
   return {
     pokedexId:enc.pokedexId,level:enc.level,currentHP:maxHP,maxHP,
     equippedMoves:[pickDefaultMove(entry)],
@@ -3653,8 +3713,8 @@ function runWildEncounterLoop(lead,enc,idx=0){
     // never reach 0 HP, wildDefeated never fired, and the fight only ever ended in a party wipe.
     // Fix: the floor now checks the same real availability decideWildBallThrow() checks, so once
     // a species is genuinely uncatchable this encounter, combat can conclude normally.
-    const canCatchThisSpecies=hasBalls&&!(state.avoidCappedSpecies&&state.dex.filter(p=>p.pokedexId===enc.pokedexId&&!p.isShiny&&!p.holder).length>=getEffectiveSpeciesCap(enc.pokedexId));
-    const throwDecision=hasBalls?decideWildBallThrow(wild.currentHP,wild.maxHP,wild.catchRate,enc.pokedexId,round%2===0):null;
+    const canCatchThisSpecies=hasBalls&&!(state.avoidCappedSpecies&&state.dex.filter(p=>p.pokedexId===enc.pokedexId&&!p.isShiny&&!p.holder&&sameCapPool(enc.pokedexId,enc.formName,p.formName)).length>=getEffectiveSpeciesCap(enc.pokedexId));
+    const throwDecision=hasBalls?decideWildBallThrow(wild.currentHP,wild.maxHP,wild.catchRate,enc.pokedexId,round%2===0,enc.formName):null;
 
     if(throwDecision){
       // Ball throw always resolves before any speed check.
@@ -3729,7 +3789,7 @@ function runWildEncounterLoop(lead,enc,idx=0){
 
 function catchPokemon(lead,enc,isShiny,idx=0){
   const aide=state.aides[idx];
-  const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId);
+  const caught=makePokemon(enc.species,enc.level,enc.gender,null,enc.pokedexId,enc.formName);
   caught.isShiny=isShiny;
   state.dex.push(caught); state.totalCatches++; state.totalSightings++;
   state.dexHistory[caught.pokedexId]=(state.dexHistory[caught.pokedexId]||0)+1;
@@ -3738,7 +3798,7 @@ function catchPokemon(lead,enc,isShiny,idx=0){
   recordGenderObserved(caught.pokedexId,caught.gender,caught.formName);
   if(isShiny) addLog(aide.emoji+' '+aide.name+': ✨ SHINY '+getDisplayName(caught)+' caught automatically! ✨','evolve','catches',aide.id);
   logCaptureRarity(caught,true);
-  const s_=getPokemonEntry(enc.pokedexId);
+  const s_=getPokemonEntry(enc.pokedexId,enc.formName); // v0.45.5 — form-aware EXP-yield lookup
   const exp=Math.floor(((s_?s_.baseExpYield:51)||51)*enc.level/7);
   distributeExp(lead,exp,idx,false);
   recordCapture(caught.pokedexId,enc.species,caught.formName);
@@ -3748,9 +3808,10 @@ function catchPokemon(lead,enc,isShiny,idx=0){
   // Write caught to encounter log — {seen, caught} schema
   if(!state.locationEncounterLog[aide.currentLocation]) state.locationEncounterLog[aide.currentLocation]={};
   const lid=parseInt(caught.pokedexId);
+  const lidFormKey=encLogKey(lid,caught.formName); // v0.45.5 — dexId+'|'+(formName||'')
   if(lid){
-    if(!state.locationEncounterLog[aide.currentLocation][lid]) state.locationEncounterLog[aide.currentLocation][lid]={seen:0,caught:0};
-    state.locationEncounterLog[aide.currentLocation][lid].caught++;
+    if(!state.locationEncounterLog[aide.currentLocation][lidFormKey]) state.locationEncounterLog[aide.currentLocation][lidFormKey]={seen:0,caught:0};
+    state.locationEncounterLog[aide.currentLocation][lidFormKey].caught++;
   }
   // Per-species cap: catch-then-release overflow non-shinies
   checkSpeciesCap(caught,idx);
@@ -3881,14 +3942,15 @@ function processAideTick(idx){
     // Write seen to encounter log — always use parseInt for numeric key
     if(!state.locationEncounterLog[aide.currentLocation]) state.locationEncounterLog[aide.currentLocation]={};
     const encDexKey=parseInt(enc.pokedexId)||0;
+    const encFormKey=encLogKey(encDexKey,enc.formName); // v0.45.5 — dexId+'|'+(formName||'')
     if(encDexKey){
-      if(!state.locationEncounterLog[aide.currentLocation][encDexKey]) state.locationEncounterLog[aide.currentLocation][encDexKey]={seen:0,caught:0};
-      state.locationEncounterLog[aide.currentLocation][encDexKey].seen++;
+      if(!state.locationEncounterLog[aide.currentLocation][encFormKey]) state.locationEncounterLog[aide.currentLocation][encFormKey]={seen:0,caught:0};
+      state.locationEncounterLog[aide.currentLocation][encFormKey].seen++;
       // v0.24 — fires here, at encounter generation, regardless of catch outcome (fixes the bug
       // where fleeing/losing an encounter never populated researchLog, so the Pokédex grid never
       // showed a silhouette for anything only ever seen, not caught).
-      recordSighting(encDexKey,enc.level);
-      recordNewSpecies(encDexKey,enc.species);
+      recordSighting(encDexKey,enc.level,enc.formName);
+      recordNewSpecies(encDexKey,enc.species,enc.formName);
     }
     // v0.39.5 CRITICAL FIX — this message (and every other wild-encounter log message across
     // resolveEncounterStep/runWildEncounterLoop/catchPokemon) previously had NO aide attribution
@@ -6940,13 +7002,17 @@ function buildEvoMethodsHtml(dexId,formName=null){
 // and can't be split per-method. Multiple methods/rod-tiers at one location each get their own segment.
 // v0.37 — Official Pokédex bypasses the seen-gate entirely and lists every location this species
 // can ever appear at, straight from ENCOUNTERS, regardless of locationEncounterLog visit history.
-function buildEncounteredAtHtml(dexId){
+// v0.45.5 — gained a formName param: filters ENCOUNTERS/locationEncounterLog to the currently
+// selected form tab, matching the form-aware encounter rows a form-restricted species (e.g.
+// Tanoby Ruins' Unown letters) actually has. formName=null (the default) reproduces the exact
+// prior behavior for every non-form-restricted species, which only ever has null-form rows anyway.
+function buildEncounteredAtHtml(dexId,formName=null){
   if(typeof ENCOUNTERS==='undefined') return '';
   const isOfficial=dexMode==='official';
   const locIds=isOfficial
-    ?[...new Set(ENCOUNTERS.filter(e=>e.dexId===dexId).map(e=>e.locationId))]
+    ?[...new Set(ENCOUNTERS.filter(e=>e.dexId===dexId&&(e.formName||null)===(formName||null)).map(e=>e.locationId))]
     :Object.keys(state.locationEncounterLog).filter(locId=>{
-      const rec=state.locationEncounterLog[locId][dexId];
+      const rec=state.locationEncounterLog[locId][encLogKey(dexId,formName)];
       return rec&&rec.seen>=1;
     });
   if(!locIds.length) return '';
@@ -6954,7 +7020,7 @@ function buildEncounteredAtHtml(dexId){
   locIds.forEach(locId=>{
     const locData=getLocation(locId);
     const locName=locData?locData.name:locId;
-    const rowsHere=ENCOUNTERS.filter(e=>e.locationId===locId&&e.dexId===dexId);
+    const rowsHere=ENCOUNTERS.filter(e=>e.locationId===locId&&e.dexId===dexId&&(e.formName||null)===(formName||null));
     if(!rowsHere.length) return;
     const segments=rowsHere.map(row=>{
       const method=getEncounterSubMethod(row.encounterMethod||'grass',row.requiresItem);
@@ -7055,7 +7121,7 @@ function renderDexDetail(){
   const totalEver=Math.max(historyCount,allCaughtOfDexId.length);
   const evoChainInner=entry&&entry.familyId?renderEvolutionChainVisual(entry.familyId,dexSelectedDexId):'';
   const evoChainHtml=evoChainInner?'<div onclick="familyChainNodeClick(event)" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--main-border);"><div style="color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Evolution Chain</div>'+evoChainInner+'</div>':'';
-  const encounteredAtHtml=buildEncounteredAtHtml(dexSelectedDexId);
+  const encounteredAtHtml=buildEncounteredAtHtml(dexSelectedDexId,dexSelectedFormName); // v0.45.5 — form-aware
   // v0.38 — Per-Species Cap Overrides field, at the bottom of Species Detail, above the
   // caught-individuals list. Your Pokédex only (Official mode has no cap concept). See
   // DESIGN.md "Per-Species Cap Overrides."
@@ -7608,7 +7674,8 @@ const SAVE_KEY='pokeprof_save';
 // batch-evolve prompt, offline friendship parity, dual-root family breeding, Ditto
 // breeding-placeholder fix, Family IV Inheritance pool fix) is a bug fix or UI/logic-only, no
 // additional schema impact.
-const SAVE_VERSION=32; // v0.45.4 — state.researchLog re-keyed from bare dexId to dexId+'|'+(formName||'') (per-form research identity; see "Research Log — Per-Form Identity" in DESIGN.md)
+const SAVE_VERSION=33; // v0.45.5 — state.locationEncounterLog re-keyed from bare dexId to dexId+'|'+(formName||'') (see migrateLocationEncounterLogKeys(), "Wild Encounter Form Resolution" in DESIGN.md)
+// v0.45.4 — state.researchLog re-keyed from bare dexId to dexId+'|'+(formName||'') (per-form research identity; see "Research Log — Per-Form Identity" in DESIGN.md)
 let saveTimer=0;
 
 function saveGame(){
@@ -7650,9 +7717,15 @@ function loadGame(){
     const data=JSON.parse(raw);
     if(!data) return false;
 
-    // ── SAVE_VERSION 32 MIGRATION ──
-    // Accepts v11-v31 saves and migrates them; rejects anything older.
-    if(data.version!==SAVE_VERSION&&data.version!==31&&data.version!==30&&data.version!==29&&data.version!==28&&data.version!==27&&data.version!==26&&data.version!==25&&data.version!==24&&data.version!==23&&data.version!==22&&data.version!==21&&data.version!==20&&data.version!==19&&data.version!==18&&data.version!==17&&data.version!==16&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
+    // ── SAVE_VERSION 33 MIGRATION ──
+    // Accepts v11-v32 saves and migrates them; rejects anything older.
+    // v0.45.5 FIX — this explicit list previously jumped straight from the dynamic `!==SAVE_VERSION`
+    // check to `!==31`, silently skipping 32 entirely. That was invisible while SAVE_VERSION itself
+    // was 32 (the dynamic check covered it), but the moment SAVE_VERSION bumped to 33 here, every
+    // genuine v0.45.4 save (version 32) would have been rejected outright on load. Same mechanical
+    // gap this comment's own migration-history model is supposed to prevent — see rule 17/19 in
+    // workflow.md (grep the old version string, confirm zero unintended hits) — added `!==32` below.
+    if(data.version!==SAVE_VERSION&&data.version!==32&&data.version!==31&&data.version!==30&&data.version!==29&&data.version!==28&&data.version!==27&&data.version!==26&&data.version!==25&&data.version!==24&&data.version!==23&&data.version!==22&&data.version!==21&&data.version!==20&&data.version!==19&&data.version!==18&&data.version!==17&&data.version!==16&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
     const s=data.state;
     // v0.39.1 — aide-owned fields (party/dex/trainerBag/currentLocation/mission-and-travel/
     // gymProgress/lastHealLocation/wanderMode) now live in state.aides[]. A pre-v26 save has them
@@ -7676,7 +7749,9 @@ function loadGame(){
     }
 
     // Migrate locationEncounterLog: v11 had flat counts {[dexId]:N}; v12 uses {[dexId]:{seen,caught}}.
-    const rawLog=s.locationEncounterLog||{};
+    // v0.45.5 — re-key to dexId+'|'+(formName||'') FIRST (migrateLocationEncounterLogKeys()), before
+    // this shape migration runs, same ordering as researchLog's v0.45.4 re-key.
+    const rawLog=migrateLocationEncounterLogKeys(s.locationEncounterLog||{});
     const migratedLog={};
     Object.entries(rawLog).forEach(([locId,entries])=>{
       migratedLog[locId]={};
@@ -8546,15 +8621,19 @@ function showMapDetail(locId){
     const sorted=Object.entries(encLog).sort((a,b)=>(b[1].seen||0)-(a[1].seen||0));
     encHtml='<div style="color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin:10px 0 6px;">Observed Encounters ('+totalEncs+' total)</div>';
     encHtml+='<div style="display:flex;flex-direction:column;gap:4px;">';
-    sorted.forEach(([dexIdStr,counts])=>{
-      const dexId=parseInt(dexIdStr);
-      const pEntry=getPokemonEntry(dexId);
-      const name=pEntry?pEntry.name:'#'+dexId;
-      const sprite=getSpriteUrl(dexId,name,false);
+    sorted.forEach(([logKey,counts])=>{
+      // v0.45.5 — logKey is now the compound dexId+'|'+(formName||'') key; parseInt correctly
+      // reads just the dexId prefix, but the form must be split out explicitly to resolve the
+      // correct per-form name/sprite/level-range/method (e.g. distinguishing Unown letters).
+      const dexId=parseInt(logKey);
+      const formName=logKey.indexOf('|')!==-1?(logKey.split('|')[1]||null):null;
+      const pEntry=getPokemonEntry(dexId,formName);
+      const name=pEntry?getDisplayName({species:pEntry.name,formName,nickname:null}):'#'+dexId;
+      const sprite=getSpriteUrl(dexId,pEntry?pEntry.name:name,false,formName);
       const seenCount=counts.seen||0;
       const caughtCount=counts.caught||0;
       const pct=Math.round((seenCount/totalEncs)*100);
-      const encDb=typeof ENCOUNTERS!=='undefined'?ENCOUNTERS.filter(e=>e.locationId===locId&&e.dexId===dexId):[];
+      const encDb=typeof ENCOUNTERS!=='undefined'?ENCOUNTERS.filter(e=>e.locationId===locId&&e.dexId===dexId&&(e.formName||null)===(formName||null)):[];
       const minLv=encDb.length?Math.min(...encDb.map(e=>e.minLevel)):'?';
       const maxLv=encDb.length?Math.max(...encDb.map(e=>e.maxLevel)):'?';
       const methods=[...new Set(encDb.map(e=>e.encounterMethod).filter(Boolean))].join(', ')||'?';

@@ -1,6 +1,6 @@
 // PokeProf — Connections Database
-// Auto-generated: 9/5/2026, 11:20:22 PM
-// Connections: 232
+// Auto-generated: 9/26/2026, 9:06:20 PM
+// Connections: 340
 
 // Flat array with full data (used for requiresItem checks)
 const CONNECTIONS_DATA = [
@@ -1395,6 +1395,654 @@ const CONNECTIONS_DATA = [
     "toLocationId": "kindleRoad",
     "requiresItem": "hm-surf",
     "travelTime": null
+  },
+  {
+    "fromLocationId": "mtEmber",
+    "toLocationId": "summitPath1F",
+    "requiresItem": "hm-strength",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "summitPath1F",
+    "toLocationId": "mtEmber",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "summitPath1F",
+    "toLocationId": "summitPath2F",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "summitPath2F",
+    "toLocationId": "summitPath1F",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "summitPath2F",
+    "toLocationId": "summitPath3F",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "summitPath3F",
+    "toLocationId": "summitPath2F",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "summitPath3F",
+    "toLocationId": "summit",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "summit",
+    "toLocationId": "summitPath3F",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "mtEmber",
+    "toLocationId": "rubyPath",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "rubyPath",
+    "toLocationId": "mtEmber",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "rubyPath",
+    "toLocationId": "rubyPathB1F",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "rubyPathB1F",
+    "toLocationId": "rubyPath",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "rubyPathB1F",
+    "toLocationId": "rubyPathB2F",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "rubyPathB2F",
+    "toLocationId": "rubyPathB1F",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "rubyPathB2F",
+    "toLocationId": "rubyPathB3F",
+    "requiresItem": "hm-strength",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "rubyPathB3F",
+    "toLocationId": "rubyPathB2F",
+    "requiresItem": "hm-strength",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "rubyPathB3F",
+    "toLocationId": "rubyPathB4F",
+    "requiresItem": "hm-strength",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "rubyPathB4F",
+    "toLocationId": "rubyPathB3F",
+    "requiresItem": "hm-strength",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "rubyPathB4F",
+    "toLocationId": "rubyPathB5F",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "rubyPathB5F",
+    "toLocationId": "rubyPathB4F",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "twoIsland",
+    "toLocationId": "capeBrink",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "capeBrink",
+    "toLocationId": "twoIsland",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "twoIsland",
+    "toLocationId": "sSAnne",
+    "requiresItem": "sSTicket",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "sSAnne",
+    "toLocationId": "twoIsland",
+    "requiresItem": "sSTicket",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "threeIslePort",
+    "toLocationId": "sSAnne",
+    "requiresItem": "sSTicket",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "sSAnne",
+    "toLocationId": "threeIslePort",
+    "requiresItem": "sSTicket",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "threeIslePort",
+    "toLocationId": "threeIsland",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "threeIsland",
+    "toLocationId": "threeIslePort",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "threeIsland",
+    "toLocationId": "bondBridge",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "bondBridge",
+    "toLocationId": "threeIsland",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "bondBridge",
+    "toLocationId": "berryForest",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "berryForest",
+    "toLocationId": "bondBridge",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "sSAnne",
+    "toLocationId": "fourIsland",
+    "requiresItem": "sSTicket",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "fourIsland",
+    "toLocationId": "sSAnne",
+    "requiresItem": "sSTicket",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "fourIsland",
+    "toLocationId": "icefallCave",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "icefallCave",
+    "toLocationId": "fourIsland",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "icefallCave",
+    "toLocationId": "icefallCave1F2",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "icefallCave1F2",
+    "toLocationId": "icefallCave",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "icefallCave1F2",
+    "toLocationId": "icefallCaveB1F",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "icefallCaveB1F",
+    "toLocationId": "icefallCave1F2",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "icefallCave1F2",
+    "toLocationId": "icefallCave1F3",
+    "requiresItem": "hm-waterfall",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "icefallCave1F3",
+    "toLocationId": "icefallCave1F2",
+    "requiresItem": "hm-waterfall",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "sSAnne",
+    "toLocationId": "fiveIsland",
+    "requiresItem": "sSTicket",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "fiveIsland",
+    "toLocationId": "sSAnne",
+    "requiresItem": "sSTicket",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "fiveIsland",
+    "toLocationId": "fiveIslandMeadow",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "fiveIslandMeadow",
+    "toLocationId": "fiveIsland",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "fiveIslandMeadow",
+    "toLocationId": "memorialPillar",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "memorialPillar",
+    "toLocationId": "fiveIslandMeadow",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "fiveIsland",
+    "toLocationId": "waterLabyrinth",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "waterLabyrinth",
+    "toLocationId": "fiveIsland",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "waterLabyrinth",
+    "toLocationId": "resortGorgeous",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "resortGorgeous",
+    "toLocationId": "waterLabyrinth",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "resortGorgeous",
+    "toLocationId": "lostCave",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "lostCave",
+    "toLocationId": "resortGorgeous",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "lostCave",
+    "toLocationId": "lostCaveDepths",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "lostCaveDepths",
+    "toLocationId": "lostCave",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "sSAnne",
+    "toLocationId": "sixIsland",
+    "requiresItem": "sSTicket",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "sixIsland",
+    "toLocationId": "sSAnne",
+    "requiresItem": "sSTicket",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "sixIsland",
+    "toLocationId": "waterPath",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "waterPath",
+    "toLocationId": "sixIsland",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "waterPath",
+    "toLocationId": "ruinValley",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "ruinValley",
+    "toLocationId": "waterPath",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "waterPath",
+    "toLocationId": "greenPath",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "greenPath",
+    "toLocationId": "waterPath",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "greenPath",
+    "toLocationId": "patternBush",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "patternBush",
+    "toLocationId": "greenPath",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "greenPath",
+    "toLocationId": "outcastIsland",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "outcastIsland",
+    "toLocationId": "greenPath",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "outcastIsland",
+    "toLocationId": "alteringCave",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "alteringCave",
+    "toLocationId": "outcastIsland",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "sSAnne",
+    "toLocationId": "sevenIsland",
+    "requiresItem": "sSTicket",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "sevenIsland",
+    "toLocationId": "sSAnne",
+    "requiresItem": "sSTicket",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "sevenIsland",
+    "toLocationId": "trainerTower",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "trainerTower",
+    "toLocationId": "sevenIsland",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "sevenIsland",
+    "toLocationId": "canyonEntrance",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "canyonEntrance",
+    "toLocationId": "sevenIsland",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "canyonEntrance",
+    "toLocationId": "seavaultCanyon",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "seavaultCanyon",
+    "toLocationId": "canyonEntrance",
+    "requiresItem": null,
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "seavaultCanyon",
+    "toLocationId": "tanobyRuins",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "tanobyRuins",
+    "toLocationId": "seavaultCanyon",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "tanobyRuins",
+    "toLocationId": "moneanChamber",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "moneanChamber",
+    "toLocationId": "tanobyRuins",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "tanobyRuins",
+    "toLocationId": "liptooChamber",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "liptooChamber",
+    "toLocationId": "tanobyRuins",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "tanobyRuins",
+    "toLocationId": "weepethChamber",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "weepethChamber",
+    "toLocationId": "tanobyRuins",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "tanobyRuins",
+    "toLocationId": "dilfordChamber",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "dilfordChamber",
+    "toLocationId": "tanobyRuins",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "tanobyRuins",
+    "toLocationId": "scufibChamber",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "scufibChamber",
+    "toLocationId": "tanobyRuins",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "tanobyRuins",
+    "toLocationId": "rixyChamber",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "rixyChamber",
+    "toLocationId": "tanobyRuins",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "tanobyRuins",
+    "toLocationId": "viapoisChamber",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "viapoisChamber",
+    "toLocationId": "tanobyRuins",
+    "requiresItem": "hm-surf",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "oneIsland",
+    "toLocationId": "seviiTransitHub",
+    "requiresItem": "sSTicket",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "seviiTransitHub",
+    "toLocationId": "oneIsland",
+    "requiresItem": "sSTicket",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "twoIsland",
+    "toLocationId": "seviiTransitHub",
+    "requiresItem": "sSTicket",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "seviiTransitHub",
+    "toLocationId": "twoIsland",
+    "requiresItem": "sSTicket",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "threeIslePort",
+    "toLocationId": "seviiTransitHub",
+    "requiresItem": "sSTicket",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "seviiTransitHub",
+    "toLocationId": "threeIslePort",
+    "requiresItem": "sSTicket",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "fourIsland",
+    "toLocationId": "seviiTransitHub",
+    "requiresItem": "sSTicket",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "seviiTransitHub",
+    "toLocationId": "fourIsland",
+    "requiresItem": "sSTicket",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "fiveIsland",
+    "toLocationId": "seviiTransitHub",
+    "requiresItem": "sSTicket",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "seviiTransitHub",
+    "toLocationId": "fiveIsland",
+    "requiresItem": "sSTicket",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "sixIsland",
+    "toLocationId": "seviiTransitHub",
+    "requiresItem": "sSTicket",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "seviiTransitHub",
+    "toLocationId": "sixIsland",
+    "requiresItem": "sSTicket",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "sevenIsland",
+    "toLocationId": "seviiTransitHub",
+    "requiresItem": "sSTicket",
+    "travelTime": null
+  },
+  {
+    "fromLocationId": "seviiTransitHub",
+    "toLocationId": "sevenIsland",
+    "requiresItem": "sSTicket",
+    "travelTime": null
   }
 ];
 
@@ -1692,7 +2340,13 @@ const CONNECTIONS = {
   ],
   "sSAnne": [
     "vermillionCity",
-    "oneIsland"
+    "oneIsland",
+    "twoIsland",
+    "threeIslePort",
+    "fourIsland",
+    "fiveIsland",
+    "sixIsland",
+    "sevenIsland"
   ],
   "route14": [
     "route13",
@@ -1834,7 +2488,8 @@ const CONNECTIONS = {
   "oneIsland": [
     "sSAnne",
     "treasureBeach",
-    "kindleRoad"
+    "kindleRoad",
+    "seviiTransitHub"
   ],
   "treasureBeach": [
     "oneIsland"
@@ -1844,7 +2499,204 @@ const CONNECTIONS = {
     "mtEmber"
   ],
   "mtEmber": [
-    "kindleRoad"
+    "kindleRoad",
+    "summitPath1F",
+    "rubyPath"
+  ],
+  "summitPath1F": [
+    "mtEmber",
+    "summitPath2F"
+  ],
+  "summitPath2F": [
+    "summitPath1F",
+    "summitPath3F"
+  ],
+  "summitPath3F": [
+    "summitPath2F",
+    "summit"
+  ],
+  "summit": [
+    "summitPath3F"
+  ],
+  "rubyPath": [
+    "mtEmber",
+    "rubyPathB1F"
+  ],
+  "rubyPathB1F": [
+    "rubyPath",
+    "rubyPathB2F"
+  ],
+  "rubyPathB2F": [
+    "rubyPathB1F",
+    "rubyPathB3F"
+  ],
+  "rubyPathB3F": [
+    "rubyPathB2F",
+    "rubyPathB4F"
+  ],
+  "rubyPathB4F": [
+    "rubyPathB3F",
+    "rubyPathB5F"
+  ],
+  "rubyPathB5F": [
+    "rubyPathB4F"
+  ],
+  "twoIsland": [
+    "capeBrink",
+    "sSAnne",
+    "seviiTransitHub"
+  ],
+  "capeBrink": [
+    "twoIsland"
+  ],
+  "threeIslePort": [
+    "sSAnne",
+    "threeIsland",
+    "seviiTransitHub"
+  ],
+  "threeIsland": [
+    "threeIslePort",
+    "bondBridge"
+  ],
+  "bondBridge": [
+    "threeIsland",
+    "berryForest"
+  ],
+  "berryForest": [
+    "bondBridge"
+  ],
+  "fourIsland": [
+    "sSAnne",
+    "icefallCave",
+    "seviiTransitHub"
+  ],
+  "icefallCave": [
+    "fourIsland",
+    "icefallCave1F2"
+  ],
+  "icefallCave1F2": [
+    "icefallCave",
+    "icefallCaveB1F",
+    "icefallCave1F3"
+  ],
+  "icefallCaveB1F": [
+    "icefallCave1F2"
+  ],
+  "icefallCave1F3": [
+    "icefallCave1F2"
+  ],
+  "fiveIsland": [
+    "sSAnne",
+    "fiveIslandMeadow",
+    "waterLabyrinth",
+    "seviiTransitHub"
+  ],
+  "fiveIslandMeadow": [
+    "fiveIsland",
+    "memorialPillar"
+  ],
+  "memorialPillar": [
+    "fiveIslandMeadow"
+  ],
+  "waterLabyrinth": [
+    "fiveIsland",
+    "resortGorgeous"
+  ],
+  "resortGorgeous": [
+    "waterLabyrinth",
+    "lostCave"
+  ],
+  "lostCave": [
+    "resortGorgeous",
+    "lostCaveDepths"
+  ],
+  "lostCaveDepths": [
+    "lostCave"
+  ],
+  "sixIsland": [
+    "sSAnne",
+    "waterPath",
+    "seviiTransitHub"
+  ],
+  "waterPath": [
+    "sixIsland",
+    "ruinValley",
+    "greenPath"
+  ],
+  "ruinValley": [
+    "waterPath"
+  ],
+  "greenPath": [
+    "waterPath",
+    "patternBush",
+    "outcastIsland"
+  ],
+  "patternBush": [
+    "greenPath"
+  ],
+  "outcastIsland": [
+    "greenPath",
+    "alteringCave"
+  ],
+  "alteringCave": [
+    "outcastIsland"
+  ],
+  "sevenIsland": [
+    "sSAnne",
+    "trainerTower",
+    "canyonEntrance",
+    "seviiTransitHub"
+  ],
+  "trainerTower": [
+    "sevenIsland"
+  ],
+  "canyonEntrance": [
+    "sevenIsland",
+    "seavaultCanyon"
+  ],
+  "seavaultCanyon": [
+    "canyonEntrance",
+    "tanobyRuins"
+  ],
+  "tanobyRuins": [
+    "seavaultCanyon",
+    "moneanChamber",
+    "liptooChamber",
+    "weepethChamber",
+    "dilfordChamber",
+    "scufibChamber",
+    "rixyChamber",
+    "viapoisChamber"
+  ],
+  "moneanChamber": [
+    "tanobyRuins"
+  ],
+  "liptooChamber": [
+    "tanobyRuins"
+  ],
+  "weepethChamber": [
+    "tanobyRuins"
+  ],
+  "dilfordChamber": [
+    "tanobyRuins"
+  ],
+  "scufibChamber": [
+    "tanobyRuins"
+  ],
+  "rixyChamber": [
+    "tanobyRuins"
+  ],
+  "viapoisChamber": [
+    "tanobyRuins"
+  ],
+  "seviiTransitHub": [
+    "oneIsland",
+    "twoIsland",
+    "threeIslePort",
+    "fourIsland",
+    "fiveIsland",
+    "sixIsland",
+    "sevenIsland"
   ]
 };
 

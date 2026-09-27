@@ -1,6 +1,6 @@
 // PokeProf — Items Database
-// Auto-generated: 9/15/2026, 7:16:03 PM
-// Entries: 81
+// Auto-generated: 9/26/2026, 9:06:20 PM
+// Entries: 82
 
 const ITEMS_DATA = [
   {
@@ -1459,6 +1459,24 @@ const ITEMS_DATA = [
     "usableInField": false,
     "usableInBattle": false,
     "sprite": null,
+    "bagType": "Trainer"
+  },
+  {
+    "itemId": "hm-waterfall",
+    "name": "Waterfall",
+    "itemCategory": "hm",
+    "description": "Teaches a trainer's Pokémon to swim straight up a waterfall",
+    "effect": "unlock-waterfall",
+    "effectValue": null,
+    "shopPrice": 100,
+    "sellPrice": null,
+    "shopTier": "full",
+    "isConsumable": false,
+    "catchRateModifier": null,
+    "requiresTarget": false,
+    "usableInField": true,
+    "usableInBattle": false,
+    "sprite": "hm-waterfall",
     "bagType": "Trainer"
   }
 ];

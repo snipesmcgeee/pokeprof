@@ -1,6 +1,6 @@
 // PokeProf — Locations Database
-// Auto-generated: 9/15/2026, 7:16:03 PM
-// Entries: 123
+// Auto-generated: 9/26/2026, 9:06:20 PM
+// Entries: 155
 
 const LOCATIONS = [
   {
@@ -339,7 +339,7 @@ const LOCATIONS = [
     "region": "Kanto",
     "heals": true,
     "shopTier": null,
-    "travelTime": 4,
+    "travelTime": 10,
     "mapCol": 120,
     "mapRow": 101,
     "defaultEncounterMethod": "grass"
@@ -1143,8 +1143,8 @@ const LOCATIONS = [
     "heals": true,
     "shopTier": null,
     "travelTime": 1,
-    "mapCol": null,
-    "mapRow": null,
+    "mapCol": 110,
+    "mapRow": 111,
     "defaultEncounterMethod": "surf"
   },
   {
@@ -1154,8 +1154,8 @@ const LOCATIONS = [
     "heals": false,
     "shopTier": null,
     "travelTime": 3,
-    "mapCol": null,
-    "mapRow": null,
+    "mapCol": 110,
+    "mapRow": 112,
     "defaultEncounterMethod": "surf"
   },
   {
@@ -1165,8 +1165,8 @@ const LOCATIONS = [
     "heals": false,
     "shopTier": null,
     "travelTime": 8,
-    "mapCol": null,
-    "mapRow": null,
+    "mapCol": 111,
+    "mapRow": 110,
     "defaultEncounterMethod": "surf"
   },
   {
@@ -1176,8 +1176,8 @@ const LOCATIONS = [
     "heals": false,
     "shopTier": null,
     "travelTime": 14,
-    "mapCol": null,
-    "mapRow": null,
+    "mapCol": 111,
+    "mapRow": 109,
     "defaultEncounterMethod": "grass"
   },
   {
@@ -1187,8 +1187,8 @@ const LOCATIONS = [
     "heals": false,
     "shopTier": null,
     "travelTime": 3,
-    "mapCol": null,
-    "mapRow": null,
+    "mapCol": 110,
+    "mapRow": 109,
     "defaultEncounterMethod": "cave"
   },
   {
@@ -1198,8 +1198,8 @@ const LOCATIONS = [
     "heals": false,
     "shopTier": null,
     "travelTime": 5,
-    "mapCol": null,
-    "mapRow": null,
+    "mapCol": 109,
+    "mapRow": 109,
     "defaultEncounterMethod": "cave"
   },
   {
@@ -1209,8 +1209,8 @@ const LOCATIONS = [
     "heals": false,
     "shopTier": null,
     "travelTime": 2,
-    "mapCol": null,
-    "mapRow": null,
+    "mapCol": 110,
+    "mapRow": 108,
     "defaultEncounterMethod": "cave"
   },
   {
@@ -1220,8 +1220,8 @@ const LOCATIONS = [
     "heals": false,
     "shopTier": null,
     "travelTime": 1,
-    "mapCol": null,
-    "mapRow": null,
+    "mapCol": 111,
+    "mapRow": 108,
     "defaultEncounterMethod": "cave"
   },
   {
@@ -1231,8 +1231,8 @@ const LOCATIONS = [
     "heals": false,
     "shopTier": null,
     "travelTime": 5,
-    "mapCol": null,
-    "mapRow": null,
+    "mapCol": 112,
+    "mapRow": 109,
     "defaultEncounterMethod": "cave"
   },
   {
@@ -1242,8 +1242,8 @@ const LOCATIONS = [
     "heals": false,
     "shopTier": null,
     "travelTime": 4,
-    "mapCol": null,
-    "mapRow": null,
+    "mapCol": 112,
+    "mapRow": 110,
     "defaultEncounterMethod": "cave"
   },
   {
@@ -1253,8 +1253,8 @@ const LOCATIONS = [
     "heals": false,
     "shopTier": null,
     "travelTime": 3,
-    "mapCol": null,
-    "mapRow": null,
+    "mapCol": 113,
+    "mapRow": 110,
     "defaultEncounterMethod": "cave"
   },
   {
@@ -1264,8 +1264,8 @@ const LOCATIONS = [
     "heals": false,
     "shopTier": null,
     "travelTime": 6,
-    "mapCol": null,
-    "mapRow": null,
+    "mapCol": 113,
+    "mapRow": 109,
     "defaultEncounterMethod": "cave"
   },
   {
@@ -1275,8 +1275,8 @@ const LOCATIONS = [
     "heals": false,
     "shopTier": null,
     "travelTime": 3,
-    "mapCol": null,
-    "mapRow": null,
+    "mapCol": 114,
+    "mapRow": 109,
     "defaultEncounterMethod": "cave"
   },
   {
@@ -1286,75 +1286,427 @@ const LOCATIONS = [
     "heals": false,
     "shopTier": null,
     "travelTime": 1,
-    "mapCol": null,
-    "mapRow": null,
+    "mapCol": 114,
+    "mapRow": 110,
     "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "twoIsland",
     "name": "Two Island",
-    "region": null,
+    "region": "Sevii Islands",
     "heals": true,
     "shopTier": "basic",
     "travelTime": 1,
-    "mapCol": null,
-    "mapRow": null,
+    "mapCol": 117,
+    "mapRow": 111,
     "defaultEncounterMethod": "cave"
   },
   {
     "locationId": "capeBrink",
     "name": "Cape Brink",
-    "region": null,
+    "region": "Sevii Islands",
     "heals": false,
     "shopTier": null,
     "travelTime": 4,
-    "mapCol": null,
-    "mapRow": null,
+    "mapCol": 117,
+    "mapRow": 110,
     "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "threeIslePort",
     "name": "Three Isle Port",
-    "region": null,
+    "region": "Sevii Islands",
     "heals": false,
     "shopTier": null,
     "travelTime": 2,
-    "mapCol": null,
-    "mapRow": null,
+    "mapCol": 125,
+    "mapRow": 111,
     "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "threeIsland",
     "name": "Three Island",
-    "region": null,
+    "region": "Sevii Islands",
     "heals": true,
     "shopTier": "basic",
     "travelTime": 1,
-    "mapCol": null,
-    "mapRow": null,
+    "mapCol": 125,
+    "mapRow": 110,
     "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "bondBridge",
     "name": "Bond Bridge",
-    "region": null,
+    "region": "Sevii Islands",
     "heals": false,
     "shopTier": null,
     "travelTime": 12,
-    "mapCol": null,
-    "mapRow": null,
+    "mapCol": 122,
+    "mapRow": 110,
     "defaultEncounterMethod": "grass"
   },
   {
     "locationId": "berryForest",
     "name": "Berry Forest",
-    "region": null,
+    "region": "Sevii Islands",
     "heals": false,
     "shopTier": null,
     "travelTime": 17,
-    "mapCol": null,
-    "mapRow": null,
+    "mapCol": 121,
+    "mapRow": 110,
     "defaultEncounterMethod": "grass"
+  },
+  {
+    "locationId": "fourIsland",
+    "name": "Four Island",
+    "region": "Sevii Islands",
+    "heals": true,
+    "shopTier": "basic",
+    "travelTime": 2,
+    "mapCol": 110,
+    "mapRow": 116,
+    "defaultEncounterMethod": "grass"
+  },
+  {
+    "locationId": "icefallCave",
+    "name": "Icefall Cave 1F-1",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 3,
+    "mapCol": 111,
+    "mapRow": 115,
+    "defaultEncounterMethod": "cave"
+  },
+  {
+    "locationId": "icefallCave1F2",
+    "name": "Icefall Cave 1F-2",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 5,
+    "mapCol": 111,
+    "mapRow": 114,
+    "defaultEncounterMethod": "cave"
+  },
+  {
+    "locationId": "icefallCave1F3",
+    "name": "Icefall Cave 1F-3",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 2,
+    "mapCol": 112,
+    "mapRow": 114,
+    "defaultEncounterMethod": "cave"
+  },
+  {
+    "locationId": "icefallCaveB1F",
+    "name": "Icefall Cave B1F",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 4,
+    "mapCol": 110,
+    "mapRow": 114,
+    "defaultEncounterMethod": "cave"
+  },
+  {
+    "locationId": "fiveIsland",
+    "name": "Five Island",
+    "region": "Sevii Islands",
+    "heals": true,
+    "shopTier": null,
+    "travelTime": 1,
+    "mapCol": 121,
+    "mapRow": 116,
+    "defaultEncounterMethod": "grass"
+  },
+  {
+    "locationId": "fiveIslandMeadow",
+    "name": "Five Island Meadow",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 4,
+    "mapCol": 122,
+    "mapRow": 116,
+    "defaultEncounterMethod": "grass"
+  },
+  {
+    "locationId": "memorialPillar",
+    "name": "Memorial Pillar",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 7,
+    "mapCol": 123,
+    "mapRow": 116,
+    "defaultEncounterMethod": "surf"
+  },
+  {
+    "locationId": "waterLabyrinth",
+    "name": "Water Labyrinth",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 12,
+    "mapCol": 121,
+    "mapRow": 115,
+    "defaultEncounterMethod": "surf"
+  },
+  {
+    "locationId": "resortGorgeous",
+    "name": "Resort Gorgeous",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 7,
+    "mapCol": 121,
+    "mapRow": 114,
+    "defaultEncounterMethod": "surf"
+  },
+  {
+    "locationId": "lostCave",
+    "name": "Lost Cave",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 22,
+    "mapCol": 122,
+    "mapRow": 114,
+    "defaultEncounterMethod": "cave"
+  },
+  {
+    "locationId": "lostCaveDepths",
+    "name": "Lost Cave Depths",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 5,
+    "mapCol": 123,
+    "mapRow": 114,
+    "defaultEncounterMethod": "cave"
+  },
+  {
+    "locationId": "sixIsland",
+    "name": "Six Island",
+    "region": "Sevii Islands",
+    "heals": true,
+    "shopTier": "basic",
+    "travelTime": 1,
+    "mapCol": 121,
+    "mapRow": 120,
+    "defaultEncounterMethod": "grass"
+  },
+  {
+    "locationId": "waterPath",
+    "name": "Water Path",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 14,
+    "mapCol": 123,
+    "mapRow": 120,
+    "defaultEncounterMethod": "surf"
+  },
+  {
+    "locationId": "ruinValley",
+    "name": "Ruin Valley",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 22,
+    "mapCol": 123,
+    "mapRow": 121,
+    "defaultEncounterMethod": "grass"
+  },
+  {
+    "locationId": "greenPath",
+    "name": "Green Path",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 6,
+    "mapCol": 123,
+    "mapRow": 119,
+    "defaultEncounterMethod": "surf"
+  },
+  {
+    "locationId": "patternBush",
+    "name": "Pattern Bush",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 18,
+    "mapCol": 124,
+    "mapRow": 119,
+    "defaultEncounterMethod": "grass"
+  },
+  {
+    "locationId": "outcastIsland",
+    "name": "Outcast Island",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 11,
+    "mapCol": 123,
+    "mapRow": 118,
+    "defaultEncounterMethod": "surf"
+  },
+  {
+    "locationId": "alteringCave",
+    "name": "Altering Cave",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 6,
+    "mapCol": 122,
+    "mapRow": 118,
+    "defaultEncounterMethod": "cave"
+  },
+  {
+    "locationId": "sevenIsland",
+    "name": "Seven Island",
+    "region": "Sevii Islands",
+    "heals": true,
+    "shopTier": "basic",
+    "travelTime": 1,
+    "mapCol": 112,
+    "mapRow": 120,
+    "defaultEncounterMethod": "grass"
+  },
+  {
+    "locationId": "trainerTower",
+    "name": "TrainerTower",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 3,
+    "mapCol": 112,
+    "mapRow": 119,
+    "defaultEncounterMethod": "surf"
+  },
+  {
+    "locationId": "canyonEntrance",
+    "name": "Canyon Entrance",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 7,
+    "mapCol": 112,
+    "mapRow": 121,
+    "defaultEncounterMethod": "grass"
+  },
+  {
+    "locationId": "seavaultCanyon",
+    "name": "Seavault Canyon",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 14,
+    "mapCol": 112,
+    "mapRow": 122,
+    "defaultEncounterMethod": "grass"
+  },
+  {
+    "locationId": "tanobyRuins",
+    "name": "Tanoby Ruins",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 5,
+    "mapCol": 112,
+    "mapRow": 123,
+    "defaultEncounterMethod": "surf"
+  },
+  {
+    "locationId": "moneanChamber",
+    "name": "Monean Chamber",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 1,
+    "mapCol": 110,
+    "mapRow": 123,
+    "defaultEncounterMethod": "cave"
+  },
+  {
+    "locationId": "liptooChamber",
+    "name": "Liptoo Chamber",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 1,
+    "mapCol": 110,
+    "mapRow": 124,
+    "defaultEncounterMethod": "cave"
+  },
+  {
+    "locationId": "weepethChamber",
+    "name": "Weepeth Chamber",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 1,
+    "mapCol": 111,
+    "mapRow": 124,
+    "defaultEncounterMethod": "cave"
+  },
+  {
+    "locationId": "dilfordChamber",
+    "name": "Dilford Chamber",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 1,
+    "mapCol": 112,
+    "mapRow": 124,
+    "defaultEncounterMethod": "cave"
+  },
+  {
+    "locationId": "scufibChamber",
+    "name": "Scufib Chamber",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 1,
+    "mapCol": 113,
+    "mapRow": 124,
+    "defaultEncounterMethod": "cave"
+  },
+  {
+    "locationId": "rixyChamber",
+    "name": "Rixy Chamber",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 1,
+    "mapCol": 114,
+    "mapRow": 124,
+    "defaultEncounterMethod": "cave"
+  },
+  {
+    "locationId": "viapoisChamber",
+    "name": "Viapois Chamber",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 1,
+    "mapCol": 114,
+    "mapRow": 123,
+    "defaultEncounterMethod": "cave"
+  },
+  {
+    "locationId": "seviiTransitHub",
+    "name": "Sevii Transit Hub",
+    "region": "Sevii Islands",
+    "heals": false,
+    "shopTier": null,
+    "travelTime": 10,
+    "mapCol": 117,
+    "mapRow": 116,
+    "defaultEncounterMethod": "surf"
   }
 ];
 

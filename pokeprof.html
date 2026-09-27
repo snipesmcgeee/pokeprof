@@ -3296,7 +3296,21 @@ function removePokemonFromBoxAndParty(id){
 // caught/capped/dex-tracked as its own species (Unown, regional variants going forward); any other
 // value (blank, "Temporary", or a row that hasn't been given one) is Temporary — today's dexId-only
 // pooling, zero behavior change. See DESIGN.md "Permanent vs. Temporary Form Nature".
+// v0.45.6 — formNature now has three values: "Permanent", "Temporary", "Cosmetic". Cosmetic forms
+// (Unown's 28 letters, future Pikachu costume forms) are still independently caught/capped/
+// dex-tracked species exactly like Permanent forms — the only difference is display: they don't
+// get their own row in the evolution chain visual (see formGetsOwnChainLine() below). Every
+// cap/dex/catch call site (sameCapPool, checkSpeciesCap, sweepSpeciesToCap, etc.) reads this same
+// helper and treats Cosmetic identically to Permanent, unchanged from v0.45.5 behavior.
 function isPermanentFormNature(dexId,formName){
+  const entry=getPokemonEntry(dexId,formName);
+  return !!(entry&&(entry.formNature==='Permanent'||entry.formNature==='Cosmetic'));
+}
+// v0.45.6, NEW — narrower than isPermanentFormNature(): true only for the exact "Permanent" value.
+// Used solely by the evolution chain visual to decide whether a form gets its own line — Cosmetic
+// forms are excluded from generating a line of their own in the family-overview fan-out (see
+// DESIGN.md "Cosmetic-Nature Forms Excluded from Chain Fan-Out").
+function formGetsOwnChainLine(dexId,formName){
   const entry=getPokemonEntry(dexId,formName);
   return !!(entry&&entry.formNature==='Permanent');
 }
@@ -6788,32 +6802,50 @@ function renderEvolutionChainVisual(famId,highlightDexId,highlightFormName){
     // the base line, and Farfetch'd itself, simply never appeared. A species with only one form,
     // or where every form evolves, never hit this — hence Ditto/Mew rendering correctly the whole
     // time despite going through the exact same code path.
-    // v0.45.6 — also excludes Temporary-nature forms (Mega, Gmax, Deoxys, Rotom, etc.) from ever
-    // generating their own line. Base/null always qualifies; a non-null form only qualifies when
-    // isPermanentFormNature() says so. Previously ANY form row generated a line regardless of
-    // nature, which is why Mewtwo/Lapras showed Mega/Gmax lines while most other Mega/Gmax-capable
-    // species didn't — purely an artifact of which rows happened to exist in the data, not a real
-    // distinction. See DESIGN.md "Temporary-Nature Forms Excluded from Chain."
+    // v0.45.6 — excludes Temporary- AND Cosmetic-nature forms (Mega/Gmax/Deoxys/Rotom, and
+    // Unown's 28 letters / future Pikachu costumes respectively) from ever generating their own
+    // line. Base/null always qualifies; a non-null form only qualifies when formGetsOwnChainLine()
+    // says so (exact formNature "Permanent"). Previously ANY form row generated a line regardless
+    // of nature, which is why Mewtwo/Lapras showed Mega/Gmax lines while most other Mega/Gmax-
+    // capable species didn't (a data-population artifact, not a real distinction), and why Unown
+    // fanned out into 28 lines on the Family Card. See DESIGN.md "Temporary-Nature Forms Excluded
+    // from Chain" and "Cosmetic-Nature Forms Excluded from Chain Fan-Out."
     const realFormNames=typeof POKEDEX_DATA!=='undefined'
-      ?Array.from(new Set(POKEDEX_DATA.filter(p=>p.dexId===root.dexId&&(p.formName==null||isPermanentFormNature(root.dexId,p.formName))).map(p=>p.formName||null)))
+      ?Array.from(new Set(POKEDEX_DATA.filter(p=>p.dexId===root.dexId&&(p.formName==null||formGetsOwnChainLine(root.dexId,p.formName))).map(p=>p.formName||null)))
       :[];
     // v0.45.1 — base line (null) always sorts first; other forms keep their relative data order
     // after it. Previously unsorted (Set iteration = data order), so whichever form's EVO_TREE
     // row happened to appear first in evotree.js rendered first — for the regional-form species,
     // that was consistently the regional row, ahead of the base line.
-    const formNames=Array.from(new Set([...realFormNames,...rootEdges.map(e=>e.fromFormName||null)]))
-      .filter(f=>f===null||isPermanentFormNature(root.dexId,f))
+    let formNames=Array.from(new Set([...realFormNames,...rootEdges.map(e=>e.fromFormName||null)]))
+      .filter(f=>f===null||formGetsOwnChainLine(root.dexId,f))
       .sort((a,b)=>(a===null?-1:0)-(b===null?-1:0));
+    // v0.45.6 — a Cosmetic (or otherwise excluded) form the player has actually drilled into on
+    // Species Detail is added back in as its own one-off candidate line, even though it doesn't
+    // qualify for the family-overview fan-out above. Viewing Unown "F" directly still needs to
+    // resolve to F's own single-node line, not silently fall through to some other form.
+    if(root.dexId===highlightDexId&&!formNames.includes(highlightFormName)) formNames=[...formNames,highlightFormName];
     const candidateLines=formNames.length?formNames:[null]; // terminal single-stage species: one base line
-    // v0.45.6 — pick the single line to render: if the highlighted node IS this root, its own
-    // formName is the target line directly; otherwise walk forward from each candidate to see
-    // which one actually reaches the highlighted node. Falls back to the base line if the
-    // highlighted species isn't reachable from this root at all (it lives under a different
-    // structural root in the same family).
-    const matchedLine=(root.dexId===highlightDexId)
-      ?(candidateLines.includes(highlightFormName)?highlightFormName:null)
-      :findLineContaining(root.dexId,candidateLines,highlightDexId,highlightFormName);
-    const lines=[matchedLine!==null?matchedLine:(candidateLines.includes(null)?null:candidateLines[0])];
+    // v0.45.6 — two rendering modes, branched on whether a specific form is being viewed:
+    // - Overview mode (highlightDexId===null, the Family Card list): render EVERY candidate line
+    //   for this root — this is what shows both Vulpix's regular and Alolan chains side by side.
+    //   Cosmetic-nature forms never made it into candidateLines above, so they contribute nothing
+    //   extra here (no line, no placeholder, no count badge — matches Temporary-nature treatment).
+    // - Focused mode (highlightDexId given, Species Detail): render exactly the ONE line
+    //   containing the currently-viewed (highlightDexId,highlightFormName) — see "Single Line Per
+    //   Selected Form." If the highlighted node IS this root, its own formName is the target line
+    //   directly; otherwise walk forward from each candidate to see which one actually reaches the
+    //   highlighted node. Falls back to the base line if the highlighted species isn't reachable
+    //   from this root at all (it lives under a different structural root in the same family).
+    let lines;
+    if(highlightDexId===null){
+      lines=candidateLines;
+    } else {
+      const matchedLine=(root.dexId===highlightDexId)
+        ?(candidateLines.includes(highlightFormName)?highlightFormName:null)
+        :findLineContaining(root.dexId,candidateLines,highlightDexId,highlightFormName);
+      lines=[matchedLine!==null?matchedLine:(candidateLines.includes(null)?null:candidateLines[0])];
+    }
     return lines.map(formName=>{
       // v0.45 — wholly-undiscovered line renders nothing at all, not even a placeholder box.
       if(!isOfficial&&!lineHasAnyDiscovery(root.dexId,formName)) return '';

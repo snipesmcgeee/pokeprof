@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.45.5</title>
+<title>PokeProf v0.45.6</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -143,7 +143,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span id="game-version-display" style="font-size:11px;color:var(--main-text-muted);">v0.45.5</span></h1>
+  <h1>PokeProf <span id="game-version-display" style="font-size:11px;color:var(--main-text-muted);">v0.45.6</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">100.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -562,7 +562,7 @@ const ENC_INTERVAL_CLOSED = 30;
 // string independently, with nothing forcing them to agree — v0.44.3's delivery updated one and
 // missed the other. Both now render FROM this constant at boot (see init()) — bumping a version
 // is a one-line edit here, and the two displays can no longer drift apart.
-const GAME_VERSION = '0.45.5';
+const GAME_VERSION = '0.45.6';
 const FRIENDSHIP_THRESHOLD = 220;
 // v0.22 — highest level-based evolution across the whole franchise is Zweilous->Hydreigon
 // at level 64; 65 clears it with the minimum safe margin. Used to rule out 'level' as a
@@ -6643,7 +6643,8 @@ function evoArrowDownLabeledHtml(label){
 // M/F -> 2 rows); a node with 2+ simultaneous confirmed branches renders as a vertical stack
 // (v0.36 — see "Branch Line-Break"), each branch getting its own line-2 slot instead of fanning
 // out inline with '/'. Unconfirmed nodes render as a greyed ??? placeholder, evaluated per-row.
-function renderEvolutionChainVisual(famId,highlightDexId){
+function renderEvolutionChainVisual(famId,highlightDexId,highlightFormName){
+  highlightFormName=highlightFormName||null; // v0.45.6
   const isOfficial=dexMode==='official';
   const allMembers=typeof getFamilyMembers!=='undefined'?getFamilyMembers(famId):[];
   if(!allMembers.length) return '';
@@ -6742,11 +6743,39 @@ function renderEvolutionChainVisual(famId,highlightDexId){
     });
     return html+branches.join('');
   }
-  // v0.45 — a root can now render MULTIPLE lines, one per distinct fromFormName found among its
-  // own outgoing edges (generic — no species hardcoding; a species with no form-branching still
-  // gets exactly its one existing base line). This is what separates regular Slowpoke's line from
+  // v0.45.6 — finds which of a root's candidate starting formNames actually leads to
+  // (targetDexId,targetFormName), by walking the same edge graph walk() uses. Returns the
+  // matching starting formName, or null if the target isn't reachable from this root at all
+  // (it belongs to a different structural root in the same family — e.g. the other Nidoran).
+  function findLineContaining(rootDexId,candidateFormNames,targetDexId,targetFormName){
+    for(const startForm of candidateFormNames){
+      const visited=new Set();
+      const queue=[[rootDexId,startForm]];
+      let found=false;
+      while(queue.length){
+        const [d,f]=queue.shift();
+        const key=d+'|'+(f||'');
+        if(visited.has(key)) continue;
+        visited.add(key);
+        if(d===targetDexId&&(f||null)===(targetFormName||null)){ found=true; break; }
+        edges.filter(e=>e.from===d&&(e.fromFormName||null)===(f||null))
+          .forEach(e=>queue.push([e.to,e.toFormName||null]));
+      }
+      if(found) return startForm;
+    }
+    return null;
+  }
+  // v0.45 — a root can render MULTIPLE lines, one per distinct fromFormName found among its own
+  // outgoing edges (generic — no species hardcoding; a species with no form-branching still gets
+  // exactly its one existing base line). This is what separates regular Slowpoke's line from
   // Galarian Slowpoke's, and regular Rattata's from Alolan Rattata's, instead of one line
   // incorrectly showing whichever edge happened to win under the old per-species rule.
+  // v0.45.6 — of the candidate lines a root has, only ONE is actually rendered per root: the one
+  // containing the currently-viewed (highlightDexId,highlightFormName). Structural roots
+  // themselves are unaffected (Nidoran ♂/♀ both still render, unchanged) — this only collapses
+  // the multiple-lines-under-one-root fan-out (Unown's 28 letters, a regional-form's separate
+  // line) down to the single line actually relevant to what's being viewed. See DESIGN.md
+  // "Single Line Per Selected Form."
   return roots.map(root=>{
     const rootEdges=edges.filter(e=>e.from===root.dexId);
     // v0.45.3 fix — formNames must come from the real Pokédex forms this dexId actually has, not
@@ -6759,16 +6788,32 @@ function renderEvolutionChainVisual(famId,highlightDexId){
     // the base line, and Farfetch'd itself, simply never appeared. A species with only one form,
     // or where every form evolves, never hit this — hence Ditto/Mew rendering correctly the whole
     // time despite going through the exact same code path.
+    // v0.45.6 — also excludes Temporary-nature forms (Mega, Gmax, Deoxys, Rotom, etc.) from ever
+    // generating their own line. Base/null always qualifies; a non-null form only qualifies when
+    // isPermanentFormNature() says so. Previously ANY form row generated a line regardless of
+    // nature, which is why Mewtwo/Lapras showed Mega/Gmax lines while most other Mega/Gmax-capable
+    // species didn't — purely an artifact of which rows happened to exist in the data, not a real
+    // distinction. See DESIGN.md "Temporary-Nature Forms Excluded from Chain."
     const realFormNames=typeof POKEDEX_DATA!=='undefined'
-      ?Array.from(new Set(POKEDEX_DATA.filter(p=>p.dexId===root.dexId).map(p=>p.formName||null)))
+      ?Array.from(new Set(POKEDEX_DATA.filter(p=>p.dexId===root.dexId&&(p.formName==null||isPermanentFormNature(root.dexId,p.formName))).map(p=>p.formName||null)))
       :[];
     // v0.45.1 — base line (null) always sorts first; other forms keep their relative data order
     // after it. Previously unsorted (Set iteration = data order), so whichever form's EVO_TREE
     // row happened to appear first in evotree.js rendered first — for the regional-form species,
     // that was consistently the regional row, ahead of the base line.
     const formNames=Array.from(new Set([...realFormNames,...rootEdges.map(e=>e.fromFormName||null)]))
+      .filter(f=>f===null||isPermanentFormNature(root.dexId,f))
       .sort((a,b)=>(a===null?-1:0)-(b===null?-1:0));
-    const lines=formNames.length?formNames:[null]; // terminal single-stage species: one base line
+    const candidateLines=formNames.length?formNames:[null]; // terminal single-stage species: one base line
+    // v0.45.6 — pick the single line to render: if the highlighted node IS this root, its own
+    // formName is the target line directly; otherwise walk forward from each candidate to see
+    // which one actually reaches the highlighted node. Falls back to the base line if the
+    // highlighted species isn't reachable from this root at all (it lives under a different
+    // structural root in the same family).
+    const matchedLine=(root.dexId===highlightDexId)
+      ?(candidateLines.includes(highlightFormName)?highlightFormName:null)
+      :findLineContaining(root.dexId,candidateLines,highlightDexId,highlightFormName);
+    const lines=[matchedLine!==null?matchedLine:(candidateLines.includes(null)?null:candidateLines[0])];
     return lines.map(formName=>{
       // v0.45 — wholly-undiscovered line renders nothing at all, not even a placeholder box.
       if(!isOfficial&&!lineHasAnyDiscovery(root.dexId,formName)) return '';
@@ -7064,10 +7109,14 @@ function renderDexDetail(){
   const forms=getFormsForDexId(dexSelectedDexId);
   let formTabHtml='';
   if(forms.length>1){
-    formTabHtml='<div style="display:flex;gap:4px;margin-top:8px;">'+forms.map(f=>{
+    // v0.45.6 — flex-wrap added, flex:1 dropped in favor of a fixed min-width, so a large form
+    // set (Unown's 28 letters, Pikachu's cap/costume forms) wraps onto additional lines instead
+    // of overflowing the card's right edge (flex:1 with no wrap can't shrink buttons below their
+    // minimum content width, so the row just ran off-card).
+    formTabHtml='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;">'+forms.map(f=>{
       const active=(f||null)===(dexSelectedFormName||null);
       const label=f||'Base';
-      return '<button onclick="selectDexForm('+(f?"'"+f.replace(/'/g,"\\'")+"'":'null')+')" style="flex:1;font-size:10px;padding:5px 4px;'+(active?'border-color:var(--accent);color:var(--accent-light);':'border-color:var(--main-border);color:var(--main-text-secondary);')+'">'+label+'</button>';
+      return '<button onclick="selectDexForm('+(f?"'"+f.replace(/'/g,"\\'")+"'":'null')+')" style="flex:0 0 auto;min-width:32px;font-size:10px;padding:5px 4px;'+(active?'border-color:var(--accent);color:var(--accent-light);':'border-color:var(--main-border);color:var(--main-text-secondary);')+'">'+label+'</button>';
     }).join('')+'</div>';
   }
   // v0.36 fix — rebuilt off the PERSISTENT researchLog flags instead of the currently-held
@@ -7119,7 +7168,7 @@ function renderDexDetail(){
   }
   const historyCount=state.dexHistory[dexSelectedDexId]||0;
   const totalEver=Math.max(historyCount,allCaughtOfDexId.length);
-  const evoChainInner=entry&&entry.familyId?renderEvolutionChainVisual(entry.familyId,dexSelectedDexId):'';
+  const evoChainInner=entry&&entry.familyId?renderEvolutionChainVisual(entry.familyId,dexSelectedDexId,dexSelectedFormName):''; // v0.45.6 — form-aware single-line selection
   const evoChainHtml=evoChainInner?'<div onclick="familyChainNodeClick(event)" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--main-border);"><div style="color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Evolution Chain</div>'+evoChainInner+'</div>':'';
   const encounteredAtHtml=buildEncounteredAtHtml(dexSelectedDexId,dexSelectedFormName); // v0.45.5 — form-aware
   // v0.38 — Per-Species Cap Overrides field, at the bottom of Species Detail, above the

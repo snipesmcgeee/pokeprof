@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.45.6</title>
+<title>PokeProf v0.46</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -143,7 +143,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span id="game-version-display" style="font-size:11px;color:var(--main-text-muted);">v0.45.6</span></h1>
+  <h1>PokeProf <span id="game-version-display" style="font-size:11px;color:var(--main-text-muted);">v0.46</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">100.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -217,6 +217,7 @@
     <div id="dex-top-controls" style="background:var(--main-panel);border-bottom:1px solid var(--main-card);padding:6px 12px;display:none;align-items:center;gap:8px;flex-shrink:0;">
       <button id="dex-mode-back-btn" onclick="dexBackToChooser()" style="padding:5px 10px;font-size:10px;">◀ Back to Dex Types</button>
       <button id="dex-shiny-toggle-btn" onclick="toggleDexShinyPreview()" style="display:none;padding:5px 10px;font-size:10px;">✨ Shiny</button>
+      <button id="dex-hide-researched-btn" onclick="toggleDexHideResearched()" style="padding:5px 10px;font-size:10px;border-color:#555;color:#777;">🔬 Hide Researched: OFF</button>
       <span id="dex-cap-label" style="color:var(--main-text-secondary);font-size:10px;margin-left:auto;">Per-Species Cap:</span>
       <select id="species-cap-select" onchange="onSpeciesCapChange(this)" style="background:var(--main-card);border:1px solid var(--main-border);color:var(--main-text);font-family:'Courier New',monospace;font-size:11px;padding:4px 8px;border-radius:4px;">
         <option value="1">1</option><option value="2">2</option><option value="3">3</option>
@@ -562,7 +563,7 @@ const ENC_INTERVAL_CLOSED = 30;
 // string independently, with nothing forcing them to agree — v0.44.3's delivery updated one and
 // missed the other. Both now render FROM this constant at boot (see init()) — bumping a version
 // is a one-line edit here, and the two displays can no longer drift apart.
-const GAME_VERSION = '0.45.6';
+const GAME_VERSION = '0.46';
 const FRIENDSHIP_THRESHOLD = 220;
 // v0.22 — highest level-based evolution across the whole franchise is Zweilous->Hydreigon
 // at level 64; 65 clears it with the minimum safe margin. Used to rule out 'level' as a
@@ -615,8 +616,16 @@ function isTurboModeActive(){
 }
 // v0.33 — returns the effective encounter interval, respecting TurboMode. Every site that sets
 // state.aides[0].nextEncounterIn reads through this instead of the raw ENC_INTERVAL_OPEN/CLOSED constants.
-function getEncounterInterval(isOpen){
-  if(isTurboModeActive()) return 1;
+// v0.46 — TurboMode is no longer a flat 1s: 2s while the tab is active/foreground, 6s while
+// hidden/backgrounded (document.hidden) — a straight 5x reduction off the existing 10s/30s
+// open/closed intervals in each state, same ratio TurboMode has always used. forceIdle is passed
+// by offline/catch-up simulation (processAideOfflineTime), which always runs AFTER the tab has
+// already become visible again — document.hidden would incorrectly read false for time that was
+// actually spent backgrounded the whole way through, so that caller forces the idle (6s) rate
+// explicitly instead of relying on the live document.hidden check. This also meaningfully reduces
+// how many iterations a long TurboMode catch-up gap has to simulate — see DESIGN.md.
+function getEncounterInterval(isOpen,forceIdle){
+  if(isTurboModeActive()) return (forceIdle||document.hidden)?6:2;
   return isOpen?ENC_INTERVAL_OPEN:ENC_INTERVAL_CLOSED;
 }
 
@@ -2907,7 +2916,7 @@ function processAideOfflineTime(idx,secsAway,summary){
     // v0.38 — fires before this iteration's heal/encounter resolution, mirroring live gameTick()'s
     // own ordering (its friendship tick also runs before that tick's heal/encounter resolution).
     advanceFriendshipTicks(consumed);
-    remaining-=nextIn; nextIn=getEncounterInterval(false); summary.encounters++;
+    remaining-=nextIn; nextIn=getEncounterInterval(false,true); summary.encounters++;
     evaluateWanderTarget(idx); // v0.33 — Wander re-routes during offline catch-up too, not just live play
     // v0.22 fix: checkLocationHeal() previously only ran in live gameTick(), never offline —
     // missions dwelling in/passing through a heals:true location took real damage offline
@@ -3404,44 +3413,57 @@ function sweepSpeciesToCap(dexId,cap){
 // v0.45.5 — liveNonShinyBox and the family-donation pool both respect Permanent-nature form
 // pooling via sameCapPool(): unchanged (dexId-only) for Temporary-nature species, form-exact for
 // Permanent-nature ones. See "Permanent vs. Temporary Form Nature".
+// v0.46 — release-priority fix (re-scoped Family IV Inheritance). Previously, IV donation ran
+// FIRST and unconditionally targeted `individual` itself (the specific arrival that pushed this
+// species over cap) — regardless of its own move-power investment — meaning a freshly-arrived,
+// heavily-trained individual (e.g. a party member moved into an already-full box) could be
+// released via donation ahead of far weaker existing box members, even though the documented rule
+// was always "release by lowest move-power first." Fixed: move-power ranking across the FULL
+// boxed pool now always decides the release target first, exactly like the plain release path
+// always has; IV donation is then applied as a bonus to THAT target (donating its IVs onward to a
+// lower-IV family member before it's removed), never bypassing the move-power ordering. See
+// DESIGN.md "Species Cap Enforcement on Evolution + Release Priority."
 function checkSpeciesCap(individual,idx=0){
   if(individual.isShiny) return; // shinies never released
   if(individual.holder||individual.breeding) return; // party AND breeding are exempt from the cap entirely
   const cap=getEffectiveSpeciesCap(individual.pokedexId);
   const liveNonShinyBox=state.dex.filter(p=>p.pokedexId===individual.pokedexId&&!p.isShiny&&!p.holder&&!p.breeding&&sameCapPool(individual.pokedexId,individual.formName,p.formName));
   if(liveNonShinyBox.length<=cap) return;
-  const familyIds=getFamilyDexIds(individual.pokedexId);
+
+  // Step 1 — move-power ranking decides the release target, same rule/tiebreak as always: lowest
+  // total equipped-move power released; ties broken by catch order (later catch released, original/
+  // longest-held kept). v0.43 — catch #1 (starter Rattata) is never a candidate, no matter how weak.
+  const releaseCandidates=liveNonShinyBox.filter(p=>p.id!==1);
+  if(!releaseCandidates.length) return; // only catch #1 present in this pool — nothing sheddable
+  let releaseTarget=releaseCandidates[0];
+  releaseCandidates.forEach(p=>{
+    const rp=movePowerTotal(releaseTarget), pp=movePowerTotal(p);
+    if(pp<rp||(pp===rp&&p.id>releaseTarget.id)) releaseTarget=p;
+  });
+
+  // Step 2 — Family IV Inheritance is a bonus applied to the release target selected above, not an
+  // independent first-checked mechanism. If any other family member (any branch/species in the
+  // evolutionary tree) currently has lower IVs than the release target, the target's IVs are
+  // donated onward before it's removed — same donation pool/logic as before, just re-scoped to
+  // whichever individual move-power ranking actually selected.
+  const familyIds=getFamilyDexIds(releaseTarget.pokedexId);
   // Cross-dexId family members (real evolution relatives) are unaffected by form pooling — they're
   // already distinct species by dexId. Only same-dexId candidates (this species' own other forms)
   // are gated by sameCapPool(), so a Permanent-nature species' donation pool stays per-form too.
-  const pool=state.dex.filter(p=>p.id!==individual.id&&familyIds.includes(p.pokedexId)&&(p.pokedexId!==individual.pokedexId||sameCapPool(individual.pokedexId,individual.formName,p.formName)));
+  const pool=state.dex.filter(p=>p.id!==releaseTarget.id&&familyIds.includes(p.pokedexId)&&(p.pokedexId!==releaseTarget.pokedexId||sameCapPool(releaseTarget.pokedexId,releaseTarget.formName,p.formName)));
   pool.sort((a,b)=>b.level-a.level);
-  const wildIV=ivTotal(individual);
-  const recipient=pool.find(p=>ivTotal(p)<wildIV);
+  const releaseIV=ivTotal(releaseTarget);
+  const recipient=pool.find(p=>ivTotal(p)<releaseIV);
   if(recipient){
-    recipient.ivs=individual.ivs;
+    recipient.ivs=releaseTarget.ivs;
     recalcStats(recipient);
     recipient.currentHP=recipient.maxHP;
-    removePokemonFromBoxAndParty(individual.id);
-    addLog(getDisplayName(recipient)+' #'+recipient.id+' inherited superior IVs from the newly caught '+getDisplayName(individual)+'!','evolve','roster',(state.aides.find(a=>a.name===recipient.holder)||{}).id||'general');
+    removePokemonFromBoxAndParty(releaseTarget.id);
+    addLog(getDisplayName(recipient)+' #'+recipient.id+' inherited superior IVs from the released '+getDisplayName(releaseTarget)+'!','evolve','roster',(state.aides.find(a=>a.name===recipient.holder)||{}).id||'general');
     return;
   }
-  // No IV-donation recipient — release the weakest of the full same-species BOXED pool
-  // (liveNonShinyBox already includes `individual` itself, since both a fresh catch and a
-  // freshly-evolved individual are already present in its owning aide's dex by the time this runs).
-  // v0.43 — catch #1 (starter Rattata) is never a candidate, no matter how weak — see
-  // removePokemonFromBoxAndParty()'s guard, which this mirrors so cap enforcement keeps working
-  // (releases the next-weakest instead of silently no-op'ing) rather than relying on that guard alone.
-  const releaseCandidates=liveNonShinyBox.filter(p=>p.id!==1);
-  if(releaseCandidates.length){
-    let releaseTarget=releaseCandidates[0];
-    releaseCandidates.forEach(p=>{
-      const rp=movePowerTotal(releaseTarget), pp=movePowerTotal(p);
-      if(pp<rp||(pp===rp&&p.id>releaseTarget.id)) releaseTarget=p;
-    });
-    removePokemonFromBoxAndParty(releaseTarget.id);
-    addLog('Released '+getDisplayName(releaseTarget)+' #'+releaseTarget.id+' — species cap reached ('+cap+' max).','info','roster','general');
-  }
+  removePokemonFromBoxAndParty(releaseTarget.id);
+  addLog('Released '+getDisplayName(releaseTarget)+' #'+releaseTarget.id+' — species cap reached ('+cap+' max).','info','roster','general');
 }
 
 // v0.26 — dropdown handler for the editable GLOBAL per-species cap. Raising applies immediately
@@ -5311,22 +5333,31 @@ function releaseDaycarePair(slotIndex){
 // See DESIGN.md "Day Care Research Mode".
 
 // Random valid pair from the box-only pool, preferring an untested result species; falls back to
-// any valid pair if none are untested; null if no valid pair exists at all. Shuffled scan rather
-// than an exhaustive uniform-random selection among every valid pair — acceptable at this game's
-// scale, and still returns immediately on the first untested match found.
+// any valid pair if none are untested; null if no valid pair exists at all.
+// v0.46 CRITICAL FIX — this was an exhaustive O(n²) scan over every possible pair in the eligible
+// box pool (shuffled first, but still a full double loop with no early exit once no untested
+// result species remained). Confirmed via direct jsdom testing to hang 60+ seconds with a
+// realistic box size (~1,000 individuals) once most species were already breeding-tested — the
+// confirmed root cause of the real-world freeze reported after long TurboMode-active gaps (large
+// dex, updateResearchModePairs()'s catch-up loop calling this up to 1,000x in a row). Replaced with
+// bounded random sampling: up to MAX_SAMPLE_PAIRS random (a,b) picks, each O(1) to check, so the
+// function's cost no longer scales with box size at all. Slightly weaker guarantee (a valid pair
+// existing doesn't strictly guarantee one is found within the sample cap on a very sparse-eligible
+// box), an accepted, confirmed-fine tradeoff at this game's scale — see DESIGN.md "Day Care
+// Research Mode".
 function findResearchPair(){
   const pool=state.dex.filter(p=>!p.holder&&!p.breeding);
   if(pool.length<2) return null;
-  const shuffled=[...pool].sort(()=>Math.random()-0.5);
+  const MAX_SAMPLE_PAIRS=200;
   let fallback=null;
-  for(let i=0;i<shuffled.length;i++){
-    for(let j=i+1;j<shuffled.length;j++){
-      const a=shuffled[i], b=shuffled[j];
-      if(!canBreedPair(a,b).ok) continue;
-      const resultDexId=getBreedResultDexId(a,b);
-      if(!getResearch(resultDexId).breedingTested) return {parentAId:a.id,parentBId:b.id,resultDexId};
-      if(!fallback) fallback={parentAId:a.id,parentBId:b.id,resultDexId};
-    }
+  for(let attempt=0;attempt<MAX_SAMPLE_PAIRS;attempt++){
+    const a=pool[Math.floor(Math.random()*pool.length)];
+    const b=pool[Math.floor(Math.random()*pool.length)];
+    if(a.id===b.id) continue;
+    if(!canBreedPair(a,b).ok) continue;
+    const resultDexId=getBreedResultDexId(a,b);
+    if(!getResearch(resultDexId).breedingTested) return {parentAId:a.id,parentBId:b.id,resultDexId};
+    if(!fallback) fallback={parentAId:a.id,parentBId:b.id,resultDexId};
   }
   return fallback;
 }
@@ -6390,6 +6421,28 @@ let dexSelectedFamily=null;
 let dexSelectedDexId=null;
 let dexSelectedFormName=null; // v0.36 — in-page-only, not persisted; resets to null (base form) whenever a new species is selected via the grid
 let dexOfficialShinyPreview=false; // v0.37 — Official Pokédex only, forces every sprite to shiny palette when true
+// v0.46, NEW — "Hide Fully Researched" toggle. Transient (not persisted, same convention as
+// dexOfficialShinyPreview), applies regardless of dexMode — filters Pokédex Grid, Families list,
+// All Catches, and the Official Pokédex Species tab down to species that still have SOMETHING left
+// to research (per isDexPageComplete()'s existing per-form definition: every evolution method
+// tested + every ability observed). Species Detail itself is never filtered — you can always still
+// look up a fully-researched species directly. See DESIGN.md "'Hide Fully Researched' Toggle".
+let dexHideResearched=false;
+function toggleDexHideResearched(){
+  dexHideResearched=!dexHideResearched;
+  renderDexHideResearchedBtn();
+  renderDex();
+}
+function renderDexHideResearchedBtn(){
+  const btn=document.getElementById('dex-hide-researched-btn'); if(!btn) return;
+  if(dexHideResearched){
+    btn.textContent='🔬 Hide Researched: ON';
+    btn.style.cssText='padding:5px 10px;font-size:10px;border-color:var(--accent);color:var(--accent);';
+  } else {
+    btn.textContent='🔬 Hide Researched: OFF';
+    btn.style.cssText='padding:5px 10px;font-size:10px;border-color:#555;color:#777;';
+  }
+}
 // v0.37 — All Catches sort/filter/search state (transient, not persisted, same convention as the old sort-select/filter-select)
 let dexCatchesSort='id';
 let dexCatchesFilters={all:true,unassigned:false,assigned:false,shiny:false,perfect:false,hasNickname:false,type:null,moveType:null};
@@ -6439,6 +6492,7 @@ function renderDex(){
   const capSelect=document.getElementById('species-cap-select');
   if(capSelect&&capSelect.value!=String(state.speciesCap||6)) capSelect.value=state.speciesCap||6;
   renderAvoidCapToggleBtn(); // v0.40
+  renderDexHideResearchedBtn(); // v0.46
   if(dexView==='chooser'){ updateDexChrome(); return; }
   if(dexView==='grid') renderDexPokedexGrid();
   else if(dexView==='families') renderDexFamilies();
@@ -6886,8 +6940,11 @@ function getAllSpeciesRoster(){
 // to Species Detail, skipping the Family Card layer; ? cells are inert.
 function renderDexPokedexGrid(){
   const c=document.getElementById('dex-list'); c.innerHTML='';
-  const roster=getAllSpeciesRoster();
+  let roster=getAllSpeciesRoster();
   if(!roster.length){ c.innerHTML='<div style="color:var(--c-danger);padding:12px;font-size:11px;">Database not loaded. Check pokedex.js is in GitHub.</div>'; return; }
+  // v0.46 — "Hide Fully Researched" toggle.
+  if(dexHideResearched) roster=roster.filter(entry=>!isDexPageComplete(entry.dexId,entry.formName));
+  if(!roster.length){ c.innerHTML='<div style="color:#555;padding:12px;font-size:11px;">Nothing left to research!</div>'; return; }
   const isOfficial=dexMode==='official';
   const grid=document.createElement('div');
   grid.style.cssText='display:grid;grid-template-columns:repeat(3,1fr);gap:6px;';
@@ -6956,6 +7013,14 @@ function renderDexFamilies(){
       totalEverCaught=0;
       speciesSeen.forEach(dexId=>{ totalEverCaught+=(state.dexHistory[dexId]||0); });
       liveInFamily.forEach(p=>{ if(!state.dexHistory[p.pokedexId]) totalEverCaught++; });
+    }
+    // v0.46 — "Hide Fully Researched" toggle: skip this family entirely once every member it shows
+    // (every real member in Official mode; every currently-known member in Your Pokédex) has
+    // nothing left to research. A family with an undiscovered next stage still has something left
+    // (that stage itself), so it's never hidden just because everything caught so far is complete.
+    if(dexHideResearched){
+      const relevantMembers=isOfficial?allMembers:allMembers.filter(m=>speciesSeen.has(m.dexId));
+      if(relevantMembers.length&&relevantMembers.every(m=>isDexPageComplete(m.dexId,m.formName))) return;
     }
     const baseSprite=getSpriteUrl(baseMember.dexId,baseMember.name,isOfficial&&dexOfficialShinyPreview);
     const d=document.createElement('div');
@@ -7404,6 +7469,8 @@ function matchesCatchesSearch(p,q){
 function renderDexViewAll(){
   const c=document.getElementById('dex-list'); c.innerHTML='';
   let entries=state.dex.filter(p=>matchesCatchesFilters(p,dexCatchesFilters)&&matchesCatchesSearch(p,dexCatchesSearch));
+  // v0.46 — "Hide Fully Researched" toggle.
+  if(dexHideResearched) entries=entries.filter(p=>!isDexPageComplete(p.pokedexId,p.formName));
   const sort=dexCatchesSort;
   // v0.43 — every comparator now expressed as a canonical ASCENDING diff, then wrapped by dir —
   // preserves each field's exact pre-v0.43 default behavior when dir matches its default
@@ -7458,6 +7525,8 @@ function renderDexOfficialSpeciesList(){
   const roster=getAllSpeciesRoster();
   if(!roster.length){ c.innerHTML='<div style="color:var(--c-danger);padding:12px;font-size:11px;">Database not loaded. Check pokedex.js is in GitHub.</div>'; return; }
   let entries=roster.filter(e=>matchesSpeciesFilters(e,dexSpeciesFilters)&&matchesSpeciesSearch(e,dexSpeciesSearch));
+  // v0.46 — "Hide Fully Researched" toggle.
+  if(dexHideResearched) entries=entries.filter(e=>!isDexPageComplete(e.dexId,e.formName));
   const sort=dexSpeciesSort;
   // v0.43 — same canonical-ascending + dir-wrapper treatment as renderDexViewAll() above.
   const dir=dexSpeciesSortDir;

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.46</title>
+<title>PokeProf v0.47</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -143,7 +143,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span id="game-version-display" style="font-size:11px;color:var(--main-text-muted);">v0.46</span></h1>
+  <h1>PokeProf <span id="game-version-display" style="font-size:11px;color:var(--main-text-muted);">v0.47</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">100.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -460,15 +460,47 @@ if(typeof POKEDEX_DATA !== 'undefined'){
 // Required for form-only species like Nidoran M/F where every entry has a non-null formName.
 // v0.33 — optional formName param fetches a specific form row (e.g. Alolan Raichu). Omitted
 // (all pre-v0.33 call sites) keeps prior behavior exactly: prefer the formName===null row.
+// v0.47 — reads build-once Map indexes instead of three linear .find() scans over all 1,375 rows
+// (see DESIGN.md "Render Performance"). Must return EXACTLY what the old .find() chain returned:
+// (1) exact (dexId, formName) row if formName given, (2) the null-form row, (3) the first row
+// with that dexId, (4) null. First row in array order wins wherever duplicates exist, same as
+// .find(). Keys compare with Map's SameValueZero — same as the old === (a string dexId still
+// misses, exactly as before). Safe only because POKEDEX_DATA is never mutated after boot.
+let _pokedexIndex=null;
+function buildPokedexIndex(){
+  const byForm=new Map(), nullForm=new Map(), anyForm=new Map(), dexIdFamilies=new Map();
+  for(const x of POKEDEX_DATA){
+    if(!byForm.has(x.dexId)) byForm.set(x.dexId,new Map());
+    const forms=byForm.get(x.dexId);
+    if(!forms.has(x.formName)) forms.set(x.formName,x);
+    if(x.formName===null&&!nullForm.has(x.dexId)) nullForm.set(x.dexId,x);
+    if(!anyForm.has(x.dexId)) anyForm.set(x.dexId,x);
+    // every familyId any row of this dexId carries — mirrors the old
+    // POKEDEX_DATA.find(x=>x.dexId===id&&x.familyId===famId) family-membership test exactly
+    if(!dexIdFamilies.has(x.dexId)) dexIdFamilies.set(x.dexId,new Set());
+    dexIdFamilies.get(x.dexId).add(x.familyId);
+  }
+  _pokedexIndex={byForm,nullForm,anyForm,dexIdFamilies};
+  return _pokedexIndex;
+}
 function getPokemonEntry(dexId,formName){
   if(typeof POKEDEX_DATA==='undefined') return null;
+  const idx=_pokedexIndex||buildPokedexIndex();
   if(formName){
-    const formRow=POKEDEX_DATA.find(x=>x.dexId===dexId&&x.formName===formName);
+    const forms=idx.byForm.get(dexId);
+    const formRow=forms?forms.get(formName):undefined;
     if(formRow) return formRow;
   }
-  const nullForm = POKEDEX_DATA.find(x=>x.dexId===dexId&&x.formName===null);
-  if(nullForm) return nullForm;
-  return POKEDEX_DATA.find(x=>x.dexId===dexId) || null;
+  const nullRow=idx.nullForm.get(dexId);
+  if(nullRow) return nullRow;
+  return idx.anyForm.get(dexId)||null;
+}
+// v0.47 — true if any POKEDEX_DATA row with this dexId carries this familyId (index-backed).
+function dexIdInFamily(dexId,famId){
+  if(typeof POKEDEX_DATA==='undefined') return false;
+  const idx=_pokedexIndex||buildPokedexIndex();
+  const fams=idx.dexIdFamilies.get(dexId);
+  return !!fams&&fams.has(famId);
 }
 
 // v0.23 — promoted from a local redeclaration inside renderDexDetail() so the Trainer Battle
@@ -517,6 +549,8 @@ function buildBadgeSpritesHtml(trainerBag){
 // which let testedMethods.length exceed EVOLUTION_METHODS.length and falsely trip "fully
 // tested"/"Does not evolve". Deriving it live from the same data the auto-test loop already
 // reads makes that drift structurally impossible going forward.
+// v0.47 — the non-item methods, used by recordEvolution() and the SAVE_VERSION 34 cleanup.
+const NON_ITEM_EVO_METHODS=['level','friendship','friendship-day','friendship-night','use-move','in-party','shed'];
 const EVOLUTION_METHODS = (function(){
   const base=['level','friendship','friendship-day','friendship-night','use-move','in-party','shed']; // v0.42 — 'shed' added for Nincada->Shedinja (see checkEvolution()'s per-aide level-up loop)
   const items=(typeof ITEMS_DATA!=='undefined'?ITEMS_DATA:[])
@@ -563,7 +597,7 @@ const ENC_INTERVAL_CLOSED = 30;
 // string independently, with nothing forcing them to agree — v0.44.3's delivery updated one and
 // missed the other. Both now render FROM this constant at boot (see init()) — bumping a version
 // is a one-line edit here, and the two displays can no longer drift apart.
-const GAME_VERSION = '0.46';
+const GAME_VERSION = '0.47';
 const FRIENDSHIP_THRESHOLD = 220;
 // v0.22 — highest level-based evolution across the whole franchise is Zweilous->Hydreigon
 // at level 64; 65 clears it with the minimum safe margin. Used to rule out 'level' as a
@@ -2088,6 +2122,41 @@ function speciesHasEvolveMethod(dexId,method,formName){
   }
   return false;
 }
+// v0.47 — the key an evolution edge is stored under in confirmedBranches[].method / testedMethods:
+// the item's display NAME for use-item (EVO_TREE stores a slug, pokedex.js stores the name —
+// both resolve to the name here), the method string for everything else.
+function evoEdgeKey(method,item){
+  if(method!=='use-item') return method;
+  const it=(item!=null)?getItem(item):null;
+  return it?it.name:item;
+}
+// v0.47 — every real evolution edge out of this exact (dexId, formName), keyed the way
+// recordEvolution() stores confirmations. Same edge set the Evolution Chain Visual draws for this
+// node: EVO_TREE rows for this fromFormName, plus the flat pokedex.js edge for the base form only
+// when EVO_TREE has no base-form rows (see DESIGN.md "Per-Form Edge Resolution").
+function getFormEvolutionEdges(dexId,formName){
+  formName=formName||null;
+  const edges=[];
+  const tree=getEvolutions(dexId);
+  if(formName===null&&!tree.some(b=>!b.fromFormName)){
+    const s=getPokemonEntry(dexId,null);
+    if(s&&s.evolveMethod&&s.evolvesIntoId) edges.push({key:evoEdgeKey(s.evolveMethod,s.evolveItem),intoId:s.evolvesIntoId,toFormName:null});
+  }
+  tree.filter(b=>(b.fromFormName||null)===formName&&b.toDexId).forEach(b=>{
+    edges.push({key:evoEdgeKey(b.evolveMethod,b.evolveItem),intoId:b.toDexId,toFormName:b.toFormName||null});
+  });
+  return edges;
+}
+// v0.47 — the single rule for non-item methods (see DESIGN.md "Same-Method Multi-Branch
+// Completeness"): a method may sit in testedMethods only if this form has NO edge using it, or
+// EVERY such edge is already in confirmedBranches. Confirming one of Tyrogue's three level
+// branches therefore no longer closes "level" for the other two.
+function isMethodResolvedForForm(dexId,formName,r,key){
+  const edges=getFormEvolutionEdges(dexId,formName).filter(e=>e.key===key);
+  if(!edges.length) return true;
+  const confirmed=(r&&r.confirmedBranches)||[];
+  return edges.every(e=>confirmed.some(b=>b.method===key&&b.intoId===e.intoId&&(b.toFormName||null)===(e.toFormName||null)));
+}
 
 // ── RESEARCH ──
 // v0.45.4 — research now belongs to a specific FORM, not a whole dexId. A form is a different
@@ -2192,12 +2261,16 @@ function recordSighting(dexId,level,formName){
 function checkMethodRuleOut(dexId,level,friendship,formName){
   if(!dexId) return;
   const r=getResearch(dexId,formName);
-  if(level!=null&&level>=LEVEL_RULEOUT_THRESHOLD&&!r.testedMethods.includes('level')){
+  // v0.47 — rule-out only applies to a method this form has NO edge for (or whose edges are all
+  // already confirmed). A method WITH an unconfirmed edge resolves only by confirming that edge —
+  // an evolve-blocked/nickname-locked individual passing the threshold proves nothing about it.
+  // See isMethodResolvedForForm() / DESIGN.md "Same-Method Multi-Branch Completeness".
+  if(level!=null&&level>=LEVEL_RULEOUT_THRESHOLD&&!r.testedMethods.includes('level')&&isMethodResolvedForForm(dexId,formName,r,'level')){
     r.testedMethods.push('level');
   }
   if(friendship!=null&&friendship>=FRIENDSHIP_THRESHOLD){
     ['friendship','friendship-day','friendship-night'].forEach(m=>{
-      if(!r.testedMethods.includes(m)) r.testedMethods.push(m);
+      if(!r.testedMethods.includes(m)&&isMethodResolvedForForm(dexId,formName,r,m)) r.testedMethods.push(m);
     });
   }
 }
@@ -2215,7 +2288,9 @@ function recordEvolution(fromDexId,toDexId,method,level,toFormName,fromFormName)
   if(!already){
     r.evolutionConfirmed=true;
     r.confirmedBranches.push({method,intoId:toDexId,toFormName});
-    if((method==='level'||method==='friendship'||method==='friendship-day'||method==='friendship-night'||method==='use-move'||method==='in-party')&&!r.testedMethods.includes(method)){
+    // v0.47 — only once EVERY edge on this form using this method is confirmed (Tyrogue's three
+    // level branches each have to be found). 'shed' added so Nincada's page can resolve.
+    if(NON_ITEM_EVO_METHODS.includes(method)&&!r.testedMethods.includes(method)&&isMethodResolvedForForm(fromDexId,fromFormName,r,method)){
       r.testedMethods.push(method);
     }
     const fromEntry=getPokemonEntry(fromDexId,fromFormName);
@@ -2688,6 +2763,16 @@ function maybeCreateShedFriend(prevDexId,evolvedPokemon){
   shedFriend.currentHP=shedFriend.maxHP;
   aide.party.push(shedFriend); state.dex.push(shedFriend);
   recordFormDiscovered(shedFriend.pokedexId,shedFriend.formName); // v0.45.1 — missed dex.push() site
+  // v0.47 — Shedinja's creation previously recorded nothing else: no confirmed 'shed' branch (so
+  // Nincada's page could never complete), no dexHistory, no first-seen/captured findings, no
+  // ability/gender observation. Same bookkeeping every other new-individual path runs.
+  const prevFormName=(shedBranch.fromFormName!=null)?shedBranch.fromFormName:null;
+  recordEvolution(prevDexId,shedFriend.pokedexId,'shed',evolvedPokemon.level,shedFriend.formName||null,prevFormName);
+  state.dexHistory[shedFriend.pokedexId]=(state.dexHistory[shedFriend.pokedexId]||0)+1;
+  recordNewSpecies(shedFriend.pokedexId,shedFriend.species,shedFriend.formName);
+  recordCapture(shedFriend.pokedexId,shedFriend.species,shedFriend.formName);
+  recordAbilityObserved(shedFriend.pokedexId,shedFriend.ability,shedFriend.formName);
+  recordGenderObserved(shedFriend.pokedexId,shedFriend.gender,shedFriend.formName);
   addLog('✨ '+getDisplayName(shedFriend)+' #'+shedFriend.id+' emerged from the discarded shell!','evolve','evolutions',(state.aides.find(a=>a.name===shedFriend.holder)||{}).id||'general');
 }
 
@@ -2796,6 +2881,7 @@ function applyEvolutionSilent(p){
     const prevDexId=p.pokedexId; const prevFormName=p.formName||null;
     applySpeciesSwap(p,ne);
     recordEvolution(prevDexId,ne.dexId,method,p.level,toFormName,prevFormName);
+    maybeCreateShedFriend(prevDexId,p); // v0.47 — offline parity: the silent path never created Shedinja at all (no-op for every other species)
     return true;
   };
   if(s&&s.evolveMethod==='level'&&s.evolvesIntoId&&p.level>=s.evolveLevel){
@@ -4478,9 +4564,11 @@ function renderInfoTopicList(){
   const modal=document.getElementById('info-modal'); if(!modal) return;
   const tiles=INFO_TOPICS.map(t=>'<button onclick="renderInfoTopicPage(\''+t.id+'\')" style="display:block;width:100%;margin-bottom:6px;padding:10px;text-align:left;border-color:var(--main-border);color:var(--main-text-secondary);">'+t.title+'</button>').join('');
   const displayTile='<button onclick="renderDisplaySettings()" style="display:block;width:100%;margin-bottom:6px;padding:10px;text-align:left;border-color:var(--accent);color:var(--accent-light);">🎨 Display</button>';
+  const cloudTile='<button onclick="openCloudPanel()" style="display:block;width:100%;margin-bottom:6px;padding:10px;text-align:left;border-color:var(--accent);color:var(--accent-light);">☁️ Save &amp; Cloud</button>'; // v0.47
   modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:var(--accent);font-size:13px;font-weight:bold;">ℹ️ Info</div><button onclick="document.getElementById(\'info-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'
     +displayTile
+    +cloudTile
     +tiles
     +'</div>';
   modal.onclick=(e)=>{ if(e.target===modal) modal.remove(); };
@@ -6482,6 +6570,13 @@ function loadDexNav(){
 
 function renderDex(){
   document.getElementById('dex-count').textContent=state.dex.length;
+  // v0.47 — the Dex only rebuilds while its own tab is visible (see DESIGN.md "Render
+  // Performance"). The "N caught" header above is shown on every tab, so it's written first,
+  // every call. Gate lives HERE, not just in render(), so every direct renderDex() call site is
+  // covered too. switchTab('dex') activates the panel before calling this, so opening the tab
+  // always shows current data.
+  const dexPanel=document.getElementById('panel-dex');
+  if(dexPanel&&!dexPanel.classList.contains('active')) return;
   document.getElementById('dex-count-detail').textContent=state.totalCatches;
   document.getElementById('dex-encounters-count').textContent=state.totalSightings;
   const knownDexIds=Object.keys(state.dexHistory);
@@ -6749,7 +6844,11 @@ function renderEvolutionChainVisual(famId,highlightDexId,highlightFormName){
   function isEdgeConfirmed(e,r){
     if(isOfficial) return true; // v0.37 — Official Pokédex shows every real edge unconditionally
     if(!r||!r.confirmedBranches) return false;
-    const matchKey=e.method==='use-item'?e.item:e.method;
+    // v0.47 — EVO_TREE stores a use-item edge's item as a SLUG, but confirmedBranches stores the
+    // item's display NAME, so a confirmed tree stone branch (e.g. Eevee -> Vaporeon) never matched
+    // here and its arrow showed "?" instead of "Water Stone". evoEdgeKey() resolves slug -> name
+    // (a pokedex.js flat edge already stores the name and passes through unchanged).
+    const matchKey=e.method==='use-item'?evoEdgeKey('use-item',e.item):e.method;
     return r.confirmedBranches.some(b=>b.method===matchKey&&b.intoId===e.to&&(b.toFormName||null)===(e.toFormName||null));
   }
   // v0.45 — discovery gate, per (dexId,formName), replacing the old dexId-only seenDexIds check
@@ -6795,11 +6894,17 @@ function renderEvolutionChainVisual(famId,highlightDexId,highlightFormName){
       if(isOfficial||(r&&isNonEvolutionConfirmed(r))) return html;
       return html+evoArrowHtml('?')+evoPlaceholderHtml();
     }
-    if(relevant.length>1){
-      const branchRows=relevant.map(e=>{
+    // v0.47 — a seen node that already shows a branch keeps one extra "? -> ???" branch while the
+    // data still has an edge from it that's neither confirmed nor drawn (Eevee after Vaporeon,
+    // Tyrogue after Hitmonlee). Accepted spoiler, Jack v0.47: reveals THAT more exist, never how
+    // many. See DESIGN.md "Evolution Chain Visual".
+    const showMoreHint=isSeen&&!isOfficial&&relevant.length<outgoing.length;
+    if(relevant.length>1||showMoreHint){
+      let branchRows=relevant.map(e=>{
         const label=isEdgeConfirmed(e,r)?evoMethodLabel(e):'?';
         return '<div style="display:flex;flex-direction:column;align-items:center;">'+evoArrowDownLabeledHtml(label)+walk(e.to,e.toFormName)+'</div>';
       }).join('');
+      if(showMoreHint) branchRows+='<div style="display:flex;flex-direction:column;align-items:center;">'+evoArrowDownLabeledHtml('?')+evoPlaceholderHtml()+'</div>';
       return '<div style="display:flex;flex-direction:column;align-items:center;">'
         +'<div style="display:flex;align-items:center;">'+html+'</div>'
         +'<div style="display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:center;gap:6px;">'+branchRows+'</div>'
@@ -6989,6 +7094,24 @@ function renderDexFamilies(){
     seenDexIds.forEach(dexId=>{ const e=getPokemonEntry(dexId); if(e&&e.familyId) seenFamilies.add(e.familyId); });
   }
   if(!seenFamilies.size){ c.innerHTML='<div style="color:#555;padding:12px;font-size:11px;">No Pokémon discovered yet.</div>'; return; }
+  // v0.47 — group the box and dexHistory by family ONCE per render (index-backed), instead of
+  // re-filtering the whole box with a POKEDEX_DATA.find() per Pokémon inside every family's loop
+  // (families × box × 1,375 rows, every tick). Same membership test, same order — see DESIGN.md
+  // "Render Performance".
+  const liveByFamily=new Map(), historyByFamily=new Map();
+  if(!isOfficial){
+    const idx=_pokedexIndex||buildPokedexIndex();
+    state.dex.forEach(p=>{
+      if(!p.pokedexId) return;
+      const fams=idx.dexIdFamilies.get(p.pokedexId); if(!fams) return;
+      fams.forEach(f=>{ if(!liveByFamily.has(f)) liveByFamily.set(f,[]); liveByFamily.get(f).push(p); });
+    });
+    Object.keys(state.dexHistory).forEach(id=>{
+      const dexId=parseInt(id);
+      const fams=idx.dexIdFamilies.get(dexId); if(!fams) return;
+      fams.forEach(f=>{ if(!historyByFamily.has(f)) historyByFamily.set(f,[]); historyByFamily.get(f).push(dexId); });
+    });
+  }
   [...seenFamilies].sort((a,b)=>a-b).forEach(famId=>{
     const allMembers=typeof getFamilyMembers!=='undefined'?getFamilyMembers(famId):[];
     if(!allMembers.length) return;
@@ -6999,12 +7122,9 @@ function renderDexFamilies(){
       speciesDisplay=allMembers.length+'/'+allMembers.length;
       totalEverCaught=null; // not applicable — no ownership data in Official mode
     } else {
-      const liveInFamily=state.dex.filter(p=>p.pokedexId&&POKEDEX_DATA.find(x=>x.dexId===p.pokedexId&&x.familyId===famId));
+      const liveInFamily=liveByFamily.get(famId)||[];
       speciesSeen=new Set(liveInFamily.map(p=>p.pokedexId));
-      Object.keys(state.dexHistory).forEach(id=>{
-        const dexId=parseInt(id);
-        if(POKEDEX_DATA.find(x=>x.dexId===dexId&&x.familyId===famId)) speciesSeen.add(dexId);
-      });
+      (historyByFamily.get(famId)||[]).forEach(dexId=>speciesSeen.add(dexId));
       const knownMembers=allMembers.filter(m=>speciesSeen.has(m.dexId));
       const lastKnown=knownMembers[knownMembers.length-1];
       const lastR=lastKnown?state.researchLog[getResearchKey(lastKnown.dexId,lastKnown.formName)]:null;
@@ -7113,7 +7233,11 @@ function buildEvoMethodsHtml(dexId,formName=null){
     // Confirmed — v0.20: a species can have multiple simultaneously confirmed branches
     const confirmedMethods=(r&&r.confirmedBranches)?r.confirmedBranches.map(b=>b.method):[];
     confirmedMethods.forEach(m=>{
-      inner+='<div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0;"><span style="color:var(--main-text);">'+m+'</span><span style="color:#2ecc71;">✓</span></div>';
+      // v0.47 — confirmed on at least one branch but not yet resolved on every branch using it
+      // (see DESIGN.md "Same-Method Multi-Branch Completeness"): "✓ +?" says there's more to find
+      // without revealing how many branches remain.
+      const more=!(r&&r.testedMethods.includes(m));
+      inner+='<div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0;"><span style="color:var(--main-text);">'+m+'</span><span style="color:#2ecc71;">✓'+(more?' <span style="color:var(--main-text-muted);">+?</span>':'')+'</span></div>';
     });
     // Unknown (in enum, not yet tested) — v0.45.4: filtered against THIS form's own testedMethods,
     // so a method already confirmed can never simultaneously appear here too (see bug narrative
@@ -7824,7 +7948,7 @@ const SAVE_KEY='pokeprof_save';
 // batch-evolve prompt, offline friendship parity, dual-root family breeding, Ditto
 // breeding-placeholder fix, Family IV Inheritance pool fix) is a bug fix or UI/logic-only, no
 // additional schema impact.
-const SAVE_VERSION=33; // v0.45.5 — state.locationEncounterLog re-keyed from bare dexId to dexId+'|'+(formName||'') (see migrateLocationEncounterLogKeys(), "Wild Encounter Form Resolution" in DESIGN.md)
+const SAVE_VERSION=34; // v0.47 — one-time research cleanup (Same-Method Multi-Branch Completeness) + Shedinja backfill; no new fields. Previously 33: v0.45.5 — state.locationEncounterLog re-keyed from bare dexId to dexId+'|'+(formName||'') (see migrateLocationEncounterLogKeys(), "Wild Encounter Form Resolution" in DESIGN.md)
 // v0.45.4 — state.researchLog re-keyed from bare dexId to dexId+'|'+(formName||'') (per-form research identity; see "Research Log — Per-Form Identity" in DESIGN.md)
 let saveTimer=0;
 
@@ -7867,15 +7991,15 @@ function loadGame(){
     const data=JSON.parse(raw);
     if(!data) return false;
 
-    // ── SAVE_VERSION 33 MIGRATION ──
-    // Accepts v11-v32 saves and migrates them; rejects anything older.
+    // ── SAVE_VERSION 34 MIGRATION ──
+    // Accepts v11-v33 saves (v0.47 — 33 added to the explicit list, same rule as the v0.45.5 fix below) and migrates them; rejects anything older.
     // v0.45.5 FIX — this explicit list previously jumped straight from the dynamic `!==SAVE_VERSION`
     // check to `!==31`, silently skipping 32 entirely. That was invisible while SAVE_VERSION itself
     // was 32 (the dynamic check covered it), but the moment SAVE_VERSION bumped to 33 here, every
     // genuine v0.45.4 save (version 32) would have been rejected outright on load. Same mechanical
     // gap this comment's own migration-history model is supposed to prevent — see rule 17/19 in
     // workflow.md (grep the old version string, confirm zero unintended hits) — added `!==32` below.
-    if(data.version!==SAVE_VERSION&&data.version!==32&&data.version!==31&&data.version!==30&&data.version!==29&&data.version!==28&&data.version!==27&&data.version!==26&&data.version!==25&&data.version!==24&&data.version!==23&&data.version!==22&&data.version!==21&&data.version!==20&&data.version!==19&&data.version!==18&&data.version!==17&&data.version!==16&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
+    if(data.version!==SAVE_VERSION&&data.version!==33&&data.version!==32&&data.version!==31&&data.version!==30&&data.version!==29&&data.version!==28&&data.version!==27&&data.version!==26&&data.version!==25&&data.version!==24&&data.version!==23&&data.version!==22&&data.version!==21&&data.version!==20&&data.version!==19&&data.version!==18&&data.version!==17&&data.version!==16&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
     const s=data.state;
     // v0.39.1 — aide-owned fields (party/dex/trainerBag/currentLocation/mission-and-travel/
     // gymProgress/lastHealLocation/wanderMode) now live in state.aides[]. A pre-v26 save has them
@@ -8069,6 +8193,36 @@ function loadGame(){
     // Re-link party entries to their canonical dex objects by id
     // JSON parse breaks shared references — do not remove this line
     state.party = state.party.map(pp => state.dex.find(d => d.id === pp.id) || pp);
+    // ── SAVE_VERSION 34 MIGRATION (v0.47) ── one-time, gated on data.version<34. Must run AFTER
+    // migrateResearchLogKeys() (compound keys, above) and BEFORE the v0.22 rule-out sweep below
+    // (which now applies the same rule itself, so it can't re-add what this removes).
+    // (1) Same-Method Multi-Branch Completeness: drop any non-item method from testedMethods while
+    //     this form still has an unconfirmed edge using it (e.g. Tyrogue with only Hitmonlee
+    //     found had 'level' closed). confirmedBranches is never touched.
+    // (2) Shedinja backfill: Shedinja creation never recorded Nincada's 'shed' branch or
+    //     dexHistory before v0.47 — credit any Shedinja already held.
+    if(data.version<34){
+      Object.keys(state.researchLog).forEach(key=>{
+        const bar=key.indexOf('|');
+        const dexId=Number(key.slice(0,bar));
+        const formName=key.slice(bar+1)||null;
+        const r=state.researchLog[key];
+        if(!r||!Array.isArray(r.testedMethods)) return;
+        r.testedMethods=r.testedMethods.filter(m=>!NON_ITEM_EVO_METHODS.includes(m)||isMethodResolvedForForm(dexId,formName,r,m));
+      });
+      const shedRows=(typeof EVO_TREE!=='undefined'?EVO_TREE:[]).filter(e=>e.evolveMethod==='shed'&&e.toDexId);
+      shedRows.forEach(row=>{
+        const held=state.dex.filter(p=>p.pokedexId===row.toDexId).length;
+        if(!held) return;
+        state.dexHistory[row.toDexId]=Math.max(state.dexHistory[row.toDexId]||0,held);
+        const r=getResearch(row.fromDexId,row.fromFormName||null);
+        if(!r.confirmedBranches.some(b=>b.method==='shed'&&b.intoId===row.toDexId)){
+          r.evolutionConfirmed=true;
+          r.confirmedBranches.push({method:'shed',intoId:row.toDexId,toFormName:row.toFormName||null});
+        }
+        if(!r.testedMethods.includes('shed')&&isMethodResolvedForForm(row.fromDexId,row.fromFormName||null,r,'shed')) r.testedMethods.push('shed');
+      });
+    }
     // v0.22 — retroactive method rule-out: catches up any existing save's individuals that
     // already exceed the level/friendship rule-out thresholds, not just ones going forward.
     state.dex.forEach(p=>{ checkMethodRuleOut(p.pokedexId,p.level,p.friendship,p.formName); });
@@ -8282,7 +8436,319 @@ function setSaveIndicator(msg,cls){
   el.textContent=msg; el.className=cls||'';
 }
 
-function autoSaveTick(){ saveTimer++; if(saveTimer>=30){ saveTimer=0; saveGame(); } }
+function autoSaveTick(){
+  saveTimer++; if(saveTimer>=30){ saveTimer=0; saveGame(); }
+  cloudTimer++; if(cloudTimer>=60){ cloudTimer=0; cloudAutoCheck(); } // v0.47 — daily cloud backup check, once a minute
+}
+
+// ── SAVE & CLOUD (v0.47) ──
+// See DESIGN.md "Save System & Cloud Save". The local save (SAVE_KEY) stays primary and is never
+// blocked by anything here. Firebase is optional and loaded lazily from the CDN by dynamic
+// import(); every Firebase call is wrapped so a failure (offline, blocked, quota) only ever shows
+// a notice — the game keeps playing and saving locally regardless.
+const FIREBASE_SDK_VERSION='13.2.0'; // pinned — never "latest"
+const FIREBASE_CONFIG={ // public by design; firestore.rules is the actual protection. Analytics deliberately omitted.
+  apiKey:'AIzaSyDdN18QZddkf6CuxdGz_RU28OeyyPROcis',
+  authDomain:'pokeprof-87205.firebaseapp.com',
+  projectId:'pokeprof-87205',
+  storageBucket:'pokeprof-87205.firebasestorage.app',
+  messagingSenderId:'320248122173',
+  appId:'1:320248122173:web:f17fcf8e6e6d867fd4d354'
+};
+const SAVE_BACKUP_KEY='pokeprof_save_backup'; // one previous save, written before any import/cloud load
+const CLOUD_META_KEY='pokeprof_cloud_meta';   // device-local, outside the save file (no SAVE_VERSION impact)
+const CLOUD_CHUNK_BYTES=900*1024;             // under Firestore's 1 MiB document limit
+const CLOUD_MAX_CHUNKS=10;                    // matches firestore.rules
+const CLOUD_AUTO_MS=24*60*60*1000;            // daily automatic backup
+const CLOUD_NEWER_MARGIN_MS=2*60*1000;
+const CLOUD_RETRY_MS=60*60*1000;              // after a failed auto upload (e.g. quota), wait an hour
+let cloudTimer=0;
+let _fb=null, _fbLoading=null;
+let cloudUser=null;
+let _cloudBusy=false;
+let _cloudPausedUntil=0;
+let _cloudNewerChecked=false; // auto-upload waits until the newer-save check has run this session
+// savedAt of the local save as it was when this page loaded — BEFORE any autosave rewrites it.
+// That's the right "how recent is this device's progress" value to compare against the cloud copy;
+// the live savedAt is bumped to "now" every 30 s and would always look newer.
+const _bootLocalSavedAt=(()=>{ try{ const d=JSON.parse(localStorage.getItem(SAVE_KEY)||'null'); return (d&&d.savedAt)||0; }catch(e){ return 0; } })();
+
+function getCloudMeta(){ try{ return JSON.parse(localStorage.getItem(CLOUD_META_KEY)||'{}')||{}; }catch(e){ return {}; } }
+function setCloudMeta(patch){ try{ localStorage.setItem(CLOUD_META_KEY,JSON.stringify(Object.assign(getCloudMeta(),patch))); }catch(e){} }
+function cloudNotice(msg,isError){
+  try{ setSaveIndicator(msg,isError?'error':'saving'); setTimeout(()=>setSaveIndicator('⬤ Auto-save on',''),4000); }catch(e){}
+}
+function formatBytes(n){ if(!n&&n!==0) return '—'; if(n<1024) return n+' B'; if(n<1024*1024) return (n/1024).toFixed(0)+' KB'; return (n/1024/1024).toFixed(2)+' MB'; }
+function formatWhen(ms){ if(!ms) return '—'; try{ return new Date(ms).toLocaleString(); }catch(e){ return String(ms); } }
+
+function loadFirebase(){
+  if(_fb) return Promise.resolve(_fb);
+  if(_fbLoading) return _fbLoading;
+  const base='https://www.gstatic.com/firebasejs/'+FIREBASE_SDK_VERSION+'/';
+  _fbLoading=Promise.all([import(base+'firebase-app.js'),import(base+'firebase-auth.js'),import(base+'firebase-firestore.js')])
+    .then(([appM,authM,fsM])=>{
+      const app=appM.initializeApp(FIREBASE_CONFIG);
+      const auth=authM.getAuth(app);
+      const db=fsM.getFirestore(app);
+      _fb={app,auth,db,authM,fsM};
+      authM.onAuthStateChanged(auth,u=>{
+        cloudUser=u||null;
+        setCloudMeta({signedIn:!!u,email:u?(u.email||''):''});
+        if(u) cloudCheckNewer(); else _cloudNewerChecked=false;
+        renderCloudPanelIfOpen();
+      });
+      return _fb;
+    })
+    .catch(e=>{ _fbLoading=null; throw e; });
+  return _fbLoading;
+}
+
+// gzip via the browser's built-in streams. Returns null where CompressionStream isn't supported.
+async function gzipString(str){
+  if(typeof CompressionStream==='undefined') return null;
+  const stream=new Blob([str]).stream().pipeThrough(new CompressionStream('gzip'));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+async function gunzipBytes(u8){
+  const stream=new Blob([u8]).stream().pipeThrough(new DecompressionStream('gzip'));
+  return await new Response(stream).text();
+}
+
+// Checks an incoming save string BEFORE anything local is overwritten. Same version window
+// loadGame() accepts — a save from a newer game version is refused, never written.
+function validateSaveString(str){
+  let data;
+  try{ data=JSON.parse(str); }catch(e){ return {ok:false,reason:'That file isn\'t a PokeProf save (not valid JSON).'}; }
+  if(!data||typeof data!=='object'||!data.state) return {ok:false,reason:'That file isn\'t a PokeProf save.'};
+  if(typeof data.version!=='number'||data.version<11) return {ok:false,reason:'That save is too old to load.'};
+  if(data.version>SAVE_VERSION) return {ok:false,reason:'That save is from a newer version of PokeProf. Refresh the page to update, then try again.'};
+  return {ok:true,data};
+}
+// The one shared "replace this device's save" path (import, cloud load, restore previous).
+// window._resetting must be set BEFORE the reload: saveGame() returns early on it, otherwise the
+// hide-tab save during the reload would overwrite the just-written incoming save.
+function replaceLocalSave(str,keepBackup){
+  try{
+    if(keepBackup!==false){
+      const cur=localStorage.getItem(SAVE_KEY);
+      if(cur) localStorage.setItem(SAVE_BACKUP_KEY,cur);
+    }
+    localStorage.setItem(SAVE_KEY,str);
+  }catch(e){ alert('Could not write the save on this device: '+(e&&e.message?e.message:e)); return false; }
+  window._resetting=true;
+  location.reload();
+  return true;
+}
+
+// ── Export / Import (no account, works offline) ──
+function exportSaveFile(){
+  saveGame();
+  const raw=localStorage.getItem(SAVE_KEY);
+  if(!raw){ alert('No save found to export yet.'); return; }
+  const d=new Date();
+  const name='pokeprof-save-'+d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+'.json';
+  const url=URL.createObjectURL(new Blob([raw],{type:'application/json'}));
+  const a=document.createElement('a'); a.href=url; a.download=name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),5000);
+}
+function importSaveFile(){
+  const input=document.createElement('input');
+  input.type='file'; input.accept='.json,application/json';
+  input.onchange=()=>{
+    const f=input.files&&input.files[0]; if(!f) return;
+    const reader=new FileReader();
+    reader.onload=()=>{
+      const str=String(reader.result||'');
+      const v=validateSaveString(str);
+      if(!v.ok){ alert(v.reason); return; }
+      if(!confirm('Replace this device\'s save with the file\'s save from '+formatWhen(v.data.savedAt)+'?\n\nYour current save is kept as a backup ("Restore previous save").')) return;
+      replaceLocalSave(str,true);
+    };
+    reader.readAsText(f);
+  };
+  input.click();
+}
+function restorePreviousSave(){
+  const prev=localStorage.getItem(SAVE_BACKUP_KEY);
+  if(!prev){ alert('No previous save stored on this device.'); return; }
+  const v=validateSaveString(prev);
+  if(!v.ok){ alert(v.reason); return; }
+  if(!confirm('Swap back to the previous save from '+formatWhen(v.data.savedAt)+'?\n\nThe current save becomes the new backup, so you can swap again.')) return;
+  replaceLocalSave(prev,true);
+}
+
+// ── Cloud ──
+async function cloudSignIn(){
+  try{
+    const fb=await loadFirebase();
+    await fb.authM.signInWithPopup(fb.auth,new fb.authM.GoogleAuthProvider());
+  }catch(e){ handleCloudError(e,true); }
+}
+async function cloudSignOut(){
+  try{ const fb=await loadFirebase(); await fb.authM.signOut(fb.auth); }catch(e){ handleCloudError(e,true); }
+  setCloudMeta({signedIn:false,email:''});
+  renderCloudPanelIfOpen();
+}
+async function cloudFetchMeta(){
+  const fb=await loadFirebase(); const u=fb.auth.currentUser; if(!u) return null;
+  const snap=await fb.fsM.getDoc(fb.fsM.doc(fb.db,'saves',u.uid));
+  return snap.exists()?snap.data():null;
+}
+async function cloudDownloadString(meta){
+  const fb=await loadFirebase(); const u=fb.auth.currentUser; if(!u) throw new Error('not signed in');
+  const n=meta.chunkCount||1;
+  const parts=[];
+  for(let i=0;i<n;i++){
+    const snap=await fb.fsM.getDoc(fb.fsM.doc(fb.db,'saves',u.uid,'chunks',String(i)));
+    if(!snap.exists()) throw new Error('cloud save is incomplete (missing part '+(i+1)+' of '+n+')');
+    parts.push(snap.data().data.toUint8Array());
+  }
+  const total=parts.reduce((a,p)=>a+p.length,0);
+  const all=new Uint8Array(total); let off=0; parts.forEach(p=>{ all.set(p,off); off+=p.length; });
+  return meta.encoding==='gzip'?await gunzipBytes(all):new TextDecoder().decode(all);
+}
+async function cloudUpload(isAuto){
+  if(_cloudBusy) return false;
+  _cloudBusy=true;
+  try{
+    const fb=await loadFirebase(); const u=fb.auth.currentUser;
+    if(!u) return false;
+    saveGame();
+    const raw=localStorage.getItem(SAVE_KEY); if(!raw) return false;
+    const data=JSON.parse(raw);
+    let bytes=await gzipString(raw), encoding='gzip';
+    if(!bytes){ bytes=new TextEncoder().encode(raw); encoding='none'; }
+    const n=Math.max(1,Math.ceil(bytes.length/CLOUD_CHUNK_BYTES));
+    if(n>CLOUD_MAX_CHUNKS) throw Object.assign(new Error('Save is too large for cloud storage ('+formatBytes(bytes.length)+').'),{code:'pokeprof/too-large'});
+    const {fsM,db}=fb;
+    const batch=fsM.writeBatch(db); // metadata + every chunk in one atomic commit — never half-written
+    for(let i=0;i<n;i++){
+      batch.set(fsM.doc(db,'saves',u.uid,'chunks',String(i)),{data:fsM.Bytes.fromUint8Array(bytes.subarray(i*CLOUD_CHUNK_BYTES,(i+1)*CLOUD_CHUNK_BYTES))});
+    }
+    batch.set(fsM.doc(db,'saves',u.uid),{savedAt:data.savedAt||Date.now(),uploadedAt:fsM.serverTimestamp(),saveVersion:data.version,gameVersion:GAME_VERSION,rawBytes:raw.length,storedBytes:bytes.length,encoding,chunkCount:n});
+    await batch.commit();
+    setCloudMeta({lastUploadAt:Date.now(),lastCloudBytes:bytes.length,lastCloudSavedAt:data.savedAt||Date.now()});
+    if(!isAuto) cloudNotice('☁ Saved to cloud',false);
+    renderCloudPanelIfOpen();
+    return true;
+  }catch(e){
+    handleCloudError(e,!isAuto);
+    _cloudPausedUntil=Date.now()+CLOUD_RETRY_MS;
+    return false;
+  }finally{ _cloudBusy=false; }
+}
+function handleCloudError(e,loud){
+  const code=(e&&e.code)||'';
+  let msg='Cloud save unavailable — your progress is saved locally.';
+  if(code==='resource-exhausted') msg='Cloud save is busy for today — your progress is saved locally.';
+  else if(code==='auth/popup-blocked') msg='Sign-in popup was blocked — allow popups for this site and try again.';
+  else if(code==='auth/popup-closed-by-user'||code==='auth/cancelled-popup-request') return;
+  else if(code==='pokeprof/too-large') msg=e.message;
+  cloudNotice('☁ '+msg,true);
+  if(loud) renderCloudPanelIfOpen(msg);
+}
+// Runs once per minute from autoSaveTick(). Signed-in only; waits for the newer-save check.
+function cloudAutoCheck(){
+  if(!cloudUser||!_cloudNewerChecked||_cloudBusy) return;
+  if(Date.now()<_cloudPausedUntil) return;
+  const m=getCloudMeta();
+  if(!m.lastUploadAt||Date.now()-m.lastUploadAt>=CLOUD_AUTO_MS) cloudUpload(true);
+}
+// On boot (already signed in) and right after sign-in: is the cloud copy newer than this
+// device's progress? Never loads silently — always asks.
+async function cloudCheckNewer(){
+  try{
+    const meta=await cloudFetchMeta();
+    if(meta){
+      setCloudMeta({lastCloudBytes:meta.storedBytes,lastCloudSavedAt:meta.savedAt});
+      if(meta.savedAt&&meta.savedAt>_bootLocalSavedAt+CLOUD_NEWER_MARGIN_MS){ showCloudNewerPrompt(meta); return; }
+    }
+    _cloudNewerChecked=true;
+  }catch(e){ handleCloudError(e,false); _cloudNewerChecked=true; }
+}
+function showCloudNewerPrompt(meta){
+  const existing=document.getElementById('cloud-newer-modal'); if(existing) existing.remove();
+  const m=document.createElement('div');
+  m.id='cloud-newer-modal';
+  m.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:1300;display:flex;align-items:center;justify-content:center;padding:16px;';
+  m.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;">'
+    +'<div style="color:var(--accent);font-size:13px;font-weight:bold;margin-bottom:8px;">☁️ Newer cloud save found</div>'
+    +'<div style="font-size:11px;color:var(--main-text);line-height:1.6;margin-bottom:12px;">Cloud save: <b>'+formatWhen(meta.savedAt)+'</b> ('+formatBytes(meta.storedBytes)+')<br>This device: <b>'+formatWhen(_bootLocalSavedAt)+'</b><br><br>Load the cloud save? This device\'s save is kept as a backup. If you keep this device\'s save instead, the next daily backup will replace the cloud copy with it.</div>'
+    +'<div style="display:flex;gap:8px;"><button id="cloud-newer-load" class="primary" style="flex:1;padding:10px;">Load cloud save</button><button id="cloud-newer-keep" style="flex:1;padding:10px;">Keep this device\'s</button></div>'
+    +'</div>';
+  document.body.appendChild(m);
+  document.getElementById('cloud-newer-load').onclick=()=>{ m.remove(); cloudLoad(meta,true); };
+  document.getElementById('cloud-newer-keep').onclick=()=>{ m.remove(); _cloudNewerChecked=true; };
+}
+async function cloudLoad(meta,skipConfirm){
+  try{
+    meta=meta||await cloudFetchMeta();
+    if(!meta){ alert('No cloud save found for this account yet.'); return; }
+    if(!skipConfirm&&!confirm('Load the cloud save from '+formatWhen(meta.savedAt)+' ('+formatBytes(meta.storedBytes)+')?\n\nThis device\'s save is kept as a backup ("Restore previous save").')) return;
+    const str=await cloudDownloadString(meta);
+    const v=validateSaveString(str);
+    if(!v.ok){ alert(v.reason); return; }
+    replaceLocalSave(str,true);
+  }catch(e){ handleCloudError(e,true); }
+}
+async function cloudSaveManual(){
+  try{
+    const meta=await cloudFetchMeta();
+    if(meta&&meta.savedAt&&meta.savedAt>_bootLocalSavedAt+CLOUD_NEWER_MARGIN_MS&&!_cloudNewerChecked){
+      if(!confirm('The cloud has a save from '+formatWhen(meta.savedAt)+', which may include progress from another device. Overwrite it with this device\'s save?')) return;
+    }
+    _cloudNewerChecked=true;
+    await cloudUpload(false);
+  }catch(e){ handleCloudError(e,true); }
+}
+
+// ── Save & Cloud screen (Info menu tile, beside Display) ──
+let _cloudPanelMsg='';
+function renderCloudPanelIfOpen(msg){
+  if(msg) _cloudPanelMsg=msg;
+  if(document.getElementById('cloud-panel')) renderCloudPanel();
+}
+function renderCloudPanel(){
+  const modal=document.getElementById('info-modal'); if(!modal) return;
+  const meta=getCloudMeta();
+  const localRaw=localStorage.getItem(SAVE_KEY)||'';
+  const hasBackup=!!localStorage.getItem(SAVE_BACKUP_KEY);
+  const btn='display:block;width:100%;margin-bottom:6px;padding:9px;text-align:left;font-size:11px;';
+  const signedIn=!!cloudUser;
+  const accountLine=signedIn
+    ?'Signed in as <b>'+String(cloudUser.email||'Google account').replace(/[<>&"]/g,'')+'</b>'
+    :(meta.signedIn?'Reconnecting to your account…':'Not signed in — cloud save is optional.');
+  const cloudButtons=signedIn
+    ?'<button onclick="cloudSaveManual()" style="'+btn+'border-color:var(--accent);color:var(--accent-light);">☁️⬆ Save to Cloud</button>'
+      +'<button onclick="cloudLoad(null,false)" style="'+btn+'">☁️⬇ Load from Cloud</button>'
+      +'<button onclick="cloudSignOut()" style="'+btn+'color:var(--main-text-secondary);">Sign out</button>'
+    :'<button onclick="cloudSignIn()" style="'+btn+'border-color:var(--accent);color:var(--accent-light);">Sign in with Google</button>';
+  modal.innerHTML='<div id="cloud-panel" style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><button onclick="renderInfoTopicList()" style="padding:5px 10px;font-size:10px;border-color:var(--accent);color:var(--accent-light);">◀ Back</button><button onclick="document.getElementById(\'info-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'
+    +'<div style="color:var(--accent);font-size:13px;font-weight:bold;margin-bottom:4px;">☁️ Save &amp; Cloud</div>'
+    +'<div style="color:var(--main-text-secondary);font-size:10px;margin-bottom:10px;">Your game always saves on this device. Cloud save is an optional backup that also lets you move between devices.</div>'
+    +(_cloudPanelMsg?'<div style="color:var(--c-danger);font-size:10px;margin-bottom:8px;">'+_cloudPanelMsg+'</div>':'')
+    +'<div style="font-size:11px;color:var(--main-text);margin-bottom:8px;">'+accountLine+'</div>'
+    +cloudButtons
+    +'<div style="color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin:12px 0 6px;">Save file</div>'
+    +'<button onclick="exportSaveFile()" style="'+btn+'">💾 Export save file</button>'
+    +'<button onclick="importSaveFile()" style="'+btn+'">📂 Import save file</button>'
+    +(hasBackup?'<button onclick="restorePreviousSave()" style="'+btn+'">↩ Restore previous save</button>':'')
+    +'<div style="font-size:10px;color:var(--main-text-secondary);line-height:1.7;margin-top:10px;padding-top:8px;border-top:1px solid var(--main-border);">'
+    +'Local save: '+formatBytes(localRaw.length)+'<br>'
+    +'Cloud save: '+(meta.lastCloudSavedAt?formatBytes(meta.lastCloudBytes)+' (compressed) · '+formatWhen(meta.lastCloudSavedAt):'—')+'<br>'
+    +'Last upload from this device: '+formatWhen(meta.lastUploadAt)+'<br>'
+    +(signedIn?'Automatic backup: once a day while the game is open':'')
+    +'</div>'
+    +'<div style="font-size:9px;color:var(--main-text-muted);margin-top:10px;line-height:1.5;">Signing in stores your save under your Google account in Firebase. Nothing else is collected.</div>'
+    +'</div>';
+  _cloudPanelMsg='';
+}
+function openCloudPanel(){
+  renderCloudPanel();
+  if(getCloudMeta().signedIn&&!_fb) loadFirebase().catch(e=>handleCloudError(e,true));
+}
 
 function init(){
   const carl=state.aides[0];
@@ -8859,6 +9325,9 @@ document.title='PokeProf v'+GAME_VERSION;
 }
 window._autoSaveInterval=setInterval(autoSaveTick,1000);
 window._gameTickInterval=setInterval(gameTick,1000);
+// v0.47 — if this device was signed in to cloud save last time, reconnect in the background so the
+// newer-save check and daily backup can run. Guests never load Firebase at all.
+if(getCloudMeta().signedIn) loadFirebase().catch(()=>{});
 
 let _hiddenAt=null;
 document.addEventListener('visibilitychange',()=>{

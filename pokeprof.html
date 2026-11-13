@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.47.1</title>
+<title>PokeProf v0.48</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -143,7 +143,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span id="game-version-display" style="font-size:11px;color:var(--main-text-muted);">v0.47.1</span></h1>
+  <h1>PokeProf <span id="game-version-display" style="font-size:11px;color:var(--main-text-muted);">v0.48</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">100.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -597,7 +597,7 @@ const ENC_INTERVAL_CLOSED = 30;
 // string independently, with nothing forcing them to agree — v0.44.3's delivery updated one and
 // missed the other. Both now render FROM this constant at boot (see init()) — bumping a version
 // is a one-line edit here, and the two displays can no longer drift apart.
-const GAME_VERSION = '0.47.1';
+const GAME_VERSION = '0.48';
 const FRIENDSHIP_THRESHOLD = 220;
 // v0.22 — highest level-based evolution across the whole franchise is Zweilous->Hydreigon
 // at level 64; 65 clears it with the minimum safe margin. Used to rule out 'level' as a
@@ -785,6 +785,7 @@ let state={
   daycareSlots:{purchased:1,slots:[]}, // v0.26 — Day Care / Breeding
   researchLog:{}, pendingFindings:[],
   discoveredLocations:new Set(['palletTown']),
+  visitedLocations:new Set(['palletTown']), // v0.48 — places an aide has actually stood in (Wander's "unexplored" = discovered but not visited)
   locationEncounterLog:{},
   locationMethodPrefs:{},
   dexHistory:{},
@@ -1000,37 +1001,32 @@ function getReachableDiscoveredLocations(fromId,trainerBag=state.aides[0].traine
   return reachable;
 }
 
-// v0.43 — Wander-only counterpart to getReachableDiscoveredLocations() above: identical BFS,
-// minus every discoveredLocations check. Every location reachable through valid (item-satisfied)
-// connection edges is included, discovered or not — the only remaining gate is requiresItem.
-// Manual "dispatch to a specific location" deliberately keeps using the discovery-gated version
-// above; this one is only ever passed to buildTravelPath() with ignoreDiscovery=true.
-function getWanderReachableLocations(fromId,trainerBag=state.aides[0].trainerBag){
-  const reachable=[];
-  if(typeof CONNECTIONS_DATA==='undefined') return reachable;
-  reachable.push(fromId);
-  const visited=new Set([fromId]);
+// v0.48 — hop distance (fewest connection steps) from fromId to every location reachable through
+// DISCOVERED, item-satisfied connections — the exact graph getReachableDiscoveredLocations() and
+// buildTravelPath(...,ignoreDiscovery=false) walk. One BFS for all targets (Wander's
+// nearest-unexplored pick). Replaces v0.43's getWanderReachableLocations(), retired with Wander's
+// discovery-ignoring pool — see DESIGN.md "Wander v0.48".
+function getDiscoveredHopDistances(fromId,trainerBag=state.aides[0].trainerBag){
+  const dist=new Map([[fromId,0]]);
+  if(typeof CONNECTIONS_DATA==='undefined') return dist;
   const queue=[fromId];
   while(queue.length){
     const cur=queue.shift();
-    const available=(CONNECTIONS_DATA||[]).filter(c=>{
-      if(c.fromLocationId!==cur) return false;
-      if(!c.requiresItem) return true;
-      return trainerBag&&trainerBag[c.requiresItem]&&trainerBag[c.requiresItem]>0; // v0.45 — trainerUnlocks removed, confirmed dead
-    });
-    for(const conn of available){
-      const n=conn.toLocationId;
-      if(visited.has(n)) continue;
-      visited.add(n);
-      reachable.push(n);
+    for(const c of CONNECTIONS_DATA){
+      if(c.fromLocationId!==cur) continue;
+      const n=c.toLocationId;
+      if(dist.has(n)||!state.discoveredLocations.has(n)) continue;
+      if(c.requiresItem&&!(trainerBag&&trainerBag[c.requiresItem]>0)) continue;
+      dist.set(n,dist.get(cur)+1);
       queue.push(n);
     }
   }
-  return reachable;
+  return dist;
 }
 
 function arriveAtLocation(locId,aide=state.aides[0]){
   aide.currentLocation=locId;
+  if(state.visitedLocations) state.visitedLocations.add(locId); // v0.48 — Wander's "unexplored" tracking
   // v0.44 — a genuine arrival anywhere other than the wipe-recall spot means the aide has
   // actually left; the gym-battle guard in rollEncounter() only needs to hold for this one
   // immediate escape, not forever.
@@ -1654,6 +1650,7 @@ function runGymEncounter(trainerId,tier,idx=0){
     }
     aide.currentEncounter=null;
     checkLocationHeal(idx); // v0.44.2 — immediately, not on the next tick (see closeWatchedBattle())
+    if(result.winner!=='player'&&wanderAfterGymLoss(idx,false)){ saveGame(); return; } // v0.48
     advanceTravelPath(idx);
     saveGame();
     return;
@@ -1670,6 +1667,7 @@ function runGymEncounter(trainerId,tier,idx=0){
       document.getElementById('enc-body').textContent='Lost the gauntlet at leg '+leg+'/5. Try again.';
       aide.currentEncounter=null;
       checkLocationHeal(idx); // v0.44.2
+      wanderAfterGymLoss(idx,false); // v0.48
       advanceTravelPath(idx);
       saveGame();
       return;
@@ -1732,13 +1730,13 @@ function runGymEncounterSilent(trainerId,tier,summary,idx=0){
     healPartyBeforeGymBattle(idx);
     const result=runOneGymBattleSilent(buildEnemyTeam(trainerId,tier),idx);
     if(result.winner==='player'){ summary.gymWins++; awardGymWinSilent(trainerId,tier,summary,idx); }
-    else { summary.gymLosses++; }
+    else { summary.gymLosses++; wanderAfterGymLoss(idx,true); } // v0.48
     return;
   }
   for(let leg=1;leg<=5;leg++){
     healPartyFullBeforeGauntletLeg(idx);
     const result=runOneGymBattleSilent(buildEnemyTeam(trainerId,tier,leg),idx);
-    if(result.winner!=='player'){ summary.gymLosses++; return; }
+    if(result.winner!=='player'){ summary.gymLosses++; wanderAfterGymLoss(idx,true); return; } // v0.48
   }
   summary.gymWins++;
   awardGymWinSilent(trainerId,tier,summary,idx);
@@ -3054,10 +3052,14 @@ function processAideOfflineTime(idx,secsAway,summary){
         ?aide.travelPath[aide.travelPath.length-1]
         :aide.missionDestination;
       aide.missionDestination=effectiveDestination;
+      const wipedAt=aide.currentLocation; // v0.48 — for Wander's after-wipe exclusion
       const returnLocId=aide.lastHealLocation||aide.missionOrigin||'palletTown';
       aide.party.forEach(p=>{ p.currentHP=p.maxHP; });
       aide.currentLocation=returnLocId;
-      if(returnLocId===aide.missionDestination){
+      if(state.visitedLocations) state.visitedLocations.add(returnLocId); // v0.48
+      if(wanderRepickAfterWipe(aide,returnLocId,true,effectiveDestination,wipedAt)){
+        // v0.48 — Wander re-picks after a wipe (Live/Offline Parity with endMission()).
+      } else if(returnLocId===aide.missionDestination){
         aide.travelPath=[]; aide.travelPathIndex=0; aide.travelCyclesRemaining=0;
       } else {
         // v0.44 fix — was missing ignoreDiscovery=true, unlike evaluateWanderTarget()'s own call.
@@ -3070,7 +3072,7 @@ function processAideOfflineTime(idx,secsAway,summary){
         // session make zero progress: any wipe deep in new territory reset cleanly to square one,
         // and the retry attempt — exploring that exact same undiscovered territory again — was
         // just as likely to wipe again before ever completing it.
-        aide.travelPath=buildTravelPath(returnLocId,aide.missionDestination,aide.trainerBag,true);
+        aide.travelPath=buildTravelPath(returnLocId,aide.missionDestination,aide.trainerBag,false); // v0.48 — discovery-gated again
         aide.travelPathIndex=0;
         if(aide.travelPath.length>0){ arriveAtLocation(aide.travelPath[0],aide); }
         else { aide.missionDestination=returnLocId; } // unreachable — fall back to researching here
@@ -3276,6 +3278,18 @@ function rollEncounter(idx=0){
   return rollFromTable(rollTable);
 }
 
+// v0.48 — would an aide at locId ever roll a gym battle there? Mirrors pickMethodForLocation()'s own
+// gym rule exactly (saved per-location Gym Battle checkbox; otherwise badge already held or the New
+// Player Preamble's Gym Battle Default). Wander's gym push only targets gyms where this is true —
+// otherwise the aide would park at a gym that never fights.
+function isGymBattleEnabledAt(locId,trainerBag){
+  const gymIds=getGymTrainerIdsAtLocation(locId);
+  if(!gymIds.length) return false;
+  const prefs=state.locationMethodPrefs[locId];
+  if(!prefs||!prefs.methods||!prefs.methods.length) return hasGymBadge(gymIds[0],trainerBag)||!!state.gymBattleDefaultPreference;
+  const known=prefs.knownMethods||prefs.methods||[];
+  return known.includes('gym')?prefs.methods.includes('gym'):true;
+}
 function pickMethodForLocation(locId,table,gymTrainerIds,trainerBag){
   gymTrainerIds=gymTrainerIds||[];
   const wildMethods=[...new Set(table.map(e=>e.method))];
@@ -4198,13 +4212,109 @@ function compareWanderCandidates(a,b,metric,trainerBag){
   const nameA=(locA?locA.name:a), nameB=(locB?locB.name:b);
   return nameA.localeCompare(nameB,undefined,{numeric:true,sensitivity:'base'});
 }
-// v0.45 — third Wander metric, 'random': uniform random pick from the identical eligible pool
-// the other two metrics use, instead of the deterministic 3-key sort. Shared by both call sites
-// (selectWanderMode()'s initial pick, evaluateWanderTarget()'s ongoing re-routing) so they never
-// disagree about which metric does what. No new eligibility rule, no new candidate pool.
+// v0.45 — third Wander metric, 'random': uniform random pick, instead of the deterministic 3-key sort.
 function pickWanderTarget(reachable,metric,trainerBag){
   if(metric==='random') return reachable[Math.floor(Math.random()*reachable.length)];
   return [...reachable].sort((a,b)=>compareWanderCandidates(a,b,metric,trainerBag))[0];
+}
+// v0.48 — the one Wander target rule, shared by selectWanderMode() (initial pick), evaluateWanderTarget()
+// (ongoing re-routing) and the Random wipe re-pick, so they never disagree. See DESIGN.md "Wander v0.48".
+// Pool: places visible on the map with a walkable route (getReachableDiscoveredLocations — the same
+// list manual dispatch uses). Unexplored = discovered but never stood in (state.visitedLocations).
+// - encounters/catches: nearest unexplored first (towns included — visiting them reveals the next
+//   ring of the map); once nothing visible is unexplored, the existing lowest-metric pick over
+//   places with wild encounters.
+// - random: uniform pick over places with wild encounters OR unexplored places (an unexplored town
+//   must be pickable or the map could never grow past it).
+// - encounters/catches gym push: once the highest-level party member is at the level cap, the
+//   nearest visible unbeaten accessible gym overrides everything above (only a badge raises the cap).
+// opts.party — the aide's party (gym push); opts.exclude (Set) — places this one pick may not choose
+// (the after-wipe rule; if that leaves nothing, the pick is retried without it); opts.gymBlockedAt —
+// the aide's wipeRecallLocation: gym battles can't happen there until the aide leaves (v0.44), so gym
+// push must not target it or the aide would sit there forever without ever fighting.
+// Returns {loc, exploring, gymPush} or null when nothing qualifies.
+function chooseWanderDestination(fromLoc,metric,trainerBag,opts){
+  opts=opts||{};
+  if(opts.exclude&&opts.exclude.size){
+    const r=chooseWanderDestination(fromLoc,metric,trainerBag,Object.assign({},opts,{exclude:null,_skip:opts.exclude}));
+    return r||chooseWanderDestination(fromLoc,metric,trainerBag,Object.assign({},opts,{exclude:null}));
+  }
+  const party=opts.party, skip=opts._skip||null;
+  const pool=getReachableDiscoveredLocations(fromLoc,trainerBag).filter(l=>!skip||!skip.has(l));
+  const visited=state.visitedLocations||new Set();
+  const isUnexplored=l=>l!==fromLoc&&!visited.has(l);
+  const hasEncounters=l=>buildRouteTable(l,trainerBag).length>0;
+  if(metric==='random'){
+    const cands=pool.filter(l=>hasEncounters(l)||isUnexplored(l));
+    if(!cands.length) return null;
+    const loc=cands[Math.floor(Math.random()*cands.length)];
+    return {loc,exploring:isUnexplored(loc)};
+  }
+  const dist=getDiscoveredHopDistances(fromLoc,trainerBag);
+  const d=l=>dist.has(l)?dist.get(l):Infinity;
+  // v0.48 — gym push (Encounters/Catches): highest-level party member at the cap -> nearest gym to beat.
+  // Only for saves that chose the idle experience (Gym Battle Default "Yes") — Jack, v0.48.
+  if(state.gymBattleDefaultPreference&&party&&party.length&&Math.max(...party.map(p=>p.level||0))>=getLevelCap(trainerBag)){
+    const gyms=pool.filter(l=>l!==opts.gymBlockedAt&&isGymBattleEnabledAt(l,trainerBag)&&getGymTrainerIdsAtLocation(l).some(tid=>{
+      if(!isGymAccessible(tid,trainerBag)) return false;
+      const row=(typeof TRAINERS_DATA!=='undefined')?TRAINERS_DATA.find(t=>t.trainerId===tid):null;
+      const badge=row&&row.badgeItemId;
+      return !!badge&&!(trainerBag&&trainerBag[badge]>0);
+    }));
+    if(gyms.length){
+      gyms.sort((a,b)=>d(a)-d(b)||String(a).localeCompare(String(b)));
+      return {loc:gyms[0],exploring:false,gymPush:true};
+    }
+  }
+  const unexplored=pool.filter(isUnexplored);
+  if(unexplored.length){
+    unexplored.sort((a,b)=>{
+      if(d(a)!==d(b)) return d(a)-d(b);
+      const ma=getLocationMaxLevel(a,trainerBag), mb=getLocationMaxLevel(b,trainerBag);
+      if(ma!==mb) return ma-mb; // Infinity (no encounters) sorts last within a distance tier
+      const la=typeof LOCATIONS!=='undefined'?getLocation(a):null, lb=typeof LOCATIONS!=='undefined'?getLocation(b):null;
+      return ((la&&la.name)||a).localeCompare((lb&&lb.name)||b,undefined,{numeric:true,sensitivity:'base'});
+    });
+    return {loc:unexplored[0],exploring:true};
+  }
+  const cands=pool.filter(hasEncounters);
+  if(!cands.length) return null;
+  return {loc:pickWanderTarget(cands,metric,trainerBag),exploring:false};
+}
+function wanderMetricLabel(metric){ return metric==='random'?'random':(metric==='catches'?'lowest-catch':'lowest-encounter'); }
+// v0.48 — after a party wipe, a Wandering aide picks a new course from the heal location instead of
+// heading back toward the same target (which could repeat forever on a spot the party can't survive).
+// Random: a fresh random pick. Encounters/Catches: a normal pick, except this one pick may not be the
+// place it was heading to or the place the party wiped (dropped if nothing else qualifies). Called by
+// live endMission('faint') and the offline wipe path in processAideOfflineTime() (Live/Offline Parity),
+// right after the aide is placed at returnLocId. Returns true if it handled the course.
+function wanderRepickAfterWipe(aide,returnLocId,silent,headingTo,wipedAt){
+  if(!aide.wanderMode) return false;
+  const metric=aide.wanderMetric||'encounters';
+  const exclude=metric==='random'?null:new Set([headingTo,wipedAt].filter(Boolean));
+  const pick=chooseWanderDestination(returnLocId,metric,aide.trainerBag,{party:aide.party,exclude,gymBlockedAt:aide.wipeRecallLocation});
+  if(!pick||pick.loc===returnLocId){
+    aide.missionDestination=returnLocId; aide.travelPath=[]; aide.travelPathIndex=0; aide.travelCyclesRemaining=0;
+    return true;
+  }
+  const path=buildTravelPath(returnLocId,pick.loc,aide.trainerBag,false);
+  if(!path.length){ aide.missionDestination=returnLocId; aide.travelPath=[]; aide.travelPathIndex=0; aide.travelCyclesRemaining=0; return true; }
+  aide.missionDestination=pick.loc; aide.travelPath=path; aide.travelPathIndex=0;
+  arriveAtLocation(path[0],aide);
+  if(!silent){
+    const ld=typeof LOCATIONS!=='undefined'?getLocation(pick.loc):null;
+    addLog('🧭 '+aide.name+' picks a new destination after the wipe: '+(ld?ld.name:pick.loc)+'.','info','travel',aide.id);
+  }
+  return true;
+}
+// v0.48 — a gym loss counts as a wipe for Wander: gym battles heal the party first and a loss doesn't
+// faint it out, so without this an aide parked at a gym by gym push would just lose to it forever.
+// Same after-wipe rule (this one pick can't be the gym), departing from where the aide stands.
+function wanderAfterGymLoss(idx,silent){
+  const aide=state.aides[idx];
+  if(!aide||!aide.wanderMode) return false;
+  const here=aide.currentLocation;
+  return wanderRepickAfterWipe(aide,here,silent,here,here);
 }
 function evaluateWanderTarget(idx=0){
   const aide=state.aides[idx];
@@ -4223,15 +4333,14 @@ function evaluateWanderTarget(idx=0){
   const currentLoc=aide.currentLocation||'palletTown';
   // v0.43 — Wander now considers every location reachable via the connection graph regardless of
   // discovery, not just already-discovered ones. requiresItem gates still fully apply.
-  const reachable=getWanderReachableLocations(currentLoc,aide.trainerBag).filter(locId=>buildRouteTable(locId,aide.trainerBag).length>0);
-  if(!reachable.length) return; // nothing reachable can ever have an encounter — nothing to do
+  // v0.48 — visible-only pool, unexplored first (encounters/catches), see chooseWanderDestination().
   const metric=aide.wanderMetric||'encounters'; // v0.35/v0.45 — 'encounters'|'catches'|'random', set at dispatch
-  const best=pickWanderTarget(reachable,metric,aide.trainerBag);
-  if(best===aide.missionDestination) return; // current target is still the deterministic best — no redirect
-  // v0.43 — ignoreDiscovery=true: best may be an undiscovered location, and the path may cross
-  // undiscovered waypoints too — both fine now, only requiresItem gates still block a route.
-  const path=buildTravelPath(currentLoc,best,aide.trainerBag,true);
-  if(!path.length) return; // unreachable by an actual walkable path (item-gated) — leave destination as-is
+  const pick=chooseWanderDestination(currentLoc,metric,aide.trainerBag,{party:aide.party,gymBlockedAt:aide.wipeRecallLocation});
+  if(!pick) return; // nothing visible qualifies — nothing to do
+  const best=pick.loc;
+  if(best===aide.missionDestination) return; // current target is still the best — no redirect
+  const path=buildTravelPath(currentLoc,best,aide.trainerBag,false);
+  if(!path.length) return; // defensive — the pool is already walkable
   // v0.34 fix — the current location is about to stop being the destination, so it must be
   // *departed* like any other waypoint: pay its own travelTime as a dwell cost before the new
   // path's first real step begins. travelPathIndex=-1 is a sentinel meaning "departure dwell in
@@ -4246,8 +4355,9 @@ function evaluateWanderTarget(idx=0){
   aide.travelPath=path;
   aide.travelPathIndex=-1;
   const destLocData=typeof LOCATIONS!=='undefined'?getLocation(best):null;
-  const metricLabel=metric==='random'?'random':(metric==='catches'?'lowest-catch':'lowest-encounter'); // v0.35/v0.45
-  addLog('🧭 '+aide.name+' changes course — new '+metricLabel+' destination: '+(destLocData?destLocData.name:best)+'.','info','travel',aide.id);
+  if(pick.gymPush) addLog('🧭 '+aide.name+' heads to '+(destLocData?destLocData.name:best)+' to challenge the gym — level cap reached.','info','travel',aide.id); // v0.48
+  else if(pick.exploring) addLog('🧭 '+aide.name+' changes course — exploring: '+(destLocData?destLocData.name:best)+'.','info','travel',aide.id); // v0.48
+  else addLog('🧭 '+aide.name+' changes course — new '+wanderMetricLabel(metric)+' destination: '+(destLocData?destLocData.name:best)+'.','info','travel',aide.id);
 }
 
 function destSortButtonHtml(field,label){
@@ -4380,12 +4490,13 @@ function selectWanderMode(metric){
   const currentLoc=state.aides[missionModalAideIndex].currentLocation||'palletTown';
   // v0.43 — same discovery-ignoring pool as evaluateWanderTarget(), for consistency between the
   // initial pick and ongoing re-routing.
-  const reachable=getWanderReachableLocations(currentLoc,state.aides[missionModalAideIndex].trainerBag).filter(locId=>buildRouteTable(locId,state.aides[missionModalAideIndex].trainerBag).length>0);
-  if(!reachable.length){ addLog('No reachable destinations with possible encounters for Wander mode.','fail','systemErrors',state.aides[missionModalAideIndex].id); return; }
+  // v0.48 — same rule as every later re-evaluation (chooseWanderDestination()).
+  const pick=chooseWanderDestination(currentLoc,metric,state.aides[missionModalAideIndex].trainerBag,{party:state.aides[missionModalAideIndex].party,gymBlockedAt:state.aides[missionModalAideIndex].wipeRecallLocation});
+  if(!pick){ addLog('No reachable destinations for Wander mode.','fail','systemErrors',state.aides[missionModalAideIndex].id); return; }
   // v0.45 — pickWanderTarget() handles 'random' (uniform pick) as well as the existing
   // deterministic 3-key comparator for 'encounters'/'catches', so the initial pick and the first
   // re-evaluation never disagree with each other for any of the three metrics.
-  const best=pickWanderTarget(reachable,metric,state.aides[missionModalAideIndex].trainerBag);
+  const best=pick.loc;
   state._missionDest=best;
   state._wanderSelected=true;
   state._wanderMetric=metric;
@@ -4790,9 +4901,9 @@ function confirmMission(){
   if(state.aides[missionModalAideIndex].missionOrigin===state.aides[missionModalAideIndex].missionDestination){
     state.aides[missionModalAideIndex].travelPath=[]; state.aides[missionModalAideIndex].travelPathIndex=0; state.aides[missionModalAideIndex].travelCyclesRemaining=0;
   } else {
-    // v0.43 — ignoreDiscovery only for Wander dispatches (wanderMode already set above from
-    // state._wanderSelected); manual destination picks stay discovery-gated as before.
-    state.aides[missionModalAideIndex].travelPath=buildTravelPath(state.aides[missionModalAideIndex].missionOrigin,state.aides[missionModalAideIndex].missionDestination,state.aides[missionModalAideIndex].trainerBag,state.aides[missionModalAideIndex].wanderMode);
+    // v0.48 — discovery-gated for every dispatch, Wander included (Wander's v0.43 ignoreDiscovery
+    // reversed — see DESIGN.md "Wander v0.48").
+    state.aides[missionModalAideIndex].travelPath=buildTravelPath(state.aides[missionModalAideIndex].missionOrigin,state.aides[missionModalAideIndex].missionDestination,state.aides[missionModalAideIndex].trainerBag,false);
     if(state.aides[missionModalAideIndex].travelPath.length===0){
       addLog('⚠ Cannot reach that destination — missing required item.','fail','systemErrors',state.aides[missionModalAideIndex].id);
       return;
@@ -4845,6 +4956,7 @@ function endMission(reason='faint',idx=0){
     ?aide.travelPath[aide.travelPath.length-1]
     :aide.missionDestination;
   aide.missionDestination=effectiveDestination;
+  const wipedAt=aide.currentLocation; // v0.48 — for Wander's after-wipe exclusion
   const returnLocId=aide.lastHealLocation||aide.missionOrigin||'palletTown';
   const originLoc=typeof LOCATIONS!=='undefined'?getLocation(returnLocId):null;
   const originName=originLoc?originLoc.name:returnLocId;
@@ -4864,13 +4976,16 @@ function endMission(reason='faint',idx=0){
       addLog('🏥 Party fully healed at '+originName+'!','info','healing',state.aides[idx].id);
     }
   }
-  if(reason==='faint'){
+  if(state.visitedLocations) state.visitedLocations.add(returnLocId); // v0.48
+  if(reason==='faint'&&wanderRepickAfterWipe(aide,returnLocId,false,effectiveDestination,wipedAt)){
+    // v0.48 — Wander set a fresh course from the heal location instead of resuming.
+  } else if(reason==='faint'){
     if(returnLocId===aide.missionDestination){
       aide.travelPath=[]; aide.travelPathIndex=0; aide.travelCyclesRemaining=0;
     } else {
-      // v0.44 fix — was missing ignoreDiscovery=true, unlike evaluateWanderTarget()'s own call
-      // (see processAideOfflineTime()'s identical fix for the full writeup).
-      aide.travelPath=buildTravelPath(returnLocId,aide.missionDestination,aide.trainerBag,true);
+      // v0.48 — discovery-gated again (was ignoreDiscovery=true since v0.44, matching Wander's
+      // v0.43 permission model, which v0.48 reverses). Unreachable → research at the heal spot.
+      aide.travelPath=buildTravelPath(returnLocId,aide.missionDestination,aide.trainerBag,false);
       aide.travelPathIndex=0;
       if(aide.travelPath.length>0){ arriveAtLocation(aide.travelPath[0],aide); }
       else { aide.missionDestination=returnLocId; } // unreachable — fall back to researching here
@@ -7591,7 +7706,7 @@ function matchesCatchesSearch(p,q){
 // checkbox popup above; search is live "contains" across name/nickname/catch#/dex#/holder;
 // each entry now shows both of the individual's actual FORM type(s) as colored badges.
 function renderDexViewAll(){
-  const c=document.getElementById('dex-list'); c.innerHTML='';
+  const c=document.getElementById('dex-list');
   let entries=state.dex.filter(p=>matchesCatchesFilters(p,dexCatchesFilters)&&matchesCatchesSearch(p,dexCatchesSearch));
   // v0.46 — "Hide Fully Researched" toggle.
   if(dexHideResearched) entries=entries.filter(p=>!isDexPageComplete(p.pokedexId,p.formName));
@@ -7611,9 +7726,41 @@ function renderDexViewAll(){
     const cmp=fa-fb||(a.pokedexId||0)-(b.pokedexId||0);
     return dir==='asc'?cmp:-cmp;
   });
+  // v0.48 — update in place instead of rebuilding every tick (see DESIGN.md "Render Performance").
+  // If the same Pokémon are on screen in the same order, only rows whose displayed values changed
+  // are rewritten; anything else (filter/search/sort/Hide Researched/new catch/release) rebuilds.
+  const order=entries.map(p=>p.id).join(',');
+  const rows=c.children;
+  // Each row is stamped with its catch id, so a list another view drew into #dex-list in between
+  // can never be mistaken for ours (its rows carry no stamp -> full rebuild).
+  if(entries.length&&c.dataset.viewAllOrder===order&&rows.length===entries.length
+     &&entries.every((p,i)=>rows[i].dataset.viewAllId===String(p.id))){
+    for(let i=0;i<entries.length;i++){
+      const p=entries[i], sig=viewAllRowSig(p), row=rows[i];
+      if(row.dataset.sig!==sig){ fillViewAllRow(row,p); row.dataset.sig=sig; }
+    }
+    return;
+  }
+  c.innerHTML='';
+  delete c.dataset.viewAllOrder;
   if(!entries.length){ c.innerHTML='<div style="color:#555;padding:12px;font-size:11px;">No entries.</div>'; return; }
   entries.forEach(p=>{
     const d=document.createElement('div');
+    fillViewAllRow(d,p);
+    d.dataset.sig=viewAllRowSig(p);
+    d.dataset.viewAllId=String(p.id);
+    d.onclick=()=>showPokemonDetail(p.id);
+    c.appendChild(d);
+  });
+  c.dataset.viewAllOrder=order;
+}
+// v0.48 — everything one All Catches row displays, as a compact string; a row is rewritten only
+// when this changes. BST is derived from species/level/stats, all covered here via calcBST().
+function viewAllRowSig(p){
+  return [p.pokedexId,p.formName,p.species,getDisplayName(p),getRarityBadge(p)||'',p.level,p.gender,p.currentHP,p.maxHP,calcBST(p.species,p.level,p),p.friendship||0,p.holder||'',p.breeding?1:0,p.isShiny?1:0].join('|');
+}
+// v0.48 — the All Catches row markup, unchanged from v0.47, factored out so it can rewrite a row in place.
+function fillViewAllRow(d,p){
     // v0.30 — breeding takes priority over the held/unassigned dimming, since it isn't idle.
     d.className='dex-entry'+((p.holder||p.breeding)?'':' unassigned'); d.style.cursor='pointer';
     const sprite=getSpriteUrl(p.pokedexId,p.species,p.isShiny||false,p.formName);
@@ -7622,9 +7769,6 @@ function renderDexViewAll(){
     const entry=getPokemonEntry(p.pokedexId,p.formName);
     const typesHtml=entry?(typeBadgeHtml(entry.type1)+typeBadgeHtml(entry.type2)):'';
     d.innerHTML='<div style="display:flex;align-items:center;gap:8px;"><img src="'+sprite+'" style="width:36px;height:36px;image-rendering:pixelated;flex-shrink:0;" onerror="this.style.display=\'none\'"><div style="flex:1;"><div class="dex-header"><span class="dex-name">#'+(p.pokedexId||'?')+' '+getDisplayName(p)+(getRarityBadge(p)?'<span class="shiny-badge">'+getRarityBadge(p)+'</span>':'')+' '+typesHtml+'(catch #'+p.id+')</span><span class="dex-id">'+statusIcon+'</span></div><div class="dex-details">Lv'+p.level+' · '+p.gender+' · HP '+p.currentHP+'/'+p.maxHP+' · BST '+calcBST(p.species,p.level,p)+' · Friendship:'+(p.friendship||0)+'</div><div class="dex-holder">'+statusText+'</div></div></div>';
-    d.onclick=()=>showPokemonDetail(p.id);
-    c.appendChild(d);
-  });
 }
 
 // v0.37 — Official Pokédex's new Species tab: one row per dexId (forms handled via the existing
@@ -7948,7 +8092,7 @@ const SAVE_KEY='pokeprof_save';
 // batch-evolve prompt, offline friendship parity, dual-root family breeding, Ditto
 // breeding-placeholder fix, Family IV Inheritance pool fix) is a bug fix or UI/logic-only, no
 // additional schema impact.
-const SAVE_VERSION=34; // v0.47 — one-time research cleanup (Same-Method Multi-Branch Completeness) + Shedinja backfill; no new fields. Previously 33: v0.45.5 — state.locationEncounterLog re-keyed from bare dexId to dexId+'|'+(formName||'') (see migrateLocationEncounterLogKeys(), "Wild Encounter Form Resolution" in DESIGN.md)
+const SAVE_VERSION=35; // v0.48 — state.visitedLocations (Wander unexplored priority). Previously 34: v0.47 — one-time research cleanup (Same-Method Multi-Branch Completeness) + Shedinja backfill; no new fields. Previously 33: v0.45.5 — state.locationEncounterLog re-keyed from bare dexId to dexId+'|'+(formName||'') (see migrateLocationEncounterLogKeys(), "Wild Encounter Form Resolution" in DESIGN.md)
 // v0.45.4 — state.researchLog re-keyed from bare dexId to dexId+'|'+(formName||'') (per-form research identity; see "Research Log — Per-Form Identity" in DESIGN.md)
 let saveTimer=0;
 
@@ -7971,6 +8115,7 @@ function saveGame(){
         speciesCapOverrides:state.speciesCapOverrides||{}, // v0.38
         daycareSlots:state.daycareSlots||{purchased:1,slots:[]},
         discoveredLocations:[...state.discoveredLocations],
+        visitedLocations:[...(state.visitedLocations||[])], // v0.48
         locationEncounterLog:state.locationEncounterLog||{},
         locationMethodPrefs:state.locationMethodPrefs||{},
         dexHistory:state.dexHistory||{},
@@ -7999,7 +8144,7 @@ function loadGame(){
     // genuine v0.45.4 save (version 32) would have been rejected outright on load. Same mechanical
     // gap this comment's own migration-history model is supposed to prevent — see rule 17/19 in
     // workflow.md (grep the old version string, confirm zero unintended hits) — added `!==32` below.
-    if(data.version!==SAVE_VERSION&&data.version!==33&&data.version!==32&&data.version!==31&&data.version!==30&&data.version!==29&&data.version!==28&&data.version!==27&&data.version!==26&&data.version!==25&&data.version!==24&&data.version!==23&&data.version!==22&&data.version!==21&&data.version!==20&&data.version!==19&&data.version!==18&&data.version!==17&&data.version!==16&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
+    if(data.version!==SAVE_VERSION&&data.version!==34&&data.version!==33&&data.version!==32&&data.version!==31&&data.version!==30&&data.version!==29&&data.version!==28&&data.version!==27&&data.version!==26&&data.version!==25&&data.version!==24&&data.version!==23&&data.version!==22&&data.version!==21&&data.version!==20&&data.version!==19&&data.version!==18&&data.version!==17&&data.version!==16&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
     const s=data.state;
     // v0.39.1 — aide-owned fields (party/dex/trainerBag/currentLocation/mission-and-travel/
     // gymProgress/lastHealLocation/wanderMode) now live in state.aides[]. A pre-v26 save has them
@@ -8073,6 +8218,7 @@ function loadGame(){
       travelPath:src0.travelPath??[], travelPathIndex:src0.travelPathIndex??0,
       travelCyclesRemaining:src0.travelCyclesRemaining??0,
       discoveredLocations:new Set(s.discoveredLocations??['palletTown','route1']),
+      visitedLocations:new Set(s.visitedLocations??[]), // v0.48 — backfilled below for data.version<35
       locationEncounterLog:migratedLog,
       locationMethodPrefs:s.locationMethodPrefs??{},
       lastHealLocation:src0.lastHealLocation??'palletTown',
@@ -8201,6 +8347,22 @@ function loadGame(){
     //     found had 'level' closed). confirmedBranches is never touched.
     // (2) Shedinja backfill: Shedinja creation never recorded Nincada's 'shed' branch or
     //     dexHistory before v0.47 — credit any Shedinja already held.
+    // ── SAVE_VERSION 35 MIGRATION (v0.48) ── backfill state.visitedLocations, which didn't exist
+    // before. Anything an aide is standing at / healed at / set out from, anything with encounter
+    // history, and any discovered location whose neighbours are all discovered (it was almost
+    // certainly stood in). Worst case of the heuristic: one harmless extra revisit.
+    if(data.version<35){
+      const v=state.visitedLocations instanceof Set?state.visitedLocations:new Set();
+      (state.aides||[]).forEach(a=>{ [a.currentLocation,a.lastHealLocation,a.missionOrigin].forEach(l=>{ if(l) v.add(l); }); });
+      Object.keys(state.locationEncounterLog||{}).forEach(l=>v.add(l));
+      if(typeof CONNECTIONS_DATA!=='undefined'){
+        state.discoveredLocations.forEach(l=>{
+          const nbrs=CONNECTIONS_DATA.filter(c=>c.fromLocationId===l).map(c=>c.toLocationId);
+          if(nbrs.length&&nbrs.every(n=>state.discoveredLocations.has(n))) v.add(l);
+        });
+      }
+      state.visitedLocations=v;
+    }
     if(data.version<34){
       Object.keys(state.researchLog).forEach(key=>{
         const bar=key.indexOf('|');
@@ -8827,6 +8989,7 @@ if(!hasSave){
     daycareSlots:{purchased:1,slots:[]},
     researchLog:{}, pendingFindings:[],
     discoveredLocations:initDiscovered,
+    visitedLocations:new Set(['palletTown']), // v0.48 — the starting location
     locationEncounterLog:{},
     locationMethodPrefs:{},
     dexHistory:{},

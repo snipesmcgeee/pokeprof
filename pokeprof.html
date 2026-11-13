@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.47</title>
+<title>PokeProf v0.47.1</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -143,7 +143,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span id="game-version-display" style="font-size:11px;color:var(--main-text-muted);">v0.47</span></h1>
+  <h1>PokeProf <span id="game-version-display" style="font-size:11px;color:var(--main-text-muted);">v0.47.1</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">100.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -597,7 +597,7 @@ const ENC_INTERVAL_CLOSED = 30;
 // string independently, with nothing forcing them to agree — v0.44.3's delivery updated one and
 // missed the other. Both now render FROM this constant at boot (see init()) — bumping a version
 // is a one-line edit here, and the two displays can no longer drift apart.
-const GAME_VERSION = '0.47';
+const GAME_VERSION = '0.47.1';
 const FRIENDSHIP_THRESHOLD = 220;
 // v0.22 — highest level-based evolution across the whole franchise is Zweilous->Hydreigon
 // at level 64; 65 clears it with the minimum safe margin. Used to rule out 'level' as a
@@ -8449,7 +8449,10 @@ function autoSaveTick(){
 const FIREBASE_SDK_VERSION='13.2.0'; // pinned — never "latest"
 const FIREBASE_CONFIG={ // public by design; firestore.rules is the actual protection. Analytics deliberately omitted.
   apiKey:'AIzaSyDdN18QZddkf6CuxdGz_RU28OeyyPROcis',
-  authDomain:'pokeprof-87205.firebaseapp.com',
+  // v0.47.1 — the game's own domain, not pokeprof-87205.firebaseapp.com: Google's sign-in helper is
+  // self-hosted at snipesmcgeee.github.io/__/auth/ (separate repo, refreshed by a GitHub Action) so
+  // browsers that wall off cross-site storage (iPhone Chrome) can complete sign-in. See DESIGN.md.
+  authDomain:'snipesmcgeee.github.io',
   projectId:'pokeprof-87205',
   storageBucket:'pokeprof-87205.firebasestorage.app',
   messagingSenderId:'320248122173',
@@ -8579,10 +8582,46 @@ function restorePreviousSave(){
 }
 
 // ── Cloud ──
+// v0.47.1 — redirect flow on iOS browsers other than Safari and on an iOS home-screen web app,
+// where a popup can't hand its result back; popup everywhere else, falling back to redirect if
+// the popup is blocked or fails with a storage error. See DESIGN.md "Save System & Cloud Save".
+const AUTH_REDIRECT_FLAG_KEY='pokeprof_auth_redirect';
+function prefersRedirectSignIn(){
+  const ua=(navigator&&navigator.userAgent)||'';
+  return /CriOS|FxiOS|EdgiOS|OPiOS/.test(ua)||(navigator&&navigator.standalone===true);
+}
+function isStorageBlockedAuthError(e){
+  const code=(e&&e.code)||'', msg=String((e&&e.message)||'');
+  return code==='auth/web-storage-unsupported'||code==='auth/missing-initial-state'||/missing initial state|sessionStorage/i.test(msg);
+}
+async function cloudSignInRedirect(fb){
+  saveGame();
+  try{ localStorage.setItem(AUTH_REDIRECT_FLAG_KEY,String(Date.now())); }catch(e){}
+  await fb.authM.signInWithRedirect(fb.auth,new fb.authM.GoogleAuthProvider());
+}
 async function cloudSignIn(){
+  let fb;
+  try{ fb=await loadFirebase(); }catch(e){ handleCloudError(e,true); return; }
+  if(prefersRedirectSignIn()){
+    try{ await cloudSignInRedirect(fb); }catch(e){ handleCloudError(e,true); }
+    return;
+  }
+  try{
+    await fb.authM.signInWithPopup(fb.auth,new fb.authM.GoogleAuthProvider());
+  }catch(e){
+    const code=(e&&e.code)||'';
+    if(code==='auth/popup-blocked'||isStorageBlockedAuthError(e)){
+      try{ await cloudSignInRedirect(fb); return; }catch(e2){ handleCloudError(e2,true); return; }
+    }
+    handleCloudError(e,true);
+  }
+}
+// Called at boot when a redirect sign-in was started last page-load: finishes it.
+async function cloudFinishRedirectSignIn(){
+  try{ localStorage.removeItem(AUTH_REDIRECT_FLAG_KEY); }catch(e){}
   try{
     const fb=await loadFirebase();
-    await fb.authM.signInWithPopup(fb.auth,new fb.authM.GoogleAuthProvider());
+    await fb.authM.getRedirectResult(fb.auth); // onAuthStateChanged picks up the signed-in user
   }catch(e){ handleCloudError(e,true); }
 }
 async function cloudSignOut(){
@@ -8645,6 +8684,7 @@ function handleCloudError(e,loud){
   else if(code==='auth/popup-blocked') msg='Sign-in popup was blocked — allow popups for this site and try again.';
   else if(code==='auth/popup-closed-by-user'||code==='auth/cancelled-popup-request') return;
   else if(code==='pokeprof/too-large') msg=e.message;
+  else if(isStorageBlockedAuthError(e)) msg='This browser blocked Google sign-in. Try Safari, or move your game with Export / Import save file.';
   cloudNotice('☁ '+msg,true);
   if(loud) renderCloudPanelIfOpen(msg);
 }
@@ -9327,7 +9367,9 @@ window._autoSaveInterval=setInterval(autoSaveTick,1000);
 window._gameTickInterval=setInterval(gameTick,1000);
 // v0.47 — if this device was signed in to cloud save last time, reconnect in the background so the
 // newer-save check and daily backup can run. Guests never load Firebase at all.
-if(getCloudMeta().signedIn) loadFirebase().catch(()=>{});
+// v0.47.1 — or finish a redirect sign-in started on the previous page-load.
+if((()=>{ try{ return !!localStorage.getItem(AUTH_REDIRECT_FLAG_KEY); }catch(e){ return false; } })()) cloudFinishRedirectSignIn();
+else if(getCloudMeta().signedIn) loadFirebase().catch(()=>{});
 
 let _hiddenAt=null;
 document.addEventListener('visibilitychange',()=>{

@@ -1650,6 +1650,7 @@ function runGymEncounter(trainerId,tier,idx=0){
     }
     aide.currentEncounter=null;
     checkLocationHeal(idx); // v0.44.2 — immediately, not on the next tick (see closeWatchedBattle())
+    if(result.winner!=='player'&&wanderAfterGymLoss(idx,false)){ saveGame(); return; } // v0.48
     advanceTravelPath(idx);
     saveGame();
     return;
@@ -1666,6 +1667,7 @@ function runGymEncounter(trainerId,tier,idx=0){
       document.getElementById('enc-body').textContent='Lost the gauntlet at leg '+leg+'/5. Try again.';
       aide.currentEncounter=null;
       checkLocationHeal(idx); // v0.44.2
+      wanderAfterGymLoss(idx,false); // v0.48
       advanceTravelPath(idx);
       saveGame();
       return;
@@ -1728,13 +1730,13 @@ function runGymEncounterSilent(trainerId,tier,summary,idx=0){
     healPartyBeforeGymBattle(idx);
     const result=runOneGymBattleSilent(buildEnemyTeam(trainerId,tier),idx);
     if(result.winner==='player'){ summary.gymWins++; awardGymWinSilent(trainerId,tier,summary,idx); }
-    else { summary.gymLosses++; }
+    else { summary.gymLosses++; wanderAfterGymLoss(idx,true); } // v0.48
     return;
   }
   for(let leg=1;leg<=5;leg++){
     healPartyFullBeforeGauntletLeg(idx);
     const result=runOneGymBattleSilent(buildEnemyTeam(trainerId,tier,leg),idx);
-    if(result.winner!=='player'){ summary.gymLosses++; return; }
+    if(result.winner!=='player'){ summary.gymLosses++; wanderAfterGymLoss(idx,true); return; } // v0.48
   }
   summary.gymWins++;
   awardGymWinSilent(trainerId,tier,summary,idx);
@@ -3050,12 +3052,13 @@ function processAideOfflineTime(idx,secsAway,summary){
         ?aide.travelPath[aide.travelPath.length-1]
         :aide.missionDestination;
       aide.missionDestination=effectiveDestination;
+      const wipedAt=aide.currentLocation; // v0.48 — for Wander's after-wipe exclusion
       const returnLocId=aide.lastHealLocation||aide.missionOrigin||'palletTown';
       aide.party.forEach(p=>{ p.currentHP=p.maxHP; });
       aide.currentLocation=returnLocId;
       if(state.visitedLocations) state.visitedLocations.add(returnLocId); // v0.48
-      if(wanderRepickAfterWipe(aide,returnLocId,true)){
-        // v0.48 — Random Wander re-picks after a wipe (Live/Offline Parity with endMission()).
+      if(wanderRepickAfterWipe(aide,returnLocId,true,effectiveDestination,wipedAt)){
+        // v0.48 — Wander re-picks after a wipe (Live/Offline Parity with endMission()).
       } else if(returnLocId===aide.missionDestination){
         aide.travelPath=[]; aide.travelPathIndex=0; aide.travelCyclesRemaining=0;
       } else {
@@ -3275,6 +3278,18 @@ function rollEncounter(idx=0){
   return rollFromTable(rollTable);
 }
 
+// v0.48 — would an aide at locId ever roll a gym battle there? Mirrors pickMethodForLocation()'s own
+// gym rule exactly (saved per-location Gym Battle checkbox; otherwise badge already held or the New
+// Player Preamble's Gym Battle Default). Wander's gym push only targets gyms where this is true —
+// otherwise the aide would park at a gym that never fights.
+function isGymBattleEnabledAt(locId,trainerBag){
+  const gymIds=getGymTrainerIdsAtLocation(locId);
+  if(!gymIds.length) return false;
+  const prefs=state.locationMethodPrefs[locId];
+  if(!prefs||!prefs.methods||!prefs.methods.length) return hasGymBadge(gymIds[0],trainerBag)||!!state.gymBattleDefaultPreference;
+  const known=prefs.knownMethods||prefs.methods||[];
+  return known.includes('gym')?prefs.methods.includes('gym'):true;
+}
 function pickMethodForLocation(locId,table,gymTrainerIds,trainerBag){
   gymTrainerIds=gymTrainerIds||[];
   const wildMethods=[...new Set(table.map(e=>e.method))];
@@ -4211,9 +4226,21 @@ function pickWanderTarget(reachable,metric,trainerBag){
 //   places with wild encounters.
 // - random: uniform pick over places with wild encounters OR unexplored places (an unexplored town
 //   must be pickable or the map could never grow past it).
-// Returns {loc, exploring} or null when nothing qualifies.
-function chooseWanderDestination(fromLoc,metric,trainerBag){
-  const pool=getReachableDiscoveredLocations(fromLoc,trainerBag);
+// - encounters/catches gym push: once the highest-level party member is at the level cap, the
+//   nearest visible unbeaten accessible gym overrides everything above (only a badge raises the cap).
+// opts.party — the aide's party (gym push); opts.exclude (Set) — places this one pick may not choose
+// (the after-wipe rule; if that leaves nothing, the pick is retried without it); opts.gymBlockedAt —
+// the aide's wipeRecallLocation: gym battles can't happen there until the aide leaves (v0.44), so gym
+// push must not target it or the aide would sit there forever without ever fighting.
+// Returns {loc, exploring, gymPush} or null when nothing qualifies.
+function chooseWanderDestination(fromLoc,metric,trainerBag,opts){
+  opts=opts||{};
+  if(opts.exclude&&opts.exclude.size){
+    const r=chooseWanderDestination(fromLoc,metric,trainerBag,Object.assign({},opts,{exclude:null,_skip:opts.exclude}));
+    return r||chooseWanderDestination(fromLoc,metric,trainerBag,Object.assign({},opts,{exclude:null}));
+  }
+  const party=opts.party, skip=opts._skip||null;
+  const pool=getReachableDiscoveredLocations(fromLoc,trainerBag).filter(l=>!skip||!skip.has(l));
   const visited=state.visitedLocations||new Set();
   const isUnexplored=l=>l!==fromLoc&&!visited.has(l);
   const hasEncounters=l=>buildRouteTable(l,trainerBag).length>0;
@@ -4223,10 +4250,23 @@ function chooseWanderDestination(fromLoc,metric,trainerBag){
     const loc=cands[Math.floor(Math.random()*cands.length)];
     return {loc,exploring:isUnexplored(loc)};
   }
+  const dist=getDiscoveredHopDistances(fromLoc,trainerBag);
+  const d=l=>dist.has(l)?dist.get(l):Infinity;
+  // v0.48 — gym push (Encounters/Catches): highest-level party member at the cap -> nearest gym to beat.
+  if(party&&party.length&&Math.max(...party.map(p=>p.level||0))>=getLevelCap(trainerBag)){
+    const gyms=pool.filter(l=>l!==opts.gymBlockedAt&&isGymBattleEnabledAt(l,trainerBag)&&getGymTrainerIdsAtLocation(l).some(tid=>{
+      if(!isGymAccessible(tid,trainerBag)) return false;
+      const row=(typeof TRAINERS_DATA!=='undefined')?TRAINERS_DATA.find(t=>t.trainerId===tid):null;
+      const badge=row&&row.badgeItemId;
+      return !!badge&&!(trainerBag&&trainerBag[badge]>0);
+    }));
+    if(gyms.length){
+      gyms.sort((a,b)=>d(a)-d(b)||String(a).localeCompare(String(b)));
+      return {loc:gyms[0],exploring:false,gymPush:true};
+    }
+  }
   const unexplored=pool.filter(isUnexplored);
   if(unexplored.length){
-    const dist=getDiscoveredHopDistances(fromLoc,trainerBag);
-    const d=l=>dist.has(l)?dist.get(l):Infinity;
     unexplored.sort((a,b)=>{
       if(d(a)!==d(b)) return d(a)-d(b);
       const ma=getLocationMaxLevel(a,trainerBag), mb=getLocationMaxLevel(b,trainerBag);
@@ -4241,13 +4281,17 @@ function chooseWanderDestination(fromLoc,metric,trainerBag){
   return {loc:pickWanderTarget(cands,metric,trainerBag),exploring:false};
 }
 function wanderMetricLabel(metric){ return metric==='random'?'random':(metric==='catches'?'lowest-catch':'lowest-encounter'); }
-// v0.48 — Random Wander re-picks after a party wipe instead of heading back toward the same target
-// (could loop forever on a spot the party can't survive). Called by live endMission('faint') and the
-// offline wipe path in processAideOfflineTime(), right after the aide is placed at returnLocId.
-// Returns true if it set a new course (caller then skips its own resume-same-target rebuild).
-function wanderRepickAfterWipe(aide,returnLocId,silent){
-  if(!aide.wanderMode||aide.wanderMetric!=='random') return false;
-  const pick=chooseWanderDestination(returnLocId,'random',aide.trainerBag);
+// v0.48 — after a party wipe, a Wandering aide picks a new course from the heal location instead of
+// heading back toward the same target (which could repeat forever on a spot the party can't survive).
+// Random: a fresh random pick. Encounters/Catches: a normal pick, except this one pick may not be the
+// place it was heading to or the place the party wiped (dropped if nothing else qualifies). Called by
+// live endMission('faint') and the offline wipe path in processAideOfflineTime() (Live/Offline Parity),
+// right after the aide is placed at returnLocId. Returns true if it handled the course.
+function wanderRepickAfterWipe(aide,returnLocId,silent,headingTo,wipedAt){
+  if(!aide.wanderMode) return false;
+  const metric=aide.wanderMetric||'encounters';
+  const exclude=metric==='random'?null:new Set([headingTo,wipedAt].filter(Boolean));
+  const pick=chooseWanderDestination(returnLocId,metric,aide.trainerBag,{party:aide.party,exclude,gymBlockedAt:aide.wipeRecallLocation});
   if(!pick||pick.loc===returnLocId){
     aide.missionDestination=returnLocId; aide.travelPath=[]; aide.travelPathIndex=0; aide.travelCyclesRemaining=0;
     return true;
@@ -4258,9 +4302,18 @@ function wanderRepickAfterWipe(aide,returnLocId,silent){
   arriveAtLocation(path[0],aide);
   if(!silent){
     const ld=typeof LOCATIONS!=='undefined'?getLocation(pick.loc):null;
-    addLog('🧭 '+aide.name+' picks a new random destination after the wipe: '+(ld?ld.name:pick.loc)+'.','info','travel',aide.id);
+    addLog('🧭 '+aide.name+' picks a new destination after the wipe: '+(ld?ld.name:pick.loc)+'.','info','travel',aide.id);
   }
   return true;
+}
+// v0.48 — a gym loss counts as a wipe for Wander: gym battles heal the party first and a loss doesn't
+// faint it out, so without this an aide parked at a gym by gym push would just lose to it forever.
+// Same after-wipe rule (this one pick can't be the gym), departing from where the aide stands.
+function wanderAfterGymLoss(idx,silent){
+  const aide=state.aides[idx];
+  if(!aide||!aide.wanderMode) return false;
+  const here=aide.currentLocation;
+  return wanderRepickAfterWipe(aide,here,silent,here,here);
 }
 function evaluateWanderTarget(idx=0){
   const aide=state.aides[idx];
@@ -4281,7 +4334,7 @@ function evaluateWanderTarget(idx=0){
   // discovery, not just already-discovered ones. requiresItem gates still fully apply.
   // v0.48 — visible-only pool, unexplored first (encounters/catches), see chooseWanderDestination().
   const metric=aide.wanderMetric||'encounters'; // v0.35/v0.45 — 'encounters'|'catches'|'random', set at dispatch
-  const pick=chooseWanderDestination(currentLoc,metric,aide.trainerBag);
+  const pick=chooseWanderDestination(currentLoc,metric,aide.trainerBag,{party:aide.party,gymBlockedAt:aide.wipeRecallLocation});
   if(!pick) return; // nothing visible qualifies — nothing to do
   const best=pick.loc;
   if(best===aide.missionDestination) return; // current target is still the best — no redirect
@@ -4301,7 +4354,8 @@ function evaluateWanderTarget(idx=0){
   aide.travelPath=path;
   aide.travelPathIndex=-1;
   const destLocData=typeof LOCATIONS!=='undefined'?getLocation(best):null;
-  if(pick.exploring) addLog('🧭 '+aide.name+' changes course — exploring: '+(destLocData?destLocData.name:best)+'.','info','travel',aide.id); // v0.48
+  if(pick.gymPush) addLog('🧭 '+aide.name+' heads to '+(destLocData?destLocData.name:best)+' to challenge the gym — level cap reached.','info','travel',aide.id); // v0.48
+  else if(pick.exploring) addLog('🧭 '+aide.name+' changes course — exploring: '+(destLocData?destLocData.name:best)+'.','info','travel',aide.id); // v0.48
   else addLog('🧭 '+aide.name+' changes course — new '+wanderMetricLabel(metric)+' destination: '+(destLocData?destLocData.name:best)+'.','info','travel',aide.id);
 }
 
@@ -4436,7 +4490,7 @@ function selectWanderMode(metric){
   // v0.43 — same discovery-ignoring pool as evaluateWanderTarget(), for consistency between the
   // initial pick and ongoing re-routing.
   // v0.48 — same rule as every later re-evaluation (chooseWanderDestination()).
-  const pick=chooseWanderDestination(currentLoc,metric,state.aides[missionModalAideIndex].trainerBag);
+  const pick=chooseWanderDestination(currentLoc,metric,state.aides[missionModalAideIndex].trainerBag,{party:state.aides[missionModalAideIndex].party,gymBlockedAt:state.aides[missionModalAideIndex].wipeRecallLocation});
   if(!pick){ addLog('No reachable destinations for Wander mode.','fail','systemErrors',state.aides[missionModalAideIndex].id); return; }
   // v0.45 — pickWanderTarget() handles 'random' (uniform pick) as well as the existing
   // deterministic 3-key comparator for 'encounters'/'catches', so the initial pick and the first
@@ -4901,6 +4955,7 @@ function endMission(reason='faint',idx=0){
     ?aide.travelPath[aide.travelPath.length-1]
     :aide.missionDestination;
   aide.missionDestination=effectiveDestination;
+  const wipedAt=aide.currentLocation; // v0.48 — for Wander's after-wipe exclusion
   const returnLocId=aide.lastHealLocation||aide.missionOrigin||'palletTown';
   const originLoc=typeof LOCATIONS!=='undefined'?getLocation(returnLocId):null;
   const originName=originLoc?originLoc.name:returnLocId;
@@ -4921,8 +4976,8 @@ function endMission(reason='faint',idx=0){
     }
   }
   if(state.visitedLocations) state.visitedLocations.add(returnLocId); // v0.48
-  if(reason==='faint'&&wanderRepickAfterWipe(aide,returnLocId,false)){
-    // v0.48 — Random Wander set a fresh course from the heal location instead of resuming.
+  if(reason==='faint'&&wanderRepickAfterWipe(aide,returnLocId,false,effectiveDestination,wipedAt)){
+    // v0.48 — Wander set a fresh course from the heal location instead of resuming.
   } else if(reason==='faint'){
     if(returnLocId===aide.missionDestination){
       aide.travelPath=[]; aide.travelPathIndex=0; aide.travelCyclesRemaining=0;

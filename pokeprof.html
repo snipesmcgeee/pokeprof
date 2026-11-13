@@ -4253,7 +4253,8 @@ function chooseWanderDestination(fromLoc,metric,trainerBag,opts){
   const dist=getDiscoveredHopDistances(fromLoc,trainerBag);
   const d=l=>dist.has(l)?dist.get(l):Infinity;
   // v0.48 — gym push (Encounters/Catches): highest-level party member at the cap -> nearest gym to beat.
-  if(party&&party.length&&Math.max(...party.map(p=>p.level||0))>=getLevelCap(trainerBag)){
+  // Only for saves that chose the idle experience (Gym Battle Default "Yes") — Jack, v0.48.
+  if(state.gymBattleDefaultPreference&&party&&party.length&&Math.max(...party.map(p=>p.level||0))>=getLevelCap(trainerBag)){
     const gyms=pool.filter(l=>l!==opts.gymBlockedAt&&isGymBattleEnabledAt(l,trainerBag)&&getGymTrainerIdsAtLocation(l).some(tid=>{
       if(!isGymAccessible(tid,trainerBag)) return false;
       const row=(typeof TRAINERS_DATA!=='undefined')?TRAINERS_DATA.find(t=>t.trainerId===tid):null;

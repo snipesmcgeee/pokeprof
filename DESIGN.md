@@ -125,6 +125,7 @@ proceeds; new entries are appended in the version order they were fixed.
 - Large saves slowed the whole game: `renderDex()` rebuilt the last-open Dex view every 1-second tick even with the Dex tab hidden, and the Families/All Catches views re-scanned the whole box and `POKEDEX_DATA` per family (~7.5 s per tick on Families at 1,755 boxed Pokémon) — fixed v0.47, see "Render Performance" under Game Loop
 - Evolution research tracked methods, not branches: confirming one branch closed its method for sibling branches sharing it, so Tyrogue (3 level branches) could reach "fully researched" with only Hitmonlee found, and the chain's `?` hint vanished on any node once one branch was known (reported on Eevee and Tyrogue) — fixed v0.47
 - Confirmed EVO_TREE stone branches showed `?` on their chain arrow instead of the stone's name (slug vs. name mismatch in `isEdgeConfirmed()`) — fixed v0.47, see Evolution Chain Visual
+- On iPhone, pop-ups capped with `vh` ran under the browser's bottom bar; the mission screen's Cancel/Dispatch couldn't be tapped (page sprang back on release) — fixed v0.48.1, see "Pop-up Sizing on Phones"
 - Wander could target and route through undiscovered locations, so a new game's first pick could be far off-map, and a wipe sent the aide back toward the same unreachable target forever (Diglett's Cave / Route 18 reports) — fixed v0.48, see "Wander v0.48"
 - Google sign-in failed in iPhone Chrome ("missing initial state") because the sign-in handler lived on a different site than the game — fixed v0.47.1, see Save System & Cloud Save
 - Shedinja creation recorded no research, no `dexHistory`, and never happened offline, so Nincada's page could never complete — fixed v0.47, see "Same-Method Multi-Branch Completeness" under Evolution Method Rule-Out
@@ -440,6 +441,12 @@ Each destination button's label appends a combined level range, e.g. `Route 1 (L
 
 ### Mission Modal — Location Markers to Match Map (SETTLED — v0.44)
 Each destination button's idle border color is derived the same way `getMapNodeStyle()` derives map node colors: shop-tier `#2ecc71` (green), heal-only `#e63946` (red), shop wins on combined heal+shop locations, routes/other unchanged. Gym locations (any location with a `TRAINERS_DATA` row, `!isGauntlet`, and a `badgeItemId`) show that badge's sprite next to the location name via the existing `BADGE_SPRITE_MAP` (+ emoji fallback) pattern, shown regardless of whether the badge has been earned yet. The existing 2px accent "selected" border still overrides the idle color for the current pick.
+
+### Pop-up Sizing on Phones + Pinned Mission Buttons (SETTLED — v0.48.1, NEW)
+- **Bug:** on iPhone browsers, `vh` is measured as if the browser toolbars were hidden, so a pop-up capped at `max-height:90vh` (or 85/80) extended under Safari's/Chrome's bottom bar. On the mission screen that hid **Cancel / Dispatch** — scrolling down revealed them, but the page sprang back on release, so they couldn't be tapped (reported by Jack).
+- **Every pop-up panel** (all ~18 `modal.innerHTML` panels: mission, Bag, Info, Save & Cloud, battle/team-order, findings, etc.) now declares its cap twice — `max-height:NNvh;max-height:NNdvh` — so browsers that support the dynamic viewport unit (`dvh`, the part of the screen actually visible) use it, and older browsers ignore it and keep today's `vh` behavior. Each also gets `overscroll-behavior:contain`, so scrolling inside a pop-up never drags the page behind it. Same for the mission screen's inner destination list.
+- **Mission screen — Cancel / Dispatch pinned.** The button row is `position:sticky` at the bottom of the mission panel (full-width strip with the panel's own background and a top border), so it's always visible and tappable while the content above it scrolls. Button markup, ids and behavior unchanged.
+- Display-only — no state, no `SAVE_VERSION` impact.
 
 ### Mission Modal — "Wander" Mode (SETTLED — v0.33, NEW; bug fixed post-release; revised v0.34, v0.35)
 - New mode alongside manual destination selection: the aide continuously travels toward whichever **reachable, discovered, encounter-capable** location currently has the fewest lifetime encounters *or* catches (metric-dependent, see below), re-evaluating on an ongoing basis rather than being dispatched once to a fixed target.
@@ -2356,11 +2363,12 @@ Every item shipped in these versions has been relocated to its topical section �
 | v0.47 | 6 | Save System & Cloud Save (new — optional Google sign-in, gzip-compressed chunked Firestore save, daily auto-backup, Export/Import, restore-previous, size readout; `firestore.rules`), Game Loop (Render Performance — Dex renders only while visible, `POKEDEX_DATA` lookup indexes, group-once Dex views), Evolution Method Rule-Out (Same-Method Multi-Branch Completeness + SAVE_VERSION 34 cleanup), Evolution Chain Visual (`?` hint kept while a shown node still has unfound branches), Shedinja creation (records its branch + bookkeeping, offline parity), repo cleanup (stray lowercase `design.md` removed), Tech Stack (Firebase), Versioning (stale "current save version" line corrected) |
 | v0.47.1 | 1 | Save System & Cloud Save (sign-in works in iPhone Chrome: `authDomain` moved to `snipesmcgeee.github.io` with self-hosted helper files, redirect flow on iOS non-Safari browsers, clearer blocked-sign-in message) |
 | v0.48 | 3 | Wander v0.48 (visible-only pool, unexplored-first for Encounters/Catches, one-pick exclusion after a wipe, gym push at the level cap, Random re-picks on arrival and wipe from encounter areas + unexplored places; `state.visitedLocations`), Render Performance (All Catches updates rows in place), Versioning (SAVE_VERSION 35) |
+| v0.48.1 | 1 | Pop-up Sizing on Phones + Pinned Mission Buttons (new — `dvh` caps + `overscroll-behavior:contain` on every pop-up; sticky Cancel/Dispatch) |
 
 
 *Note: the v0.45.7 row above shipped to players as **v0.46** (renamed at the last moment before release; there is no live v0.45.7).*
 
-`SAVE_VERSION`: 27→28 (v0.40), stays on 28 (v0.41–v0.43), reaches 30 across two bumps (v0.44), no bump (v0.44.1–v0.44.4), 30→31 (v0.45), no bump (v0.45.1–v0.45.3), 31→32 (v0.45.4), 32→33 (v0.45.5), no bump (v0.45.6 — display-only), no bump (v0.45.7/v0.46 — bugfixes + UI-only, no schema change), 33→34 (v0.47 — research cleanup migration only), no bump (v0.47.1 — sign-in only), 34→35 (v0.48 — `visitedLocations`).
+`SAVE_VERSION`: 27→28 (v0.40), stays on 28 (v0.41–v0.43), reaches 30 across two bumps (v0.44), no bump (v0.44.1–v0.44.4), 30→31 (v0.45), no bump (v0.45.1–v0.45.3), 31→32 (v0.45.4), 32→33 (v0.45.5), no bump (v0.45.6 — display-only), no bump (v0.45.7/v0.46 — bugfixes + UI-only, no schema change), 33→34 (v0.47 — research cleanup migration only), no bump (v0.47.1 — sign-in only), 34→35 (v0.48 — `visitedLocations`), no bump (v0.48.1 — display-only).
 
 ---
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.48</title>
+<title>PokeProf v0.48.1</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -143,7 +143,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span id="game-version-display" style="font-size:11px;color:var(--main-text-muted);">v0.48</span></h1>
+  <h1>PokeProf <span id="game-version-display" style="font-size:11px;color:var(--main-text-muted);">v0.48.1</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">100.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -428,7 +428,7 @@ function renderDisplaySettings(){
   const modal=document.getElementById('info-modal'); if(!modal) return;
   const mainSwatches=THEME_COLORS.map(c=>themeSwatchButtonHtml('main',c)).join('');
   const accentSwatches=THEME_COLORS.map(c=>themeSwatchButtonHtml('accent',c)).join('');
-  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;">'
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;max-height:90dvh;overflow-y:auto;overscroll-behavior:contain;">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><button onclick="renderInfoTopicList()" style="padding:5px 10px;font-size:10px;border-color:var(--accent);color:var(--accent-light);">◀ Back</button><button onclick="document.getElementById(\'info-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'
     +'<div style="color:var(--accent);font-size:13px;font-weight:bold;margin-bottom:4px;">🎨 Display</div>'
     +'<div style="color:var(--main-text-secondary);font-size:10px;margin-bottom:12px;">Stored on this device only — not part of your save file.</div>'
@@ -597,7 +597,7 @@ const ENC_INTERVAL_CLOSED = 30;
 // string independently, with nothing forcing them to agree — v0.44.3's delivery updated one and
 // missed the other. Both now render FROM this constant at boot (see init()) — bumping a version
 // is a one-line edit here, and the two displays can no longer drift apart.
-const GAME_VERSION = '0.48';
+const GAME_VERSION = '0.48.1';
 const FRIENDSHIP_THRESHOLD = 220;
 // v0.22 — highest level-based evolution across the whole franchise is Zweilous->Hydreigon
 // at level 64; 65 clears it with the minimum safe margin. Used to rule out 'level' as a
@@ -1845,7 +1845,7 @@ function renderTeamOrderModal(){
       '<div style="flex:1;pointer-events:none;"><div style="color:#fff;font-size:11px;">'+getDisplayName(p)+'</div>'+
       '<div style="color:var(--main-text-secondary);font-size:9px;">Lv'+p.level+' · '+p.currentHP+'/'+p.maxHP+' HP'+(fainted?' (fainted)':'')+'</div></div></div>';
   }).join('');
-  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;max-height:85vh;overflow-y:auto;">'+
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;max-height:85vh;max-height:85dvh;overflow-y:auto;overscroll-behavior:contain;">'+
     '<div style="color:var(--accent);font-size:13px;font-weight:bold;margin-bottom:4px;">⚔ Set Team Order'+legNote+'</div>'+
     '<div style="color:var(--main-text-muted);font-size:10px;margin-bottom:10px;">Drag to reorder — lead Pokémon battles first.</div>'+
     '<div id="teamorder-list">'+rows+'</div>'+
@@ -3674,7 +3674,7 @@ function showCapOverridesModal(){
       +'<button onclick="deleteSpeciesCapOverride('+dexId+');showCapOverridesModal();" style="padding:4px 8px;font-size:11px;border-color:var(--c-danger);color:var(--c-danger);">✕</button>'
       +'</div>';
   }).join(''):'<div style="color:#555;font-size:11px;padding:12px 0;">No overrides set.</div>';
-  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:80vh;overflow-y:auto;">'
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:80vh;max-height:80dvh;overflow-y:auto;overscroll-behavior:contain;">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><div style="color:var(--accent);font-size:13px;font-weight:bold;">Per-Species Cap Overrides</div><button onclick="document.getElementById(\'cap-overrides-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'
     +rowsHtml
     +'</div>';
@@ -4471,7 +4471,7 @@ function showMissionModal(){
     '<button onclick="selectWanderMode(\'encounters\')" id="wander-select-btn-encounters" style="width:100%;padding:8px;margin-bottom:4px;font-size:11px;border-color:var(--main-border);color:var(--main-text-secondary);">🧭 Wander (lowest encounters)</button>'+
     '<button onclick="selectWanderMode(\'catches\')" id="wander-select-btn-catches" style="width:100%;padding:8px;margin-bottom:4px;font-size:11px;border-color:var(--main-border);color:var(--main-text-secondary);">🧭 Wander (lowest catches)</button>'+
     '<button onclick="selectWanderMode(\'random\')" id="wander-select-btn-random" style="width:100%;padding:8px;margin-bottom:8px;font-size:11px;border-color:var(--main-border);color:var(--main-text-secondary);">🧭 Wander (random)</button>';
-  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;"><div style="color:var(--accent);font-size:13px;font-weight:bold;margin-bottom:12px;">🗺 Choose Destination</div><div style="font-size:10px;color:var(--main-text-muted);margin-bottom:8px;">From: '+currentLoc+'</div>'+wanderButtonHtml+sortButtonsHtml+'<div id="dest-list-container" style="max-height:220px;overflow-y:auto;"></div><div id="mission-summary" style="color:var(--main-text-secondary);font-size:11px;margin:10px 0;min-height:18px;"></div><div id="method-prefs"></div><div id="shop-section-container"></div><div style="display:flex;gap:8px;"><button onclick="document.getElementById(\'mission-modal\').remove()" style="flex:1;">✕ Cancel</button><button id="confirm-mission" onclick="confirmMission()" class="primary" style="flex:1;" disabled>▶ Dispatch</button></div></div>';
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;max-height:90dvh;overflow-y:auto;overscroll-behavior:contain;"><div style="color:var(--accent);font-size:13px;font-weight:bold;margin-bottom:12px;">🗺 Choose Destination</div><div style="font-size:10px;color:var(--main-text-muted);margin-bottom:8px;">From: '+currentLoc+'</div>'+wanderButtonHtml+sortButtonsHtml+'<div id="dest-list-container" style="max-height:220px;overflow-y:auto;overscroll-behavior:contain;"></div><div id="mission-summary" style="color:var(--main-text-secondary);font-size:11px;margin:10px 0;min-height:18px;"></div><div id="method-prefs"></div><div id="shop-section-container"></div><div style="display:flex;gap:8px;position:sticky;bottom:-16px;margin:8px -16px -16px;padding:10px 16px 16px;background:var(--main-panel);border-top:1px solid var(--main-border);"><button onclick="document.getElementById(\'mission-modal\').remove()" style="flex:1;">✕ Cancel</button><button id="confirm-mission" onclick="confirmMission()" class="primary" style="flex:1;" disabled>▶ Dispatch</button></div></div>';
   document.body.appendChild(modal);
   renderDestList();
   renderShopSection(currentLoc);
@@ -4676,7 +4676,7 @@ function renderInfoTopicList(){
   const tiles=INFO_TOPICS.map(t=>'<button onclick="renderInfoTopicPage(\''+t.id+'\')" style="display:block;width:100%;margin-bottom:6px;padding:10px;text-align:left;border-color:var(--main-border);color:var(--main-text-secondary);">'+t.title+'</button>').join('');
   const displayTile='<button onclick="renderDisplaySettings()" style="display:block;width:100%;margin-bottom:6px;padding:10px;text-align:left;border-color:var(--accent);color:var(--accent-light);">🎨 Display</button>';
   const cloudTile='<button onclick="openCloudPanel()" style="display:block;width:100%;margin-bottom:6px;padding:10px;text-align:left;border-color:var(--accent);color:var(--accent-light);">☁️ Save &amp; Cloud</button>'; // v0.47
-  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;">'
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;max-height:90dvh;overflow-y:auto;overscroll-behavior:contain;">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:var(--accent);font-size:13px;font-weight:bold;">ℹ️ Info</div><button onclick="document.getElementById(\'info-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'
     +displayTile
     +cloudTile
@@ -4691,7 +4691,7 @@ function renderInfoTopicPage(topicId){
     (s.header?'<div style="color:#f4d03f;font-size:12px;font-weight:bold;margin:10px 0 4px;">'+s.header+'</div>':'')
     +'<div style="color:var(--main-text);font-size:11px;line-height:1.6;">'+s.text+'</div>'
   ).join('');
-  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;">'
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;max-height:90dvh;overflow-y:auto;overscroll-behavior:contain;">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><button onclick="renderInfoTopicList()" style="padding:5px 10px;font-size:10px;border-color:var(--accent);color:var(--accent-light);">◀ Back</button><button onclick="document.getElementById(\'info-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'
     +'<div style="color:var(--accent);font-size:13px;font-weight:bold;margin-bottom:8px;">'+topic.title+'</div>'
     +body
@@ -5237,7 +5237,7 @@ function showBatchEvolveModal(itemId,maxQty){
       +'<span style="flex:1;font-size:11px;color:var(--main-text);">'+getDisplayName(p)+' #'+p.id+' → '+toName+'</span>'
       +'</label>';
   }).join('');
-  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:80vh;overflow-y:auto;">'
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:80vh;max-height:80dvh;overflow-y:auto;overscroll-behavior:contain;">'
     +'<div style="color:var(--accent);font-size:13px;font-weight:bold;margin-bottom:6px;">Evolve with '+item.name+'?</div>'
     +'<div id="batch-evolve-count" style="color:var(--main-text-secondary);font-size:10px;margin-bottom:8px;">0 / '+maxQty+' selected</div>'
     +rowsHtml
@@ -5825,7 +5825,7 @@ function renderDaycareModalStep1(){
   const rows=options.length
     ?options.map(p=>daycarePickerRowHtml(p,'selectDaycareParentA('+p.id+')')).join('')
     :'<div style="color:#555;font-size:11px;">No eligible Pokémon.</div>';
-  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;max-height:85vh;overflow-y:auto;">'+
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;max-height:85vh;max-height:85dvh;overflow-y:auto;overscroll-behavior:contain;">'+
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:var(--accent);font-size:13px;font-weight:bold;">Day Care — Slot '+(daycareModalSlot+1)+' · Parent A</div><button onclick="document.getElementById(\'daycare-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'+
     rows+
     '</div>';
@@ -5844,7 +5844,7 @@ function renderDaycareModalStep2(){
     :'<div style="color:#555;font-size:11px;">No compatible partners.</div>';
   const pB=daycareParentB?state.dex.find(p=>p.id===daycareParentB):null;
   const previewHtml=pB?buildDaycarePreviewHtml(pA,pB):'';
-  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;max-height:85vh;overflow-y:auto;">'+
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;max-height:85vh;max-height:85dvh;overflow-y:auto;overscroll-behavior:contain;">'+
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><div style="color:var(--accent);font-size:13px;font-weight:bold;">Day Care — Slot '+(daycareModalSlot+1)+' · Parent B</div><button onclick="document.getElementById(\'daycare-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'+
     '<div style="color:var(--main-text-secondary);font-size:10px;margin-bottom:8px;">Parent A: '+getDisplayName(pA)+' #'+pA.id+' ('+(pA.gender||'—')+')</div>'+
     '<button onclick="renderDaycareModalStep1()" style="margin-bottom:8px;padding:5px 10px;font-size:10px;border-color:var(--accent);color:var(--accent-light);">◀ Back</button>'+
@@ -6001,7 +6001,7 @@ function showPokemonDetail(catchId){
   const badgeText=badge==='🦄'?'🦄 SHINY + PERFECT IV':badge==='💥'?'💥 PERFECT IV':badge==='✨'?'✨ SHINY':'';
   const badgeHtml=badgeText?'<div style="color:#f4d03f;">'+badgeText+'</div>':'';
 
-  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;">'
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;max-height:90dvh;overflow-y:auto;overscroll-behavior:contain;">'
     // v0.34 fix — getDisplayName(p) already appends "(formName)" for un-nicknamed form-variant
     // individuals, so the old unconditional +(p.formName?...) here doubled it (e.g. "Raichu (Alolan)
     // (Alolan)"). Removed for that case. For the nicknamed case, the species parenthetical is now
@@ -6074,7 +6074,7 @@ function showCheatFormPicker(catchId,targetDexId,forms){
     // v0.43 — form choice now hands off to the Shiny/Normal question instead of replacing directly.
     return '<button onclick="showCheatShinyPicker('+catchId+','+targetDexId+','+formArg+')" style="width:100%;margin-bottom:6px;padding:8px;font-size:11px;">'+label+'</button>';
   }).join('');
-  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;max-height:80vh;overflow-y:auto;">'
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;max-height:80vh;max-height:80dvh;overflow-y:auto;overscroll-behavior:contain;">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:var(--accent);font-size:13px;font-weight:bold;">Choose a Form</div><button onclick="document.getElementById(\'cheat-form-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'
     +rows
     +'</div>';
@@ -6159,7 +6159,7 @@ function openNaturePicker(catchId){
     const isCurrent=n===p.nature;
     return '<button '+(isCurrent?'disabled':'')+' onclick="confirmNatureChange('+p.id+',\''+n+'\')" style="text-align:left;padding:8px 10px;'+(isCurrent?'opacity:0.4;':'')+'">'+n+' <span style="color:var(--main-text-secondary);font-size:10px;">— '+natureEffectLabel(n)+(isCurrent?' (current)':'')+'</span></button>';
   }).join('');
-  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;max-height:85vh;overflow-y:auto;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><div style="color:var(--accent);font-size:13px;font-weight:bold;">🌿 Change Nature</div><button onclick="document.getElementById(\'nature-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div><div style="display:flex;flex-direction:column;gap:5px;">'+rows+'</div></div>';
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;max-height:85vh;max-height:85dvh;overflow-y:auto;overscroll-behavior:contain;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><div style="color:var(--accent);font-size:13px;font-weight:bold;">🌿 Change Nature</div><button onclick="document.getElementById(\'nature-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div><div style="display:flex;flex-direction:column;gap:5px;">'+rows+'</div></div>';
   modal.onclick=(e)=>{ if(e.target===modal) modal.remove(); };
   document.body.appendChild(modal);
 }
@@ -6267,7 +6267,7 @@ function openMoveSlot(catchId,slotIndex){
       '</div>'+
       (tmCount<1?'<div style="color:var(--c-danger);font-size:10px;margin-top:8px;">Need 1 TM</div>':'');
   }
-  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;max-height:85vh;overflow-y:auto;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:var(--accent);font-size:13px;font-weight:bold;">Move Slot '+(slotIndex+1)+'</div><button onclick="document.getElementById(\'move-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div><div id="move-modal-body">'+body+'</div></div>';
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;max-height:85vh;max-height:85dvh;overflow-y:auto;overscroll-behavior:contain;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:var(--accent);font-size:13px;font-weight:bold;">Move Slot '+(slotIndex+1)+'</div><button onclick="document.getElementById(\'move-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div><div id="move-modal-body">'+body+'</div></div>';
   modal.onclick=(e)=>{ if(e.target===modal) modal.remove(); };
   document.body.appendChild(modal);
 }
@@ -6398,7 +6398,7 @@ function showReleaseModal(dexId,formName){
       +'<div style="color:var(--main-text-secondary);font-size:9px;">Lv'+p.level+' · '+p.gender+'</div></div>'
       +'</label>';
   }).join('');
-  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--c-danger);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:85vh;overflow-y:auto;">'
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--c-danger);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:85vh;max-height:85dvh;overflow-y:auto;overscroll-behavior:contain;">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:var(--c-danger);font-size:13px;font-weight:bold;">🗑 Select Pokémon to Release</div><button onclick="document.getElementById(\'release-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'
     +rows
     +'<button onclick="confirmReleaseSelected()" style="width:100%;margin-top:6px;padding:10px;border-color:var(--c-danger);color:var(--c-danger);">Release Selected</button>'
@@ -6429,7 +6429,7 @@ function showBagModal(){
   // matter what they were actually carrying. Now builds one section per aide in state.aides[].
   const profSection=buildBagSectionHtml('🔬 Professor',state.professorBag,null);
   const aideSections=state.aides.map(aide=>buildBagSectionHtml(aide.emoji+' '+aide.name,aide.trainerBag,['badge'])).join('');
-  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:85vh;overflow-y:auto;">'+
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:85vh;max-height:85dvh;overflow-y:auto;overscroll-behavior:contain;">'+
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="color:var(--accent);font-size:13px;font-weight:bold;">🎒 Bag</div><button onclick="document.getElementById(\'bag-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'+
     profSection+aideSections+
     '</div>';
@@ -7636,7 +7636,7 @@ function renderDexFilterPopupContent(){
   }
   rows+='<div style="'+dim+'padding:6px 0;"><button onclick="openDexTypePicker(\'type\')" style="width:100%;font-size:11px;text-align:left;">Type: '+(f.type||'Any')+'</button></div>';
   rows+='<div style="'+dim+'padding:6px 0;"><button onclick="openDexTypePicker(\'moveType\')" style="width:100%;font-size:11px;text-align:left;">Move Type: '+(f.moveType||'Any')+'</button></div>';
-  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;max-height:85vh;overflow-y:auto;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><div style="color:var(--accent);font-size:13px;font-weight:bold;">Filter</div><button onclick="document.getElementById(\'dex-filter-modal\').remove();renderDex();" style="padding:4px 10px;font-size:12px;">✕</button></div><div>'+rows+'</div></div>';
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:320px;font-family:\'Courier New\',monospace;max-height:85vh;max-height:85dvh;overflow-y:auto;overscroll-behavior:contain;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><div style="color:var(--accent);font-size:13px;font-weight:bold;">Filter</div><button onclick="document.getElementById(\'dex-filter-modal\').remove();renderDex();" style="padding:4px 10px;font-size:12px;">✕</button></div><div>'+rows+'</div></div>';
   modal.onclick=(e)=>{ if(e.target===modal){ modal.remove(); renderDex(); } };
 }
 function toggleDexFilterCheckbox(key){
@@ -7944,7 +7944,7 @@ function renderLogFilterPopupContent(){
     '<label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12px;"><input type="checkbox" '+(f.aides[a.id]?'checked':'')+' onchange="toggleLogAideFilter(\''+a.id+'\')"> '+a.emoji+' '+a.name+'</label>'
   ).join('')
   +'<label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12px;"><input type="checkbox" '+(f.aides['general']?'checked':'')+' onchange="toggleLogAideFilter(\'general\')"> General (no single aide)</label>';
-  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:85vh;overflow-y:auto;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><div style="color:var(--accent);font-size:13px;font-weight:bold;">Filter</div><button onclick="document.getElementById(\'log-filter-modal\').remove();renderLogPanel();" style="padding:4px 10px;font-size:12px;">✕</button></div>'
+  modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:85vh;max-height:85dvh;overflow-y:auto;overscroll-behavior:contain;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><div style="color:var(--accent);font-size:13px;font-weight:bold;">Filter</div><button onclick="document.getElementById(\'log-filter-modal\').remove();renderLogPanel();" style="padding:4px 10px;font-size:12px;">✕</button></div>'
     +'<div style="color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin:4px 0 2px;">Categories</div>'+catRows
     +'<div style="color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin:10px 0 2px;">Aides</div>'+aideRows
     +'</div>';
@@ -8926,7 +8926,7 @@ function renderCloudPanel(){
       +'<button onclick="cloudLoad(null,false)" style="'+btn+'">☁️⬇ Load from Cloud</button>'
       +'<button onclick="cloudSignOut()" style="'+btn+'color:var(--main-text-secondary);">Sign out</button>'
     :'<button onclick="cloudSignIn()" style="'+btn+'border-color:var(--accent);color:var(--accent-light);">Sign in with Google</button>';
-  modal.innerHTML='<div id="cloud-panel" style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;overflow-y:auto;">'
+  modal.innerHTML='<div id="cloud-panel" style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:90vh;max-height:90dvh;overflow-y:auto;overscroll-behavior:contain;">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><button onclick="renderInfoTopicList()" style="padding:5px 10px;font-size:10px;border-color:var(--accent);color:var(--accent-light);">◀ Back</button><button onclick="document.getElementById(\'info-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'
     +'<div style="color:var(--accent);font-size:13px;font-weight:bold;margin-bottom:4px;">☁️ Save &amp; Cloud</div>'
     +'<div style="color:var(--main-text-secondary);font-size:10px;margin-bottom:10px;">Your game always saves on this device. Cloud save is an optional backup that also lets you move between devices.</div>'

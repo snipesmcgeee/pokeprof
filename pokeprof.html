@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.48.1</title>
+<title>PokeProf v0.49</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -143,7 +143,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span id="game-version-display" style="font-size:11px;color:var(--main-text-muted);">v0.48.1</span></h1>
+  <h1>PokeProf <span id="game-version-display" style="font-size:11px;color:var(--main-text-muted);">v0.49</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">100.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -214,12 +214,18 @@
       <button onclick="dexSwitchMode('your')" style="width:100%;max-width:280px;padding:22px 16px;font-size:13px;">🎒 Your Pokédex</button>
     </div>
     <!-- v0.37 — repurposed species-cap row: now a general top-control row (Back-to-chooser + Shiny toggle + cap dropdown) -->
-    <div id="dex-top-controls" style="background:var(--main-panel);border-bottom:1px solid var(--main-card);padding:6px 12px;display:none;align-items:center;gap:8px;flex-shrink:0;">
+    <div id="dex-top-controls" style="background:var(--main-panel);border-bottom:1px solid var(--main-card);padding:6px 12px;display:none;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;">
       <button id="dex-mode-back-btn" onclick="dexBackToChooser()" style="padding:5px 10px;font-size:10px;">◀ Back to Dex Types</button>
       <button id="dex-shiny-toggle-btn" onclick="toggleDexShinyPreview()" style="display:none;padding:5px 10px;font-size:10px;">✨ Shiny</button>
       <button id="dex-hide-researched-btn" onclick="toggleDexHideResearched()" style="padding:5px 10px;font-size:10px;border-color:#555;color:#777;">🔬 Hide Researched: OFF</button>
+      <button id="dex-living-btn" onclick="toggleDexLivingDex()" style="display:none;padding:5px 10px;font-size:10px;">📗 Living Dex</button>
       <span id="dex-cap-label" style="color:var(--main-text-secondary);font-size:10px;margin-left:auto;">Per-Species Cap:</span>
       <select id="species-cap-select" onchange="onSpeciesCapChange(this)" style="background:var(--main-card);border:1px solid var(--main-border);color:var(--main-text);font-family:'Courier New',monospace;font-size:11px;padding:4px 8px;border-radius:4px;">
+        <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+        <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+      </select>
+      <span id="dex-shinycap-label" style="color:var(--main-text-secondary);font-size:10px;">✨ Cap:</span>
+      <select id="shiny-cap-select" onchange="onShinyCapChange(this)" style="background:var(--main-card);border:1px solid var(--main-border);color:var(--main-text);font-family:'Courier New',monospace;font-size:11px;padding:4px 8px;border-radius:4px;">
         <option value="1">1</option><option value="2">2</option><option value="3">3</option>
         <option value="4">4</option><option value="5">5</option><option value="6">6</option>
       </select>
@@ -597,7 +603,7 @@ const ENC_INTERVAL_CLOSED = 30;
 // string independently, with nothing forcing them to agree — v0.44.3's delivery updated one and
 // missed the other. Both now render FROM this constant at boot (see init()) — bumping a version
 // is a one-line edit here, and the two displays can no longer drift apart.
-const GAME_VERSION = '0.48.1';
+const GAME_VERSION = '0.49';
 const FRIENDSHIP_THRESHOLD = 220;
 // v0.22 — highest level-based evolution across the whole franchise is Zweilous->Hydreigon
 // at level 64; 65 clears it with the minimum safe margin. Used to rule out 'level' as a
@@ -782,6 +788,8 @@ let state={
   avoidCappedSpecies:false, // v0.40 — global toggle, skip ball-throw attempts at capped species
   gymBattleDefaultPreference:false, // v0.44 — new-player preamble choice, starting default for any location's Gym Battle checkbox that hasn't been manually touched yet
   speciesCapOverrides:{}, // v0.38 — per-species cap overrides {dexId:number}
+  shinyCap:6, // v0.49 — per-species SHINY cap (separate pool from speciesCap)
+  shinyCapOverrides:{}, // v0.49 — per-species shiny cap overrides {dexId:number}
   daycareSlots:{purchased:1,slots:[]}, // v0.26 — Day Care / Breeding
   researchLog:{}, pendingFindings:[],
   discoveredLocations:new Set(['palletTown']),
@@ -3155,7 +3163,7 @@ function runWildEncounterLoopSilent(lead,enc,summary,encLocKey,encDexKey,idx=0){
     const hasBalls=getBallCount()>0;
     // v0.44.4 fix — same fix as the live runWildEncounterLoop(); see that function's comment
     // for the full writeup.
-    const canCatchThisSpecies=hasBalls&&!(state.avoidCappedSpecies&&state.dex.filter(p=>p.pokedexId===enc.pokedexId&&!p.isShiny&&!p.holder&&sameCapPool(enc.pokedexId,enc.formName,p.formName)).length>=getEffectiveSpeciesCap(enc.pokedexId));
+    const canCatchThisSpecies=hasBalls&&!(state.avoidCappedSpecies&&state.dex.filter(p=>p.pokedexId===enc.pokedexId&&!p.isShiny&&sameCapPool(enc.pokedexId,enc.formName,p.formName)).length>=getEffectiveSpeciesCap(enc.pokedexId));
     const throwDecision=hasBalls?decideWildBallThrow(wild.currentHP,wild.maxHP,wild.catchRate,enc.pokedexId,round%2===0,enc.formName):null;
 
     if(throwDecision){
@@ -3435,9 +3443,11 @@ function sameCapPool(dexId,formNameA,formNameB){
 // Overrides").
 // v0.45.5 — stays keyed by bare dexId even for Permanent-nature species: one override value
 // applies uniformly to every form of that species (see "Permanent vs. Temporary Form Nature").
-function getEffectiveSpeciesCap(dexId){
-  const ov=state.speciesCapOverrides&&state.speciesCapOverrides[dexId];
-  return (ov!=null)?ov:(state.speciesCap||6);
+// v0.49 — shiny=true reads the separate shiny cap (state.shinyCap / shinyCapOverrides).
+function getEffectiveSpeciesCap(dexId,shiny=false){
+  const map=shiny?state.shinyCapOverrides:state.speciesCapOverrides;
+  const ov=map&&map[dexId];
+  return (ov!=null)?ov:((shiny?state.shinyCap:state.speciesCap)||6);
 }
 // v0.38 — box-only sweep for a single species down to `cap`: shiny/party exempt, earliest catch
 // kept, releases the newest excess. Shared by the global cap-lowering sweep and per-species
@@ -3455,18 +3465,22 @@ function getEffectiveSpeciesCap(dexId){
 // v0.45.5 — Permanent-nature species (each form its own cap pool, see "Permanent vs. Temporary
 // Form Nature") must be swept per form, not as one combined dexId-wide pool; Temporary-nature
 // (default) keeps today's exact single-pool behavior, unchanged.
-function sweepSpeciesToCap(dexId,cap){
-  const allBoxed=state.dex.filter(p=>p.pokedexId===dexId&&!p.isShiny&&!p.holder&&!p.breeding);
-  if(!allBoxed.length) return 0;
-  const isPermanent=isPermanentFormNature(dexId,allBoxed[0].formName);
+// v0.49 — shiny selects the pool (shinies have their own cap now), and party/Day Care members of
+// the pool count toward the cap (they're never released — the box keeps cap minus their count).
+function sweepSpeciesToCap(dexId,cap,shiny=false){
+  const allHeld=state.dex.filter(p=>p.pokedexId===dexId&&!!p.isShiny===!!shiny);
+  if(!allHeld.length) return 0;
+  const isPermanent=isPermanentFormNature(dexId,allHeld[0].formName);
   const groups=isPermanent
-    ? Object.values(allBoxed.reduce((acc,p)=>{ const k=(p.formName||''); (acc[k]=acc[k]||[]).push(p); return acc; },{}))
-    : [allBoxed];
+    ? Object.values(allHeld.reduce((acc,p)=>{ const k=(p.formName||''); (acc[k]=acc[k]||[]).push(p); return acc; },{}))
+    : [allHeld];
   let releasedCount=0;
-  groups.forEach(group=>{
-    if(group.length<=cap) return;
+  groups.forEach(heldGroup=>{
+    const group=heldGroup.filter(p=>!p.holder&&!p.breeding);
+    const boxRoom=Math.max(0,cap-(heldGroup.length-group.length));
+    if(group.length<=boxRoom) return;
     group.sort((a,b)=>a.id-b.id);
-    const toRelease=new Set(group.slice(cap).map(p=>p.id));
+    const toRelease=new Set(group.slice(boxRoom).filter(p=>p.id!==1).map(p=>p.id));
     state.dex=state.dex.filter(p=>!toRelease.has(p.id));
     state.aides.forEach(aide=>{
       aide.party=aide.party.filter(p=>!toRelease.has(p.id));
@@ -3524,11 +3538,14 @@ function sweepSpeciesToCap(dexId,cap){
 // lower-IV family member before it's removed), never bypassing the move-power ordering. See
 // DESIGN.md "Species Cap Enforcement on Evolution + Release Priority."
 function checkSpeciesCap(individual,idx=0){
-  if(individual.isShiny) return; // shinies never released
-  if(individual.holder||individual.breeding) return; // party AND breeding are exempt from the cap entirely
-  const cap=getEffectiveSpeciesCap(individual.pokedexId);
-  const liveNonShinyBox=state.dex.filter(p=>p.pokedexId===individual.pokedexId&&!p.isShiny&&!p.holder&&!p.breeding&&sameCapPool(individual.pokedexId,individual.formName,p.formName));
-  if(liveNonShinyBox.length<=cap) return;
+  // v0.49 — shinies have their own pool + cap (no longer exempt), and every held copy counts —
+  // box, party and Day Care — but only boxed individuals are ever released. Release choice is the
+  // standing rule for both pools: lowest total move power, newer catch on ties.
+  const shiny=!!individual.isShiny;
+  const cap=getEffectiveSpeciesCap(individual.pokedexId,shiny);
+  const heldPool=state.dex.filter(p=>p.pokedexId===individual.pokedexId&&!!p.isShiny===shiny&&sameCapPool(individual.pokedexId,individual.formName,p.formName));
+  if(heldPool.length<=cap) return;
+  const liveNonShinyBox=heldPool.filter(p=>!p.holder&&!p.breeding); // boxed members of this pool — the only release candidates
 
   // Step 1 — move-power ranking decides the release target, same rule/tiebreak as always: lowest
   // total equipped-move power released; ties broken by catch order (later catch released, original/
@@ -3563,7 +3580,7 @@ function checkSpeciesCap(individual,idx=0){
     return;
   }
   removePokemonFromBoxAndParty(releaseTarget.id);
-  addLog('Released '+getDisplayName(releaseTarget)+' #'+releaseTarget.id+' — species cap reached ('+cap+' max).','info','roster','general');
+  addLog('Released '+getDisplayName(releaseTarget)+' #'+releaseTarget.id+' — '+(shiny?'shiny ':'')+'species cap reached ('+cap+' max).','info','roster','general');
 }
 
 // v0.26 — dropdown handler for the editable GLOBAL per-species cap. Raising applies immediately
@@ -3610,13 +3627,13 @@ function onSpeciesCapChange(selectEl){
     saveGame(); render();
     return;
   }
-  const proceed=confirm('Are you sure you would like to change the species cap for Pokémon in your box? Lowering the cap will result in any excess being dropped. (Earliest caught kept, shiny Pokémon excluded)');
+  const proceed=confirm('Are you sure you would like to change the species cap? Party and Day Care Pokémon count toward it but are never released; excess boxed Pokémon are dropped. (Earliest caught kept, shiny Pokémon use their own cap)');
   if(!proceed){
     selectEl.value=oldCap;
     return;
   }
   state.speciesCap=newCap;
-  const dexIds=new Set(state.dex.filter(p=>!p.isShiny&&!p.holder).map(p=>p.pokedexId));
+  const dexIds=new Set(state.dex.filter(p=>!p.isShiny).map(p=>p.pokedexId));
   let released=0;
   dexIds.forEach(dexId=>{ released+=sweepSpeciesToCap(dexId,getEffectiveSpeciesCap(dexId)); });
   addLog('Per-species cap lowered to '+newCap+' — '+released+' excess Pokémon released.','info','roster','general');
@@ -3628,33 +3645,49 @@ function onSpeciesCapChange(selectEl){
 // the global default. Lowering the EFFECTIVE cap (including a clear that drops it) triggers the
 // same confirm-and-sweep behavior as the global dropdown — box-only, shiny-exempt, via the shared
 // sweepSpeciesToCap() helper. See DESIGN.md "Per-Species Cap Overrides."
-function setSpeciesCapOverride(dexId,rawValue){
+// v0.49 — global SHINY cap dropdown. Same confirm-and-sweep as onSpeciesCapChange(), shiny pool only.
+function onShinyCapChange(selectEl){
+  const newCap=parseInt(selectEl.value)||6;
+  const oldCap=state.shinyCap||6;
+  if(newCap<oldCap&&!confirm('Lower the shiny cap? Party and Day Care shinies count toward it but are never released; excess boxed shinies are dropped. (Earliest caught kept)')){ selectEl.value=oldCap; return; }
+  state.shinyCap=newCap;
+  let released=0;
+  if(newCap<oldCap){
+    const dexIds=new Set(state.dex.filter(p=>p.isShiny).map(p=>p.pokedexId));
+    dexIds.forEach(dexId=>{ released+=sweepSpeciesToCap(dexId,getEffectiveSpeciesCap(dexId,true),true); });
+  }
+  addLog('Shiny cap set to '+newCap+(released?' — '+released+' excess shinies released.':'.'),'info','roster','general');
+  saveGame(); render();
+}
+function setSpeciesCapOverride(dexId,rawValue,shiny=false){
   dexId=Number(dexId);
-  if(!state.speciesCapOverrides) state.speciesCapOverrides={};
-  const oldEffective=getEffectiveSpeciesCap(dexId);
+  const key=shiny?'shinyCapOverrides':'speciesCapOverrides';
+  if(!state[key]) state[key]={};
+  const oldEffective=getEffectiveSpeciesCap(dexId,shiny);
   const trimmed=String(rawValue).trim();
   let newVal=null;
   if(trimmed!==''){
     newVal=Math.max(0,Math.min(99,parseInt(trimmed)||0));
   }
-  const newEffective=(newVal!=null)?newVal:(state.speciesCap||6);
+  const newEffective=(newVal!=null)?newVal:((shiny?state.shinyCap:state.speciesCap)||6);
   if(newEffective<oldEffective){
-    const proceed=confirm('Are you sure you would like to change the cap for this species? Lowering it will result in any excess being dropped. (Earliest caught kept, shiny Pokémon excluded)');
+    const proceed=confirm('Are you sure you would like to change the cap for this species? Lowering it will result in any excess being dropped. (Earliest caught kept; party and Day Care Pokémon count but are never released)');
     if(!proceed){ renderDex(); return; }
   }
-  if(newVal!=null) state.speciesCapOverrides[dexId]=newVal;
-  else delete state.speciesCapOverrides[dexId];
-  const released=sweepSpeciesToCap(dexId,newEffective);
+  if(newVal!=null) state[key][dexId]=newVal;
+  else delete state[key][dexId];
+  const released=sweepSpeciesToCap(dexId,newEffective,shiny);
   const entry=getPokemonEntry(dexId);
-  addLog('Species cap for '+(entry?entry.name:'#'+dexId)+' set to '+newEffective+(released>0?' — '+released+' excess released.':'.'),'info','roster','general');
+  addLog((shiny?'Shiny cap':'Species cap')+' for '+(entry?entry.name:'#'+dexId)+' set to '+newEffective+(released>0?' — '+released+' excess released.':'.'),'info','roster','general');
   saveGame(); renderDex();
 }
 // v0.38 — clears an override back to the global default, reusing setSpeciesCapOverride()'s
 // confirm-and-sweep logic (passing '' is equivalent to deleting it).
-function deleteSpeciesCapOverride(dexId){
+function deleteSpeciesCapOverride(dexId,shiny=false){
   dexId=Number(dexId);
-  if(!state.speciesCapOverrides||state.speciesCapOverrides[dexId]==null) return;
-  setSpeciesCapOverride(dexId,'');
+  const map=shiny?state.shinyCapOverrides:state.speciesCapOverrides;
+  if(!map||map[dexId]==null) return;
+  setSpeciesCapOverride(dexId,'',shiny);
 }
 // v0.38 — audit/bulk-edit modal listing every species with an active override, opened via the
 // "View All" button next to the per-species field on Species Detail.
@@ -3663,17 +3696,21 @@ function showCapOverridesModal(){
   const modal=document.createElement('div');
   modal.id='cap-overrides-modal';
   modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
-  const overrides=state.speciesCapOverrides||{};
-  const dexIds=Object.keys(overrides).map(Number).sort((a,b)=>a-b);
-  const rowsHtml=dexIds.length?dexIds.map(dexId=>{
-    const entry=getPokemonEntry(dexId);
-    const name=entry?entry.name:'#'+dexId;
-    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--main-card);">'
-      +'<div style="flex:1;font-size:11px;color:var(--main-text);">#'+dexId+' '+name+'</div>'
-      +'<input type="number" min="0" max="99" value="'+overrides[dexId]+'" style="width:52px;background:var(--main-bg);border:1px solid var(--main-border);border-radius:4px;padding:4px 6px;color:#fff;font-family:\'Courier New\',monospace;font-size:11px;" onchange="setSpeciesCapOverride('+dexId+',this.value);showCapOverridesModal();">'
-      +'<button onclick="deleteSpeciesCapOverride('+dexId+');showCapOverridesModal();" style="padding:4px 8px;font-size:11px;border-color:var(--c-danger);color:var(--c-danger);">✕</button>'
-      +'</div>';
-  }).join(''):'<div style="color:#555;font-size:11px;padding:12px 0;">No overrides set.</div>';
+  // v0.49 — two sections: regular cap overrides, then shiny cap overrides.
+  const section=(shiny)=>{
+    const overrides=(shiny?state.shinyCapOverrides:state.speciesCapOverrides)||{};
+    const dexIds=Object.keys(overrides).map(Number).sort((a,b)=>a-b);
+    return '<div style="color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin:8px 0 2px;">'+(shiny?'✨ Shiny cap':'Species cap')+'</div>'+(dexIds.length?dexIds.map(dexId=>{
+      const entry=getPokemonEntry(dexId);
+      const name=entry?entry.name:'#'+dexId;
+      return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--main-card);">'
+        +'<div style="flex:1;font-size:11px;color:var(--main-text);">#'+dexId+' '+name+'</div>'
+        +'<input type="number" min="0" max="99" value="'+overrides[dexId]+'" style="width:52px;background:var(--main-bg);border:1px solid var(--main-border);border-radius:4px;padding:4px 6px;color:#fff;font-family:\'Courier New\',monospace;font-size:11px;" onchange="setSpeciesCapOverride('+dexId+',this.value,'+shiny+');showCapOverridesModal();">'
+        +'<button onclick="deleteSpeciesCapOverride('+dexId+','+shiny+');showCapOverridesModal();" style="padding:4px 8px;font-size:11px;border-color:var(--c-danger);color:var(--c-danger);">✕</button>'
+        +'</div>';
+    }).join(''):'<div style="color:#555;font-size:11px;padding:6px 0;">No overrides set.</div>');
+  };
+  const rowsHtml=section(false)+section(true);
   modal.innerHTML='<div style="background:var(--main-panel);border:1px solid var(--accent);border-radius:8px;padding:16px;width:100%;max-width:340px;font-family:\'Courier New\',monospace;max-height:80vh;max-height:80dvh;overflow-y:auto;overscroll-behavior:contain;">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><div style="color:var(--accent);font-size:13px;font-weight:bold;">Per-Species Cap Overrides</div><button onclick="document.getElementById(\'cap-overrides-modal\').remove()" style="padding:4px 10px;font-size:12px;">✕</button></div>'
     +rowsHtml
@@ -3849,7 +3886,7 @@ function runWildEncounterLoop(lead,enc,idx=0){
     // never reach 0 HP, wildDefeated never fired, and the fight only ever ended in a party wipe.
     // Fix: the floor now checks the same real availability decideWildBallThrow() checks, so once
     // a species is genuinely uncatchable this encounter, combat can conclude normally.
-    const canCatchThisSpecies=hasBalls&&!(state.avoidCappedSpecies&&state.dex.filter(p=>p.pokedexId===enc.pokedexId&&!p.isShiny&&!p.holder&&sameCapPool(enc.pokedexId,enc.formName,p.formName)).length>=getEffectiveSpeciesCap(enc.pokedexId));
+    const canCatchThisSpecies=hasBalls&&!(state.avoidCappedSpecies&&state.dex.filter(p=>p.pokedexId===enc.pokedexId&&!p.isShiny&&sameCapPool(enc.pokedexId,enc.formName,p.formName)).length>=getEffectiveSpeciesCap(enc.pokedexId));
     const throwDecision=hasBalls?decideWildBallThrow(wild.currentHP,wild.maxHP,wild.catchRate,enc.pokedexId,round%2===0,enc.formName):null;
 
     if(throwDecision){
@@ -6636,6 +6673,106 @@ function toggleDexHideResearched(){
   renderDexHideResearchedBtn();
   renderDex();
 }
+// v0.49 — Living Dex toggle on the Pokédex Grid (Your Pokédex only). Transient, not saved.
+let dexLivingDex=false;
+let dexLivingFilter='owned'; // 'owned'|'researched'|'perfect'|'shiny'|'unicorn' — which progress bar is selected
+function toggleDexLivingDex(){ dexLivingDex=!dexLivingDex; renderDex(); }
+function setDexLivingFilter(f){ dexLivingFilter=f; renderDex(); }
+function renderDexLivingBtn(){
+  const btn=document.getElementById('dex-living-btn'); if(!btn) return;
+  const show=dexMode==='your'&&dexView==='grid';
+  btn.style.cssText='padding:5px 10px;font-size:10px;display:'+(show?'inline-block':'none')+';'+(dexLivingDex?'border-color:var(--accent);color:var(--accent);':'border-color:#555;color:#777;');
+}
+// v0.49 — does any form of this species that the view should consider still have research left?
+// Official: every form. Your Pokédex: every discovered form plus the entry being shown. Used by
+// Hide Fully Researched on the Grid and Families views (previously base form only — Galarian
+// Weezing's open page was ignored).
+function speciesHasOpenResearch(entry,isOfficial){
+  const idx=_pokedexIndex||buildPokedexIndex();
+  const forms=idx.byForm.get(entry.dexId);
+  const rows=forms?[...forms.values()]:[entry];
+  return rows.some(r=>{
+    const relevant=isOfficial||(r.formName||null)===(entry.formName||null)||isFormDiscovered(r.dexId,r.formName);
+    return relevant&&!isDexPageComplete(r.dexId,r.formName);
+  });
+}
+// v0.49 — every (dexId, formName) obtainable in the current data, computed once: wild encounter
+// forms, then repeatedly every evolution-edge target, every 'shed' result, and the family root of
+// any form that can breed, until nothing new is added. Keys "dexId|formName". See DESIGN.md
+// "Living Dex Toggle". (252 species / 285 forms as of v0.49 data.)
+let _obtainableForms=null;
+function getObtainableForms(){
+  if(_obtainableForms) return _obtainableForms;
+  const key=(d,f)=>d+'|'+(f||'');
+  const set=new Set();
+  const add=k=>{ if(set.has(k)) return false; const [d,f]=k.split('|'); if(!getPokemonEntry(+d,f||null)) return false; const e=getPokemonEntry(+d,f||null); if(f&&e.formName!==f) return false; set.add(k); return true; };
+  (typeof ENCOUNTERS!=='undefined'?ENCOUNTERS:[]).forEach(e=>add(key(e.dexId,e.formName)));
+  let grew=true;
+  while(grew){
+    grew=false;
+    [...set].forEach(k=>{
+      const [d,f]=k.split('|'); const dex=+d, form=f||null;
+      getFormEvolutionEdges(dex,form).forEach(e=>{ if(add(key(e.intoId,e.toFormName))) grew=true; });
+      (typeof EVO_TREE!=='undefined'?EVO_TREE:[]).forEach(e=>{ if(e.evolveMethod==='shed'&&e.fromDexId===dex&&e.toDexId&&add(key(e.toDexId,e.toFormName))) grew=true; });
+      if(!isUndiscoveredOnly(dex)&&add(key(getFamilyRootDexId(dex),null))) grew=true;
+    });
+  }
+  _obtainableForms=set;
+  return set;
+}
+function renderLivingDexGrid(c){
+  const key=(d,f)=>d+'|'+(f||'');
+  const obtainable=getObtainableForms();
+  const keys=new Set(obtainable);
+  state.dex.forEach(p=>{ if(p.pokedexId) keys.add(key(p.pokedexId,p.formName)); }); // cheat-only forms still get a cell
+  const idx=_pokedexIndex||buildPokedexIndex();
+  const formOrder=(d,f)=>{ const m=idx.byForm.get(d); if(!m) return 0; let i=0; for(const k of m.keys()){ if((k||'')===(f||'')) return i; i++; } return i; };
+  const cells=[...keys].map(k=>{ const [d,f]=k.split('|'); return {dexId:+d,formName:f||null,k}; })
+    .filter(x=>getPokemonEntry(x.dexId,x.formName))
+    .sort((a,b)=>a.dexId-b.dexId||formOrder(a.dexId,a.formName)-formOrder(b.dexId,b.formName));
+  const heldBy={};
+  state.dex.forEach(p=>{ const k=key(p.pokedexId,p.formName); (heldBy[k]=heldBy[k]||[]).push(p); });
+  const info=cells.map(x=>{
+    const held=heldBy[x.k]||[];
+    const perfect=held.some(isPerfectIV), shiny=held.some(p=>p.isShiny), unicorn=held.some(p=>p.isShiny&&isPerfectIV(p));
+    const researched=isDexPageComplete(x.dexId,x.formName);
+    return Object.assign(x,{entry:getPokemonEntry(x.dexId,x.formName),held,owned:held.length>0,perfect,shiny,unicorn,researched,
+      seen:held.length>0||isSpeciesKnown(x.dexId,x.formName),counted:obtainable.has(x.k)});
+  });
+  const bars=[['owned','Owned'],['researched','🔬'],['perfect','💥'],['shiny','✨'],['unicorn','🦄']];
+  const total=obtainable.size;
+  let html='<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px;">';
+  bars.forEach(([f,label])=>{
+    const n=info.filter(x=>x.counted&&x[f]).length;
+    const pct=total?Math.round(n/total*1000)/10:0;
+    const sel=dexLivingFilter===f;
+    html+='<div onclick="setDexLivingFilter(\''+f+'\')" style="cursor:pointer;border:2px solid '+(sel?'var(--accent-light)':'var(--main-border)')+';border-radius:6px;padding:4px 8px;background:var(--main-card);">'
+      +'<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--main-text);"><span>'+label+'</span><span>'+n+' / '+total+' ('+pct+'%)</span></div>'
+      +'<div style="height:5px;background:var(--main-bg);border-radius:3px;margin-top:3px;overflow:hidden;"><div style="height:100%;width:'+pct+'%;background:var(--accent);"></div></div></div>';
+  });
+  html+='</div>';
+  c.innerHTML=html;
+  const grid=document.createElement('div');
+  grid.style.cssText='display:grid;grid-template-columns:repeat(3,1fr);gap:6px;';
+  info.forEach(x=>{
+    if(dexHideResearched&&x.researched) return;
+    const cell=document.createElement('div');
+    cell.style.cssText='display:flex;flex-direction:column;align-items:center;background:var(--main-card);border:1px solid var(--main-border);border-radius:6px;padding:6px;'+(x.seen?'cursor:pointer;':'opacity:0.5;');
+    if(x.seen){
+      const lit=!!x[dexLivingFilter];
+      const name=x.entry.name+(x.formName?' ('+x.formName+')':'');
+      const badges=(x.researched?'🔬':'')+(x.perfect?'💥':'')+(x.shiny?'✨':'')+(x.unicorn?'🦄':'');
+      cell.innerHTML='<img src="'+getSpriteUrl(x.dexId,x.entry.name,false,x.formName)+'" style="width:48px;height:48px;image-rendering:pixelated;'+(lit?'':'filter:brightness(0);opacity:0.45;')+'" onerror="this.style.display=\'none\'">'
+        +'<div style="font-size:9px;color:var(--main-text-secondary);margin-top:2px;text-align:center;">#'+x.dexId+' '+name+'</div>'
+        +'<div style="font-size:10px;min-height:13px;text-align:center;">'+badges+'</div>';
+      cell.onclick=()=>{ dexSelectedDexId=x.dexId; dexSelectedFormName=x.formName; dexSelectedFamily=x.entry.familyId; dexView='detail'; renderDex(); };
+    } else {
+      cell.innerHTML='<div style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;font-size:22px;color:#555;">?</div><div style="font-size:9px;color:#555;margin-top:2px;">#'+x.dexId+'</div><div style="min-height:13px;"></div>';
+    }
+    grid.appendChild(cell);
+  });
+  c.appendChild(grid);
+}
 function renderDexHideResearchedBtn(){
   const btn=document.getElementById('dex-hide-researched-btn'); if(!btn) return;
   if(dexHideResearched){
@@ -6701,8 +6838,11 @@ function renderDex(){
   // v0.26 — keep the species-cap dropdown in sync with state (e.g. after loading a save).
   const capSelect=document.getElementById('species-cap-select');
   if(capSelect&&capSelect.value!=String(state.speciesCap||6)) capSelect.value=state.speciesCap||6;
+  const shinyCapSelect=document.getElementById('shiny-cap-select'); // v0.49
+  if(shinyCapSelect&&shinyCapSelect.value!=String(state.shinyCap||6)) shinyCapSelect.value=state.shinyCap||6;
   renderAvoidCapToggleBtn(); // v0.40
   renderDexHideResearchedBtn(); // v0.46
+  renderDexLivingBtn(); // v0.49
   if(dexView==='chooser'){ updateDexChrome(); return; }
   if(dexView==='grid') renderDexPokedexGrid();
   else if(dexView==='families') renderDexFamilies();
@@ -6789,6 +6929,8 @@ function updateDexChrome(){
   shinyBtn.style.cssText='padding:5px 10px;font-size:10px;display:'+(isOfficial?'inline-block':'none')+';'+(dexOfficialShinyPreview?'border-color:#f4d03f;color:#f4d03f;':'');
   capLabel.style.display=isOfficial?'none':'inline';
   capSelect.style.display=isOfficial?'none':'inline-block';
+  document.getElementById('dex-shinycap-label').style.display=isOfficial?'none':'inline'; // v0.49
+  document.getElementById('shiny-cap-select').style.display=isOfficial?'none':'inline-block';
 
   thirdTabBtn.textContent=isOfficial?'Species':'All Catches';
 
@@ -7162,10 +7304,11 @@ function renderDexPokedexGrid(){
   const c=document.getElementById('dex-list'); c.innerHTML='';
   let roster=getAllSpeciesRoster();
   if(!roster.length){ c.innerHTML='<div style="color:var(--c-danger);padding:12px;font-size:11px;">Database not loaded. Check pokedex.js is in GitHub.</div>'; return; }
-  // v0.46 — "Hide Fully Researched" toggle.
-  if(dexHideResearched) roster=roster.filter(entry=>!isDexPageComplete(entry.dexId,entry.formName));
-  if(!roster.length){ c.innerHTML='<div style="color:#555;padding:12px;font-size:11px;">Nothing left to research!</div>'; return; }
   const isOfficial=dexMode==='official';
+  if(!isOfficial&&dexLivingDex){ renderLivingDexGrid(c); return; } // v0.49
+  // v0.46 — "Hide Fully Researched" toggle. v0.49 — any relevant form with research left keeps it.
+  if(dexHideResearched) roster=roster.filter(entry=>speciesHasOpenResearch(entry,isOfficial));
+  if(!roster.length){ c.innerHTML='<div style="color:#555;padding:12px;font-size:11px;">Nothing left to research!</div>'; return; }
   const grid=document.createElement('div');
   grid.style.cssText='display:grid;grid-template-columns:repeat(3,1fr);gap:6px;';
   roster.forEach(entry=>{
@@ -7255,7 +7398,7 @@ function renderDexFamilies(){
     // (that stage itself), so it's never hidden just because everything caught so far is complete.
     if(dexHideResearched){
       const relevantMembers=isOfficial?allMembers:allMembers.filter(m=>speciesSeen.has(m.dexId));
-      if(relevantMembers.length&&relevantMembers.every(m=>isDexPageComplete(m.dexId,m.formName))) return;
+      if(relevantMembers.length&&relevantMembers.every(m=>!speciesHasOpenResearch(m,isOfficial))) return; // v0.49 — forms count
     }
     const baseSprite=getSpriteUrl(baseMember.dexId,baseMember.name,isOfficial&&dexOfficialShinyPreview);
     const d=document.createElement('div');
@@ -7519,6 +7662,12 @@ function renderDexDetail(){
       +'<input type="number" min="0" max="99" value="'+effCap+'" style="width:52px;background:var(--main-bg);border:1px solid var(--main-border);border-radius:4px;padding:4px 6px;color:#fff;font-family:\'Courier New\',monospace;font-size:11px;" onchange="setSpeciesCapOverride('+dexSelectedDexId+',this.value)">'
       +(hasOverride?'<span style="color:#f4d03f;font-size:9px;">override</span>':'<span style="color:var(--main-text-muted);font-size:9px;">default</span>')
       +'<button onclick="showCapOverridesModal()" style="margin-left:auto;padding:4px 8px;font-size:10px;">View All</button>'
+      +'</div>'
+      // v0.49 — shiny cap override, same behavior on the shiny pool
+      +'<div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+      +'<div style="color:var(--main-text-secondary);font-size:10px;letter-spacing:1px;text-transform:uppercase;">✨ Shiny Cap</div>'
+      +'<input type="number" min="0" max="99" value="'+getEffectiveSpeciesCap(dexSelectedDexId,true)+'" style="width:52px;background:var(--main-bg);border:1px solid var(--main-border);border-radius:4px;padding:4px 6px;color:#fff;font-family:\'Courier New\',monospace;font-size:11px;" onchange="setSpeciesCapOverride('+dexSelectedDexId+',this.value,true)">'
+      +((state.shinyCapOverrides&&state.shinyCapOverrides[dexSelectedDexId]!=null)?'<span style="color:#f4d03f;font-size:9px;">override</span>':'<span style="color:var(--main-text-muted);font-size:9px;">default</span>')
       +'</div>'
       +'<button onclick="showReleaseModal('+dexSelectedDexId+','+(dexSelectedFormName?"'"+dexSelectedFormName+"'":'null')+')" style="width:100%;margin-top:6px;padding:6px;font-size:10px;border-color:var(--c-danger);color:var(--c-danger);">🗑 Select Pokémon to Release</button>';
   }
@@ -8092,7 +8241,7 @@ const SAVE_KEY='pokeprof_save';
 // batch-evolve prompt, offline friendship parity, dual-root family breeding, Ditto
 // breeding-placeholder fix, Family IV Inheritance pool fix) is a bug fix or UI/logic-only, no
 // additional schema impact.
-const SAVE_VERSION=35; // v0.48 — state.visitedLocations (Wander unexplored priority). Previously 34: v0.47 — one-time research cleanup (Same-Method Multi-Branch Completeness) + Shedinja backfill; no new fields. Previously 33: v0.45.5 — state.locationEncounterLog re-keyed from bare dexId to dexId+'|'+(formName||'') (see migrateLocationEncounterLogKeys(), "Wild Encounter Form Resolution" in DESIGN.md)
+const SAVE_VERSION=36; // v0.49 — shinyCap + shinyCapOverrides. Previously 35: v0.48 — state.visitedLocations (Wander unexplored priority). Previously 34: v0.47 — one-time research cleanup (Same-Method Multi-Branch Completeness) + Shedinja backfill; no new fields. Previously 33: v0.45.5 — state.locationEncounterLog re-keyed from bare dexId to dexId+'|'+(formName||'') (see migrateLocationEncounterLogKeys(), "Wild Encounter Form Resolution" in DESIGN.md)
 // v0.45.4 — state.researchLog re-keyed from bare dexId to dexId+'|'+(formName||'') (per-form research identity; see "Research Log — Per-Form Identity" in DESIGN.md)
 let saveTimer=0;
 
@@ -8113,6 +8262,7 @@ function saveGame(){
         avoidCappedSpecies:!!state.avoidCappedSpecies, // v0.40
         gymBattleDefaultPreference:!!state.gymBattleDefaultPreference, // v0.44
         speciesCapOverrides:state.speciesCapOverrides||{}, // v0.38
+        shinyCap:state.shinyCap||6, shinyCapOverrides:state.shinyCapOverrides||{}, // v0.49
         daycareSlots:state.daycareSlots||{purchased:1,slots:[]},
         discoveredLocations:[...state.discoveredLocations],
         visitedLocations:[...(state.visitedLocations||[])], // v0.48
@@ -8144,7 +8294,7 @@ function loadGame(){
     // genuine v0.45.4 save (version 32) would have been rejected outright on load. Same mechanical
     // gap this comment's own migration-history model is supposed to prevent — see rule 17/19 in
     // workflow.md (grep the old version string, confirm zero unintended hits) — added `!==32` below.
-    if(data.version!==SAVE_VERSION&&data.version!==34&&data.version!==33&&data.version!==32&&data.version!==31&&data.version!==30&&data.version!==29&&data.version!==28&&data.version!==27&&data.version!==26&&data.version!==25&&data.version!==24&&data.version!==23&&data.version!==22&&data.version!==21&&data.version!==20&&data.version!==19&&data.version!==18&&data.version!==17&&data.version!==16&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
+    if(data.version!==SAVE_VERSION&&data.version!==35&&data.version!==34&&data.version!==33&&data.version!==32&&data.version!==31&&data.version!==30&&data.version!==29&&data.version!==28&&data.version!==27&&data.version!==26&&data.version!==25&&data.version!==24&&data.version!==23&&data.version!==22&&data.version!==21&&data.version!==20&&data.version!==19&&data.version!==18&&data.version!==17&&data.version!==16&&data.version!==15&&data.version!==14&&data.version!==13&&data.version!==12&&data.version!==11) return false;
     const s=data.state;
     // v0.39.1 — aide-owned fields (party/dex/trainerBag/currentLocation/mission-and-travel/
     // gymProgress/lastHealLocation/wanderMode) now live in state.aides[]. A pre-v26 save has them
@@ -8214,6 +8364,7 @@ function loadGame(){
       avoidCappedSpecies:!!s.avoidCappedSpecies, // v0.40
       gymBattleDefaultPreference:!!s.gymBattleDefaultPreference, // v0.44
       speciesCapOverrides:s.speciesCapOverrides??{}, // v0.38
+      shinyCap:s.shinyCap??6, shinyCapOverrides:s.shinyCapOverrides??{}, // v0.49 — defaulted for SAVE_VERSION <36, no sweep
       daycareSlots:s.daycareSlots??{purchased:1,slots:[]},
       travelPath:src0.travelPath??[], travelPathIndex:src0.travelPathIndex??0,
       travelCyclesRemaining:src0.travelCyclesRemaining??0,
@@ -8986,6 +9137,7 @@ if(!hasSave){
     avoidCappedSpecies:false, // v0.40
     gymBattleDefaultPreference:false, // v0.44 — set by the New Player Preamble's Gym Battle Default question
     speciesCapOverrides:{}, // v0.38
+    shinyCap:6, shinyCapOverrides:{}, // v0.49
     daycareSlots:{purchased:1,slots:[]},
     researchLog:{}, pendingFindings:[],
     discoveredLocations:initDiscovered,

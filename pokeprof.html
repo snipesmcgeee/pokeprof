@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PokeProf v0.49</title>
+<title>PokeProf v0.49.1</title>
 <script src="pokedex.js"></script>
 <script src="encounters.js"></script>
 <script src="locations.js"></script>
@@ -143,7 +143,7 @@
 <body>
 
 <div id="header">
-  <h1>PokeProf <span id="game-version-display" style="font-size:11px;color:var(--main-text-muted);">v0.49</span></h1>
+  <h1>PokeProf <span id="game-version-display" style="font-size:11px;color:var(--main-text-muted);">v0.49.1</span></h1>
   <div>
     <div class="funds">$<span id="funds-display">100.00</span></div>
     <div class="income-rate">$<span id="income-display">1.00</span>/min</div>
@@ -603,7 +603,7 @@ const ENC_INTERVAL_CLOSED = 30;
 // string independently, with nothing forcing them to agree — v0.44.3's delivery updated one and
 // missed the other. Both now render FROM this constant at boot (see init()) — bumping a version
 // is a one-line edit here, and the two displays can no longer drift apart.
-const GAME_VERSION = '0.49';
+const GAME_VERSION = '0.49.1';
 const FRIENDSHIP_THRESHOLD = 220;
 // v0.22 — highest level-based evolution across the whole franchise is Zweilous->Hydreigon
 // at level 64; 65 clears it with the minimum safe margin. Used to rule out 'level' as a
@@ -3435,8 +3435,12 @@ function formGetsOwnChainLine(dexId,formName){
 // nature (default): always true, matches today's exact form-blind behavior. Permanent-nature: only
 // true on an exact form match — each form (e.g. each Unown letter) is its own independent pool.
 function sameCapPool(dexId,formNameA,formNameB){
-  if(!isPermanentFormNature(dexId,formNameA)) return true;
-  return (formNameA||null)===(formNameB||null);
+  // v0.49.1 — symmetric: previously only formNameA's nature was checked, so a base-form trigger
+  // (formNature null) lumped every form — Galarian Weezing, Unown letters — into the base pool and
+  // could release them. Now: same form → same pool; different forms share a pool only if NEITHER is
+  // a Permanent/Cosmetic form (i.e. Temporary forms still share with their base, as designed).
+  if((formNameA||null)===(formNameB||null)) return true;
+  return !isPermanentFormNature(dexId,formNameA)&&!isPermanentFormNature(dexId,formNameB);
 }
 // v0.38 — this species' effective cap: the per-species override if one is set, else the global
 // state.speciesCap. Single source of truth for every cap check below (see "Per-Species Cap
@@ -3470,10 +3474,9 @@ function getEffectiveSpeciesCap(dexId,shiny=false){
 function sweepSpeciesToCap(dexId,cap,shiny=false){
   const allHeld=state.dex.filter(p=>p.pokedexId===dexId&&!!p.isShiny===!!shiny);
   if(!allHeld.length) return 0;
-  const isPermanent=isPermanentFormNature(dexId,allHeld[0].formName);
-  const groups=isPermanent
-    ? Object.values(allHeld.reduce((acc,p)=>{ const k=(p.formName||''); (acc[k]=acc[k]||[]).push(p); return acc; },{}))
-    : [allHeld];
+  // v0.49.1 — group per individual: a Permanent/Cosmetic form is its own pool; base + Temporary
+  // forms share one pool (was decided from allHeld[0] alone, so a base form first lumped everything).
+  const groups=Object.values(allHeld.reduce((acc,p)=>{ const k=isPermanentFormNature(dexId,p.formName)?('f:'+(p.formName||'')):'shared'; (acc[k]=acc[k]||[]).push(p); return acc; },{}));
   let releasedCount=0;
   groups.forEach(heldGroup=>{
     const group=heldGroup.filter(p=>!p.holder&&!p.breeding);
@@ -6833,8 +6836,10 @@ function renderDex(){
   document.getElementById('dex-encounters-count').textContent=state.totalSightings;
   const knownDexIds=Object.keys(state.dexHistory);
   document.getElementById('dex-species-count').textContent=knownDexIds.length;
-  const pagesCompleted=knownDexIds.filter(dexId=>isDexPageComplete(parseInt(dexId))).length;
-  document.getElementById('dex-pages-completed').textContent=pagesCompleted;
+  // v0.49.1 — every seen form has its own page: count completed / seen across all research pages.
+  const pageKeys=Object.keys(state.researchLog||{});
+  const pagesCompleted=pageKeys.filter(k=>{ const bar=k.indexOf('|'); return isDexPageComplete(Number(k.slice(0,bar)),k.slice(bar+1)||null); }).length;
+  document.getElementById('dex-pages-completed').textContent=pagesCompleted+' / '+pageKeys.length;
   // v0.26 — keep the species-cap dropdown in sync with state (e.g. after loading a save).
   const capSelect=document.getElementById('species-cap-select');
   if(capSelect&&capSelect.value!=String(state.speciesCap||6)) capSelect.value=state.speciesCap||6;

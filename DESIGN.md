@@ -125,6 +125,8 @@ proceeds; new entries are appended in the version order they were fixed.
 - Large saves slowed the whole game: `renderDex()` rebuilt the last-open Dex view every 1-second tick even with the Dex tab hidden, and the Families/All Catches views re-scanned the whole box and `POKEDEX_DATA` per family (~7.5 s per tick on Families at 1,755 boxed Pokémon) — fixed v0.47, see "Render Performance" under Game Loop
 - Evolution research tracked methods, not branches: confirming one branch closed its method for sibling branches sharing it, so Tyrogue (3 level branches) could reach "fully researched" with only Hitmonlee found, and the chain's `?` hint vanished on any node once one branch was known (reported on Eevee and Tyrogue) — fixed v0.47
 - Confirmed EVO_TREE stone branches showed `?` on their chain arrow instead of the stone's name (slug vs. name mismatch in `isEdgeConfirmed()`) — fixed v0.47, see Evolution Chain Visual
+- Species cap released regional forms / Unown letters when a base-form copy triggered the check (pool decided from one side only) — fixed v0.49.1
+- Dex Pages Completed only counted each species' base-form page — fixed v0.49.1 (every seen form page, shown completed / seen)
 - Hide Fully Researched hid families/grid cells whose regional form still had research left (only the base form was checked; seen on Galarian Weezing) — fixed v0.49
 - On iPhone, pop-ups capped with `vh` ran under the browser's bottom bar; the mission screen's Cancel/Dispatch couldn't be tapped (page sprang back on release) — fixed v0.48.1, see "Pop-up Sizing on Phones"
 - Wander could target and route through undiscovered locations, so a new game's first pick could be far off-map, and a wipe sent the aide back toward the same unreachable target forever (Diglett's Cave / Route 18 reports) — fixed v0.48, see "Wander v0.48"
@@ -870,6 +872,7 @@ Button beneath the per-species cap override control on Species Detail. Opens a m
 - **v0.45.5:** stays keyed by bare `dexId` even for Permanent-nature species — one override value applies uniformly to every form of that species (e.g. one "Unown cap" field governs all 28 letters individually), not a per-form override. See Permanent vs. Temporary Form Nature below.
 
 ### Shiny Cap + Caps Count Every Held Copy (SETTLED — v0.49, NEW)
+- **v0.49.1 — cap pools fixed (bug since v0.45.5).** `sameCapPool()` only checked the *triggering* individual's form nature, so a base-form trigger (formNature null) lumped every form of that species into one pool — at cap 1, a new Weezing could release the Galarian Weezing. Now symmetric: same form → same pool; two different forms share a pool only if **neither** is Permanent/Cosmetic (Temporary forms still share with their base). `sweepSpeciesToCap()` groups per individual by the same rule instead of deciding from the first individual.
 - **Shiny per-species cap (new).** `state.shinyCap` (default 6) plus `state.shinyCapOverrides = {dexId: number}` (default `{}`, range 0–99), mirroring `speciesCap` / `speciesCapOverrides` exactly: the global value sits beside the existing species-cap dropdown; the per-species override sits beside the species override field in Species Detail and in the same "View All" overrides modal. Shinies were previously never released; now shinies have their own pool and cap, and the non-shiny cap continues to ignore shinies (two separate pools per species, same `sameCapPool()` form rules).
 - **Both caps now count every held copy of that species:** boxed, in an aide's party, and at the Day Care — reversing v0.38's box-only counting. **Release targets are still boxed only** — party and Day Care individuals are never auto-released. So the box keeps `cap − (party + Day Care count)`, floored at 0 (e.g. cap 6 with 2 Pidgey in a party → up to 4 boxed).
 - **Shiny release choice:** exactly the standing rule used for non-shiny — release the boxed individual with the **lowest total equipped-move power** (spent TMs, which don't inherit), **newer catch released on ties**; Family IV Inheritance bonus unchanged. No special protection for 🦄 (Jack, v0.49): move power is what doesn't inherit down — IVs do — so a released 🦄 just means another one is made eventually.
@@ -1133,6 +1136,7 @@ Read-only "Research Pairs" section on the Day Care screen — sprite row (reusin
 - **Catches:** `state.totalCatches` (unchanged)
 - **Encounters:** `state.totalSightings` — total wild encounters ever, online + offline
 - **Species:** count of keys in `state.dexHistory` — unique dexIds ever discovered (caught or evolved into)
+- **v0.49.1:** now counts **every seen page** — one per (species, form) in `researchLog`, so each regional form and Unown letter is its own page — and displays `completed / seen`. The "both are true" conditions below apply per page.
 - **Dex Pages Completed:** count of species where BOTH are true:
   - Evolution research complete: every entry of `EVOLUTION_METHODS` is present in `testedMethods` (content check since v0.33 — see "Research State per Species"; read live — see "Evolution Method Enum" above). `isFullyTested()` already reads this live and is the canonical check — `isDexPageComplete()` reuses the same pattern rather than a separate hardcoded threshold. **v0.47:** this now also implies every evolution branch on that form is confirmed — see "Same-Method Multi-Branch Completeness."
   - All ability slots observed: every non-null ability the species has (`ability1`, `ability2`, `hiddenAbility`) has been seen at least once, per `researchLog[dexId].abilitiesObserved`
@@ -2384,11 +2388,12 @@ Every item shipped in these versions has been relocated to its topical section �
 | v0.48 | 3 | Wander v0.48 (visible-only pool, unexplored-first for Encounters/Catches, one-pick exclusion after a wipe, gym push at the level cap, Random re-picks on arrival and wipe from encounter areas + unexplored places; `state.visitedLocations`), Render Performance (All Catches updates rows in place), Versioning (SAVE_VERSION 35) |
 | v0.48.1 | 1 | Pop-up Sizing on Phones + Pinned Mission Buttons (new — `dvh` caps + `overscroll-behavior:contain` on every pop-up; sticky Cancel/Dispatch) |
 | v0.49 | 3 | Hide Fully Researched (forms count), Living Dex Toggle (new — per-form grid, badge row, clickable progress-bar filters, obtainable-form total), Shiny Cap + Caps Count Every Held Copy (new; reverses v0.38 box-only counting), Versioning (SAVE_VERSION 36) |
+| v0.49.1 | 2 | Species cap pools symmetric (Permanent/Cosmetic forms always their own pool), Dex Pages Completed counts every form page as completed / seen |
 
 
 *Note: the v0.45.7 row above shipped to players as **v0.46** (renamed at the last moment before release; there is no live v0.45.7).*
 
-`SAVE_VERSION`: 27→28 (v0.40), stays on 28 (v0.41–v0.43), reaches 30 across two bumps (v0.44), no bump (v0.44.1–v0.44.4), 30→31 (v0.45), no bump (v0.45.1–v0.45.3), 31→32 (v0.45.4), 32→33 (v0.45.5), no bump (v0.45.6 — display-only), no bump (v0.45.7/v0.46 — bugfixes + UI-only, no schema change), 33→34 (v0.47 — research cleanup migration only), no bump (v0.47.1 — sign-in only), 34→35 (v0.48 — `visitedLocations`), no bump (v0.48.1 — display-only), 35→36 (v0.49 — shiny cap).
+`SAVE_VERSION`: 27→28 (v0.40), stays on 28 (v0.41–v0.43), reaches 30 across two bumps (v0.44), no bump (v0.44.1–v0.44.4), 30→31 (v0.45), no bump (v0.45.1–v0.45.3), 31→32 (v0.45.4), 32→33 (v0.45.5), no bump (v0.45.6 — display-only), no bump (v0.45.7/v0.46 — bugfixes + UI-only, no schema change), 33→34 (v0.47 — research cleanup migration only), no bump (v0.47.1 — sign-in only), 34→35 (v0.48 — `visitedLocations`), no bump (v0.48.1 — display-only), 35→36 (v0.49 — shiny cap), no bump (v0.49.1).
 
 ---
 
